@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -1584,7 +1585,6 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAU2VzlnSOILn7CrzWIH-HMD3YmbMr0I6s",
@@ -1598,203 +1598,130 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-// ── PHONE AUTH ──
-window.setupRecaptcha = function() {
-  if (window.recaptchaVerifier) return;
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'invisible',
-    callback: () => {}
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast-fb';
+    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:8px 18px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;transition:opacity 0.3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+function showStep(stepId) {
+  ['ob-phone-step','ob-verify-step','ob-name-step'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === stepId ? 'flex' : 'none';
   });
-};
+}
 
 window.sendSMSCode = async function() {
-  const phoneInput = document.getElementById('phone-input');
-  if (!phoneInput) { showToast('Phone input not found'); return; }
-  const phone = phoneInput.value.trim();
-  if (!phone) { showToast('Enter your phone number'); return; }
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length !== 10) { showToast('Enter a valid 10-digit number'); return; }
-  const fullPhone = '+1' + digits;
-  
-  const btn = document.querySelector('.ob-btn');
-  if (btn) { btn.textContent = 'Sending...'; btn.disabled = true; }
-  
+  const input = document.getElementById('phone-input');
+  if (!input) { toast('Input not found'); return; }
+  const digits = input.value.replace(/\D/g,'');
+  if (digits.length !== 10) { toast('Enter a valid 10-digit number'); return; }
+
+  const btn = document.querySelector('#ob-phone-step .ob-btn');
+  if (btn) { btn.textContent = 'Sending…'; btn.disabled = true; }
+
   try {
-    // Clear any existing recaptcha
-    if (window.recaptchaVerifier) {
-      try { window.recaptchaVerifier.clear(); } catch(e) {}
-      window.recaptchaVerifier = null;
+    if (window._recaptcha) {
+      try { window._recaptcha.clear(); } catch(e) {}
+      window._recaptcha = null;
     }
-    
-    // Create fresh recaptcha
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+
+    const recaptchaDiv = document.getElementById('recaptcha-container');
+    recaptchaDiv.innerHTML = '';
+
+    window._recaptcha = new RecaptchaVerifier(auth, recaptchaDiv, {
       size: 'invisible',
       callback: () => {}
     });
-    await window.recaptchaVerifier.render();
-    
-    const confirm = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
-    window.confirmationResult = confirm;
-    document.getElementById('ob-phone-step').style.display = 'none';
-    document.getElementById('ob-verify-step').style.display = 'flex';
-    showToast('Code sent to ' + fullPhone);
-  } catch(e) {
-    console.error('SMS error:', e);
-    showToast(e.message || 'Error sending code. Try again.');
+
+    const result = await signInWithPhoneNumber(auth, '+1' + digits, window._recaptcha);
+    window._confirm = result;
+    showStep('ob-verify-step');
+    toast('Code sent!');
+  } catch(err) {
+    console.error(err);
+    toast(err.code === 'auth/invalid-phone-number' ? 'Invalid number' :
+          err.code === 'auth/too-many-requests' ? 'Too many attempts. Try later.' :
+          'Error: ' + (err.code || err.message));
     if (btn) { btn.textContent = 'Send code'; btn.disabled = false; }
-    if (window.recaptchaVerifier) {
-      try { window.recaptchaVerifier.clear(); } catch(err) {}
-      window.recaptchaVerifier = null;
+    if (window._recaptcha) {
+      try { window._recaptcha.clear(); } catch(e) {}
+      window._recaptcha = null;
     }
   }
 };
 
 window.verifyCode = async function() {
-  const code = document.getElementById('verify-input').value.trim();
-  if (!code) { showToast('Enter the code'); return; }
+  const code = document.getElementById('verify-input');
+  if (!code || !code.value.trim()) { toast('Enter the 6-digit code'); return; }
+  const btn = document.querySelector('#ob-verify-step .ob-btn');
+  if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
   try {
-    await window.confirmationResult.confirm(code);
-    // Auth state change will handle the rest
-  } catch(e) {
-    showToast('Wrong code. Try again.');
+    await window._confirm.confirm(code.value.trim());
+  } catch(err) {
+    toast('Wrong code — try again');
+    if (btn) { btn.textContent = 'Verify'; btn.disabled = false; }
   }
 };
 
-// ── AUTH STATE ──
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    window.currentUser = user;
-    // Check if user has a profile
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userDoc.exists()) {
-      // New user — show name setup
-      document.getElementById('ob-phone-step').style.display = 'none';
-      document.getElementById('ob-verify-step').style.display = 'none';
-      document.getElementById('ob-name-step').style.display = 'flex';
-    } else {
-      // Existing user — go to feed
-      window.userData = userDoc.data();
-      nav('feed');
-      initFeed();
-    }
-  }
-});
-
 window.saveProfile = async function() {
-  const name = document.getElementById('name-input').value.trim();
-  const dob = document.getElementById('dob-input').value;
-  if (!name) { showToast('Enter your name'); return; }
-  if (!dob) { showToast('Enter your date of birth'); return; }
-  
-  // Age check
-  const birthDate = new Date(dob);
+  const name = document.getElementById('name-input');
+  const dob = document.getElementById('dob-input');
+  if (!name || !name.value.trim()) { toast('Enter your name'); return; }
+  if (!dob || !dob.value) { toast('Enter your date of birth'); return; }
+
+  const birth = new Date(dob.value);
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-  
-  if (age < 18) {
-    showToast('You must be 18 or older to use Innings');
-    return;
-  }
-  
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  if (age < 18) { toast('You must be 18 or older'); return; }
+
   const user = auth.currentUser;
+  if (!user) { toast('Session expired — please restart'); return; }
+
   await setDoc(doc(db, 'users', user.uid), {
-    name: name,
-    dob: dob,
-    age: age,
+    name: name.value.trim(),
+    dob: dob.value,
     phone: user.phoneNumber,
     createdAt: serverTimestamp()
   });
-  window.userData = { name, phone: user.phoneNumber };
+  window.currentUser = user;
+  window.userData = { name: name.value.trim(), phone: user.phoneNumber };
   nav('feed');
-  initFeed();
 };
 
-// ── REAL-TIME CHAT ──
-let unsubscribeChat = null;
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  window.currentUser = user;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      window.userData = snap.data();
+      nav('feed');
+    } else {
+      showStep('ob-name-step');
+    }
+  } catch(e) {
+    console.error(e);
+    showStep('ob-name-step');
+  }
+});
 
-window.initChat = function(groupId) {
-  if (unsubscribeChat) unsubscribeChat();
-  const chatRef = collection(db, 'groups', groupId, 'messages');
-  const q = query(chatRef, orderBy('timestamp', 'asc'));
-  unsubscribeChat = onSnapshot(q, (snapshot) => {
-    const convo = document.getElementById('live-convo');
-    if (!convo) return;
-    // Only render new messages
-    snapshot.docChanges().forEach(change => {
-      if (change.type === 'added') {
-        const msg = change.doc.data();
-        const isMe = msg.uid === window.currentUser?.uid;
-        const div = document.createElement('div');
-        div.className = 'msg' + (isMe ? ' mine' : '');
-        div.innerHTML = isMe
-          ? \`<div class="m-av av-a" style="width:28px;height:28px">\${getInitials(msg.name)}</div><div class="bubble me"><div class="b-txt">\${msg.text}</div></div>\`
-          : \`<div class="m-av av-b" style="width:28px;height:28px">\${getInitials(msg.name)}</div><div class="bubble them"><div class="b-who">\${msg.name}</div><div class="b-txt">\${msg.text}</div></div>\`;
-        convo.appendChild(div);
-        convo.scrollTop = convo.scrollHeight;
-      }
-    });
-  });
-};
-
-window.sendMessage = async function(groupId) {
-  const input = document.getElementById('chat-input-' + groupId) || document.querySelector('.msg-input');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text || !window.currentUser) return;
-  input.value = '';
-  await addDoc(collection(db, 'groups', groupId, 'messages'), {
-    text,
-    uid: window.currentUser.uid,
-    name: window.userData?.name || 'You',
-    timestamp: serverTimestamp()
-  });
-};
-
-// ── PHOTO UPLOAD ──
-window.uploadPhoto = async function(file, groupId) {
-  if (!file || !window.currentUser) return;
-  const storageRef = ref(storage, \`groups/\${groupId}/\${Date.now()}_\${file.name}\`);
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
-  await addDoc(collection(db, 'groups', groupId, 'messages'), {
-    type: 'photo',
-    photoUrl: url,
-    uid: window.currentUser.uid,
-    name: window.userData?.name || 'You',
-    timestamp: serverTimestamp()
-  });
-};
-
-// ── HELPERS ──
-function getInitials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast') || document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
-}
-
-// Expose to window for OSL group chat
 window.db = db;
-window.storage = storage;
-window.initChat = window.initChat;
-window.sendMessage = window.sendMessage;
-
-// Auto-init OSL chat when on that screen
-window.initOSLChat = function() {
-  window.initChat('outside-lands-2026');
-};
-
+window.serverTimestamp = serverTimestamp;
+window.collection = collection;
+window.addDoc = addDoc;
 </script>
-<div id="recaptcha-container"></div>
+<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;z-index:9999"></div>
 </body>
 </html>
