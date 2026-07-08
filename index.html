@@ -463,16 +463,25 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- STEP 3: NAME (new users only) -->
-    <div class="ob-bottom" id="ob-name-step" style="display:none">
-      <div class="ob-fields">
+    <!-- STEP 3: PROFILE (new users only) -->
+    <div class="ob-bottom" id="ob-name-step" style="display:none;flex-direction:column;gap:14px">
+      <div style="font-size:16px;font-weight:700;color:var(--black);letter-spacing:-0.3px;padding-top:4px">Tell us about you</div>
+      <div class="ob-fields" style="gap:10px">
         <div>
           <div class="ob-field-lbl">Your name</div>
           <input class="ob-input" type="text" id="name-input" placeholder="What your people call you">
         </div>
+        <div>
+          <div class="ob-field-lbl">Date of birth</div>
+          <input class="ob-input" type="date" id="dob-input" placeholder="MM/DD/YYYY">
+        </div>
+        <div style="background:#FEF3E2;border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7A4F10" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div style="font-size:12px;color:#7A4F10;font-weight:500">You must be 18 or older to use Innings.</div>
+        </div>
       </div>
       <div class="ob-foot">
-        <button class="ob-btn" onclick="saveProfile()">Let's go</button>
+        <button class="ob-btn" onclick="saveProfile()">Start your innings</button>
         <div class="ob-notice">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Private by default. Your people only.
@@ -605,147 +614,18 @@ function setWhen(w) {
 
   <div class="scroll">
 
-    <!-- LIVE MOMENT — Giants game, conversation first -->
-    <div class="card live" style="padding:0;overflow:hidden">
-      <!-- LIVE HEADER -->
-      <div style="background:var(--black);padding:12px 16px 10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <div class="live-pip"></div>
-            <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px">Live now</span>
-          </div>
-          <span style="font-size:11px;color:rgba(255,255,255,0.3)">Giants Nerds · 4 watching</span>
-        </div>
-        <!-- SCORE — big and prominent -->
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div style="text-align:center;flex:1">
-            <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:4px">SF Giants</div>
-            <div style="font-size:48px;font-weight:900;color:white;letter-spacing:-3px;line-height:1">4</div>
-          </div>
-          <div style="text-align:center;padding:0 12px">
-            <div style="font-size:11px;color:rgba(255,255,255,0.25);font-weight:600">BOT 8</div>
-            <div style="font-size:13px;color:rgba(255,255,255,0.2);margin-top:3px">1 out</div>
-          </div>
-          <div style="text-align:center;flex:1">
-            <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:4px">LAD</div>
-            <div style="font-size:48px;font-weight:900;color:white;letter-spacing:-3px;line-height:1">3</div>
-          </div>
-        </div>
-        <div style="text-align:center;margin-top:6px">
-          <span style="font-size:11px;color:rgba(255,255,255,0.25)">Caleb Kilian pitching · Oracle Park</span>
-        </div>
-      </div>
-
-      <!-- CONVERSATION — the product -->
-      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">
-        <div class="msg">
-          <div class="m-av av-b" style="width:28px;height:28px">GA</div>
-          <div class="bubble them"><div class="b-who">Geoffrey</div><div class="b-txt">Kilian in the 8th. Sure.</div><div class="b-t">8:42 PM</div></div>
-        </div>
-        <div class="msg mine">
-          <div class="m-av av-a" style="width:28px;height:28px">NV</div>
-          <div class="bubble me"><div class="b-txt">I've seen this story before 😬</div><div class="b-t" style="text-align:right">8:43 PM</div></div>
-        </div>
-        <div class="msg">
-          <div class="m-av av-c" style="width:28px;height:28px">JC</div>
-          <div class="bubble them"><div class="b-who">Jason</div><div class="b-txt">why do they do this to us every single year</div><div class="b-t">8:44 PM</div></div>
-        </div>
-        <!-- QUICK REPLY — two taps to react -->
-        <div style="display:flex;gap:7px;margin-top:2px;flex-wrap:wrap">
-          <div style="padding:7px 13px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;font-size:12px;font-weight:600;color:var(--mid);cursor:pointer">😬 Same</div>
-          <div style="padding:7px 13px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;font-size:12px;font-weight:600;color:var(--mid);cursor:pointer">💀 RIP</div>
-          <div style="padding:7px 13px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;font-size:12px;font-weight:600;color:var(--mid);cursor:pointer">🔥 Let's go</div>
-        </div>
-        <div class="input-row" style="margin-top:0">
-          <div class="m-av av-a" style="width:28px;height:28px">NV</div>
-          <input class="msg-input" placeholder="Say something...">
-          <button class="send-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
-        </div>
-      </div>
-      <a class="sg-btn" href="https://seatgeek.com/san-francisco-giants-tickets" target="_blank" style="margin:0 16px 14px;display:flex">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/></svg>
-        Get tickets · SeatGeek
-      </a>
+    <!-- EMPTY FEED STATE -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">⚾</div>
+      <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">Your feed is waiting</div>
+      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Create a moment, invite your people, and it'll come alive here.</div>
+      <button onclick="nav('create-group')" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Create your first moment</button>
     </div>
 
-    <!-- GROUPS BELOW — quiet cards, tap to enter -->
-    <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;padding:4px 2px">Moments</div>
-
-    <!-- OSL GROUP — active -->
-    <div class="card" style="cursor:pointer;padding:14px 16px" onclick="nav('osl-group')">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#2E1A40,#4A1A6B);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎪</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--black)">Outside Lands 2026</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Jamie: anyone know what time Hozier goes on?</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-          <div style="font-size:11px;color:var(--subtle)">Now</div>
-          <div style="width:20px;height:20px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">12</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- GIANTS NERDS — active game -->
-    <div class="card" style="cursor:pointer;padding:14px 16px" onclick="nav('group-detail')">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:var(--indigo-deep);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚾</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--black)">Giants Nerds</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">You: I've seen this story before 😬</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-          <div style="font-size:11px;color:var(--subtle)">8:43 PM</div>
-          <div style="display:flex;align-items:center;gap:3px">
-            <div class="live-pip" style="width:5px;height:5px"></div>
-            <span style="font-size:10px;color:var(--indigo);font-weight:600">Live</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- THE LEAGUE — quiet -->
-    <div class="card" style="cursor:pointer;padding:14px 16px" onclick="nav('group-detail')">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:#1C2E4A;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏆</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--black)">The League 2026</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Geoffrey: First place here I come 💪</div>
-        </div>
-        <div style="font-size:11px;color:var(--subtle);flex-shrink:0">3:02 PM</div>
-      </div>
-    </div>
-
-    <!-- DAD + GIANTS — quiet -->
-    <div class="card" style="cursor:pointer;padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:#1A2E20;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏟️</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--black)">Dad + Giants</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Dad: Same seats Saturday. I'll drive.</div>
-        </div>
-        <div style="font-size:11px;color:var(--subtle);flex-shrink:0">Mon</div>
-      </div>
-    </div>
-
-    <!-- HARRIET'S TEAM — quiet -->
-    <div class="card" style="cursor:pointer;padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:#2E1A0A;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎓</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--black)">Harriet's team</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Harriet: anyone coming to visit Chicago?? 👀</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-          <div style="font-size:11px;color:var(--subtle)">Sun</div>
-          <div style="width:20px;height:20px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">2</div>
-        </div>
-      </div>
-    </div>
+    <!-- PLACEHOLDER GROUP CARDS -->
 
   </div>
-
-  <div class="bottom-nav">
+    <div class="bottom-nav">
     <button class="nav-item active" onclick="nav('feed')" aria-label="Feed"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg><span>Feed</span></div></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
@@ -759,53 +639,19 @@ function setWhen(w) {
   <div class="status-light"><span class="st-dark">9:41</span><i class="ti ti-battery" style="font-size:14px;color:var(--black)"></i></div>
   <div class="topbar-light"><div><span class="app-name">Inn<em>ings</em></span><div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div></div></div>
   <div class="ss-strip">
-    <div class="ss"><div class="ss-v">47</div><div class="ss-l">Memories</div></div>
+    <div class="ss"><div class="ss-v">0</div><div class="ss-l">Moments</div></div>
     <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v">23</div><div class="ss-l">Moments</div></div>
+    <div class="ss"><div class="ss-v">0</div><div class="ss-l">This year</div></div>
     <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v" style="color:var(--indigo)">🔥3</div><div class="ss-l">Week streak</div></div>
+    <div class="ss"><div class="ss-v" style="color:var(--indigo)">—</div><div class="ss-l">Streak</div></div>
   </div>
-  <div class="cal-wrap">
-    <div class="cal-hdr"><div class="cal-mo">June 2026</div><div class="cal-nav"><i class="ti ti-chevron-left"></i><i class="ti ti-chevron-right"></i></div></div>
-    <div class="cal-grid">
-      <div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
-      <div class="cal-day"><div class="day-num" style="color:var(--subtle)">1</div></div><div class="cal-day"><div class="day-num" style="color:var(--subtle)">2</div></div><div class="cal-day"><div class="day-num" style="color:var(--subtle)">3</div></div><div class="cal-day"><div class="day-num" style="color:var(--subtle)">4</div></div><div class="cal-day"><div class="day-num" style="color:var(--subtle)">5</div></div><div class="cal-day"><div class="day-num" style="color:var(--subtle)">6</div></div>
-      <div class="cal-day"><div class="day-num">7</div><div class="dot-row"><div class="dot w"></div></div></div><div class="cal-day"><div class="day-num">8</div></div><div class="cal-day"><div class="day-num">9</div><div class="dot-row"><div class="dot f"></div></div></div><div class="cal-day"><div class="day-num">10</div></div><div class="cal-day"><div class="day-num">11</div><div class="dot-row"><div class="dot a"></div><div class="dot f"></div></div></div><div class="cal-day"><div class="day-num">12</div><div class="dot-row"><div class="dot a"></div></div></div><div class="cal-day"><div class="day-num">13</div></div>
-      <div class="cal-day"><div class="day-num">14</div><div class="dot-row"><div class="dot w"></div><div class="dot f"></div></div></div><div class="cal-day"><div class="day-num">15</div></div><div class="cal-day"><div class="day-num">16</div><div class="dot-row"><div class="dot a"></div></div></div><div class="cal-day"><div class="day-num">17</div></div><div class="cal-day"><div class="day-num">18</div><div class="dot-row"><div class="dot w"></div></div></div><div class="cal-day"><div class="day-num">19</div><div class="dot-row"><div class="dot f"></div></div></div><div class="cal-day"><div class="day-num">20</div><div class="dot-row"><div class="dot a"></div></div></div>
-      <div class="cal-day"><div class="day-num">21</div></div><div class="cal-day sel"><div class="day-num">22</div><div class="dot-row"><div class="dot a"></div><div class="dot f"></div></div></div><div class="cal-day today"><div class="day-num">23</div><div class="dot-row"><div class="dot w"></div></div></div><div class="cal-day"><div class="day-num">24</div></div><div class="cal-day"><div class="day-num">25</div></div><div class="cal-day"><div class="day-num">26</div></div><div class="cal-day"><div class="day-num">27</div></div>
-      <div class="cal-day"><div class="day-num">28</div></div><div class="cal-day"><div class="day-num">29</div></div><div class="cal-day"><div class="day-num">30</div></div>
-    </div>
-    <div class="legend">
-      <div class="leg-i"><div class="leg-d" style="background:var(--indigo)"></div>Attended</div>
-      <div class="leg-i"><div class="leg-d" style="background:var(--indigo-mid)"></div>Watched</div>
-      <div class="leg-i"><div class="leg-d" style="background:#C4BFEF"></div>Fantasy</div>
-    </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
+    <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">📅</div>
+    <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No moments yet</div>
+    <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Your moments will appear here as a timeline of your life.</div>
+    <button onclick="nav('create-group')" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Create a moment</button>
   </div>
-  <div class="day-scroll">
-    <div class="day-lbl">Sunday, June 22 · 2 moments</div>
-    <div class="mom-card hl">
-      <div class="m-icon">⚾</div>
-      <div style="flex:1">
-        <div class="m-type" style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--indigo);flex-shrink:0"></div>Moment · with Mike & Jake</div>
-        <div class="m-title">Giants 6 · Dodgers 3</div>
-        <div class="m-desc">Oracle Park · Sec 119 · Bobblehead night</div>
-        <div class="m-foot">
-          <div style="display:flex;align-items:center"><div class="ov-stack"><div class="ov-av av-b">MK</div><div class="ov-av av-c" style="margin-right:0">JC</div></div><span class="ov-lbl">Mike & Jason were there too</span></div>
-          <div class="t-btn">Thread</div>
-        </div>
-      </div>
-    </div>
-    <div class="mom-card">
-      <div class="m-icon" style="font-size:16px">🏆</div>
-      <div style="flex:1">
-        <div class="m-type" style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:#C4BFEF;flex-shrink:0"></div>Fantasy milestone</div>
-        <div class="m-title">Chapman HR sealed the week</div>
-        <div class="m-desc">The League 2026 · Week 10 win · 78–61</div>
-        <div class="m-foot"><div></div><div class="t-btn">View</div></div>
-      </div>
-    </div>
-  </div>
-  <div class="bottom-nav">
+    <div class="bottom-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item active" onclick="nav('calendar')" aria-label="Calendar"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg><span>Calendar</span></div></button>
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
@@ -822,39 +668,14 @@ function setWhen(w) {
     <div style="width:36px;height:36px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="nav('group-detail')"><i class="ti ti-edit" style="font-size:17px;color:white"></i></div>
   </div>
   <div class="scroll">
-    <div class="closed-banner"><i class="ti ti-lock"></i> Groups are invite-only. Friends-of-friends at most. Never public.</div>
-    <div class="g-row" onclick="nav('osl-group')">
-      <div class="g-icon" style="background:linear-gradient(135deg,#2E1A40 0%,#4A1A6B 100%)"><span>🎪</span></div>
-      <div class="g-info"><div class="g-name">Outside Lands 2026</div><div class="g-prev">Jamie: anyone know what time Hozier goes on?</div></div>
-      <div class="g-meta"><div class="g-time">Now</div><div class="unread">12</div></div>
-    </div>
-    <div class="g-row" onclick="nav('group-detail')">
-      <div class="g-icon deep"><span>⚾</span></div>
-      <div class="g-info"><div class="g-name">The League 2026</div><div class="g-prev">Geoffrey: First place here I come 💪</div></div>
-      <div class="g-meta"><div class="g-time">3:02 PM</div><div class="unread">5</div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-icon slate"><span>🍺</span></div>
-      <div class="g-info"><div class="g-name">Thursday Team</div><div class="g-prev">You: anyone want to grab the Saturday game?</div></div>
-      <div class="g-meta"><div class="g-time">Yesterday</div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-icon forest"><span>🏟️</span></div>
-      <div class="g-info"><div class="g-name">Dad + Giants</div><div class="g-prev">Dad: Same seats Saturday. I'll drive.</div></div>
-      <div class="g-meta"><div class="g-time">Mon</div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-icon warm"><span>🎓</span></div>
-      <div class="g-info"><div class="g-name">Harriet's team</div><div class="g-prev">Harriet: anyone coming to visit Chicago?? 👀</div></div>
-      <div class="g-meta"><div class="g-time">Sun</div><div class="unread">2</div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-icon rose"><span>🏫</span></div>
-      <div class="g-info"><div class="g-name">K-12 friends</div><div class="g-prev">Alex: bar crawl next Friday?</div></div>
-      <div class="g-meta"><div class="g-time">Fri</div></div>
+    <div class="closed-banner"><i class="ti ti-lock"></i> Invite-only. Only people you text can join your moments.</div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">🎪</div>
+      <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No moments yet</div>
+      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Tap the + to create your first moment and invite your people.</div>
     </div>
   </div>
-  <div class="bottom-nav">
+    <div class="bottom-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
@@ -1043,19 +864,12 @@ function setWhen(w) {
 <!-- ═══ FANTASY ═══ -->
 <div class="screen" id="screen-fantasy">
   <div class="status-dark"><span class="st-light">9:41</span><i class="ti ti-battery" style="font-size:14px;color:white"></i></div>
-  <div class="f-hdr">
-    <div class="fh-top"><div><div class="lg-nm">The League 2026</div><div class="lg-seas">Season 14 · Week 13 · 12 members</div></div><div class="set-btn"><i class="ti ti-settings" style="font-size:16px;color:rgba(255,255,255,0.6)"></i></div></div>
-    <div class="mc-card" onclick="nav('matchup')">
-      <div class="mc-lbl">Your matchup this week</div>
-      <div class="mc-row">
-        <div class="mc-team"><div class="mc-nm">Busted<div class="w-pip"></div></div><div class="mc-rec">10–0 · 1st</div></div>
-        <div class="mc-sc"><div class="mc-nums">7–3</div><div class="mc-sub">3 days left</div></div>
-        <div class="mc-team r"><div class="mc-nm">A Hard Time</div><div class="mc-rec">6–7 · 6th</div></div>
-      </div>
-      <div class="mc-foot"><span class="mc-fl">Winning · tap to view</span><div class="view-btn">View matchup</div></div>
-    </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px;background:var(--indigo-deep)">
+    <div style="font-size:32px;margin-bottom:4px">🏆</div>
+    <div style="font-size:18px;font-weight:700;color:white;letter-spacing:-0.4px">No fantasy league yet</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.45);line-height:1.6;max-width:260px">Connect your fantasy league and the trash talk lives here.</div>
   </div>
-  <div class="tabs-dark"><div class="tab-d active">Activity</div><div class="tab-d">Standings</div><div class="tab-d">My Team</div><div class="tab-d">Moves</div></div>
+    <div class="tabs-dark"><div class="tab-d active">Activity</div><div class="tab-d">Standings</div><div class="tab-d">My Team</div><div class="tab-d">Moves</div></div>
   <div class="scroll">
     <div class="wk-res">
       <div class="wr-lbl">Last week · Week 12</div>
@@ -1135,138 +949,14 @@ function setWhen(w) {
   </div>
 
   <div class="scroll-bare" style="overflow-y:auto;-webkit-overflow-scrolling:touch">
-
-    <!-- FAVORITES ALBUM -->
-    <div style="padding:14px 16px 10px;border-bottom:0.5px solid var(--rule)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;color:var(--black);letter-spacing:-0.2px">Favorites</div>
-        <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer">See all</div>
-      </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px">
-        <div style="flex-shrink:0;width:68px;height:68px;border-radius:12px;background:linear-gradient(135deg,#1a3a5c,#1a4a2e);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative">
-          ⚾
-          <div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:rgba(0,0,0,0.45);border-radius:50%;display:flex;align-items:center;justify-content:center">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-        </div>
-        <div style="flex-shrink:0;width:68px;height:68px;border-radius:12px;background:linear-gradient(135deg,#2E1A40,#4A1A6B);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative">
-          🎪
-          <div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:rgba(0,0,0,0.45);border-radius:50%;display:flex;align-items:center;justify-content:center">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-        </div>
-        <div style="flex-shrink:0;width:68px;height:68px;border-radius:12px;background:linear-gradient(135deg,#1C2E4A,#2E1A40);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative">
-          🏆
-          <div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:rgba(0,0,0,0.45);border-radius:50%;display:flex;align-items:center;justify-content:center">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-        </div>
-        <div style="flex-shrink:0;width:68px;height:68px;border-radius:12px;background:linear-gradient(135deg,#1A2E20,#0d2137);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative">
-          🏟️
-          <div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:rgba(0,0,0,0.45);border-radius:50%;display:flex;align-items:center;justify-content:center">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-        </div>
-      </div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:12px">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">❤️</div>
+      <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">Your memories live here</div>
+      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Every moment deserves a home. Tap + to save your first one.</div>
+      <button onclick="nav('create-group')" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Save a moment</button>
     </div>
-
-    <!-- 2026 GRID -->
-    <div style="padding:14px 16px 8px;display:flex;align-items:baseline;justify-content:space-between">
-      <div style="font-size:22px;font-weight:700;color:var(--black);letter-spacing:-1px">2026</div>
-      <div style="font-size:12px;color:var(--subtle)">23 memories</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:0 2px">
-
-      <!-- FEATURED — spans full width -->
-      <div style="grid-column:1/-1;height:160px;position:relative;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px;background:linear-gradient(135deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%);margin-bottom:2px">
-        ⚾
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 30%,rgba(0,0,0,0.8))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 14px">
-          <div style="font-size:14px;font-weight:700;color:white;letter-spacing:-0.3px">Giants 5 · Phillies 4 · Walk-off</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px">Oracle Park · with Harriet</div>
-        </div>
-        <div style="position:absolute;top:10px;right:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        </div>
-      </div>
-
-      <!-- GRID CELLS -->
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#2E1A40,#4A1A6B)">
-        🎪
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Outside Lands 2026</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">24 people</div>
-        </div>
-        <div style="position:absolute;top:6px;right:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-      </div>
-
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#1C2E4A,#2E1A40)">
-        🏆
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Season 14 draft</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">7 people</div>
-        </div>
-      </div>
-
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#1A2E20,#0d2137)">
-        ⚾
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Giants 6 · Dodgers 3</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">Geoffrey + Jason</div>
-        </div>
-      </div>
-
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#3d2800,#1C2E4A)">
-        🏟️
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Dad's birthday game</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">with Dad</div>
-        </div>
-      </div>
-
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#1a1640,#2d1f4e)">
-        ⚾
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Giants 4 · Padres 2</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">solo</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 2025 GRID -->
-    <div style="padding:18px 16px 8px;display:flex;align-items:baseline;justify-content:space-between">
-      <div style="font-size:22px;font-weight:700;color:var(--black);letter-spacing:-1px">2025</div>
-      <div style="font-size:12px;color:var(--subtle)">18 memories</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:0 2px 16px">
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#1a3a5c,#1a4a2e)">
-        ⚾
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Giants 5 · Phillies 4</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">with Harriet</div>
-        </div>
-        <div style="position:absolute;top:6px;right:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#D4AF37" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-      </div>
-      <div style="aspect-ratio:1;position:relative;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#2E1A0A,#1C2E4A)">
-        🎸
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.75))"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:7px 8px">
-          <div style="font-size:10px;font-weight:600;color:white;line-height:1.2">Grateful Dead show</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:1px">Chase Center</div>
-        </div>
-      </div>
-    </div>
-
   </div>
-
-  <div class="bottom-nav">
+    <div class="bottom-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
@@ -1720,9 +1410,9 @@ function setWhen(w) {
   <div class="streak-bar">
     <div class="streak-lbl">This season</div>
     <div class="streak-cards">
-      <div class="s-card on"><div class="s-val">🔥 3</div><div class="s-unit">social streak</div></div>
-      <div class="s-card"><div class="s-val">31</div><div class="s-unit">social events</div></div>
-      <div class="s-card"><div class="s-val">47</div><div class="s-unit">memories</div></div>
+      <div class="s-card on"><div class="s-val">—</div><div class="s-unit">social streak</div></div>
+      <div class="s-card"><div class="s-val">0</div><div class="s-unit">social events</div></div>
+      <div class="s-card"><div class="s-val">0</div><div class="s-unit">memories</div></div>
     </div>
   </div>
 
@@ -1891,10 +1581,10 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
 
 <!-- FIREBASE -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAU2VzlnSOILn7CrzWIH-HMD3YmbMr0I6s",
@@ -1920,22 +1610,44 @@ window.setupRecaptcha = function() {
 };
 
 window.sendSMSCode = async function() {
-  const phone = document.getElementById('phone-input').value.trim();
+  const phoneInput = document.getElementById('phone-input');
+  if (!phoneInput) { showToast('Phone input not found'); return; }
+  const phone = phoneInput.value.trim();
   if (!phone) { showToast('Enter your phone number'); return; }
-  const fullPhone = '+1' + phone.replace(/\D/g, '');
-  if (fullPhone.length !== 12) { showToast('Enter a valid 10-digit number'); return; }
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length !== 10) { showToast('Enter a valid 10-digit number'); return; }
+  const fullPhone = '+1' + digits;
+  
+  const btn = document.querySelector('.ob-btn');
+  if (btn) { btn.textContent = 'Sending...'; btn.disabled = true; }
+  
   try {
-    setupRecaptcha();
+    // Clear any existing recaptcha
+    if (window.recaptchaVerifier) {
+      try { window.recaptchaVerifier.clear(); } catch(e) {}
+      window.recaptchaVerifier = null;
+    }
+    
+    // Create fresh recaptcha
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {}
+    });
+    await window.recaptchaVerifier.render();
+    
     const confirm = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
     window.confirmationResult = confirm;
-    // Show verification screen
     document.getElementById('ob-phone-step').style.display = 'none';
     document.getElementById('ob-verify-step').style.display = 'flex';
-    showToast('Code sent!');
+    showToast('Code sent to ' + fullPhone);
   } catch(e) {
-    console.error(e);
-    showToast('Error sending code. Try again.');
-    if(window.recaptchaVerifier) { window.recaptchaVerifier.clear(); window.recaptchaVerifier = null; }
+    console.error('SMS error:', e);
+    showToast(e.message || 'Error sending code. Try again.');
+    if (btn) { btn.textContent = 'Send code'; btn.disabled = false; }
+    if (window.recaptchaVerifier) {
+      try { window.recaptchaVerifier.clear(); } catch(err) {}
+      window.recaptchaVerifier = null;
+    }
   }
 };
 
@@ -1972,10 +1684,27 @@ onAuthStateChanged(auth, async (user) => {
 
 window.saveProfile = async function() {
   const name = document.getElementById('name-input').value.trim();
+  const dob = document.getElementById('dob-input').value;
   if (!name) { showToast('Enter your name'); return; }
+  if (!dob) { showToast('Enter your date of birth'); return; }
+  
+  // Age check
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  
+  if (age < 18) {
+    showToast('You must be 18 or older to use Innings');
+    return;
+  }
+  
   const user = auth.currentUser;
   await setDoc(doc(db, 'users', user.uid), {
     name: name,
+    dob: dob,
+    age: age,
     phone: user.phoneNumber,
     createdAt: serverTimestamp()
   });
