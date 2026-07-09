@@ -1652,7 +1652,10 @@ window.sendSMSCode = async function() {
     showStep('ob-verify-step');
     toast('Code sent!');
   } catch(err) {
-    console.error(err);
+    console.error('INNINGS AUTH ERROR:', err);
+    console.error('Error code:', err.code);
+    console.error('Error message:', err.message);
+    console.error('Full error:', JSON.stringify(err));
     toast(err.code === 'auth/invalid-phone-number' ? 'Invalid number' :
           err.code === 'auth/too-many-requests' ? 'Too many attempts. Try later.' :
           'Error: ' + (err.code || err.message));
@@ -1726,6 +1729,6 @@ window.serverTimestamp = serverTimestamp;
 window.collection = collection;
 window.addDoc = addDoc;
 </script>
-<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;z-index:9999"></div>
+<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;z-index:-1;visibility:hidden"></div>
 </body>
 </html>
