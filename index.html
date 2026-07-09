@@ -481,7 +481,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
       </div>
       <div class="ob-foot">
-        <button class="ob-btn" onclick="saveProfile()">Start your innings</button>
+        <button class="ob-btn" onclick="window.saveProfile()" type="button">Start your innings</button>
         <div class="ob-notice">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Private by default. Your people only.
@@ -1681,8 +1681,11 @@ window.verifyCode = async function() {
 };
 
 window.saveProfile = async function() {
+  console.log('saveProfile called');
   const name = document.getElementById('name-input');
   const dob = document.getElementById('dob-input');
+  console.log('name:', name ? name.value : 'NOT FOUND');
+  console.log('dob:', dob ? dob.value : 'NOT FOUND');
   if (!name || !name.value.trim()) { toast('Enter your name'); return; }
   if (!dob || !dob.value) { toast('Enter your date of birth'); return; }
 
@@ -1729,6 +1732,6 @@ window.serverTimestamp = serverTimestamp;
 window.collection = collection;
 window.addDoc = addDoc;
 </script>
-<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;z-index:-1;visibility:hidden"></div>
+<div id="recaptcha-container" style="position:fixed;top:-500px;left:-500px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"></div>
 </body>
 </html>
