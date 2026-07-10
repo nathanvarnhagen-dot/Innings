@@ -1669,18 +1669,11 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
   };
 
   window.saveProfile = function() {
-    console.log('saveProfile called');
     var nameEl = document.getElementById('name-input');
     var dobEl = document.getElementById('dob-input');
     var name = nameEl ? nameEl.value.trim() : '';
     var dob = dobEl ? dobEl.value : '';
-    console.log('name:', name, 'dob:', dob);
     if (!name) { toast('Enter your name'); return; }
-    if (!dob) { toast('Enter your date of birth'); return; }
-
-    // Age check — log the raw value for debugging
-    console.log('raw dob value:', dob);
-    // Skip strict age check for now — verified manually for beta
 
     var user = auth.currentUser;
     if (!user) { toast('Session expired — please restart'); return; }
