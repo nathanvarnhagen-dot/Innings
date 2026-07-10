@@ -1620,6 +1620,19 @@ function showStep(stepId) {
     const el = document.getElementById(id);
     if (el) el.style.display = id === stepId ? 'flex' : 'none';
   });
+  if (stepId === 'ob-name-step') {
+    setTimeout(function() {
+      const btn = document.getElementById('start-innings-btn');
+      if (btn) {
+        btn.onclick = null;
+        btn.addEventListener('click', function() {
+          console.log('Start innings tapped via showStep wire');
+          window.saveProfile();
+        });
+        console.log('Profile btn wired in showStep');
+      }
+    }, 100);
+  }
 }
 
 window.sendSMSCode = async function() {
@@ -1723,6 +1736,16 @@ onAuthStateChanged(auth, async (user) => {
       nav('feed');
     } else {
       showStep('ob-name-step');
+      setTimeout(function() {
+        const btn = document.getElementById('start-innings-btn');
+        if (btn) {
+          btn.onclick = null;
+          btn.addEventListener('click', function() {
+            console.log('Start innings tapped via auth wire');
+            window.saveProfile();
+          });
+        }
+      }, 300);
     }
   } catch(e) {
     console.error(e);
@@ -1734,6 +1757,19 @@ window.db = db;
 window.serverTimestamp = serverTimestamp;
 window.collection = collection;
 window.addDoc = addDoc;
+
+// Poll every 200ms to wire the profile button as soon as it becomes visible
+const wireProfileBtn = setInterval(function() {
+  const btn = document.getElementById('start-innings-btn');
+  if (btn && !btn._wired) {
+    btn._wired = true;
+    btn.addEventListener('click', function() {
+      console.log('Start innings tapped');
+      window.saveProfile();
+    });
+    console.log('Profile button wired');
+  }
+}, 200);
 
 // Wire buttons directly to avoid module scope issues
 document.addEventListener('DOMContentLoaded', function() {
