@@ -441,7 +441,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
       </div>
       <div class="ob-foot">
-        <button class="ob-btn" onclick="sendSMSCode()">Send code</button>
+        <button class="ob-btn" type="button" id="send-code-btn">Send code</button>
         <div class="ob-notice">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Your number is never shared. Your people only.
@@ -458,7 +458,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
       </div>
       <div class="ob-foot">
-        <button class="ob-btn" onclick="verifyCode()">Verify</button>
+        <button class="ob-btn" type="button" id="verify-btn">Verify</button>
         <div class="ob-notice" onclick="document.getElementById('ob-verify-step').style.display='none';document.getElementById('ob-phone-step').style.display='flex';" style="cursor:pointer;color:rgba(255,255,255,0.4)">← Back</div>
       </div>
     </div>
@@ -481,7 +481,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
       </div>
       <div class="ob-foot">
-        <button class="ob-btn" onclick="window.saveProfile()" type="button">Start your innings</button>
+        <button class="ob-btn" type="button" id="start-innings-btn">Start your innings</button>
         <div class="ob-notice">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Private by default. Your people only.
@@ -1585,6 +1585,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Expose functions to window immediately so buttons can call them
+window._innings = {}; // namespace to confirm module loaded
+
 const firebaseConfig = {
   apiKey: "AIzaSyAU2VzlnSOILn7CrzWIH-HMD3YmbMr0I6s",
   authDomain: "innings-558fc.firebaseapp.com",
@@ -1731,6 +1734,42 @@ window.db = db;
 window.serverTimestamp = serverTimestamp;
 window.collection = collection;
 window.addDoc = addDoc;
+
+// Wire buttons directly to avoid module scope issues
+document.addEventListener('DOMContentLoaded', function() {
+  // Phone step button
+  const sendBtn = document.querySelector('#ob-phone-step .ob-btn');
+  if (sendBtn) sendBtn.addEventListener('click', window.sendSMSCode);
+  
+  // Verify step button  
+  const verifyBtn = document.querySelector('#ob-verify-step .ob-btn');
+  if (verifyBtn) verifyBtn.addEventListener('click', window.verifyCode);
+  
+  // Profile step button — use MutationObserver since it's hidden initially
+  const observer = new MutationObserver(function() {
+    const profileBtn = document.querySelector('#ob-name-step .ob-btn');
+    if (profileBtn && !profileBtn._wired) {
+      profileBtn._wired = true;
+      profileBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Profile button tapped via listener');
+        window.saveProfile();
+      });
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+  
+  // Also try wiring immediately in case it's already visible
+  const profileBtn = document.querySelector('#ob-name-step .ob-btn');
+  if (profileBtn) {
+    profileBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Profile button tapped immediately');
+      window.saveProfile();
+    });
+  }
+});
 </script>
 <div id="recaptcha-container" style="position:fixed;top:-500px;left:-500px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"></div>
 </body>
