@@ -1708,5 +1708,55 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
     });
   });
 </script>
+
+<script>
+// BUTTON FIX — runs independently of Firebase
+document.addEventListener('DOMContentLoaded', function() {
+  function tryWireButton() {
+    var btn = document.getElementById('start-innings-btn');
+    if (btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        var nameEl = document.getElementById('name-input');
+        var name = nameEl ? nameEl.value.trim() : '';
+        if (!name) { alert('Enter your name'); return; }
+        // Try Firebase save, fall back to just navigating
+        if (typeof window.saveProfile === 'function') {
+          window.saveProfile();
+        } else {
+          // Firebase not loaded — just go to feed
+          if (typeof nav === 'function') nav('feed');
+        }
+      };
+    } else {
+      setTimeout(tryWireButton, 100);
+    }
+  }
+  tryWireButton();
+
+  // Also wire send code and verify buttons
+  function wireSendCode() {
+    var btn = document.getElementById('send-code-btn');
+    if (btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        if (typeof window.sendSMSCode === 'function') window.sendSMSCode();
+      };
+    } else { setTimeout(wireSendCode, 100); }
+  }
+  wireSendCode();
+
+  function wireVerify() {
+    var btn = document.getElementById('verify-btn');
+    if (btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        if (typeof window.verifyCode === 'function') window.verifyCode();
+      };
+    } else { setTimeout(wireVerify, 100); }
+  }
+  wireVerify();
+});
+</script>
 </body>
 </html>
