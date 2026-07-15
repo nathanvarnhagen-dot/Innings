@@ -2201,71 +2201,107 @@ firebase.initializeApp({
   messagingSenderId: "570364586597",
   appId: "1:570364586597:web:774cc634c7c143390ff48c"
 });
+
 var auth = firebase.auth();
 var db = firebase.firestore();
 
-function showStep(stepId) {
-  ['ob-phone-step','ob-verify-step','ob-name-step'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.style.display = id === stepId ? 'flex' : 'none';
-  });
-}
-
-function toast(msg) {
-  var t = document.getElementById('toast-fb');
+// ── HELPERS ──
+function ib_toast(msg) {
+  var t = document.getElementById('ib-toast');
   if (!t) {
     t = document.createElement('div');
-    t.id = 'toast-fb';
-    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:8px 18px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap';
+    t.id = 'ib-toast';
+    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:10px 20px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;display:none';
     document.body.appendChild(t);
   }
   t.textContent = msg;
   t.style.display = 'block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(function(){ t.style.display = 'none'; }, 2500);
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.style.display = 'none'; }, 2800);
 }
 
+function ib_showStep(stepId) {
+  // Force hide all steps first
+  var steps = ['ob-phone-step','ob-verify-step','ob-name-step'];
+  steps.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.cssText = 'display:none!important';
+    el.style.display = 'none';
+  });
+  // Show the target
+  var target = document.getElementById(stepId);
+  if (target) {
+    target.style.cssText = '';
+    target.style.display = 'flex';
+    target.style.flexDirection = 'column';
+    target.style.gap = '14px';
+  }
+}
+
+function ib_setProfileDisplay(name) {
+  var nameDisplay = document.getElementById('profile-name-display');
+  if (nameDisplay && name) nameDisplay.textContent = name;
+  var av = document.getElementById('profile-av');
+  if (av && name) {
+    av.textContent = name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+  }
+}
+
+// ── PHONE AUTH ──
 window.sendSMSCode = function() {
   var input = document.getElementById('phone-input');
-  if (!input) { toast('Input not found'); return; }
-  var digits = input.value.replace(/\D/g,'');
-  if (digits.length !== 10) { toast('Enter a valid 10-digit number'); return; }
-  var btn = document.getElementById('send-code-btn');
+  var phone = input ? input.value.replace(/\D/g,'') : '';
+  if (phone.length !== 10) { ib_toast('Enter a valid 10-digit US number'); return; }
+
+  var btn = document.querySelector('#ob-phone-step .ob-btn');
   if (btn) { btn.textContent = 'Sending…'; btn.disabled = true; }
-  if (window._recaptchaVerifier) {
-    try { window._recaptchaVerifier.clear(); } catch(e) {}
-    window._recaptchaVerifier = null;
+
+  // Destroy old recaptcha
+  if (window._ib_recaptcha) {
+    try { window._ib_recaptcha.clear(); } catch(e) {}
+    window._ib_recaptcha = null;
   }
-  var oldDiv = document.getElementById('recaptcha-container');
-  if (oldDiv) oldDiv.remove();
-  var newDiv = document.createElement('div');
-  newDiv.id = 'recaptcha-container';
-  newDiv.style.cssText = 'position:fixed;top:-1000px;left:-1000px';
-  document.body.appendChild(newDiv);
-  window._recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    size: 'invisible', callback: function() {}
+  var old = document.getElementById('ib-recaptcha');
+  if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'ib-recaptcha';
+  div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px';
+  document.body.appendChild(div);
+
+  window._ib_recaptcha = new firebase.auth.RecaptchaVerifier('ib-recaptcha', {
+    size: 'invisible', callback: function(){}
   });
-  auth.signInWithPhoneNumber('+1' + digits, window._recaptchaVerifier)
+
+  auth.signInWithPhoneNumber('+1' + phone, window._ib_recaptcha)
     .then(function(result) {
-      window._confirmResult = result;
-      showStep('ob-verify-step');
-      toast('Code sent!');
+      window._ib_confirm = result;
+      ib_showStep('ob-verify-step');
+      ib_toast('Code sent! Check your texts.');
+      if (btn) { btn.textContent = 'Send code'; btn.disabled = false; }
     })
     .catch(function(err) {
-      console.error(err);
-      toast('Error: ' + (err.code || err.message));
+      console.error('SMS error:', err);
+      var msg = err.code === 'auth/too-many-requests' ? 'Too many attempts. Try later.' :
+                err.code === 'auth/invalid-phone-number' ? 'Invalid phone number.' :
+                'Could not send code. Check the number and try again.';
+      ib_toast(msg);
       if (btn) { btn.textContent = 'Send code'; btn.disabled = false; }
+      if (window._ib_recaptcha) { try { window._ib_recaptcha.clear(); } catch(e){} window._ib_recaptcha = null; }
     });
 };
 
 window.verifyCode = function() {
-  var code = document.getElementById('verify-input');
-  if (!code || !code.value.trim()) { toast('Enter the 6-digit code'); return; }
-  var btn = document.getElementById('verify-btn');
+  if (!window._ib_confirm) { ib_toast('Please request a code first'); ib_showStep('ob-phone-step'); return; }
+  var codeEl = document.getElementById('verify-input');
+  var code = codeEl ? codeEl.value.trim() : '';
+  if (code.length < 6) { ib_toast('Enter the 6-digit code from your text'); return; }
+  var btn = document.querySelector('#ob-verify-step .ob-btn');
   if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
-  window._confirmResult.confirm(code.value.trim())
+  window._ib_confirm.confirm(code)
     .catch(function(err) {
-      toast('Wrong code — try again');
+      console.error('Verify error:', err);
+      ib_toast('Wrong code — try again');
       if (btn) { btn.textContent = 'Verify'; btn.disabled = false; }
     });
 };
@@ -2273,9 +2309,9 @@ window.verifyCode = function() {
 window.saveProfile = function() {
   var nameEl = document.getElementById('name-input');
   var name = nameEl ? nameEl.value.trim() : '';
-  if (!name) { toast('Enter your name'); return; }
+  if (!name) { ib_toast('Enter your name to continue'); return; }
   var user = auth.currentUser;
-  if (!user) { toast('Session expired — please restart'); return; }
+  if (!user) { ib_toast('Session expired — please start over'); ib_showStep('ob-phone-step'); return; }
   var btn = document.querySelector('#ob-name-step .ob-btn');
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
   db.collection('users').doc(user.uid).set({
@@ -2285,59 +2321,35 @@ window.saveProfile = function() {
   }).then(function() {
     window.currentUser = user;
     window.userData = { name: name, phone: user.phoneNumber };
-    // Update profile display
-    var nameDisplay = document.getElementById('profile-name-display');
-    if (nameDisplay) nameDisplay.textContent = name;
-    var av = document.getElementById('profile-av');
-    if (av) { var i = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); av.textContent = i; }
+    ib_setProfileDisplay(name);
     nav('feed');
   }).catch(function(err) {
-    console.error(err);
-    toast('Error saving profile — try again');
+    console.error('Save error:', err);
+    ib_toast('Error saving — try again');
     if (btn) { btn.textContent = 'Start your innings'; btn.disabled = false; }
   });
 };
 
-// Wire buttons after DOM loads
-document.addEventListener('DOMContentLoaded', function() {
-  var sendBtn = document.getElementById('send-code-btn');
-  if (sendBtn) sendBtn.addEventListener('click', function(e) { e.preventDefault(); window.sendSMSCode(); });
-  var verifyBtn = document.getElementById('verify-btn');
-  if (verifyBtn) verifyBtn.addEventListener('click', function(e) { e.preventDefault(); window.verifyCode(); });
-  function wireProfileBtn() {
-    var profileBtn = document.querySelector('#ob-name-step .ob-btn');
-    if (profileBtn && !profileBtn._wired) {
-      profileBtn._wired = true;
-      profileBtn.addEventListener('click', function(e) { e.preventDefault(); window.saveProfile(); });
-    } else if (!profileBtn) { setTimeout(wireProfileBtn, 200); }
-  }
-  wireProfileBtn();
-});
-
+// ── AUTH STATE ──
 auth.onAuthStateChanged(function(user) {
   if (!user) return;
   window.currentUser = user;
-  db.collection('users').doc(user.uid).get().then(function(snap) {
-    if (snap.exists) {
-      window.userData = snap.data();
-      var name = snap.data().name || '';
-      var nameDisplay = document.getElementById('profile-name-display');
-      if (nameDisplay && name) nameDisplay.textContent = name;
-      var av = document.getElementById('profile-av');
-      if (av && name) { var i = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); av.textContent = i; }
-      nav('feed');
-    } else {
-      showStep('ob-name-step');
-      setTimeout(function() {
-        var btn = document.querySelector('#ob-name-step .ob-btn');
-        if (btn && !btn._wired) {
-          btn._wired = true;
-          btn.addEventListener('click', function(e) { e.preventDefault(); window.saveProfile(); });
-        }
-      }, 300);
-    }
-  }).catch(function() { showStep('ob-name-step'); });
+  db.collection('users').doc(user.uid).get()
+    .then(function(snap) {
+      if (snap.exists) {
+        window.userData = snap.data();
+        ib_setProfileDisplay(snap.data().name || '');
+        nav('feed');
+      } else {
+        ib_showStep('ob-name-step');
+      }
+    })
+    .catch(function(err) {
+      console.error('Auth state error:', err);
+      ib_showStep('ob-name-step');
+    });
 });
+</script>
 
 function sendInviteText() {
   var code = document.getElementById('user-code');
@@ -2413,7 +2425,29 @@ function selectRemember(el, name) {
 }
 
 function saveNewMoment() {
-  nav('memories');
+  var name = document.getElementById('moment-name');
+  var momentName = name ? name.value.trim() : '';
+  var highlight = document.getElementById('highlight-text');
+  var highlightText = highlight ? highlight.value.trim() : '';
+  var user = window.currentUser;
+
+  if (!momentName) { nav('memories'); return; } // Allow saving even without name for preview
+
+  if (user && db) {
+    db.collection('users').doc(user.uid).collection('moments').add({
+      name: momentName || 'Untitled moment',
+      highlight: highlightText,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      uid: user.uid
+    }).then(function() {
+      nav('memories');
+    }).catch(function(err) {
+      console.error('Save moment error:', err);
+      nav('memories');
+    });
+  } else {
+    nav('memories');
+  }
 }
 </script>
 
