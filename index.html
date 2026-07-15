@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Innings">
 <meta name="theme-color" content="#1A1640">
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSI0MCIgZmlsbD0iIzFBMTY0MCIvPgogIDx0ZXh0IHg9IjQ2IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSItYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsIFNGIFBybyBEaXNwbGF5LCBIZWx2ZXRpY2EgTmV1ZSwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjgwMCIgZm9udC1zaXplPSI4OCIgZmlsbD0id2hpdGUiIGxldHRlci1zcGFjaW5nPSItNCI+STwvdGV4dD4KICA8dGV4dCB4PSI4OCIgeT0iMTIyIiBmb250LWZhbWlseT0iLWFwcGxlLXN5c3RlbSwgQmxpbmtNYWNTeXN0ZW1Gb250LCBTRiBQcm8gRGlzcGxheSwgSGVsdmV0aWNhIE5ldWUsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZvbnQtc2l6ZT0iODgiIGZpbGw9IiM2QjYzQjUiIGxldHRlci1zcGFjaW5nPSItNCI+TjwvdGV4dD4KPC9zdmc+">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSI0MCIgZmlsbD0iIzFBMTY0MCIvPgogIDx0ZXh0IHg9IjIyIiB5PSIxMjIiIGZvbnQtZmFtaWx5PSItYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsIEhlbHZldGljYSBOZXVlLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9Ijg4IiBmaWxsPSJ3aGl0ZSIgbGV0dGVyLXNwYWNpbmc9Ii0yIj5JPC90ZXh0PgogIDx0ZXh0IHg9Ijc4IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSItYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsIEhlbHZldGljYSBOZXVlLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9Ijg4IiBmaWxsPSIjQTg5RkU4IiBsZXR0ZXItc3BhY2luZz0iLTIiPk48L3RleHQ+Cjwvc3ZnPg==">
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIklubmluZ3MiLAogICJzaG9ydF9uYW1lIjogIklubmluZ3MiLAogICJkZXNjcmlwdGlvbiI6ICJMaWZlLCBQZW9wbGUsIGFuZCBNb21lbnRzIiwKICAic3RhcnRfdXJsIjogIi8iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxQTE2NDAiLAogICJ0aGVtZV9jb2xvciI6ICIjMUExNjQwIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiCn0=">
 <style>
   @media (prefers-color-scheme: dark) { :root { background: #1A1640; } }
@@ -519,6 +519,80 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
 
   </div>
+</div>
+
+<!-- ═══ ADD TO HOME SCREEN ═══ -->
+<div class="screen" id="screen-add-to-home" style="background:var(--indigo-deep);display:flex;flex-direction:column">
+
+  <!-- TOP — branding -->
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:16px">
+    
+    <!-- IN logo -->
+    <div style="width:80px;height:80px;border-radius:22px;background:var(--indigo-deep);border:2px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+      <span style="font-size:40px;font-weight:800;color:white;letter-spacing:-3px;line-height:1">I<span style="color:#A89FE8">N</span></span>
+    </div>
+
+    <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px">Add Innings to your<br>Home Screen</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.45);line-height:1.65;max-width:280px">So it opens like an app — fullscreen, no browser bar, always one tap away.</div>
+
+    <!-- STEPS -->
+    <div style="background:rgba(255,255,255,0.06);border-radius:20px;padding:20px;width:100%;margin-top:8px;display:flex;flex-direction:column;gap:16px;border:0.5px solid rgba(255,255,255,0.1)">
+      
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(168,159,232,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+          <span style="font-size:16px">1</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Tap the Share button</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5">At the bottom of Safari — the box with an arrow pointing up</div>
+          <!-- Share icon illustration -->
+          <div style="margin-top:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <span style="font-size:12px;color:rgba(255,255,255,0.6);font-weight:600">Share</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:0.5px;background:rgba(255,255,255,0.08)"></div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(168,159,232,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+          <span style="font-size:16px">2</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Tap "Add to Home Screen"</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5">Scroll down in the share sheet until you see it</div>
+          <div style="margin-top:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="17" x2="21" y2="17"/><line x1="17.5" y1="14" x2="17.5" y2="21"/></svg>
+            <span style="font-size:12px;color:rgba(255,255,255,0.6);font-weight:600">Add to Home Screen</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:0.5px;background:rgba(255,255,255,0.08)"></div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(168,159,232,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+          <span style="font-size:16px">3</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Tap "Add" in the top right</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5">Innings will appear on your home screen with the IN icon</div>
+          <div style="margin-top:8px;width:44px;height:44px;border-radius:12px;background:#1A1640;border:1.5px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center">
+            <span style="font-size:18px;font-weight:800;color:white;letter-spacing:-1px">I<span style="color:#A89FE8">N</span></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM BUTTON -->
+  <div style="padding:20px 32px env(safe-area-inset-bottom,28px);flex-shrink:0;display:flex;flex-direction:column;gap:10px">
+    <button onclick="nav('feed')" style="width:100%;background:white;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">I've added it — let's go</button>
+    <button onclick="nav('feed')" style="width:100%;background:transparent;color:rgba(255,255,255,0.35);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Skip for now</button>
+  </div>
+
 </div>
 
 <!-- ═══ CREATE MOMENT ═══ -->
@@ -2322,7 +2396,14 @@ window.saveProfile = function() {
     window.currentUser = user;
     window.userData = { name: name, phone: user.phoneNumber };
     ib_setProfileDisplay(name);
-    nav('feed');
+    // Show Add to Home Screen on iOS Safari
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var isStandalone = window.navigator.standalone;
+    if (isIOS && !isStandalone) {
+      nav('add-to-home');
+    } else {
+      nav('feed');
+    }
   }).catch(function(err) {
     console.error('Save error:', err);
     ib_toast('Error saving — try again');
