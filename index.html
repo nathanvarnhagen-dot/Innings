@@ -2188,12 +2188,157 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
 })();
 </script>
 
-<!-- FIREBASE BYPASS FOR LOCAL PREVIEW -->
+<!-- FIREBASE AUTH -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-window.currentUser = { uid: 'preview-user' };
-window.userData = { name: 'Nathan' };
-window.sendSMSCode = function() { nav('osl-group'); };
-window.verifyCode = function() { nav('osl-group'); };
+firebase.initializeApp({
+  apiKey: "AIzaSyAU2VzlnSOILn7CrzWIH-HMD3YmbMr0I6s",
+  authDomain: "innings-558fc.firebaseapp.com",
+  projectId: "innings-558fc",
+  storageBucket: "innings-558fc.firebasestorage.app",
+  messagingSenderId: "570364586597",
+  appId: "1:570364586597:web:774cc634c7c143390ff48c"
+});
+var auth = firebase.auth();
+var db = firebase.firestore();
+
+function showStep(stepId) {
+  ['ob-phone-step','ob-verify-step','ob-name-step'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = id === stepId ? 'flex' : 'none';
+  });
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast-fb');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast-fb';
+    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:8px 18px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.display = 'none'; }, 2500);
+}
+
+window.sendSMSCode = function() {
+  var input = document.getElementById('phone-input');
+  if (!input) { toast('Input not found'); return; }
+  var digits = input.value.replace(/\D/g,'');
+  if (digits.length !== 10) { toast('Enter a valid 10-digit number'); return; }
+  var btn = document.getElementById('send-code-btn');
+  if (btn) { btn.textContent = 'Sending…'; btn.disabled = true; }
+  if (window._recaptchaVerifier) {
+    try { window._recaptchaVerifier.clear(); } catch(e) {}
+    window._recaptchaVerifier = null;
+  }
+  var oldDiv = document.getElementById('recaptcha-container');
+  if (oldDiv) oldDiv.remove();
+  var newDiv = document.createElement('div');
+  newDiv.id = 'recaptcha-container';
+  newDiv.style.cssText = 'position:fixed;top:-1000px;left:-1000px';
+  document.body.appendChild(newDiv);
+  window._recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    size: 'invisible', callback: function() {}
+  });
+  auth.signInWithPhoneNumber('+1' + digits, window._recaptchaVerifier)
+    .then(function(result) {
+      window._confirmResult = result;
+      showStep('ob-verify-step');
+      toast('Code sent!');
+    })
+    .catch(function(err) {
+      console.error(err);
+      toast('Error: ' + (err.code || err.message));
+      if (btn) { btn.textContent = 'Send code'; btn.disabled = false; }
+    });
+};
+
+window.verifyCode = function() {
+  var code = document.getElementById('verify-input');
+  if (!code || !code.value.trim()) { toast('Enter the 6-digit code'); return; }
+  var btn = document.getElementById('verify-btn');
+  if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+  window._confirmResult.confirm(code.value.trim())
+    .catch(function(err) {
+      toast('Wrong code — try again');
+      if (btn) { btn.textContent = 'Verify'; btn.disabled = false; }
+    });
+};
+
+window.saveProfile = function() {
+  var nameEl = document.getElementById('name-input');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { toast('Enter your name'); return; }
+  var user = auth.currentUser;
+  if (!user) { toast('Session expired — please restart'); return; }
+  var btn = document.querySelector('#ob-name-step .ob-btn');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  db.collection('users').doc(user.uid).set({
+    name: name,
+    phone: user.phoneNumber,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    window.currentUser = user;
+    window.userData = { name: name, phone: user.phoneNumber };
+    // Update profile display
+    var nameDisplay = document.getElementById('profile-name-display');
+    if (nameDisplay) nameDisplay.textContent = name;
+    var av = document.getElementById('profile-av');
+    if (av) { var i = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); av.textContent = i; }
+    nav('feed');
+  }).catch(function(err) {
+    console.error(err);
+    toast('Error saving profile — try again');
+    if (btn) { btn.textContent = 'Start your innings'; btn.disabled = false; }
+  });
+};
+
+// Wire buttons after DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+  var sendBtn = document.getElementById('send-code-btn');
+  if (sendBtn) sendBtn.addEventListener('click', function(e) { e.preventDefault(); window.sendSMSCode(); });
+  var verifyBtn = document.getElementById('verify-btn');
+  if (verifyBtn) verifyBtn.addEventListener('click', function(e) { e.preventDefault(); window.verifyCode(); });
+  function wireProfileBtn() {
+    var profileBtn = document.querySelector('#ob-name-step .ob-btn');
+    if (profileBtn && !profileBtn._wired) {
+      profileBtn._wired = true;
+      profileBtn.addEventListener('click', function(e) { e.preventDefault(); window.saveProfile(); });
+    } else if (!profileBtn) { setTimeout(wireProfileBtn, 200); }
+  }
+  wireProfileBtn();
+});
+
+auth.onAuthStateChanged(function(user) {
+  if (!user) return;
+  window.currentUser = user;
+  db.collection('users').doc(user.uid).get().then(function(snap) {
+    if (snap.exists) {
+      window.userData = snap.data();
+      var name = snap.data().name || '';
+      var nameDisplay = document.getElementById('profile-name-display');
+      if (nameDisplay && name) nameDisplay.textContent = name;
+      var av = document.getElementById('profile-av');
+      if (av && name) { var i = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); av.textContent = i; }
+      nav('feed');
+    } else {
+      showStep('ob-name-step');
+      setTimeout(function() {
+        var btn = document.querySelector('#ob-name-step .ob-btn');
+        if (btn && !btn._wired) {
+          btn._wired = true;
+          btn.addEventListener('click', function(e) { e.preventDefault(); window.saveProfile(); });
+        }
+      }, 300);
+    }
+  }).catch(function() { showStep('ob-name-step'); });
+});
+
 function sendInviteText() {
   var code = document.getElementById('user-code');
   var userCode = code ? code.textContent.trim() : 'YourCode2026';
@@ -2270,8 +2415,6 @@ function selectRemember(el, name) {
 function saveNewMoment() {
   nav('memories');
 }
-
-window.saveProfile = function() { nav('osl-group'); };
 </script>
 
 <script>
