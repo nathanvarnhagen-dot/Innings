@@ -2263,6 +2263,108 @@ setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active')
 })();
 </script>
 
+
+<script>
+// CREATE MOMENT FUNCTIONS — standalone, no Firebase dependency
+function goToStep(n) {
+  for (var i = 1; i <= 4; i++) {
+    var step = document.getElementById('create-step-' + i);
+    var ind = document.getElementById('step-ind-' + i);
+    if (step) step.style.display = 'none';
+    if (ind) ind.style.background = i <= n ? '#3D3580' : '#EAEAF0';
+  }
+  var active = document.getElementById('create-step-' + n);
+  if (active) {
+    active.style.cssText = 'display:flex;flex-direction:column';
+  }
+  // Scroll to top
+  var container = document.getElementById('screen-create-group');
+  if (container) {
+    var scrollable = container.querySelector('div[style*="overflow-y:auto"], div[style*="overflow-y: auto"]');
+    if (scrollable) scrollable.scrollTop = 0;
+    else container.scrollTop = 0;
+  }
+}
+
+function selectVibe(el) {
+  var pills = document.querySelectorAll('#vibe-pills > div');
+  pills.forEach(function(p) {
+    p.style.background = '#F6F6F9';
+    p.style.color = '#8E8EA8';
+    p.style.fontWeight = '500';
+    p.style.borderColor = '#EAEAF0';
+  });
+  el.style.background = '#EEEDF8';
+  el.style.color = '#3D3580';
+  el.style.fontWeight = '600';
+  el.style.borderColor = 'transparent';
+}
+
+function removePerson(id) {
+  var el = document.getElementById('person-' + id);
+  if (el) el.remove();
+}
+
+function selectRemember(el, name) {
+  document.querySelectorAll('[id^="remember-"]').forEach(function(b) {
+    b.style.background = 'rgba(61,53,128,0.08)';
+  });
+  el.style.background = '#3D3580';
+}
+
+function saveNewMoment() {
+  var nameEl = document.getElementById('moment-name');
+  var momentName = nameEl ? nameEl.value.trim() : 'Untitled moment';
+  var highlightEl = document.getElementById('highlight-text');
+  var highlightText = highlightEl ? highlightEl.value.trim() : '';
+  var user = window.currentUser;
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).collection('moments').add({
+      name: momentName || 'Untitled moment',
+      highlight: highlightText,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      nav('memories');
+    }).catch(function() { nav('memories'); });
+  } else {
+    nav('memories');
+  }
+}
+
+function addPerson() {
+  if (typeof sendInviteText === 'function') sendInviteText();
+}
+
+function previewMainPhoto(input) {
+  if (!input || !input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var preview = document.getElementById('main-photo-preview');
+    if (!preview) return;
+    preview.style.backgroundImage = 'url(' + e.target.result + ')';
+    preview.style.backgroundSize = 'cover';
+    preview.style.backgroundPosition = 'center';
+    preview.style.border = 'none';
+    preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = 'none'; });
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function addMomentPhotos(input) {
+  if (!input || !input.files) return;
+  var preview = document.getElementById('moment-photo-preview');
+  if (!preview) return;
+  Array.from(input.files).forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var d = document.createElement('div');
+      d.style.cssText = 'width:68px;height:68px;border-radius:12px;background-size:cover;background-position:center;flex-shrink:0;background-image:url(' + e.target.result + ')';
+      preview.appendChild(d);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+</script>
 <!-- FIREBASE AUTH -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -2460,80 +2562,7 @@ function sendInviteText() {
   }
 }
 
-function goToStep(n) {
-  [1,2,3,4].forEach(function(i) {
-    var step = document.getElementById('create-step-' + i);
-    var ind = document.getElementById('step-ind-' + i);
-    if (step) step.style.display = 'none';
-    if (ind) ind.style.background = i <= n ? 'var(--indigo)' : 'var(--rule)';
-  });
-  var active = document.getElementById('create-step-' + n);
-  if (active) {
-    active.style.display = 'flex';
-    active.style.flexDirection = 'column';
-  }
-  // Scroll the scrollable container to top
-  var scroller = document.querySelector('#screen-create-group > div[style*="overflow-y"]');
-  if (scroller) scroller.scrollTop = 0;
-}
-
-function selectVibe(el) {
-  document.querySelectorAll('#vibe-pills > div').forEach(function(p) {
-    p.style.background = 'var(--bg)';
-    p.style.color = 'var(--subtle)';
-    p.style.fontWeight = '500';
-    p.style.borderColor = 'var(--rule)';
-  });
-  el.style.background = 'var(--indigo-light)';
-  el.style.color = 'var(--indigo)';
-  el.style.fontWeight = '600';
-  el.style.borderColor = 'transparent';
-}
-
-function removePerson(id) {
-  var el = document.getElementById('person-' + id);
-  if (el) el.remove();
-}
-
-function addPerson() {
-  // In real app would open contacts — for preview just show toast
-  sendInviteText();
-}
-
-function selectRemember(el, name) {
-  document.querySelectorAll('[id^="remember-"]').forEach(function(b) {
-    b.style.background = 'rgba(61,53,128,0.08)';
-    b.querySelectorAll('span').forEach(function(s) { s.style.color = 'var(--indigo)'; });
-  });
-  el.style.background = 'var(--indigo)';
-  el.querySelectorAll('span').forEach(function(s) { s.style.color = 'white'; });
-}
-
-function saveNewMoment() {
-  var name = document.getElementById('moment-name');
-  var momentName = name ? name.value.trim() : '';
-  var highlight = document.getElementById('highlight-text');
-  var highlightText = highlight ? highlight.value.trim() : '';
-  var user = window.currentUser;
-
-  if (!momentName) { nav('memories'); return; } // Allow saving even without name for preview
-
-  if (user && db) {
-    db.collection('users').doc(user.uid).collection('moments').add({
-      name: momentName || 'Untitled moment',
-      highlight: highlightText,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      uid: user.uid
-    }).then(function() {
-      nav('memories');
-    }).catch(function(err) {
-      console.error('Save moment error:', err);
-      nav('memories');
-    });
-  } else {
-    nav('memories');
-  }
-}
+// Functions moved to standalone block above
 </script>
 
 <script>
