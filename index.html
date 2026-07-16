@@ -1071,11 +1071,18 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── PHOTOS PANEL ── -->
-  <div id="osl2-photos" style="flex:1;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:48px 24px;text-align:center;background:var(--bg)">
-    <div style="font-size:36px;margin-bottom:4px">📸</div>
-    <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">No photos yet</div>
-    <div style="font-size:13px;color:var(--subtle);max-width:240px;line-height:1.6">Everyone in this group can add photos from the weekend.</div>
-    <button style="margin-top:4px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer">Add a photo</button>
+  <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
+      <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+      <input type="file" id="osl-photo-input" accept="image/*" multiple style="display:none" onchange="addOslPhoto(this)">
+    </div>
+    <div id="osl-photos-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
+      <div style="font-size:34px">📸</div>
+      <div style="font-size:16px;font-weight:700;color:var(--black)">No photos yet</div>
+      <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Everyone in this group can add photos from the weekend.</div>
+    </div>
+    <div id="osl-photos-grid" style="display:none;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 16px 20px;overflow-y:auto"></div>
   </div>
 
 </div>
@@ -1275,6 +1282,7 @@ function oslTab(tab) {
     if (typeof startOslChat === 'function') startOslChat();
   } else if (tab === 'photos') {
     document.getElementById('osl2-photos').style.display = 'flex';
+    if (typeof startOslPhotos === 'function') startOslPhotos();
   }
 }
 
@@ -1498,16 +1506,14 @@ function oslDay2(day) {
 <!-- ═══ PROFILE ═══ -->
 <div class="screen" id="screen-profile">
   <div class="photo-hdr">
-    <div class="photo-slide slide-1 active" id="ps1"></div>
-    <div class="photo-slide slide-2" id="ps2"></div>
-    <div class="photo-slide slide-3" id="ps3"></div>
+    <div id="photo-slides"><div class="photo-slide slide-1 active"></div></div>
     <div class="photo-overlay"></div>
     <div class="photo-status"><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
-    <div class="photo-dots"><div class="pdot active" id="pd1"></div><div class="pdot" id="pd2"></div><div class="pdot" id="pd3"></div></div>
+    <div class="photo-dots" id="photo-dots"></div>
     <div onclick="document.getElementById('profile-photo-input').click()" style="position:absolute;top:56px;right:16px;z-index:6;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,0.3)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
-    <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="addProfilePhoto(this)">
+    <input type="file" id="profile-photo-input" accept="image/*" multiple style="display:none" onchange="addProfilePhoto(this)">
     <div class="profile-info">
       <div>
         <div class="p-av" id="profile-av">?</div>
@@ -1624,8 +1630,20 @@ function oslDay2(day) {
 </div>
 <script>
 function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
-const slides=['ps1','ps2','ps3'],dots=['pd1','pd2','pd3'];let cur=0;
-setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active');document.getElementById(dots[cur]).classList.remove('active');cur=(cur+1)%3;document.getElementById(slides[cur]).classList.add('active');document.getElementById(dots[cur]).classList.add('active')},3000);
+let _photoCur=0, _photoTimer=null;
+function _startPhotoRotation(){
+  if(_photoTimer) clearInterval(_photoTimer);
+  _photoCur=0;
+  _photoTimer=setInterval(function(){
+    var sl=document.querySelectorAll('#photo-slides .photo-slide');
+    var dt=document.querySelectorAll('#photo-dots .pdot');
+    if(sl.length<2) return;
+    sl[_photoCur].classList.remove('active'); if(dt[_photoCur]) dt[_photoCur].classList.remove('active');
+    _photoCur=(_photoCur+1)%sl.length;
+    sl[_photoCur].classList.add('active'); if(dt[_photoCur]) dt[_photoCur].classList.add('active');
+  },3000);
+}
+_startPhotoRotation();
 </script>
 
 <script>
@@ -1970,7 +1988,9 @@ auth.onAuthStateChanged(function(user) {
       if (snap.exists) {
         window.userData = snap.data();
         ib_setProfileDisplay(snap.data().name || '');
-        if (snap.data().profilePhoto && typeof applyProfilePhoto === 'function') applyProfilePhoto(snap.data().profilePhoto);
+        var pdata = snap.data();
+        var photos = pdata.profilePhotos || (pdata.profilePhoto ? [pdata.profilePhoto] : []);
+        if (photos.length && typeof applyProfilePhoto === 'function') applyProfilePhoto(photos);
         nav('feed');
       } else {
         ib_showStep('ob-name-step');
@@ -2050,31 +2070,66 @@ function previewMainPhoto(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
-function applyProfilePhoto(url) {
-  if (!url) return;
-  ['ps1','ps2','ps3'].forEach(function(id){
-    var s = document.getElementById(id);
-    if (s) { s.style.backgroundImage = 'url(' + url + ')'; s.classList.add('has-photo'); }
-  });
+window._profilePhotos = [];
+var PROFILE_PHOTO_MAX = 5;
+
+// Accepts an array of dataURLs, or (legacy) a single dataURL string
+function applyProfilePhoto(photos) {
+  if (typeof photos === 'string') photos = photos ? [photos] : [];
+  window._profilePhotos = (photos || []).slice(0, PROFILE_PHOTO_MAX);
+  renderProfilePhotos();
+}
+
+function renderProfilePhotos() {
+  var slidesBox = document.getElementById('photo-slides');
+  var dotsBox = document.getElementById('photo-dots');
+  if (!slidesBox) return;
+  var photos = window._profilePhotos || [];
+  if (!photos.length) {
+    slidesBox.innerHTML = '<div class="photo-slide slide-1 active"></div>';
+    if (dotsBox) dotsBox.innerHTML = '';
+  } else {
+    slidesBox.innerHTML = photos.map(function(url, i){
+      return '<div class="photo-slide has-photo' + (i === 0 ? ' active' : '') + '" style="background-image:url(' + url + ')"></div>';
+    }).join('');
+    if (dotsBox) dotsBox.innerHTML = photos.length > 1
+      ? photos.map(function(_, i){ return '<div class="pdot' + (i === 0 ? ' active' : '') + '"></div>'; }).join('')
+      : '';
+  }
+  if (typeof _startPhotoRotation === 'function') _startPhotoRotation();
 }
 
 function addProfilePhoto(input) {
-  if (!input.files || !input.files[0]) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    _downscaleImage(e.target.result, 700, function(small){
-      applyProfilePhoto(small);
-      window.userData = window.userData || {};
-      window.userData.profilePhoto = small;
-      var user = window.currentUser || (window.auth && window.auth.currentUser);
-      if (user && window.db) {
-        window.db.collection('users').doc(user.uid).set({ profilePhoto: small }, { merge: true })
-          .then(function(){ if (typeof ib_toast==='function') ib_toast('Profile photo saved'); })
-          .catch(function(err){ console.error('Profile photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not save photo — try again'); });
-      }
-    });
-  };
-  reader.readAsDataURL(input.files[0]);
+  if (!input.files || !input.files.length) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var files = Array.from(input.files);
+  var current = (window._profilePhotos || []).length;
+  var room = PROFILE_PHOTO_MAX - current;
+  if (room <= 0) { if (typeof ib_toast==='function') ib_toast('You can save up to ' + PROFILE_PHOTO_MAX + ' photos'); input.value=''; return; }
+  files = files.slice(0, room);
+  var processed = [], done = 0;
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      _downscaleImage(e.target.result, 900, function(small){
+        processed.push(small);
+        done++;
+        if (done === files.length) {
+          window._profilePhotos = (window._profilePhotos || []).concat(processed).slice(0, PROFILE_PHOTO_MAX);
+          renderProfilePhotos();
+          window.userData = window.userData || {};
+          window.userData.profilePhotos = window._profilePhotos;
+          if (user && window.db) {
+            window.db.collection('users').doc(user.uid).set({ profilePhotos: window._profilePhotos }, { merge: true })
+              .then(function(){ if (typeof ib_toast==='function') ib_toast(window._profilePhotos.length + ' of ' + PROFILE_PHOTO_MAX + ' photos saved'); })
+              .catch(function(err){ console.error('Profile photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not save photo — try again'); });
+          }
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
 }
 function showEditProfile() { var m=document.getElementById('edit-profile-modal'); if(m) m.style.display='flex'; }
 function hideEditProfile() { var m=document.getElementById('edit-profile-modal'); if(m) m.style.display='none'; }
@@ -2571,6 +2626,7 @@ function startOslChat() {
   }, function(err){
     console.error('OSL chat error:', err);
     window._oslChatStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
   });
 }
 
@@ -2611,7 +2667,55 @@ function sendOslMessage() {
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
   window.db.collection('oslChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Send message error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — try again'); });
+    .catch(function(err){ console.error('Send message error:', err); if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules'); });
+}
+
+// ── OUTSIDE LANDS SHARED PHOTOS ──
+window._oslPhotosStarted = false;
+function startOslPhotos() {
+  if (window._oslPhotosStarted) return;
+  if (!window.db) return;
+  window._oslPhotosStarted = true;
+  window.db.collection('oslPhotos').orderBy('ts', 'desc').limit(120).onSnapshot(function(snap){
+    var arr = [];
+    snap.forEach(function(doc){ arr.push(doc.data()); });
+    renderOslPhotos(arr);
+  }, function(err){
+    console.error('OSL photos error:', err);
+    window._oslPhotosStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules');
+  });
+}
+
+function renderOslPhotos(photos) {
+  var grid = document.getElementById('osl-photos-grid');
+  var empty = document.getElementById('osl-photos-empty');
+  if (!grid) return;
+  if (empty) empty.style.display = photos.length ? 'none' : 'flex';
+  grid.style.display = photos.length ? 'grid' : 'none';
+  grid.innerHTML = photos.map(function(p){
+    return '<div style="width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center"></div>';
+  }).join('');
+}
+
+function addOslPhoto(input) {
+  if (!input.files || !input.files.length) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to add photos'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var files = Array.from(input.files);
+  if (typeof ib_toast==='function') ib_toast('Uploading…');
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      _downscaleImage(e.target.result, 1000, function(small){
+        window.db.collection('oslPhotos').add({ uid: user.uid, author: author, photo: small, ts: Date.now() })
+          .catch(function(err){ console.error('Add photo error:', err); if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules'); });
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
 }
 </script>
 </body>
