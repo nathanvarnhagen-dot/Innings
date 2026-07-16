@@ -484,6 +484,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Your number is never shared. Your people only.
         </div>
+        <div id="build-stamp" style="text-align:center;font-size:10px;color:var(--subtle);opacity:0.5;margin-top:2px">build</div>
       </div>
     </div>
 
@@ -1628,6 +1629,14 @@ function oslDay2(day) {
 </div>
 
 </div>
+<script>
+window.INNINGS_BUILD = 'v4.31';
+console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
+document.addEventListener('DOMContentLoaded', function(){
+  var t = document.getElementById('build-stamp');
+  if (t) t.textContent = 'build ' + window.INNINGS_BUILD;
+});
+</script>
 <script>
 function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
 let _photoCur=0, _photoTimer=null;
