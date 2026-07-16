@@ -355,6 +355,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .photo-hdr{position:relative;height:240px;flex-shrink:0;overflow:hidden}
 .photo-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease}
 .photo-slide.active{opacity:1}
+.photo-slide.has-photo::before{display:none}
+.photo-slide.has-photo{background-size:cover;background-position:center}
 .slide-1{background:linear-gradient(160deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%)}
 .slide-1::before{content:'⚾';position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:64px;opacity:0.12}
 .slide-2{background:linear-gradient(150deg,#2d1f4e 0%,#1a1640 50%,#3d2060 100%)}
@@ -827,16 +829,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div class="status-light"><span class="st-dark">9:41</span><i class="ti ti-battery" style="font-size:14px;color:var(--black)"></i></div>
   <div class="topbar-light"><div><span class="app-name">Inn<em>ings</em></span><div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div></div></div>
   <div class="ss-strip">
-    <div class="ss"><div class="ss-v">0</div><div class="ss-l">Moments</div></div>
+    <div class="ss"><div class="ss-v" id="cal-moments">0</div><div class="ss-l">Moments</div></div>
     <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v">0</div><div class="ss-l">This year</div></div>
+    <div class="ss"><div class="ss-v" id="cal-year">0</div><div class="ss-l">This year</div></div>
     <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v" style="color:var(--indigo)">—</div><div class="ss-l">Streak</div></div>
+    <div class="ss"><div class="ss-v" id="cal-streak" style="color:var(--indigo)">0</div><div class="ss-l">Streak</div></div>
   </div>
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
+  <div class="scroll" id="cal-content"></div>
+  <div id="cal-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
     <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">📅</div>
-    <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No moments yet</div>
-    <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Your moments will appear here as a timeline of your life.</div>
+    <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">Nothing on the calendar yet</div>
+    <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">RSVP to an event or save a moment and it'll show up here as a timeline of your life.</div>
     <button onclick="nav('create-group')" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Create a moment</button>
   </div>
     <div class="bottom-nav">
@@ -1054,14 +1057,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── CHAT PANEL ── -->
-  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 24px;text-align:center;background:var(--bg)">
-    <div style="font-size:34px;margin-bottom:2px">💬</div>
-    <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">No messages yet</div>
-    <div style="font-size:13px;color:var(--subtle);max-width:240px;line-height:1.6">Start the conversation with everyone going to Outside Lands.</div>
+  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
+    <div id="osl-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
+      <div style="font-size:34px">💬</div>
+      <div style="font-size:16px;font-weight:700;color:var(--black)">No messages yet</div>
+      <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Start the conversation with everyone going to Outside Lands.</div>
+    </div>
+    <div id="osl-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
   <div id="osl2-chat-input" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;flex-shrink:0">
-    <input class="msg-input" placeholder="Message Outside Lands 2026...">
-    <button class="send-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    <input id="osl-chat-field" class="msg-input" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}">
+    <button class="send-btn" onclick="sendOslMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
 
   <!-- ── PHOTOS PANEL ── -->
@@ -1266,6 +1272,7 @@ function oslTab(tab) {
   } else if (tab === 'chat') {
     document.getElementById('osl2-chat').style.display = 'flex';
     document.getElementById('osl2-chat-input').style.display = 'flex';
+    if (typeof startOslChat === 'function') startOslChat();
   } else if (tab === 'photos') {
     document.getElementById('osl2-photos').style.display = 'flex';
   }
@@ -1616,7 +1623,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
 const slides=['ps1','ps2','ps3'],dots=['pd1','pd2','pd3'];let cur=0;
 setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active');document.getElementById(dots[cur]).classList.remove('active');cur=(cur+1)%3;document.getElementById(slides[cur]).classList.add('active');document.getElementById(dots[cur]).classList.add('active')},3000);
 </script>
@@ -1963,6 +1970,7 @@ auth.onAuthStateChanged(function(user) {
       if (snap.exists) {
         window.userData = snap.data();
         ib_setProfileDisplay(snap.data().name || '');
+        if (snap.data().profilePhoto && typeof applyProfilePhoto === 'function') applyProfilePhoto(snap.data().profilePhoto);
         nav('feed');
       } else {
         ib_showStep('ob-name-step');
@@ -2042,14 +2050,29 @@ function previewMainPhoto(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
+function applyProfilePhoto(url) {
+  if (!url) return;
+  ['ps1','ps2','ps3'].forEach(function(id){
+    var s = document.getElementById(id);
+    if (s) { s.style.backgroundImage = 'url(' + url + ')'; s.classList.add('has-photo'); }
+  });
+}
+
 function addProfilePhoto(input) {
   if (!input.files || !input.files[0]) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    var s = document.getElementById('ps1');
-    s.style.backgroundImage = 'url(' + e.target.result + ')';
-    s.style.backgroundSize = 'cover';
-    s.style.backgroundPosition = 'center';
+    _downscaleImage(e.target.result, 700, function(small){
+      applyProfilePhoto(small);
+      window.userData = window.userData || {};
+      window.userData.profilePhoto = small;
+      var user = window.currentUser || (window.auth && window.auth.currentUser);
+      if (user && window.db) {
+        window.db.collection('users').doc(user.uid).set({ profilePhoto: small }, { merge: true })
+          .then(function(){ if (typeof ib_toast==='function') ib_toast('Profile photo saved'); })
+          .catch(function(err){ console.error('Profile photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not save photo — try again'); });
+      }
+    });
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -2143,6 +2166,7 @@ function loadMoments() {
       window._moments = arr;
       renderMoments(arr);
       updateProfileStats(arr);
+      if (typeof renderCalendar === 'function') renderCalendar();
     })
     .catch(function(err) {
       console.error('Load moments error:', err);
@@ -2438,6 +2462,7 @@ function oslSetRsvp(val) {
   window.userData = window.userData || {};
   window.userData.oslRsvp = val;
   renderOslState();
+  if (typeof renderCalendar === 'function') renderCalendar();
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && window.db) {
     window.db.collection('users').doc(user.uid).set({ oslRsvp: val }, { merge: true }).catch(function(err){ console.error('OSL rsvp error:', err); });
@@ -2467,6 +2492,126 @@ function renderOslState() {
       '<div class="m-nm-sm">Invite</div></div>';
     members.innerHTML = chip + invite;
   }
+}
+
+// ── CALENDAR ──
+function _formatCalDate(s) {
+  if (!s) return '';
+  var p = String(s).split('-');
+  if (p.length !== 3) return s;
+  var d = new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
+}
+
+function renderCalendar() {
+  var moments = window._moments || [];
+  var thisYear = moments.filter(function(m){ return (m.date || '').slice(0,4) === '2026'; });
+  var social = moments.filter(function(m){ return (m.people || []).length > 0; });
+  var mEl = document.getElementById('cal-moments'); if (mEl) mEl.textContent = moments.length;
+  var yEl = document.getElementById('cal-year'); if (yEl) yEl.textContent = thisYear.length;
+  var sEl = document.getElementById('cal-streak'); if (sEl) sEl.textContent = computeWeeklyStreak(social);
+
+  var content = document.getElementById('cal-content');
+  var empty = document.getElementById('cal-empty');
+  if (!content) return;
+
+  var html = '';
+  var rsvp = (window.userData && window.userData.oslRsvp) || '';
+
+  // Upcoming events (Outside Lands if RSVP'd going/maybe)
+  if (rsvp === 'going' || rsvp === 'maybe') {
+    var badge = rsvp === 'going'
+      ? '<span style="background:var(--win-bg);color:var(--win);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">GOING</span>'
+      : '<span style="background:#FEF3E2;color:#7A4F10;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">MAYBE</span>';
+    html += '<div class="sec-title">Upcoming</div>' +
+      '<div onclick="nav(\'osl-group\')" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:18px">' +
+        '<div style="width:52px;flex-shrink:0;text-align:center">' +
+          '<div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.9);text-transform:uppercase;letter-spacing:0.06em">Aug</div>' +
+          '<div style="font-size:24px;font-weight:900;color:white;line-height:1.1">7–9</div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:15px;font-weight:700;color:white">Outside Lands 2026</div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px">Fri–Sun · Golden Gate Park</div>' +
+        '</div>' + badge +
+      '</div>';
+  }
+
+  // Moments timeline (most recent first)
+  if (moments.length) {
+    html += '<div class="sec-title">Your moments</div><div style="display:flex;flex-direction:column;gap:8px">';
+    html += moments.map(function(m){
+      var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+      return '<div onclick="openMemory(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+        '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+        '<div style="font-size:12px;color:var(--subtle);margin-top:1px">' + _escapeHtml(m.date ? _formatCalDate(m.date) : '') + '</div></div>' +
+      '</div>';
+    }).join('');
+    html += '</div>';
+  }
+
+  var hasContent = html.length > 0;
+  content.innerHTML = html;
+  content.style.display = hasContent ? 'block' : 'none';
+  if (empty) empty.style.display = hasContent ? 'none' : 'flex';
+}
+
+// ── OUTSIDE LANDS GROUP CHAT (shared across everyone) ──
+window._oslChatStarted = false;
+function startOslChat() {
+  if (window._oslChatStarted) return;
+  if (!window.db) return;
+  window._oslChatStarted = true;
+  window.db.collection('oslChat').orderBy('ts').limit(300).onSnapshot(function(snap){
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(doc.data()); });
+    renderOslChat(msgs);
+  }, function(err){
+    console.error('OSL chat error:', err);
+    window._oslChatStarted = false;
+  });
+}
+
+function _fmtTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var h = d.getHours(), m = d.getMinutes();
+  var ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
+}
+
+function renderOslChat(msgs) {
+  var box = document.getElementById('osl-chat-msgs');
+  var empty = document.getElementById('osl-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function(c){
+    var mine = c.uid && c.uid === myUid;
+    if (mine) {
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+  }).join('');
+  var panel = document.getElementById('osl2-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function sendOslMessage() {
+  var inp = document.getElementById('osl-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  window.db.collection('oslChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('Send message error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — try again'); });
 }
 </script>
 </body>
