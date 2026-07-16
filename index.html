@@ -682,16 +682,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
             <div style="width:48px;height:48px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--indigo)">You</div>
             <div style="font-size:10px;color:var(--subtle)">You</div>
           </div>
-
-          <!-- Add person -->
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer" onclick="addPerson()">
-            <div style="width:48px;height:48px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </div>
-            <div style="font-size:10px;color:var(--subtle)">Invite</div>
-          </div>
         </div>
-        <div style="font-size:12px;color:var(--subtle);margin-top:12px">Tagged people get a text link to claim their place in this memory.</div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <input id="new-person-name" placeholder="Add a name" onkeydown="if(event.key==='Enter'){event.preventDefault();addMomentPerson();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">
+          <button onclick="addMomentPerson()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:12px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
+        </div>
+        <div onclick="if(typeof sendInviteText==='function')sendInviteText()" style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:12px;cursor:pointer">＋ Text an invite link instead</div>
+        <div style="font-size:12px;color:var(--subtle);margin-top:8px">Tagging people is what turns a moment into a shared memory — and keeps your weekly streak alive.</div>
       </div>
 
       <!-- JUST YOU OPTION -->
@@ -892,22 +889,29 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎪</div>
       <div>
         <div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px">Outside Lands 2026</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Aug 7–9 · Golden Gate Park · 24 going</div>
+        <div id="osl-going-status" style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Aug 7–9 · Golden Gate Park</div>
       </div>
     </div>
   </div>
 
   <!-- MEMBERS STRIP -->
-  <div style="background:white;border-bottom:0.5px solid var(--rule);padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-a">You</div><div class="m-nm-sm">You</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-b">JM</div><div class="m-nm-sm">Jamie</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-c">KL</div><div class="m-nm-sm">Kira</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-d">TR</div><div class="m-nm-sm">Tyler</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-e">SA</div><div class="m-nm-sm">Sofia</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0"><div class="m-av-sm av-b">MC</div><div class="m-nm-sm">Marcus</div></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
-      <div style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--subtle)">+18</div>
-      <div class="m-nm-sm">more</div>
+  <div id="osl-members" style="background:white;border-bottom:0.5px solid var(--rule);padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--subtle)">＋</div>
+      <div class="m-nm-sm">Invite</div>
+    </div>
+  </div>
+
+  <!-- FIRST-VISIT RSVP OVERLAY -->
+  <div id="osl-rsvp-overlay" style="display:none;position:absolute;inset:0;z-index:60;background:rgba(13,8,32,0.92);flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;gap:8px">
+    <div style="font-size:34px;margin-bottom:6px">🎪</div>
+    <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px">Outside Lands 2026</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:22px">Aug 7–9 · Golden Gate Park</div>
+    <div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px">Are you going?</div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px">
+      <button onclick="oslSetRsvp('going')" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">I'm going ✓</button>
+      <button onclick="oslSetRsvp('maybe')" style="width:100%;background:rgba(255,255,255,0.1);color:white;border:0.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Maybe</button>
+      <button onclick="oslSetRsvp('no')" style="width:100%;background:transparent;color:rgba(255,255,255,0.45);border:none;padding:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Can't make it this year</button>
     </div>
   </div>
 
@@ -1050,26 +1054,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── CHAT PANEL ── -->
-  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px">
-    <div style="text-align:center;font-size:11px;font-weight:600;color:var(--subtle)">Today · Aug 8</div>
-    <div class="msg"><div class="m-av av-b" style="width:30px;height:30px">JM</div>
-      <div>
-        <div class="art-share" style="background:linear-gradient(135deg,#2E1A40,#4A1A6B);border:none;max-width:220px">
-          <div class="art-thumb" style="background:rgba(255,255,255,0.05);height:48px;font-size:16px">🎵</div>
-          <div class="art-body" style="background:rgba(255,255,255,0.06)">
-            <div class="art-src" style="color:rgba(255,255,255,0.4)">OSL App</div>
-            <div class="art-title" style="color:white;font-size:12px">Friday set times — Charli XCX 9pm Lands End</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--subtle);margin-top:3px;padding:0 4px">11:42 AM</div>
-      </div>
-    </div>
-    <div class="msg"><div class="m-av av-c" style="width:30px;height:30px">KL</div><div class="bubble them"><div class="b-who">Kira</div><div class="b-txt">anyone know what time Charli XCX goes on?</div><div class="b-t">11:44 AM</div></div></div>
-    <div class="msg"><div class="m-av av-b" style="width:30px;height:30px">JM</div><div class="bubble them"><div class="b-who">Jamie</div><div class="b-txt">9pm Lands End — just posted above 😂</div><div class="b-t">11:45 AM</div></div></div>
-    <div class="msg"><div class="m-av av-d" style="width:30px;height:30px">TR</div><div class="bubble them"><div class="b-who">Tyler</div><div class="b-txt">GRIZTRONICS at SOMA at 7 or Labrinth at Lands End? this is impossible</div><div class="b-t">12:02 PM</div></div></div>
-    <div class="msg"><div class="m-av av-e" style="width:30px;height:30px">SA</div><div class="bubble them"><div class="b-who">Sofia</div><div class="b-txt">we split up and report back obviously</div><div class="b-t">12:04 PM</div></div></div>
-    <div class="msg mine"><div class="m-av av-a" style="width:30px;height:30px">You</div><div class="bubble me"><div class="b-txt">meet at polo field entrance after Charli? 🌳</div><div class="b-t" style="text-align:right">2:35 PM</div></div></div>
-    <div class="msg"><div class="m-av av-b" style="width:30px;height:30px">JM</div><div class="bubble them"><div class="b-who">Jamie</div><div class="b-txt">✅✅✅</div><div class="b-t">2:36 PM</div></div></div>
+  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 24px;text-align:center;background:var(--bg)">
+    <div style="font-size:34px;margin-bottom:2px">💬</div>
+    <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">No messages yet</div>
+    <div style="font-size:13px;color:var(--subtle);max-width:240px;line-height:1.6">Start the conversation with everyone going to Outside Lands.</div>
   </div>
   <div id="osl2-chat-input" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;flex-shrink:0">
     <input class="msg-input" placeholder="Message Outside Lands 2026...">
@@ -1107,7 +1095,7 @@ function setRsvp(val) {
     }
   });
   var summary = document.getElementById('rsvp-summary');
-  var msgs = {going:"You're going! 🎉 18 others are also going.", maybe:'Maybe — 4 others are also on the fence.', no:"You're not going. Maybe next year."};
+  var msgs = {going:"You're going! 🎉", maybe:'Maybe — still deciding.', no:"You're not going. Maybe next year."};
   summary.textContent = msgs[val];
   summary.style.display = 'block';
 }
@@ -1488,6 +1476,18 @@ function oslDay2(day) {
   </div>
 </div>
 
+<!-- ═══ MEMORY DETAIL ═══ -->
+<div class="screen" id="screen-memory-detail" style="background:var(--bg)">
+  <div class="status-light"><span class="st-dark">9:41</span></div>
+  <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+    </button>
+    <button onclick="momentDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
+  </div>
+  <div class="scroll" id="md-scroll" style="padding:0"></div>
+</div>
+
 <!-- ═══ PROFILE ═══ -->
 <div class="screen" id="screen-profile">
   <div class="photo-hdr">
@@ -1528,9 +1528,9 @@ function oslDay2(day) {
   <div class="streak-bar">
     <div class="streak-lbl">2026</div>
     <div class="streak-cards">
-      <div class="s-card on"><div class="s-val">—</div><div class="s-unit">social streak</div></div>
-      <div class="s-card"><div class="s-val">0</div><div class="s-unit">social events</div></div>
-      <div class="s-card"><div class="s-val">0</div><div class="s-unit">memories</div></div>
+      <div class="s-card on" id="stat-streak-card"><div class="s-val" id="stat-streak">0</div><div class="s-unit">social streak</div></div>
+      <div class="s-card"><div class="s-val" id="stat-events">0</div><div class="s-unit">social events</div></div>
+      <div class="s-card"><div class="s-val" id="stat-memories">0</div><div class="s-unit">memories</div></div>
     </div>
   </div>
 
@@ -1616,7 +1616,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
 const slides=['ps1','ps2','ps3'],dots=['pd1','pd2','pd3'];let cur=0;
 setInterval(()=>{document.getElementById(slides[cur]).classList.remove('active');document.getElementById(dots[cur]).classList.remove('active');cur=(cur+1)%3;document.getElementById(slides[cur]).classList.add('active');document.getElementById(dots[cur]).classList.add('active')},3000);
 </script>
@@ -1747,6 +1747,8 @@ function saveNewMoment() {
   var dedication = rememberEl ? rememberEl.value.trim() : '';
   var vibe = window._momentVibe || '⚾ Game';
   var photo = window._momentPhoto || '';
+  var people = (window._momentPeople || []).slice();
+  var photos = (window._momentExtraPhotos || []).slice();
 
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) {
@@ -1764,6 +1766,9 @@ function saveNewMoment() {
     highlight: highlightText,
     dedication: dedication,
     photo: photo,
+    photos: photos,
+    people: people,
+    comments: [],
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() {
     _savingMoment = false;
@@ -1788,6 +1793,9 @@ function resetMomentForm() {
   if (extraPrev) extraPrev.innerHTML = '';
   window._momentPhoto = '';
   window._momentVibe = '⚾ Game';
+  window._momentPeople = [];
+  window._momentExtraPhotos = [];
+  if (typeof renderMomentPeople === 'function') renderMomentPeople();
   if (typeof goToStep === 'function') goToStep(1);
 }
 
@@ -2079,11 +2087,15 @@ function saveInterest() {
 function addMomentPhotos(input) {
   if(!input.files) return;
   var p=document.getElementById('moment-photo-preview'); if(!p) return;
+  if(!window._momentExtraPhotos) window._momentExtraPhotos=[];
   Array.from(input.files).forEach(function(file){
     var r=new FileReader(); r.onload=function(e){
-      var d=document.createElement('div');
-      d.style.cssText='width:68px;height:68px;border-radius:12px;background-size:cover;background-position:center;flex-shrink:0;background-image:url('+e.target.result+')';
-      p.appendChild(d);
+      _downscaleImage(e.target.result, 900, function(small){
+        window._momentExtraPhotos.push(small);
+        var d=document.createElement('div');
+        d.style.cssText='width:68px;height:68px;border-radius:12px;background-size:cover;background-position:center;flex-shrink:0;background-image:url('+small+')';
+        p.appendChild(d);
+      });
     }; r.readAsDataURL(file);
   });
 }
@@ -2104,9 +2116,20 @@ function _formatMomentDate(s) {
   return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
 }
 
+function _initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).map(function(w){ return w[0] || ''; }).join('').toUpperCase().slice(0, 2);
+}
+
+window._moments = [];
+function _findMoment(id) {
+  for (var i = 0; i < window._moments.length; i++) { if (window._moments[i]._id === id) return window._moments[i]; }
+  return null;
+}
+
 function loadMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) { renderMoments([]); return; }
+  if (!user || !window.db) { window._moments = []; renderMoments([]); updateProfileStats([]); return; }
   window.db.collection('users').doc(user.uid).collection('moments').get()
     .then(function(snap) {
       var arr = [];
@@ -2117,11 +2140,14 @@ function loadMoments() {
         if (tb !== ta) return tb - ta;
         return (b.date || '').localeCompare(a.date || '');
       });
+      window._moments = arr;
       renderMoments(arr);
+      updateProfileStats(arr);
     })
     .catch(function(err) {
       console.error('Load moments error:', err);
       renderMoments([]);
+      updateProfileStats([]);
     });
 }
 
@@ -2144,18 +2170,303 @@ function renderMoments(moments) {
       : '<div class="mem-snap-img" style="background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%);font-size:34px">' + _escapeHtml(emoji) + '</div>';
     var sub = _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : ''));
     var caption = m.highlight ? '<div class="mem-snap-caption">' + _escapeHtml(m.highlight) + '</div>' : '';
-    var ded = m.dedication
-      ? '<div class="mem-snap-highlight"><i class="ti ti-star-filled"></i><span>' + _escapeHtml(m.dedication) + '</span></div>'
-      : '';
-    return '<div class="mem-snap">' + img +
+    var people = (m.people || []);
+    var who = people.length ? 'You + ' + (people.length === 1 ? _escapeHtml(people[0]) : people.length + ' others') : 'Just you';
+    var nComments = (m.comments || []).length;
+    var totalPhotos = (m.photos || []).length + (m.photo ? 1 : 0);
+    var meta = [];
+    if (totalPhotos > 1) meta.push(totalPhotos + ' photos');
+    if (nComments) meta.push(nComments + (nComments === 1 ? ' comment' : ' comments'));
+    var metaLine = meta.length ? '<div style="font-size:11px;color:var(--subtle);margin-top:8px">' + meta.join('  ·  ') + '</div>' : '';
+    return '<div class="mem-snap" style="cursor:pointer" onclick="openMemory(\'' + m._id + '\')">' + img +
       '<div class="mem-snap-body">' +
         '<div class="mem-snap-who">' +
-          '<div class="av av-a" style="width:28px;height:28px;font-size:10px">You</div>' +
+          '<div class="av av-a" style="width:28px;height:28px;font-size:10px">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
           '<div><div class="mem-snap-names">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
-          '<div class="mem-snap-date">' + sub + '</div></div>' +
-        '</div>' + caption + ded +
+          '<div class="mem-snap-date">' + who + '  ·  ' + sub + '</div></div>' +
+        '</div>' + caption + metaLine +
       '</div></div>';
   }).join('');
+}
+
+// ── PROFILE STATS + SOCIAL STREAK ──
+function _weekIndex(dateStr) {
+  var p = String(dateStr || '').split('-');
+  if (p.length !== 3) return null;
+  var days = Date.UTC(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)) / 86400000;
+  return Math.floor((days + 3) / 7); // Monday-anchored week index
+}
+
+function computeWeeklyStreak(socialMoments) {
+  if (!socialMoments.length) return 0;
+  var weeks = {};
+  socialMoments.forEach(function(m){ var w = _weekIndex(m.date); if (w !== null) weeks[w] = true; });
+  var cur = _weekIndex(new Date().toISOString().slice(0,10));
+  if (cur === null) return 0;
+  if (!weeks[cur] && !weeks[cur-1]) return 0; // streak broken if no social moment this week or last
+  var start = weeks[cur] ? cur : cur - 1;
+  var count = 0, w = start;
+  while (weeks[w]) { count++; w--; }
+  return count;
+}
+
+function updateProfileStats(moments) {
+  var social = moments.filter(function(m){ return (m.people || []).length > 0; });
+  var streak = computeWeeklyStreak(social);
+  var memEl = document.getElementById('stat-memories');
+  var evEl = document.getElementById('stat-events');
+  var stEl = document.getElementById('stat-streak');
+  var stCard = document.getElementById('stat-streak-card');
+  if (memEl) memEl.textContent = moments.length;
+  if (evEl) evEl.textContent = social.length;
+  if (stEl) stEl.textContent = streak;
+  if (stCard) stCard.className = 's-card' + (streak > 0 ? ' on' : '');
+}
+
+// ── MEMORY DETAIL / EDIT / COMMENT / DELETE ──
+window._openMomentId = null;
+
+function openMemory(id) {
+  var m = _findMoment(id);
+  if (!m) return;
+  window._openMomentId = id;
+  renderMemoryDetail(m);
+  nav('memory-detail');
+}
+
+function renderMemoryDetail(m) {
+  var box = document.getElementById('md-scroll');
+  if (!box) return;
+  var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
+  var hero = allPhotos.length
+    ? '<div style="height:220px;background-image:url(' + allPhotos[0] + ');background-size:cover;background-position:center"></div>'
+    : '<div style="height:150px;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:52px">' + _escapeHtml((m.vibe||'⚾').split(' ')[0]) + '</div>';
+
+  var gallery = '';
+  if (allPhotos.length > 1) {
+    gallery = '<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0">' +
+      allPhotos.slice(1).map(function(p){ return '<div style="width:76px;height:76px;border-radius:12px;flex-shrink:0;background-image:url(' + p + ');background-size:cover;background-position:center"></div>'; }).join('') +
+      '</div>';
+  }
+
+  var people = (m.people || []);
+  var peopleChips = '<div class="av av-a" style="width:34px;height:34px;font-size:11px">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
+    people.map(function(nm, i){
+      return '<div style="position:relative"><div class="av av-b" style="width:34px;height:34px;font-size:11px;margin-left:-6px;border:2px solid white">' + _escapeHtml(_initials(nm)) + '</div>' +
+        '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--loss);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div></div>';
+    }).join('');
+
+  var comments = (m.comments || []);
+  var commentHtml = comments.length
+    ? comments.map(function(c){
+        return '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+          '<div class="av av-c" style="width:28px;height:28px;font-size:10px;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--black)">' + _escapeHtml(c.author) + '</div>' +
+          '<div style="font-size:13px;color:var(--mid);line-height:1.5;margin-top:1px">' + _escapeHtml(c.text) + '</div></div></div>';
+      }).join('')
+    : '<div style="font-size:13px;color:var(--subtle);padding:4px 0">No comments yet. Add the first one.</div>';
+
+  box.innerHTML =
+    hero + gallery +
+    '<div style="padding:16px">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Moment name</div>' +
+      '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:none;outline:none;background:transparent;letter-spacing:-0.4px;font-family:inherit;margin-bottom:4px">' +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:16px">' + _escapeHtml((m.vibe||'') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
+
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
+      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:20px">' +
+        '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:13px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 12px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
+        '<button onclick="momentTagPerson()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
+      '</div>' +
+
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
+      '<textarea id="md-highlight" placeholder="What do you want to remember?" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:88px;font-family:inherit;line-height:1.6;margin-bottom:16px">' + _escapeHtml(m.highlight || '') + '</textarea>' +
+
+      (m.dedication ? '<div style="background:var(--indigo-light);border-radius:14px;padding:12px 14px;margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Dedication</div><div style="font-size:14px;color:var(--indigo-dark);line-height:1.55;font-style:italic">' + _escapeHtml(m.dedication) + '</div></div>' : '') +
+
+      '<div style="display:flex;gap:8px;margin-bottom:24px">' +
+        '<input type="file" id="md-photo-input" accept="image/*" multiple style="display:none" onchange="momentAddPhoto(this)">' +
+        '<button onclick="document.getElementById(\'md-photo-input\').click()" style="flex:1;background:var(--bg);border:0.5px solid var(--rule);border-radius:14px;padding:12px;font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer;font-family:inherit">＋ Add photos</button>' +
+        '<button onclick="momentSaveEdits()" style="flex:1;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save changes</button>' +
+      '</div>' +
+
+      '<div style="border-top:0.5px solid var(--rule);padding-top:18px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Comments</div>' +
+        '<div id="md-comments">' + commentHtml + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:6px">' +
+          '<input id="md-comment" placeholder="Add a comment…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
+          '<button onclick="momentAddComment()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Post</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function _persistMoment(m, fields, okMsg) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in first'); return; }
+  window.db.collection('users').doc(user.uid).collection('moments').doc(m._id).update(fields)
+    .then(function(){
+      if (okMsg && typeof ib_toast==='function') ib_toast(okMsg);
+      renderMoments(window._moments);
+      updateProfileStats(window._moments);
+    })
+    .catch(function(err){ console.error('Update error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+}
+
+function momentSaveEdits() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  var nm = document.getElementById('md-name');
+  var hl = document.getElementById('md-highlight');
+  m.name = nm ? (nm.value.trim() || 'Untitled moment') : m.name;
+  m.highlight = hl ? hl.value.trim() : m.highlight;
+  _persistMoment(m, { name: m.name, highlight: m.highlight }, 'Saved');
+}
+
+function momentTagPerson() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  var inp = document.getElementById('md-person');
+  var name = inp ? inp.value.trim() : '';
+  if (!name) return;
+  m.people = (m.people || []).concat([name]);
+  if (inp) inp.value = '';
+  renderMemoryDetail(m);
+  _persistMoment(m, { people: m.people }, 'Tagged ' + name);
+}
+
+function momentRemovePerson(i) {
+  var m = _findMoment(window._openMomentId); if (!m || !m.people) return;
+  m.people.splice(i, 1);
+  renderMemoryDetail(m);
+  _persistMoment(m, { people: m.people });
+}
+
+function momentAddPhoto(input) {
+  var m = _findMoment(window._openMomentId); if (!m || !input.files) return;
+  if (!m.photos) m.photos = [];
+  var files = Array.from(input.files), done = 0;
+  files.forEach(function(file){
+    var r = new FileReader();
+    r.onload = function(e){
+      _downscaleImage(e.target.result, 900, function(small){
+        if (!m.photo) m.photo = small; else m.photos.push(small);
+        done++;
+        if (done === files.length) {
+          renderMemoryDetail(m);
+          _persistMoment(m, { photo: m.photo || '', photos: m.photos }, 'Photo added');
+        }
+      });
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+function momentAddComment() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  var inp = document.getElementById('md-comment');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var author = (window.userData && window.userData.name) || 'You';
+  m.comments = (m.comments || []).concat([{ author: author, text: text, ts: Date.now() }]);
+  if (inp) inp.value = '';
+  renderMemoryDetail(m);
+  _persistMoment(m, { comments: m.comments });
+}
+
+function momentDelete() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  if (!confirm('Delete "' + (m.name || 'this moment') + '"? This can\'t be undone.')) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window.db.collection('users').doc(user.uid).collection('moments').doc(m._id).delete()
+    .then(function(){
+      window._moments = window._moments.filter(function(x){ return x._id !== m._id; });
+      if (typeof ib_toast==='function') ib_toast('Moment deleted');
+      renderMoments(window._moments);
+      updateProfileStats(window._moments);
+      nav('memories');
+    })
+    .catch(function(err){ console.error('Delete error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+// ── CREATE FLOW: tag people by name ──
+window._momentPeople = [];
+function addMomentPerson() {
+  var inp = document.getElementById('new-person-name');
+  var name = inp ? inp.value.trim() : '';
+  if (!name) return;
+  if (!window._momentPeople) window._momentPeople = [];
+  window._momentPeople.push(name);
+  if (inp) inp.value = '';
+  renderMomentPeople();
+}
+function removeMomentPerson(i) {
+  if (!window._momentPeople) return;
+  window._momentPeople.splice(i, 1);
+  renderMomentPeople();
+}
+function renderMomentPeople() {
+  var list = document.getElementById('people-list');
+  if (!list) return;
+  var you = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' +
+    '<div style="width:48px;height:48px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
+    '<div style="font-size:10px;color:var(--subtle)">You</div></div>';
+  var others = (window._momentPeople || []).map(function(nm, i){
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;position:relative">' +
+      '<div class="av av-b" style="width:48px;height:48px;font-size:15px">' + _escapeHtml(_initials(nm)) + '</div>' +
+      '<div style="font-size:10px;color:var(--subtle);max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
+      '<div onclick="removeMomentPerson(' + i + ')" style="position:absolute;top:-4px;right:2px;width:18px;height:18px;border-radius:50%;background:var(--loss);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div></div>';
+  }).join('');
+  list.innerHTML = you + others;
+}
+
+// ── OUTSIDE LANDS RSVP ──
+function oslCheckRsvp() {
+  var rsvp = window.userData && window.userData.oslRsvp;
+  var overlay = document.getElementById('osl-rsvp-overlay');
+  if (!rsvp) {
+    if (overlay) overlay.style.display = 'flex';
+  } else {
+    if (overlay) overlay.style.display = 'none';
+    renderOslState();
+  }
+}
+
+function oslSetRsvp(val) {
+  var overlay = document.getElementById('osl-rsvp-overlay');
+  if (overlay) overlay.style.display = 'none';
+  window.userData = window.userData || {};
+  window.userData.oslRsvp = val;
+  renderOslState();
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ oslRsvp: val }, { merge: true }).catch(function(err){ console.error('OSL rsvp error:', err); });
+  }
+  if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're going 🎉" : val === 'maybe' ? 'Marked as maybe' : 'Marked as not going');
+}
+
+function renderOslState() {
+  var rsvp = (window.userData && window.userData.oslRsvp) || '';
+  var name = (window.userData && window.userData.name) || 'You';
+  var status = document.getElementById('osl-going-status');
+  if (status) {
+    if (rsvp === 'going') status.textContent = "You're going · Aug 7–9";
+    else if (rsvp === 'maybe') status.textContent = 'Maybe · Aug 7–9 · Golden Gate Park';
+    else status.textContent = 'Aug 7–9 · Golden Gate Park';
+  }
+  var members = document.getElementById('osl-members');
+  if (members) {
+    var chip = '';
+    if (rsvp === 'going' || rsvp === 'maybe') {
+      chip = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' +
+        '<div class="m-av-sm av-a">' + _escapeHtml(_initials(name)) + '</div>' +
+        '<div class="m-nm-sm">' + _escapeHtml(name.split(' ')[0]) + '</div></div>';
+    }
+    var invite = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText===\'function\')sendInviteText()">' +
+      '<div style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--subtle)">＋</div>' +
+      '<div class="m-nm-sm">Invite</div></div>';
+    members.innerHTML = chip + invite;
+  }
 }
 </script>
 </body>
