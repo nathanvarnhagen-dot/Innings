@@ -2671,15 +2671,25 @@ function renderOslChat(msgs) {
 }
 
 function sendOslMessage() {
+  console.log('[oslChat] sendOslMessage called');
   var inp = document.getElementById('osl-chat-field');
+  console.log('[oslChat] input element found:', !!inp);
   var text = inp ? inp.value.trim() : '';
-  if (!text) return;
+  console.log('[oslChat] text value:', JSON.stringify(text));
+  if (!text) { console.log('[oslChat] aborting: empty text'); return; }
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  console.log('[oslChat] user:', user ? user.uid : null, 'db present:', !!window.db);
+  if (!user || !window.db) {
+    console.log('[oslChat] aborting: no user or no db');
+    if (typeof ib_toast==='function') ib_toast('Sign in to chat');
+    return;
+  }
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
+  console.log('[oslChat] writing to Firestore…');
   window.db.collection('oslChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Send message error:', err); if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules'); });
+    .then(function(ref){ console.log('[oslChat] write succeeded, doc id:', ref.id); })
+    .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules'); });
 }
 
 // ── OUTSIDE LANDS SHARED PHOTOS ──
