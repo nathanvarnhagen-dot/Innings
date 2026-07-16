@@ -921,10 +921,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- TABS — Lineup first -->
   <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;padding:0 16px;flex-shrink:0" id="osl-tabs">
-    <div class="osl-main-tab active" onclick="oslTab('lineup')" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer;white-space:nowrap">Lineup</div>
-    <div class="osl-main-tab" onclick="oslTab('myfest')" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Your Festival</div>
-    <div class="osl-main-tab" onclick="oslTab('chat')" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Chat</div>
-    <div class="osl-main-tab" onclick="oslTab('photos')" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Photos</div>
+    <div class="osl-main-tab active" onclick="oslTab('lineup', event)" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer;white-space:nowrap">Lineup</div>
+    <div class="osl-main-tab" onclick="oslTab('myfest', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Your Festival</div>
+    <div class="osl-main-tab" onclick="oslTab('chat', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Chat</div>
+    <div class="osl-main-tab" onclick="oslTab('photos', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Photos</div>
   </div>
 
   <!-- ── LINEUP PANEL ── -->
@@ -1256,15 +1256,18 @@ function updateMyFest() {
   });
 }
 
-function oslTab(tab) {
+function oslTab(tab, evt) {
+  evt = evt || window.event;
   document.querySelectorAll('.osl-main-tab').forEach(function(t) {
     t.style.color = 'rgba(255,255,255,0.35)';
     t.style.fontWeight = '500';
     t.style.borderBottom = '2px solid transparent';
   });
-  event.target.style.color = 'rgba(168,159,232,1)';
-  event.target.style.fontWeight = '700';
-  event.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  if (evt && evt.target) {
+    evt.target.style.color = 'rgba(168,159,232,1)';
+    evt.target.style.fontWeight = '700';
+    evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  }
 
   ['osl2-lineup','osl2-chat','osl2-chat-input','osl2-photos','osl2-myfest'].forEach(function(id) {
     var el = document.getElementById(id);
