@@ -1230,6 +1230,13 @@ function actRsvp2(btn, actName, val) {
     btn.style.fontWeight = '700';
   }
   updateMyFest();
+  window.userData = window.userData || {};
+  window.userData.oslActRsvps = myRsvps;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true })
+      .catch(function(err){ console.error('Act RSVP save error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+  }
 }
 
 function updateMyFest() {
@@ -2523,6 +2530,10 @@ function renderMomentPeople() {
 function oslCheckRsvp() {
   var rsvp = window.userData && window.userData.oslRsvp;
   var overlay = document.getElementById('osl-rsvp-overlay');
+  if (window.userData && window.userData.oslActRsvps) {
+    myRsvps = window.userData.oslActRsvps;
+    if (typeof updateMyFest === 'function') updateMyFest();
+  }
   if (!rsvp) {
     if (overlay) overlay.style.display = 'flex';
   } else {
