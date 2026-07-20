@@ -621,11 +621,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="create-step-0" style="display:flex;flex-direction:column;padding:24px 20px;gap:14px">
       <div style="font-size:20px;font-weight:800;color:var(--black);letter-spacing:-0.4px">When is this?</div>
       <div style="font-size:13px;color:var(--subtle);margin-bottom:6px;line-height:1.5">Already happened? Log it as a memory. Coming up? Send an invite and collect RSVPs.</div>
-      <div onclick="chooseMomentType('past')" style="background:var(--card);border:1.5px solid var(--rule);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer">
+      <div onclick="chooseMomentType('past')" style="background:var(--indigo);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(61,53,128,0.25)">
         <div style="font-size:30px">🕰️</div>
         <div>
-          <div style="font-size:16px;font-weight:700;color:var(--black)">It already happened</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Log a memory — highlights, photos, who was there</div>
+          <div style="font-size:16px;font-weight:700;color:white">It already happened</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px">Log a memory — highlights, photos, who was there</div>
         </div>
       </div>
       <div onclick="chooseMomentType('future')" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(132,94,247,0.3)">
@@ -1564,6 +1564,24 @@ function oslDay2(day) {
     <div id="upcoming-section" style="display:none;margin-bottom:18px">
       <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Upcoming</div>
       <div id="upcoming-list"></div>
+    </div>
+
+    <!-- EDIT FUTURE MOMENT MODAL -->
+    <div id="edit-future-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit plan</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+          <input id="edit-future-title" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Name">
+          <input type="date" id="edit-future-date" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)">
+          <input type="time" id="edit-future-time" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)">
+          <input id="edit-future-location" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Location">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button onclick="hideEditFuture()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+          <button onclick="saveEditFuture()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+        </div>
+        <button onclick="deleteFutureMoment()" style="width:100%;padding:12px;border-radius:14px;background:transparent;border:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--loss);font-family:inherit">Delete this plan</button>
+      </div>
     </div>
 
     <!-- REAL SAVED MOMENTS render here (newest first) -->
@@ -2539,6 +2557,60 @@ function loadMoments() {
     });
 }
 
+function openEditFuture(momentId) {
+  var m = (window._futureMomentsCache || {})[momentId];
+  if (!m) return;
+  window._editingFutureId = momentId;
+  var t = document.getElementById('edit-future-title'); if (t) t.value = m.title || '';
+  var d = document.getElementById('edit-future-date'); if (d) d.value = m.date || '';
+  var tm = document.getElementById('edit-future-time'); if (tm) tm.value = m.time || '';
+  var l = document.getElementById('edit-future-location'); if (l) l.value = m.location || '';
+  var modal = document.getElementById('edit-future-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideEditFuture() {
+  var modal = document.getElementById('edit-future-modal');
+  if (modal) modal.style.display = 'none';
+  window._editingFutureId = null;
+}
+
+function saveEditFuture() {
+  var id = window._editingFutureId;
+  if (!id || !window.db) return;
+  var t = document.getElementById('edit-future-title');
+  var d = document.getElementById('edit-future-date');
+  var tm = document.getElementById('edit-future-time');
+  var l = document.getElementById('edit-future-location');
+  window.db.collection('futureMoments').doc(id).update({
+    title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
+    date: d ? d.value : '',
+    time: tm ? tm.value : '',
+    location: l ? l.value.trim() : ''
+  }).then(function(){
+    hideEditFuture();
+    if (typeof ib_toast === 'function') ib_toast('Plan updated');
+    if (typeof loadFutureMoments === 'function') loadFutureMoments();
+  }).catch(function(err){
+    console.error('Edit future moment error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
+  });
+}
+
+function deleteFutureMoment() {
+  var id = window._editingFutureId;
+  if (!id || !window.db) return;
+  window.db.collection('futureMoments').doc(id).delete()
+    .then(function(){
+      hideEditFuture();
+      if (typeof ib_toast === 'function') ib_toast('Plan deleted');
+      if (typeof loadFutureMoments === 'function') loadFutureMoments();
+    }).catch(function(err){
+      console.error('Delete future moment error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not delete — try again');
+    });
+}
+
 function loadFutureMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   var listEl = document.getElementById('upcoming-list');
@@ -2556,18 +2628,20 @@ function loadFutureMoments() {
     arr = arr.filter(function(m){ return !m.date || m.date >= today; });
     arr.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
     if (wrapEl) wrapEl.style.display = arr.length ? 'block' : 'none';
+    window._futureMomentsCache = {};
+    arr.forEach(function(m){ window._futureMomentsCache[m._id] = m; });
     listEl.innerHTML = arr.map(function(m){
       var isOwner = m.ownerUid === user.uid;
       var myRsvp = (m.rsvps || {})[user.uid] || '';
       var goingCount = Object.keys(m.rsvps || {}).filter(function(k){ return m.rsvps[k] === 'going'; }).length;
       var rsvpUi = isOwner
-        ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going</div>'
+        ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going · tap to edit</div>'
         : '<div style="display:flex;gap:6px;margin-top:12px">' +
           '<button onclick="futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
           '<button onclick="futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div style="background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div ' + (isOwner ? 'onclick="openEditFuture(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -2990,13 +3064,33 @@ function startOslChat() {
   window._oslChatStarted = true;
   window.db.collection('oslChat').orderBy('ts').limit(300).onSnapshot(function(snap){
     var msgs = [];
-    snap.forEach(function(doc){ msgs.push(doc.data()); });
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
     renderOslChat(msgs);
   }, function(err){
     console.error('OSL chat error:', err);
     window._oslChatStarted = false;
     if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
   });
+}
+
+function confirmDeleteOslMessage(msgId, bubbleEl) {
+  if (!msgId) return;
+  if (bubbleEl && bubbleEl.dataset.confirming === '1') {
+    deleteOslMessage(msgId);
+    return;
+  }
+  if (bubbleEl) {
+    bubbleEl.dataset.confirming = '1';
+    var txt = bubbleEl.querySelector('.b-t');
+    if (txt) txt.textContent = 'Tap again to delete';
+    setTimeout(function(){ if (bubbleEl) bubbleEl.dataset.confirming = '0'; }, 3000);
+  }
+}
+
+function deleteOslMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('oslChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 function _fmtTime(ts) {
@@ -3018,7 +3112,7 @@ function renderOslChat(msgs) {
     var mine = c.uid && c.uid === myUid;
     if (mine) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+        '<div class="bubble me" onclick="confirmDeleteOslMessage(\'' + c._id + '\', this)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + ' · tap to delete</div></div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
