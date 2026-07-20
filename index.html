@@ -2313,6 +2313,7 @@ auth.onAuthStateChanged(function(user) {
         var pdata = snap.data();
         var photos = pdata.profilePhotos || (pdata.profilePhoto ? [pdata.profilePhoto] : []);
         if (photos.length && typeof applyProfilePhoto === 'function') applyProfilePhoto(photos);
+        if (typeof renderInterests === 'function') renderInterests(pdata.interests || []);
         nav('feed');
       } else {
         ib_showStep('ob-name-step');
@@ -2462,27 +2463,58 @@ function saveEditProfile() {
   if(loc) document.getElementById('profile-location').textContent=loc+' · joined 2026';
   hideEditProfile();
 }
+function renderInterests(list) {
+  window.userData = window.userData || {};
+  window.userData.interests = list || [];
+  var c = document.getElementById('interests-container');
+  if (!c) return;
+  if (!list || !list.length) {
+    c.innerHTML = '<div id="interests-empty" style="width:100%;text-align:center;padding:8px 0">' +
+      '<div style="font-size:13px;color:var(--subtle);margin-bottom:8px">Tell people who you are</div>' +
+      '<button onclick="showAddInterest()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add your first interest</button>' +
+    '</div>';
+    return;
+  }
+  c.innerHTML = list.map(function(it, i){
+    return '<div onclick="removeInterest(' + i + ')" style="display:inline-flex;align-items:center;gap:6px;background:var(--indigo-light);border-radius:20px;padding:7px 13px;cursor:pointer">' +
+      '<span style="font-size:15px">' + _escapeHtml(it.emoji || '✨') + '</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">' + _escapeHtml(it.label || '') + '</span></div>';
+  }).join('') +
+  '<div id="add-interest-btn" onclick="showAddInterest()" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;padding:7px 13px;cursor:pointer"><span style="font-size:13px;color:var(--indigo);font-weight:600">+ Add</span></div>';
+}
+
 function showAddInterest() { var m=document.getElementById('add-interest-modal'); if(m) m.style.display='flex'; }
 function hideAddInterest() { var m=document.getElementById('add-interest-modal'); if(m) m.style.display='none'; }
 function quickInterest(e,l) { document.getElementById('interest-emoji').value=e; document.getElementById('interest-label').value=l; }
+
 function saveInterest() {
-  var emoji=document.getElementById('interest-emoji').value.trim()||'✨';
-  var label=document.getElementById('interest-label').value.trim();
-  if(!label){ hideAddInterest(); return; }
-  var empty=document.getElementById('interests-empty'); if(empty) empty.remove();
-  var c=document.getElementById('interests-container');
-  var tag=document.createElement('div');
-  tag.style.cssText='display:inline-flex;align-items:center;gap:6px;background:var(--indigo-light);border-radius:20px;padding:7px 13px;cursor:pointer';
-  tag.innerHTML='<span style="font-size:15px">'+emoji+'</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">'+label+'</span>';
-  tag.onclick=function(){if(confirm('Remove "'+label+'"?'))tag.remove();};
-  if(!document.getElementById('add-interest-btn')){
-    var b=document.createElement('div'); b.id='add-interest-btn';
-    b.style.cssText='display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;padding:7px 13px;cursor:pointer';
-    b.innerHTML='<span style="font-size:13px;color:var(--indigo);font-weight:600">+ Add</span>';
-    b.onclick=showAddInterest; c.appendChild(tag); c.appendChild(b);
-  } else { c.insertBefore(tag, document.getElementById('add-interest-btn')); }
-  document.getElementById('interest-emoji').value=''; document.getElementById('interest-label').value='';
+  var emoji = document.getElementById('interest-emoji').value.trim() || '✨';
+  var label = document.getElementById('interest-label').value.trim();
+  if (!label) { hideAddInterest(); return; }
+  window.userData = window.userData || {};
+  var list = (window.userData.interests || []).slice();
+  list.push({ emoji: emoji, label: label });
+  renderInterests(list);
+  document.getElementById('interest-emoji').value = '';
+  document.getElementById('interest-label').value = '';
   hideAddInterest();
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ interests: list }, { merge: true })
+      .catch(function(err){ console.error('Save interest error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+  }
+}
+
+function removeInterest(i) {
+  var list = ((window.userData && window.userData.interests) || []).slice();
+  var removed = list[i];
+  if (!removed || !confirm('Remove "' + removed.label + '"?')) return;
+  list.splice(i, 1);
+  renderInterests(list);
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ interests: list }, { merge: true })
+      .catch(function(err){ console.error('Remove interest error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+  }
 }
 function addMomentPhotos(input) {
   if(!input.files) return;
@@ -3222,10 +3254,11 @@ function startOslChat() {
 function oslMsgPressStart(el) {
   el._pressTimer = setTimeout(function(){
     el._heldReady = true;
+    el._confirmStage = false;
     var txt = el.querySelector('.b-t');
     if (txt) txt.textContent = 'Tap to delete';
     el.style.opacity = '0.6';
-    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 3000);
+    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
   }, 550);
 }
 
@@ -3235,16 +3268,23 @@ function oslMsgPressCancel(el) {
 
 function oslMsgResetPress(el) {
   el._heldReady = false;
+  el._confirmStage = false;
   el.style.opacity = '1';
   var txt = el.querySelector('.b-t');
   if (txt) txt.textContent = el.getAttribute('data-ts-label') || '';
 }
 
 function oslMsgTap(el, msgId) {
-  if (el._heldReady) {
-    if (el._resetTimer) clearTimeout(el._resetTimer);
-    deleteOslMessage(msgId);
+  if (!el._heldReady) return;
+  if (el._resetTimer) clearTimeout(el._resetTimer);
+  if (!el._confirmStage) {
+    el._confirmStage = true;
+    var txt = el.querySelector('.b-t');
+    if (txt) txt.textContent = 'Tap again to confirm delete';
+    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
+    return;
   }
+  deleteOslMessage(msgId);
 }
 
 function deleteOslMessage(msgId) {
