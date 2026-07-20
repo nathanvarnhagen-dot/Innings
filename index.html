@@ -1170,8 +1170,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- PHOTO VIEWER / LIGHTBOX -->
-  <div id="osl-photo-viewer" style="display:none;position:absolute;inset:0;z-index:70;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;padding:20px">
+  <div id="osl-photo-viewer" style="display:none;position:absolute;inset:0;z-index:70;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;padding:20px" ontouchstart="oslPhotoSwipeStart(event)" ontouchend="oslPhotoSwipeEnd(event)">
     <button onclick="closeOslPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
+    <button onclick="oslPhotoNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">‹</button>
+    <button onclick="oslPhotoNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">›</button>
     <img id="osl-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
     <div id="osl-photo-viewer-caption" style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
     <button id="osl-photo-viewer-download" onclick="oslPhotoDownload()" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
@@ -1667,7 +1669,7 @@ function oslDay2(day) {
     </div>
   </div>
   <div id="edit-profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-    <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
       <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit profile</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
         <input id="edit-name" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Your name">
@@ -1706,7 +1708,7 @@ function oslDay2(day) {
       </div>
     </div>
     <div id="add-interest-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
         <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Add an interest</div>
         <div style="display:flex;gap:8px;margin-bottom:14px">
           <input id="interest-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾">
@@ -3408,6 +3410,26 @@ function oslPhotoDownload() {
     console.error('Photo download error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not download — try pressing and holding the photo instead');
   });
+}
+
+function oslPhotoNav(delta) {
+  var photos = window._oslPhotosData || [];
+  var newIndex = (window._oslPhotoViewerIndex || 0) + delta;
+  if (newIndex < 0 || newIndex >= photos.length) return;
+  openOslPhoto(newIndex);
+}
+
+var _oslSwipeStartX = null;
+function oslPhotoSwipeStart(e) {
+  if (e.touches && e.touches.length === 1) _oslSwipeStartX = e.touches[0].clientX;
+}
+function oslPhotoSwipeEnd(e) {
+  if (_oslSwipeStartX === null) return;
+  var endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : _oslSwipeStartX;
+  var delta = endX - _oslSwipeStartX;
+  _oslSwipeStartX = null;
+  if (Math.abs(delta) < 40) return;
+  oslPhotoNav(delta < 0 ? 1 : -1);
 }
 
 function closeOslPhoto() {
