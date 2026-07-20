@@ -1174,7 +1174,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <button onclick="closeOslPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
     <img id="osl-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
     <div id="osl-photo-viewer-caption" style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
-    <a id="osl-photo-viewer-download" href="" download="innings-photo.jpg" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;text-decoration:none;font-family:inherit">⬇ Download</a>
+    <button id="osl-photo-viewer-download" onclick="oslPhotoDownload()" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
     <button id="osl-photo-viewer-delete" onclick="deleteOslPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
   </div>
 
@@ -2258,6 +2258,11 @@ window.verifyCode = function() {
   var btn = document.querySelector('#ob-verify-step .ob-btn');
   if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
   window._ib_confirm.confirm(code)
+    .then(function() {
+      if (window._ib_recaptcha) { try { window._ib_recaptcha.clear(); } catch(e){} window._ib_recaptcha = null; }
+      var el = document.getElementById('ib-recaptcha');
+      if (el) el.remove();
+    })
     .catch(function(err) {
       console.error('Verify error:', err);
       ib_toast('Wrong code — try again');
@@ -3335,13 +3340,34 @@ function openOslPhoto(i) {
   window._oslPhotoViewerIndex = i;
   var img = document.getElementById('osl-photo-viewer-img');
   var del = document.getElementById('osl-photo-viewer-delete');
-  var dl = document.getElementById('osl-photo-viewer-download');
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (img) img.src = p.photo;
-  if (dl) dl.href = p.photo;
+  window._oslPhotoViewerSrc = p.photo;
   if (del) del.style.display = (user && p.uid === user.uid) ? 'block' : 'none';
   var viewer = document.getElementById('osl-photo-viewer');
   if (viewer) viewer.style.display = 'flex';
+}
+
+function oslPhotoDownload() {
+  var src = window._oslPhotoViewerSrc;
+  if (!src) return;
+  fetch(src).then(function(res){ return res.blob(); }).then(function(blob){
+    var file = new File([blob], 'innings-photo.jpg', { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] }).catch(function(){});
+    } else {
+      var a = document.createElement('a');
+      a.href = src;
+      a.download = 'innings-photo.jpg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
+    }
+  }).catch(function(err){
+    console.error('Photo download error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not download — try pressing and holding the photo instead');
+  });
 }
 
 function closeOslPhoto() {
