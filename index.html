@@ -880,7 +880,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div>
     </div>
     <div style="display:flex;gap:10px">
-      <div class="icon-btn notif-pip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mid)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="icon-btn notif-pip" onclick="nav('notifications')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mid)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
     </div>
   </div>
 
@@ -940,27 +940,22 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 </div>
 
-<!-- ═══ GROUPS ═══ -->
-<div class="screen" id="screen-groups">
+<!-- ═══ NOTIFICATIONS ═══ -->
+<div class="screen" id="screen-notifications">
   <div class="status-light"><span class="st-dark">9:41</span><i class="ti ti-battery" style="font-size:14px;color:var(--black)"></i></div>
-  <div class="topbar-light">
-    <span class="app-name">Inn<em>ings</em></span>
-    <div style="width:36px;height:36px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="nav('group-detail')"><i class="ti ti-edit" style="font-size:17px;color:white"></i></div>
+  <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <button onclick="nav('feed')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Feed
+    </button>
+    <span style="font-size:16px;font-weight:700;color:var(--black)">Notifications</span>
+    <div style="width:40px"></div>
   </div>
-  <div class="scroll">
-    <div class="closed-banner"><i class="ti ti-lock"></i> Invite-only. Only people you text can join your moments.</div>
+  <div class="scroll" id="notif-list">
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
-      <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">🎪</div>
-      <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No moments yet</div>
-      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Tap the + to create your first moment and invite your people.</div>
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">🔔</div>
+      <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No notifications yet</div>
+      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Friend requests, tags, and highlights on your moments will show up here.</div>
     </div>
-  </div>
-    <div class="bottom-nav">
-    <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
-    <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
-    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
-    <button class="nav-item" onclick="nav('memories')" aria-label="Memories"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-    <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </div>
 </div>
 
@@ -971,7 +966,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
-      <button class="back-btn" onclick="nav('groups')">
+      <button class="back-btn" onclick="nav('feed')">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
       </button>
@@ -1179,7 +1174,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <button onclick="closeOslPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
     <img id="osl-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
     <div id="osl-photo-viewer-caption" style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
-    <button id="osl-photo-viewer-delete" onclick="deleteOslPhoto()" style="display:none;margin-top:18px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+    <a id="osl-photo-viewer-download" href="" download="innings-photo.jpg" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;text-decoration:none;font-family:inherit">⬇ Download</a>
+    <button id="osl-photo-viewer-delete" onclick="deleteOslPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
   </div>
 
 </div>
@@ -1437,7 +1433,7 @@ function oslDay2(day) {
 <!-- ═══ GROUP DETAIL ═══ -->
 <div class="screen" id="screen-group-detail">
   <div class="g-hdr">
-    <div class="gh-status"><button class="back-btn" onclick="nav('groups')"><i class="ti ti-chevron-left"></i> Groups</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
+    <div class="gh-status"><button class="back-btn" onclick="nav('feed')"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
     <div class="gh-main">
       <div class="gh-icon">⚾</div>
       <div><div class="gh-name">The League 2026</div><div class="gh-sub">12 members · Invite only · Season 14</div></div>
@@ -3218,17 +3214,31 @@ function startOslChat() {
   });
 }
 
-function confirmDeleteOslMessage(msgId, bubbleEl) {
-  if (!msgId) return;
-  if (bubbleEl && bubbleEl.dataset.confirming === '1') {
+function oslMsgPressStart(el) {
+  el._pressTimer = setTimeout(function(){
+    el._heldReady = true;
+    var txt = el.querySelector('.b-t');
+    if (txt) txt.textContent = 'Tap to delete';
+    el.style.opacity = '0.6';
+    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 3000);
+  }, 550);
+}
+
+function oslMsgPressCancel(el) {
+  if (el._pressTimer) { clearTimeout(el._pressTimer); el._pressTimer = null; }
+}
+
+function oslMsgResetPress(el) {
+  el._heldReady = false;
+  el.style.opacity = '1';
+  var txt = el.querySelector('.b-t');
+  if (txt) txt.textContent = el.getAttribute('data-ts-label') || '';
+}
+
+function oslMsgTap(el, msgId) {
+  if (el._heldReady) {
+    if (el._resetTimer) clearTimeout(el._resetTimer);
     deleteOslMessage(msgId);
-    return;
-  }
-  if (bubbleEl) {
-    bubbleEl.dataset.confirming = '1';
-    var txt = bubbleEl.querySelector('.b-t');
-    if (txt) txt.textContent = 'Tap again to delete';
-    setTimeout(function(){ if (bubbleEl) bubbleEl.dataset.confirming = '0'; }, 3000);
   }
 }
 
@@ -3256,8 +3266,9 @@ function renderOslChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     if (mine) {
+      var tsLabel = _fmtTime(c.ts);
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div class="bubble me" onclick="confirmDeleteOslMessage(\'' + c._id + '\', this)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + ' · tap to delete</div></div></div>';
+        '<div class="bubble me" data-ts-label="' + _escapeHtml(tsLabel) + '" onmousedown="oslMsgPressStart(this)" ontouchstart="oslMsgPressStart(this)" onmouseup="oslMsgPressCancel(this)" onmouseleave="oslMsgPressCancel(this)" ontouchend="oslMsgPressCancel(this)" ontouchcancel="oslMsgPressCancel(this)" onclick="oslMsgTap(this, \'' + c._id + '\')" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
@@ -3324,8 +3335,10 @@ function openOslPhoto(i) {
   window._oslPhotoViewerIndex = i;
   var img = document.getElementById('osl-photo-viewer-img');
   var del = document.getElementById('osl-photo-viewer-delete');
+  var dl = document.getElementById('osl-photo-viewer-download');
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (img) img.src = p.photo;
+  if (dl) dl.href = p.photo;
   if (del) del.style.display = (user && p.uid === user.uid) ? 'block' : 'none';
   var viewer = document.getElementById('osl-photo-viewer');
   if (viewer) viewer.style.display = 'flex';
@@ -3404,7 +3417,7 @@ function openUserProfile(uid) {
 }
 
 function closeViewProfile() {
-  nav(window._profileReturnTo || 'groups');
+  nav(window._profileReturnTo || 'feed');
 }
 
 function _renderFriendArea(theirUid) {
