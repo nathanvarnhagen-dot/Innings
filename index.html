@@ -1325,6 +1325,27 @@ function oslDay2(day) {
 }
 </script>
 
+<!-- ═══ VIEW PROFILE (someone else's) ═══ -->
+<div class="screen" id="screen-view-profile" style="background:var(--bg)">
+  <div class="photo-hdr" style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%)">
+    <div class="photo-status"><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
+    <button onclick="closeViewProfile()" style="position:absolute;top:52px;left:16px;z-index:6;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      <span style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.6)">Back</span>
+    </button>
+    <div class="profile-info">
+      <div>
+        <div class="p-av" id="vp-av">?</div>
+        <div class="p-name" id="vp-name" style="color:white">Name</div>
+        <div class="p-handle" id="vp-location" style="color:rgba(255,255,255,0.5)"></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:20px 20px 0">
+    <div id="vp-friend-area"></div>
+  </div>
+</div>
+
 <!-- ═══ GROUP DETAIL ═══ -->
 <div class="screen" id="screen-group-detail">
   <div class="g-hdr">
@@ -2574,7 +2595,7 @@ function renderOslState() {
         var d = doc.data();
         var nm = d.name || 'Friend';
         var isMe = user && doc.id === user.uid;
-        chips.push('<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' +
+        chips.push('<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0' + (isMe ? '' : ';cursor:pointer') + '"' + (isMe ? '' : ' onclick="openUserProfile(\'' + doc.id + '\')"') + '>' +
           '<div class="m-av-sm av-a">' + _escapeHtml(_initials(nm)) + '</div>' +
           '<div class="m-nm-sm">' + _escapeHtml(isMe ? 'You' : nm.split(' ')[0]) + '</div></div>');
       });
@@ -2794,6 +2815,109 @@ function addOslPhoto(input) {
     reader.readAsDataURL(file);
   });
   input.value = '';
+}
+
+// ── FRIENDS ──
+function _initialsFallback(nm){ return typeof _initials==='function' ? _initials(nm) : (nm||'?').charAt(0).toUpperCase(); }
+
+function openUserProfile(uid) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!window.db || !uid) return;
+  if (user && uid === user.uid) { nav('profile'); return; }
+  window._profileReturnTo = document.querySelector('.screen.active') ? document.querySelector('.screen.active').id.replace('screen-','') : 'osl-group';
+  nav('view-profile');
+  var avEl = document.getElementById('vp-av');
+  var nameEl = document.getElementById('vp-name');
+  var locEl = document.getElementById('vp-location');
+  var areaEl = document.getElementById('vp-friend-area');
+  if (nameEl) nameEl.textContent = 'Loading…';
+  if (areaEl) areaEl.innerHTML = '';
+  window.db.collection('users').doc(uid).get().then(function(doc){
+    var d = doc.exists ? doc.data() : {};
+    var nm = d.name || 'Innings User';
+    if (nameEl) nameEl.textContent = nm;
+    if (locEl) locEl.textContent = d.location || '';
+    if (avEl) {
+      if (d.profilePhotos && d.profilePhotos.length) {
+        avEl.style.backgroundImage = 'url(' + d.profilePhotos[0] + ')';
+        avEl.style.backgroundSize = 'cover';
+        avEl.style.backgroundPosition = 'center';
+        avEl.textContent = '';
+      } else {
+        avEl.style.backgroundImage = '';
+        avEl.textContent = _initialsFallback(nm);
+      }
+    }
+    _renderFriendArea(uid);
+  }).catch(function(err){
+    console.error('View profile error:', err);
+    if (nameEl) nameEl.textContent = 'Could not load profile';
+  });
+}
+
+function closeViewProfile() {
+  nav(window._profileReturnTo || 'groups');
+}
+
+function _renderFriendArea(theirUid) {
+  var areaEl = document.getElementById('vp-friend-area');
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!areaEl || !user || !window.db) return;
+  areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Checking friend status…</div>';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('toUid','==',theirUid).get(),
+    window.db.collection('friendRequests').where('fromUid','==',theirUid).where('toUid','==',user.uid).get()
+  ]).then(function(results){
+    var sent = results[0].empty ? null : { id: results[0].docs[0].id, data: results[0].docs[0].data() };
+    var received = results[1].empty ? null : { id: results[1].docs[0].id, data: results[1].docs[0].data() };
+    if ((sent && sent.data.status === 'accepted') || (received && received.data.status === 'accepted')) {
+      areaEl.innerHTML = '<div style="display:flex;align-items:center;gap:6px;color:var(--indigo);font-size:14px;font-weight:700"><span>✓</span> Friends</div>';
+    } else if (received && received.data.status === 'pending') {
+      areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">Wants to be friends</div>' +
+        '<div style="display:flex;gap:8px">' +
+        '<button onclick="acceptFriendRequest(\'' + received.id + '\')" style="flex:1;padding:12px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Accept</button>' +
+        '<button onclick="declineFriendRequest(\'' + received.id + '\')" style="flex:1;padding:12px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Decline</button>' +
+        '</div>';
+    } else if (sent && sent.data.status === 'pending') {
+      areaEl.innerHTML = '<button disabled style="width:100%;padding:12px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);color:var(--subtle);font-size:14px;font-weight:600;font-family:inherit">Request Sent</button>';
+    } else {
+      areaEl.innerHTML = '<button onclick="sendFriendRequest(\'' + theirUid + '\')" style="width:100%;padding:12px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add Friend</button>';
+    }
+  }).catch(function(err){
+    console.error('Friend status error:', err);
+    areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Could not load friend status</div>';
+  });
+}
+
+function sendFriendRequest(theirUid) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: theirUid, status: 'pending', ts: Date.now() })
+    .then(function(){ if (typeof ib_toast==='function') ib_toast('Friend request sent'); _renderFriendArea(theirUid); })
+    .catch(function(err){ console.error('Send friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not send request — try again'); });
+}
+
+function acceptFriendRequest(reqId) {
+  if (!window.db) return;
+  var theirUid = null;
+  window.db.collection('friendRequests').doc(reqId).get().then(function(doc){
+    theirUid = doc.exists ? doc.data().fromUid : null;
+    return window.db.collection('friendRequests').doc(reqId).update({ status: 'accepted' });
+  }).then(function(){
+    if (typeof ib_toast==='function') ib_toast("You're friends now 🎉");
+    if (theirUid) _renderFriendArea(theirUid);
+  }).catch(function(err){ console.error('Accept friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not accept — try again'); });
+}
+
+function declineFriendRequest(reqId) {
+  if (!window.db) return;
+  var theirUid = null;
+  window.db.collection('friendRequests').doc(reqId).get().then(function(doc){
+    theirUid = doc.exists ? doc.data().fromUid : null;
+    return window.db.collection('friendRequests').doc(reqId).delete();
+  }).then(function(){
+    if (theirUid) _renderFriendArea(theirUid);
+  }).catch(function(err){ console.error('Decline friend request error:', err); });
 }
 </script>
 </body>
