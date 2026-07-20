@@ -1714,6 +1714,11 @@ function oslDay2(day) {
           <input id="interest-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾">
           <input id="interest-label" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. Giants fan, Dog person, Tech">
         </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button onclick="hideAddInterest()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+          <button onclick="saveInterest()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Quick picks</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
           <div onclick="quickInterest('⚾','Giants fan')" style="padding:6px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:12px;cursor:pointer;color:var(--mid)">⚾ Giants fan</div>
           <div onclick="quickInterest('🎸','Music')" style="padding:6px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:12px;cursor:pointer;color:var(--mid)">🎸 Music</div>
@@ -1723,10 +1728,6 @@ function oslDay2(day) {
           <div onclick="quickInterest('🎪','Festivals')" style="padding:6px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:12px;cursor:pointer;color:var(--mid)">🎪 Festivals</div>
           <div onclick="quickInterest('📚','Books')" style="padding:6px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:12px;cursor:pointer;color:var(--mid)">📚 Books</div>
           <div onclick="quickInterest('🍕','Food')" style="padding:6px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:12px;cursor:pointer;color:var(--mid)">🍕 Food</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="hideAddInterest()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
-          <button onclick="saveInterest()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
         </div>
       </div>
     </div>
