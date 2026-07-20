@@ -1086,6 +1086,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="osl-photos-grid" style="display:none;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 16px 20px;overflow-y:auto"></div>
   </div>
 
+  <!-- PHOTO VIEWER / LIGHTBOX -->
+  <div id="osl-photo-viewer" style="display:none;position:absolute;inset:0;z-index:70;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;padding:20px">
+    <button onclick="closeOslPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
+    <img id="osl-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
+    <div id="osl-photo-viewer-caption" style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
+    <button id="osl-photo-viewer-delete" onclick="deleteOslPhoto()" style="display:none;margin-top:18px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+  </div>
+
 </div>
 
 <script>
@@ -2546,18 +2554,26 @@ function renderOslState() {
     else if (rsvp === 'maybe') status.textContent = 'Maybe · Aug 7–9 · Golden Gate Park';
     else status.textContent = 'Aug 7–9 · Golden Gate Park';
   }
-  var members = document.getElementById('osl-members');
-  if (members) {
-    var chip = '';
-    if (rsvp === 'going' || rsvp === 'maybe') {
-      chip = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' +
-        '<div class="m-av-sm av-a">' + _escapeHtml(_initials(name)) + '</div>' +
-        '<div class="m-nm-sm">' + _escapeHtml(name.split(' ')[0]) + '</div></div>';
-    }
-    var invite = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText===\'function\')sendInviteText()">' +
-      '<div style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--subtle)">＋</div>' +
-      '<div class="m-nm-sm">Invite</div></div>';
-    members.innerHTML = chip + invite;
+  var membersEl = document.getElementById('osl-members');
+  if (membersEl && window.db) {
+    window.db.collection('users').where('oslRsvp', 'in', ['going', 'maybe']).get().then(function(snap){
+      var user = window.currentUser || (window.auth && window.auth.currentUser);
+      var chips = [];
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var nm = d.name || 'Friend';
+        var isMe = user && doc.id === user.uid;
+        chips.push('<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' +
+          '<div class="m-av-sm av-a">' + _escapeHtml(_initials(nm)) + '</div>' +
+          '<div class="m-nm-sm">' + _escapeHtml(isMe ? 'You' : nm.split(' ')[0]) + '</div></div>');
+      });
+      var invite = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText===\'function\')sendInviteText()">' +
+        '<div style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--subtle)">＋</div>' +
+        '<div class="m-nm-sm">Invite</div></div>';
+      membersEl.innerHTML = chips.join('') + invite;
+    }).catch(function(err){
+      console.error('OSL members error:', err);
+    });
   }
 }
 
@@ -2700,7 +2716,8 @@ function startOslPhotos() {
   window._oslPhotosStarted = true;
   window.db.collection('oslPhotos').orderBy('ts', 'desc').limit(120).onSnapshot(function(snap){
     var arr = [];
-    snap.forEach(function(doc){ arr.push(doc.data()); });
+    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id }, doc.data())); });
+    window._oslPhotosData = arr;
     renderOslPhotos(arr);
   }, function(err){
     console.error('OSL photos error:', err);
@@ -2715,9 +2732,37 @@ function renderOslPhotos(photos) {
   if (!grid) return;
   if (empty) empty.style.display = photos.length ? 'none' : 'flex';
   grid.style.display = photos.length ? 'grid' : 'none';
-  grid.innerHTML = photos.map(function(p){
-    return '<div style="width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center"></div>';
+  grid.innerHTML = photos.map(function(p, i){
+    return '<div onclick="openOslPhoto(' + i + ')" style="width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer"></div>';
   }).join('');
+}
+
+function openOslPhoto(i) {
+  var photos = window._oslPhotosData || [];
+  var p = photos[i];
+  if (!p) return;
+  window._oslPhotoViewerIndex = i;
+  var img = document.getElementById('osl-photo-viewer-img');
+  var del = document.getElementById('osl-photo-viewer-delete');
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (img) img.src = p.photo;
+  if (del) del.style.display = (user && p.uid === user.uid) ? 'block' : 'none';
+  var viewer = document.getElementById('osl-photo-viewer');
+  if (viewer) viewer.style.display = 'flex';
+}
+
+function closeOslPhoto() {
+  var viewer = document.getElementById('osl-photo-viewer');
+  if (viewer) viewer.style.display = 'none';
+}
+
+function deleteOslPhoto() {
+  var photos = window._oslPhotosData || [];
+  var p = photos[window._oslPhotoViewerIndex];
+  if (!p || !p._id || !window.db) return;
+  window.db.collection('oslPhotos').doc(p._id).delete()
+    .then(function(){ closeOslPhoto(); if (typeof ib_toast==='function') ib_toast('Photo deleted'); })
+    .catch(function(err){ console.error('Delete photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 function addOslPhoto(input) {
