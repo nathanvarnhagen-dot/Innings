@@ -1566,23 +1566,6 @@ function oslDay2(day) {
       <div id="upcoming-list"></div>
     </div>
 
-    <!-- EDIT FUTURE MOMENT MODAL -->
-    <div id="edit-future-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto">
-        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit plan</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-          <input id="edit-future-title" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Name">
-          <input type="date" id="edit-future-date" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)">
-          <input type="time" id="edit-future-time" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)">
-          <input id="edit-future-location" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Location">
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button onclick="hideEditFuture()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
-          <button onclick="saveEditFuture()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
-        </div>
-        <button onclick="deleteFutureMoment()" style="width:100%;padding:12px;border-radius:14px;background:transparent;border:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--loss);font-family:inherit">Delete this plan</button>
-      </div>
-    </div>
 
     <!-- REAL SAVED MOMENTS render here (newest first) -->
     <div id="mem-list" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -1653,6 +1636,18 @@ function oslDay2(day) {
     <button onclick="momentDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
   </div>
   <div class="scroll" id="md-scroll" style="padding:0"></div>
+</div>
+
+<!-- ═══ FUTURE MOMENT DETAIL ═══ -->
+<div class="screen" id="screen-future-detail" style="background:var(--bg)">
+  <div class="status-light"><span class="st-dark">9:41</span></div>
+  <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+    </button>
+    <button onclick="futureDetailDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
+  </div>
+  <div class="scroll" id="fd-scroll" style="padding:0"></div>
 </div>
 
 <!-- ═══ PROFILE ═══ -->
@@ -2557,60 +2552,6 @@ function loadMoments() {
     });
 }
 
-function openEditFuture(momentId) {
-  var m = (window._futureMomentsCache || {})[momentId];
-  if (!m) return;
-  window._editingFutureId = momentId;
-  var t = document.getElementById('edit-future-title'); if (t) t.value = m.title || '';
-  var d = document.getElementById('edit-future-date'); if (d) d.value = m.date || '';
-  var tm = document.getElementById('edit-future-time'); if (tm) tm.value = m.time || '';
-  var l = document.getElementById('edit-future-location'); if (l) l.value = m.location || '';
-  var modal = document.getElementById('edit-future-modal');
-  if (modal) modal.style.display = 'flex';
-}
-
-function hideEditFuture() {
-  var modal = document.getElementById('edit-future-modal');
-  if (modal) modal.style.display = 'none';
-  window._editingFutureId = null;
-}
-
-function saveEditFuture() {
-  var id = window._editingFutureId;
-  if (!id || !window.db) return;
-  var t = document.getElementById('edit-future-title');
-  var d = document.getElementById('edit-future-date');
-  var tm = document.getElementById('edit-future-time');
-  var l = document.getElementById('edit-future-location');
-  window.db.collection('futureMoments').doc(id).update({
-    title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
-    date: d ? d.value : '',
-    time: tm ? tm.value : '',
-    location: l ? l.value.trim() : ''
-  }).then(function(){
-    hideEditFuture();
-    if (typeof ib_toast === 'function') ib_toast('Plan updated');
-    if (typeof loadFutureMoments === 'function') loadFutureMoments();
-  }).catch(function(err){
-    console.error('Edit future moment error:', err);
-    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
-  });
-}
-
-function deleteFutureMoment() {
-  var id = window._editingFutureId;
-  if (!id || !window.db) return;
-  window.db.collection('futureMoments').doc(id).delete()
-    .then(function(){
-      hideEditFuture();
-      if (typeof ib_toast === 'function') ib_toast('Plan deleted');
-      if (typeof loadFutureMoments === 'function') loadFutureMoments();
-    }).catch(function(err){
-      console.error('Delete future moment error:', err);
-      if (typeof ib_toast === 'function') ib_toast('Could not delete — try again');
-    });
-}
-
 function loadFutureMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   var listEl = document.getElementById('upcoming-list');
@@ -2641,7 +2582,7 @@ function loadFutureMoments() {
           '<button onclick="futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div ' + (isOwner ? 'onclick="openEditFuture(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div ' + (isOwner ? 'onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -2659,6 +2600,210 @@ function futureRsvp(momentId, val) {
   window.db.collection('futureMoments').doc(momentId).update(update)
     .then(function(){ if (typeof loadFutureMoments === 'function') loadFutureMoments(); })
     .catch(function(err){ console.error('Future RSVP error:', err); if (typeof ib_toast === 'function') ib_toast('Could not RSVP — try again'); });
+}
+
+function openFutureDetail(momentId) {
+  var m = (window._futureMomentsCache || {})[momentId];
+  if (!m) return;
+  window._openFutureId = momentId;
+  renderFutureDetail(m);
+  nav('future-detail');
+}
+
+function renderFutureDetail(m) {
+  var box = document.getElementById('fd-scroll');
+  if (!box) return;
+  var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
+  var vibes = ['⚾ Game','🎪 Festival','🎵 Concert','🍺 Hangout','✈️ Trip','+ Other'];
+  var vibePills = vibes.map(function(v){
+    var active = (m.vibe||'') === v;
+    return '<div onclick="fdSelectVibe(this,\'' + v.replace(/'/g,"\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:' + (active?'var(--indigo-light)':'var(--bg)') + ';border:0.5px solid ' + (active?'transparent':'var(--rule)') + ';font-size:13px;font-weight:' + (active?'600':'500') + ';color:' + (active?'var(--indigo)':'var(--subtle)') + ';cursor:pointer">' + v + '</div>';
+  }).join('');
+  var themes = ['linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)','linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)','linear-gradient(135deg,#F472B6 0%,#FB923C 100%)','linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)','linear-gradient(135deg,#FBBF24 0%,#F87171 100%)'];
+  var themeSwatches = themes.map(function(t){
+    var active = t === theme;
+    return '<div onclick="fdSelectTheme(this,\'' + t + '\')" style="width:34px;height:34px;border-radius:50%;background:' + t + ';cursor:pointer;border:2px solid ' + (active?'#0D0820':'transparent') + '"></div>';
+  }).join('');
+
+  box.innerHTML =
+    '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px">' +
+      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;font-family:inherit;letter-spacing:-0.5px">' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>' +
+      '<div style="display:flex;gap:10px" id="fd-theme-pills">' + themeSwatches + '</div>' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">' +
+      '<div style="font-size:14px;font-weight:600;color:var(--black)">Date</div>' +
+      '<input type="date" id="fd-date" value="' + _escapeHtml(m.date || '') + '" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">' +
+      '<div style="font-size:14px;font-weight:600;color:var(--black)">Time</div>' +
+      '<input type="time" id="fd-time" value="' + _escapeHtml(m.time || '') + '" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>' +
+      '<input id="fd-location" value="' + _escapeHtml(m.location || '') + '" placeholder="Add a location" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px" id="fd-vibe-pills">' + vibePills + '</div>' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Who\'s invited</div>' +
+      '<div id="fd-guest-list"></div>' +
+      '<div style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:10px;cursor:pointer" onclick="fdToggleAddFriends()">＋ Add more friends</div>' +
+      '<div id="fd-add-friends" style="display:none;margin-top:10px"></div>' +
+    '</div>' +
+    '<div style="padding:20px">' +
+      '<button onclick="futureDetailSave()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Save changes</button>' +
+    '</div>';
+
+  window._fdTheme = theme;
+  window._fdVibe = m.vibe || '⚾ Game';
+  window._fdInvitees = (m.taggedUids || []).slice();
+  renderFdGuestList(m);
+}
+
+function renderFdGuestList(m) {
+  var listEl = document.getElementById('fd-guest-list');
+  if (!listEl || !window.db) return;
+  var uids = window._fdInvitees || [];
+  if (!uids.length) { listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">No one invited yet</div>'; return; }
+  listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Loading…</div>';
+  Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+    var rsvps = m.rsvps || {};
+    listEl.innerHTML = docs.map(function(doc){
+      var d = doc.data() || {};
+      var nm = d.name || 'Friend';
+      var status = rsvps[doc.id] || 'pending';
+      var label = status === 'going' ? 'Going' : status === 'maybe' ? 'Maybe' : status === 'no' ? "Can't go" : 'Pending';
+      var color = status === 'going' ? 'var(--win)' : status === 'no' ? 'var(--loss)' : 'var(--subtle)';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--rule)">' +
+        '<div style="width:34px;height:34px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+        '<div style="flex:1;font-size:14px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:' + color + '">' + label + '</div>' +
+        '<div onclick="fdRemoveInvitee(\'' + doc.id + '\')" style="width:20px;height:20px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--subtle);cursor:pointer">×</div>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+function fdRemoveInvitee(uid) {
+  window._fdInvitees = (window._fdInvitees || []).filter(function(u){ return u !== uid; });
+  var m = (window._futureMomentsCache || {})[window._openFutureId];
+  if (m) renderFdGuestList(m);
+}
+
+function fdToggleAddFriends() {
+  var el = document.getElementById('fd-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    fdLoadAddableFriends();
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function fdLoadAddableFriends() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var el = document.getElementById('fd-add-friends');
+  if (!user || !window.db || !el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && (window._fdInvitees||[]).indexOf(v) === -1; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can invite is already on this plan.</div>'; return; }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      el.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        return '<div onclick="fdAddInvitee(\'' + doc.id + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
+        '</div>';
+      }).join('');
+    });
+  });
+}
+
+function fdAddInvitee(uid) {
+  window._fdInvitees = window._fdInvitees || [];
+  if (window._fdInvitees.indexOf(uid) === -1) window._fdInvitees.push(uid);
+  var m = (window._futureMomentsCache || {})[window._openFutureId];
+  if (m) renderFdGuestList(m);
+  fdLoadAddableFriends();
+}
+
+function fdSelectTheme(el, gradient) {
+  document.querySelectorAll('#fd-theme-pills > div').forEach(function(p){ p.style.borderColor = 'transparent'; });
+  el.style.borderColor = '#0D0820';
+  window._fdTheme = gradient;
+  var hero = document.getElementById('fd-hero');
+  if (hero) hero.style.background = gradient;
+}
+
+function fdSelectVibe(el, v) {
+  var pills = document.querySelectorAll('#fd-vibe-pills > div');
+  pills.forEach(function(p) {
+    p.style.background = 'var(--bg)';
+    p.style.color = 'var(--subtle)';
+    p.style.fontWeight = '500';
+    p.style.borderColor = 'var(--rule)';
+  });
+  el.style.background = 'var(--indigo-light)';
+  el.style.color = 'var(--indigo)';
+  el.style.fontWeight = '600';
+  el.style.borderColor = 'transparent';
+  window._fdVibe = v;
+}
+
+function futureDetailSave() {
+  var id = window._openFutureId;
+  if (!id || !window.db) return;
+  var t = document.getElementById('fd-title');
+  var d = document.getElementById('fd-date');
+  var tm = document.getElementById('fd-time');
+  var l = document.getElementById('fd-location');
+  window.db.collection('futureMoments').doc(id).update({
+    title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
+    date: d ? d.value : '',
+    time: tm ? tm.value : '',
+    location: l && l.value.trim() ? l.value.trim() : '',
+    theme: window._fdTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
+    vibe: window._fdVibe || '⚾ Game',
+    taggedUids: window._fdInvitees || []
+  }).then(function(){
+    if (typeof ib_toast === 'function') ib_toast('Plan updated');
+    if (typeof loadFutureMoments === 'function') loadFutureMoments();
+    nav('memories');
+  }).catch(function(err){
+    console.error('Save future detail error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
+  });
+}
+
+function futureDetailDelete() {
+  var id = window._openFutureId;
+  var m = (window._futureMomentsCache || {})[id];
+  if (!id || !window.db) return;
+  if (!confirm('Delete "' + (m && m.title ? m.title : 'this plan') + '"? This can\'t be undone.')) return;
+  window.db.collection('futureMoments').doc(id).delete()
+    .then(function(){
+      if (typeof ib_toast === 'function') ib_toast('Plan deleted');
+      if (typeof loadFutureMoments === 'function') loadFutureMoments();
+      nav('memories');
+    }).catch(function(err){
+      console.error('Delete future moment error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not delete — try again');
+    });
 }
 
 function renderMoments(moments) {
