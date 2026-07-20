@@ -604,11 +604,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="background:var(--card);padding:4px 24px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
     <button onclick="nav('feed')" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">Cancel</button>
     <div style="font-size:16px;font-weight:700;color:var(--black);letter-spacing:-0.3px">New moment</div>
-    <button onclick="saveNewMoment()" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--indigo);font-family:inherit">Save</button>
+    <button onclick="headerSaveMoment()" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--indigo);font-family:inherit">Save</button>
   </div>
 
   <!-- STEP INDICATOR -->
-  <div style="background:var(--card);padding:10px 24px;border-bottom:0.5px solid var(--rule);flex-shrink:0;display:flex;gap:6px;align-items:center">
+  <div id="moment-step-indicator" style="display:none;background:var(--card);padding:10px 24px;border-bottom:0.5px solid var(--rule);flex-shrink:0;gap:6px;align-items:center">
     <div id="step-ind-1" style="height:3px;flex:1;border-radius:2px;background:var(--indigo)"></div>
     <div id="step-ind-2" style="height:3px;flex:1;border-radius:2px;background:var(--rule)"></div>
     <div id="step-ind-3" style="height:3px;flex:1;border-radius:2px;background:var(--rule)"></div>
@@ -617,8 +617,28 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
 
+    <!-- ── STEP 0: WHEN IS THIS ── -->
+    <div id="create-step-0" style="display:flex;flex-direction:column;padding:24px 20px;gap:14px">
+      <div style="font-size:20px;font-weight:800;color:var(--black);letter-spacing:-0.4px">When is this?</div>
+      <div style="font-size:13px;color:var(--subtle);margin-bottom:6px;line-height:1.5">Already happened? Log it as a memory. Coming up? Send an invite and collect RSVPs.</div>
+      <div onclick="chooseMomentType('past')" style="background:var(--card);border:1.5px solid var(--rule);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer">
+        <div style="font-size:30px">🕰️</div>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--black)">It already happened</div>
+          <div style="font-size:12px;color:var(--subtle);margin-top:2px">Log a memory — highlights, photos, who was there</div>
+        </div>
+      </div>
+      <div onclick="chooseMomentType('future')" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(132,94,247,0.3)">
+        <div style="font-size:30px">🎉</div>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:white">It's coming up</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:2px">Send an invite and collect RSVPs</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── STEP 1: THE MOMENT ── -->
-    <div id="create-step-1" style="display:flex;flex-direction:column">
+    <div id="create-step-1" style="display:none;flex-direction:column">
 
       <!-- PHOTO -->
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
@@ -777,6 +797,74 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <button onclick="saveNewMoment()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Save this moment</button>
         <button onclick="saveNewMoment()" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Skip — save without a dedication</button>
         <button onclick="goToStep(3)" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
+      </div>
+    </div>
+
+    <!-- ── FUTURE STEP 1: INVITE DETAILS ── -->
+    <div id="create-step-f1" style="display:none;flex-direction:column">
+      <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px">
+        <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;font-family:inherit;letter-spacing:-0.5px">
+        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>
+        <div style="display:flex;gap:10px" id="future-theme-pills">
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);cursor:pointer;border:2px solid #0D0820"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%);cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F472B6 0%,#FB923C 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F472B6 0%,#FB923C 100%);cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%);cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FBBF24 0%,#F87171 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FBBF24 0%,#F87171 100%);cursor:pointer;border:2px solid transparent"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:600;color:var(--black)">Date</div>
+        <input type="date" id="future-date" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">
+      </div>
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:600;color:var(--black)">Time</div>
+        <input type="time" id="future-time" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">
+      </div>
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>
+        <input id="future-location" placeholder="Add a location" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="future-vibe-pills">
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--indigo-light);border:0.5px solid transparent;font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer">⚾ Game</div>
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎪 Festival</div>
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎵 Concert</div>
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🍺 Hangout</div>
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">✈️ Trip</div>
+          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">+ Other</div>
+        </div>
+      </div>
+
+      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+        <button onclick="goToFutureStep(2)" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Next — Who's invited</button>
+        <button onclick="backToStep0()" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
+      </div>
+    </div>
+
+    <!-- ── FUTURE STEP 2: WHO'S INVITED ── -->
+    <div id="create-step-f2" style="display:none;flex-direction:column">
+      <div style="background:var(--card);padding:20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px;margin-bottom:4px">Who's invited?</div>
+        <div style="font-size:13px;color:var(--subtle);line-height:1.55">Tag friends to invite them — they'll get real Going / Maybe / Can't go buttons.</div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div id="future-friend-picker" style="display:flex;flex-direction:column"></div>
+        <div onclick="if(typeof sendInviteText==='function')sendInviteText()" style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:12px;cursor:pointer">＋ Text an invite link to someone not on Innings yet</div>
+        <div style="font-size:12px;color:var(--subtle);margin-top:8px">Only Innings friends can RSVP directly right now — texted invites won't show a live RSVP.</div>
+      </div>
+
+      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+        <button onclick="saveFutureMoment()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Send the invite</button>
+        <button onclick="goToFutureStep(1)" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
       </div>
     </div>
 
@@ -1472,6 +1560,12 @@ function oslDay2(day) {
     </div>
     <div class="closed-banner"><i class="ti ti-lock"></i> Your memories are private. Only people in the moment with you can see them.</div>
 
+    <!-- UPCOMING (future moments) -->
+    <div id="upcoming-section" style="display:none;margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Upcoming</div>
+      <div id="upcoming-list"></div>
+    </div>
+
     <!-- REAL SAVED MOMENTS render here (newest first) -->
     <div id="mem-list" style="display:flex;flex-direction:column;gap:12px"></div>
 
@@ -1677,7 +1771,7 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);}}
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();}}
 let _photoCur=0, _photoTimer=null;
 function _startPhotoRotation(){
   if(_photoTimer) clearInterval(_photoTimer);
@@ -1760,6 +1854,172 @@ _startPhotoRotation();
 
 <script>
 // CREATE MOMENT FUNCTIONS — standalone, no Firebase dependency
+function chooseMomentType(type) {
+  window._momentType = type;
+  var step0 = document.getElementById('create-step-0');
+  if (step0) step0.style.display = 'none';
+  var indBar = document.getElementById('moment-step-indicator');
+  if (type === 'past') {
+    if (indBar) indBar.style.display = 'flex';
+    goToStep(1);
+  } else if (type === 'future') {
+    if (indBar) indBar.style.display = 'none';
+    goToFutureStep(1);
+  }
+}
+
+function backToStep0() {
+  ['create-step-1','create-step-2','create-step-3','create-step-4','create-step-f1','create-step-f2'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var indBar = document.getElementById('moment-step-indicator');
+  if (indBar) indBar.style.display = 'none';
+  var step0 = document.getElementById('create-step-0');
+  if (step0) step0.style.display = 'flex';
+  window._momentType = null;
+}
+
+function goToFutureStep(n) {
+  var s1 = document.getElementById('create-step-f1');
+  var s2 = document.getElementById('create-step-f2');
+  if (s1) s1.style.display = n === 1 ? 'flex' : 'none';
+  if (s2) s2.style.display = n === 2 ? 'flex' : 'none';
+  if (n === 2 && typeof loadFutureFriendPicker === 'function') loadFutureFriendPicker();
+  var container = document.getElementById('screen-create-group');
+  if (container) {
+    var scrollable = container.querySelector('div[style*="overflow-y:auto"], div[style*="overflow-y: auto"]');
+    if (scrollable) scrollable.scrollTop = 0;
+    else container.scrollTop = 0;
+  }
+}
+
+function selectFutureTheme(el, gradient) {
+  document.querySelectorAll('#future-theme-pills > div').forEach(function(p){ p.style.borderColor = 'transparent'; });
+  el.style.borderColor = '#0D0820';
+  window._futureTheme = gradient;
+  var hero = document.getElementById('future-hero');
+  if (hero) hero.style.background = gradient;
+}
+
+function selectFutureVibe(el) {
+  var pills = document.querySelectorAll('#future-vibe-pills > div');
+  pills.forEach(function(p) {
+    p.style.background = '#F6F6F9';
+    p.style.color = '#8E8EA8';
+    p.style.fontWeight = '500';
+    p.style.borderColor = '#EAEAF0';
+  });
+  el.style.background = '#EEEDF8';
+  el.style.color = '#3D3580';
+  el.style.fontWeight = '600';
+  el.style.borderColor = 'transparent';
+  window._futureVibe = el.textContent.trim();
+}
+
+window._futureInvitees = [];
+function loadFutureFriendPicker() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var listEl = document.getElementById('future-friend-picker');
+  if (!user || !window.db || !listEl) return;
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);line-height:1.5">You haven\'t added any friends yet — add friends from a group first, then they\'ll show up here.</div>';
+      return;
+    }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      listEl.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        var checked = window._futureInvitees.indexOf(doc.id) !== -1;
+        return '<div onclick="toggleFutureFriend(\'' + doc.id + '\', this)" data-uid="' + doc.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-bottom:0.5px solid var(--rule)">' +
+          '<div style="width:36px;height:36px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:14px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div class="future-friend-check" style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--rule);background:' + (checked ? 'var(--indigo)' : 'transparent') + ';border-color:' + (checked ? 'var(--indigo)' : 'var(--rule)') + '"></div>' +
+        '</div>';
+      }).join('');
+    });
+  }).catch(function(err){ console.error('Load friends error:', err); listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>'; });
+}
+
+function toggleFutureFriend(uid, el) {
+  var idx = window._futureInvitees.indexOf(uid);
+  var check = el.querySelector('.future-friend-check');
+  if (idx === -1) {
+    window._futureInvitees.push(uid);
+    if (check) { check.style.background = 'var(--indigo)'; check.style.borderColor = 'var(--indigo)'; }
+  } else {
+    window._futureInvitees.splice(idx, 1);
+    if (check) { check.style.background = 'transparent'; check.style.borderColor = 'var(--rule)'; }
+  }
+}
+
+var _savingFuture = false;
+function saveFutureMoment() {
+  if (_savingFuture) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in first'); return; }
+  var titleEl = document.getElementById('future-title');
+  var title = titleEl && titleEl.value.trim() ? titleEl.value.trim() : 'Untitled plan';
+  var date = (document.getElementById('future-date') || {}).value || '';
+  var time = (document.getElementById('future-time') || {}).value || '';
+  var locEl = document.getElementById('future-location');
+  var location = locEl && locEl.value.trim() ? locEl.value.trim() : '';
+  var theme = window._futureTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
+  var vibe = window._futureVibe || '⚾ Game';
+  var invitees = (window._futureInvitees || []).slice();
+  var ownerName = (window.userData && window.userData.name) || 'You';
+
+  _savingFuture = true;
+  if (typeof ib_toast === 'function') ib_toast('Sending invite…');
+  window.db.collection('futureMoments').add({
+    ownerUid: user.uid,
+    ownerName: ownerName,
+    title: title,
+    date: date,
+    time: time,
+    location: location,
+    theme: theme,
+    vibe: vibe,
+    taggedUids: invitees,
+    rsvps: {},
+    ts: Date.now()
+  }).then(function(){
+    _savingFuture = false;
+    resetFutureForm();
+    if (typeof ib_toast === 'function') ib_toast('Invite sent 🎉');
+    nav('memories');
+  }).catch(function(err){
+    _savingFuture = false;
+    console.error('Save future moment error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
+  });
+}
+
+function resetFutureForm() {
+  var t = document.getElementById('future-title'); if (t) t.value = '';
+  var d = document.getElementById('future-date'); if (d) d.value = '';
+  var tm = document.getElementById('future-time'); if (tm) tm.value = '';
+  var l = document.getElementById('future-location'); if (l) l.value = '';
+  window._futureTheme = null;
+  window._futureVibe = '⚾ Game';
+  window._futureInvitees = [];
+  if (typeof backToStep0 === 'function') backToStep0();
+}
+
+function headerSaveMoment() {
+  if (!window._momentType) return;
+  if (window._momentType === 'future') { saveFutureMoment(); } else { saveNewMoment(); }
+}
+
 function goToStep(n) {
   for (var i = 1; i <= 4; i++) {
     var step = document.getElementById('create-step-' + i);
@@ -1869,7 +2129,7 @@ function resetMomentForm() {
   window._momentPeople = [];
   window._momentExtraPhotos = [];
   if (typeof renderMomentPeople === 'function') renderMomentPeople();
-  if (typeof goToStep === 'function') goToStep(1);
+  if (typeof backToStep0 === 'function') backToStep0();
 }
 
 function addPerson() {
@@ -2270,12 +2530,61 @@ function loadMoments() {
       renderMoments(arr);
       updateProfileStats(arr);
       if (typeof renderCalendar === 'function') renderCalendar();
+      if (typeof loadFutureMoments === 'function') loadFutureMoments();
     })
     .catch(function(err) {
       console.error('Load moments error:', err);
       renderMoments([]);
       updateProfileStats([]);
     });
+}
+
+function loadFutureMoments() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var listEl = document.getElementById('upcoming-list');
+  var wrapEl = document.getElementById('upcoming-section');
+  if (!user || !window.db || !listEl) return;
+  Promise.all([
+    window.db.collection('futureMoments').where('ownerUid','==',user.uid).get(),
+    window.db.collection('futureMoments').where('taggedUids','array-contains',user.uid).get()
+  ]).then(function(results){
+    var map = {};
+    results[0].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
+    results[1].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
+    var arr = Object.keys(map).map(function(k){ return map[k]; });
+    var today = new Date().toISOString().slice(0,10);
+    arr = arr.filter(function(m){ return !m.date || m.date >= today; });
+    arr.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    if (wrapEl) wrapEl.style.display = arr.length ? 'block' : 'none';
+    listEl.innerHTML = arr.map(function(m){
+      var isOwner = m.ownerUid === user.uid;
+      var myRsvp = (m.rsvps || {})[user.uid] || '';
+      var goingCount = Object.keys(m.rsvps || {}).filter(function(k){ return m.rsvps[k] === 'going'; }).length;
+      var rsvpUi = isOwner
+        ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going</div>'
+        : '<div style="display:flex;gap:6px;margin-top:12px">' +
+          '<button onclick="futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+          '<button onclick="futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+          '<button onclick="futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+        '</div>';
+      return '<div style="background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+        '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
+        '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+        rsvpUi +
+      '</div>';
+    }).join('');
+  }).catch(function(err){ console.error('Load future moments error:', err); });
+}
+
+function futureRsvp(momentId, val) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  var update = {};
+  update['rsvps.' + user.uid] = val;
+  window.db.collection('futureMoments').doc(momentId).update(update)
+    .then(function(){ if (typeof loadFutureMoments === 'function') loadFutureMoments(); })
+    .catch(function(err){ console.error('Future RSVP error:', err); if (typeof ib_toast === 'function') ib_toast('Could not RSVP — try again'); });
 }
 
 function renderMoments(moments) {
