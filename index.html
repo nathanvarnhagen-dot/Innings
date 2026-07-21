@@ -1624,13 +1624,25 @@ function oslDay2(day) {
 <!-- ═══ MEMORY DETAIL ═══ -->
 <div class="screen" id="screen-memory-detail" style="background:var(--bg)">
   <div class="status-light"><span class="st-dark">9:41</span></div>
-  <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+  <div id="md-header-view" style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
     <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+    </button>
+    <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--indigo);font-family:inherit">Edit</button>
+  </div>
+  <div id="md-header-edit" style="display:none;background:var(--card);padding:4px 16px 12px;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <button onclick="exitMemoryEdit()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Back
     </button>
     <button onclick="momentDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
   </div>
   <div class="scroll" id="md-scroll" style="padding:0"></div>
+  <div id="photo-lightbox" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.94);z-index:200;align-items:center;justify-content:center;flex-direction:column">
+    <div onclick="closePhotoLightbox()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:white">×</div>
+    <img id="lightbox-img" src="" style="max-width:92%;max-height:72%;object-fit:contain;border-radius:8px">
+    <a id="lightbox-download" href="" download="innings-photo.jpg" style="margin-top:20px;background:white;color:var(--indigo-deep);border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit">Download</a>
+    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:12px;text-align:center;padding:0 32px">On iPhone: tap and hold the photo above to save it</div>
+  </div>
 </div>
 
 <!-- ═══ FUTURE MOMENT DETAIL ═══ -->
@@ -2971,28 +2983,89 @@ function updateProfileStats(moments) {
 
 // ── MEMORY DETAIL / EDIT / COMMENT / DELETE ──
 window._openMomentId = null;
+window._memoryDetailMode = 'view';
+window._mdPhotoTimer = null;
 
 function openMemory(id) {
   var m = _findMoment(id);
   if (!m) return;
   window._openMomentId = id;
-  renderMemoryDetail(m);
+  window._memoryDetailMode = 'view';
+  _showMemoryHeader('view');
+  renderMemoryView(m);
   nav('memory-detail');
 }
 
-function renderMemoryDetail(m) {
+function _showMemoryHeader(mode) {
+  var v = document.getElementById('md-header-view');
+  var e = document.getElementById('md-header-edit');
+  if (v) v.style.display = mode === 'view' ? 'flex' : 'none';
+  if (e) e.style.display = mode === 'edit' ? 'flex' : 'none';
+}
+
+function enterMemoryEdit() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  window._memoryDetailMode = 'edit';
+  if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+  _showMemoryHeader('edit');
+  renderMemoryEdit(m);
+}
+
+function exitMemoryEdit() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  window._memoryDetailMode = 'view';
+  _showMemoryHeader('view');
+  renderMemoryView(m);
+}
+
+function openPhotoLightbox(url) {
+  var img = document.getElementById('lightbox-img');
+  var dl = document.getElementById('lightbox-download');
+  var box = document.getElementById('photo-lightbox');
+  if (img) img.src = url;
+  if (dl) dl.href = url;
+  if (box) box.style.display = 'flex';
+}
+
+function closePhotoLightbox() {
+  var box = document.getElementById('photo-lightbox');
+  if (box) box.style.display = 'none';
+}
+
+function _startMemoryPhotoRotation(count) {
+  if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+  if (count < 2) return;
+  var i = 0;
+  window._mdPhotoTimer = setInterval(function(){
+    var slides = document.querySelectorAll('#md-photo-rotator .md-slide');
+    var dots = document.querySelectorAll('#md-photo-rotator .md-dot');
+    if (slides.length < 2) return;
+    slides[i].style.opacity = 0;
+    if (dots[i]) dots[i].style.background = 'rgba(255,255,255,0.35)';
+    i = (i + 1) % slides.length;
+    slides[i].style.opacity = 1;
+    if (dots[i]) dots[i].style.background = '#fff';
+  }, 3200);
+}
+
+function renderMemoryView(m) {
   var box = document.getElementById('md-scroll');
   if (!box) return;
   var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
-  var hero = allPhotos.length
-    ? '<div style="height:220px;background-image:url(' + allPhotos[0] + ');background-size:cover;background-position:center"></div>'
-    : '<div style="height:150px;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:52px">' + _escapeHtml((m.vibe||'⚾').split(' ')[0]) + '</div>';
 
-  var gallery = '';
-  if (allPhotos.length > 1) {
-    gallery = '<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0">' +
-      allPhotos.slice(1).map(function(p){ return '<div style="width:76px;height:76px;border-radius:12px;flex-shrink:0;background-image:url(' + p + ');background-size:cover;background-position:center"></div>'; }).join('') +
-      '</div>';
+  var photoBlock;
+  if (allPhotos.length) {
+    var slides = allPhotos.map(function(p, i){
+      return '<div class="md-slide" onclick="openPhotoLightbox(\'' + p.replace(/'/g, "\\'") + '\')" style="position:absolute;inset:0;background-image:url(' + p + ');background-size:cover;background-position:center;opacity:' + (i === 0 ? '1' : '0') + ';transition:opacity 0.8s ease;cursor:pointer"></div>';
+    }).join('');
+    var dots = allPhotos.length > 1
+      ? '<div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px">' +
+        allPhotos.map(function(_, i){ return '<div class="md-dot" style="width:5px;height:5px;border-radius:50%;background:' + (i === 0 ? '#fff' : 'rgba(255,255,255,0.35)') + '"></div>'; }).join('') +
+        '</div>'
+      : '';
+    photoBlock = '<div id="md-photo-rotator" style="height:220px;position:relative;overflow:hidden">' + slides + dots + '</div>';
+  } else {
+    photoBlock = '<div style="height:150px;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:52px">' + _escapeHtml((m.vibe || '⚾').split(' ')[0]) + '</div>';
   }
 
   var people = (m.people || []);
@@ -3010,14 +3083,13 @@ function renderMemoryDetail(m) {
           '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--black)">' + _escapeHtml(c.author) + '</div>' +
           '<div style="font-size:13px;color:var(--mid);line-height:1.5;margin-top:1px">' + _escapeHtml(c.text) + '</div></div></div>';
       }).join('')
-    : '<div style="font-size:13px;color:var(--subtle);padding:4px 0">No comments yet. Add the first one.</div>';
+    : '<div style="font-size:13px;color:var(--subtle);padding:4px 0">Nobody\'s said anything yet.</div>';
 
   box.innerHTML =
-    hero + gallery +
+    photoBlock +
     '<div style="padding:16px">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Moment name</div>' +
-      '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:none;outline:none;background:transparent;letter-spacing:-0.4px;font-family:inherit;margin-bottom:4px">' +
-      '<div style="font-size:12px;color:var(--subtle);margin-bottom:16px">' + _escapeHtml((m.vibe||'') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
+      '<div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px;margin-bottom:4px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:16px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
 
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
       '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
@@ -3027,23 +3099,46 @@ function renderMemoryDetail(m) {
       '</div>' +
 
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
-      '<textarea id="md-highlight" placeholder="What do you want to remember?" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:88px;font-family:inherit;line-height:1.6;margin-bottom:16px">' + _escapeHtml(m.highlight || '') + '</textarea>' +
+      (m.highlight
+        ? '<div style="font-size:15px;color:var(--black);line-height:1.6;margin-bottom:20px">' + _escapeHtml(m.highlight) + '</div>'
+        : '<div style="font-size:14px;color:var(--subtle);font-style:italic;margin-bottom:20px">No highlight yet — tap Edit to add one.</div>') +
 
-      (m.dedication ? '<div style="background:var(--indigo-light);border-radius:14px;padding:12px 14px;margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Dedication</div><div style="font-size:14px;color:var(--indigo-dark);line-height:1.55;font-style:italic">' + _escapeHtml(m.dedication) + '</div></div>' : '') +
+      (m.dedication ? '<div style="background:var(--indigo-light);border-radius:14px;padding:12px 14px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Dedication</div><div style="font-size:14px;color:var(--indigo-dark);line-height:1.55;font-style:italic">' + _escapeHtml(m.dedication) + '</div></div>' : '') +
 
-      '<div style="display:flex;gap:8px;margin-bottom:24px">' +
+      '<div style="border-top:0.5px solid var(--rule);padding-top:18px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Talk about it!</div>' +
+        '<div id="md-comments">' + commentHtml + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:6px">' +
+          '<input id="md-comment" placeholder="What\'s today\'s story?" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
+          '<button onclick="momentAddComment()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Post</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  _startMemoryPhotoRotation(allPhotos.length);
+}
+
+function renderMemoryEdit(m) {
+  var box = document.getElementById('md-scroll');
+  if (!box) return;
+  var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
+  var photoCount = allPhotos.length;
+
+  box.innerHTML =
+    '<div style="padding:16px">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Moment name</div>' +
+      '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);letter-spacing:-0.4px;font-family:inherit;margin-bottom:16px">' +
+
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
+      '<textarea id="md-highlight" placeholder="What do you want to remember?" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:100px;font-family:inherit;line-height:1.6;margin-bottom:20px">' + _escapeHtml(m.highlight || '') + '</textarea>' +
+
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Photos</div>' +
+      '<div style="font-size:13px;color:var(--subtle);margin-bottom:12px">' + photoCount + (photoCount === 1 ? ' photo added' : ' photos added') + '</div>' +
+
+      '<div style="display:flex;gap:8px">' +
         '<input type="file" id="md-photo-input" accept="image/*" multiple style="display:none" onchange="momentAddPhoto(this)">' +
         '<button onclick="document.getElementById(\'md-photo-input\').click()" style="flex:1;background:var(--bg);border:0.5px solid var(--rule);border-radius:14px;padding:12px;font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer;font-family:inherit">＋ Add photos</button>' +
         '<button onclick="momentSaveEdits()" style="flex:1;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save changes</button>' +
-      '</div>' +
-
-      '<div style="border-top:0.5px solid var(--rule);padding-top:18px">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Comments</div>' +
-        '<div id="md-comments">' + commentHtml + '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:6px">' +
-          '<input id="md-comment" placeholder="Add a comment…" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
-          '<button onclick="momentAddComment()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Post</button>' +
-        '</div>' +
       '</div>' +
     '</div>';
 }
@@ -3067,6 +3162,7 @@ function momentSaveEdits() {
   m.name = nm ? (nm.value.trim() || 'Untitled moment') : m.name;
   m.highlight = hl ? hl.value.trim() : m.highlight;
   _persistMoment(m, { name: m.name, highlight: m.highlight }, 'Saved');
+  exitMemoryEdit();
 }
 
 function momentTagPerson() {
@@ -3076,14 +3172,14 @@ function momentTagPerson() {
   if (!name) return;
   m.people = (m.people || []).concat([name]);
   if (inp) inp.value = '';
-  renderMemoryDetail(m);
+  renderMemoryView(m);
   _persistMoment(m, { people: m.people }, 'Tagged ' + name);
 }
 
 function momentRemovePerson(i) {
   var m = _findMoment(window._openMomentId); if (!m || !m.people) return;
   m.people.splice(i, 1);
-  renderMemoryDetail(m);
+  renderMemoryView(m);
   _persistMoment(m, { people: m.people });
 }
 
@@ -3098,7 +3194,7 @@ function momentAddPhoto(input) {
         if (!m.photo) m.photo = small; else m.photos.push(small);
         done++;
         if (done === files.length) {
-          renderMemoryDetail(m);
+          renderMemoryEdit(m);
           _persistMoment(m, { photo: m.photo || '', photos: m.photos }, 'Photo added');
         }
       });
@@ -3115,7 +3211,7 @@ function momentAddComment() {
   var author = (window.userData && window.userData.name) || 'You';
   m.comments = (m.comments || []).concat([{ author: author, text: text, ts: Date.now() }]);
   if (inp) inp.value = '';
-  renderMemoryDetail(m);
+  renderMemoryView(m);
   _persistMoment(m, { comments: m.comments });
 }
 
