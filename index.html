@@ -666,13 +666,21 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <!-- VIBE -->
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of moment</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px" id="vibe-pills">
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--indigo-light);border:0.5px solid transparent;font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer">⚾ Game</div>
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎪 Festival</div>
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎵 Concert</div>
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🍺 Hangout</div>
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">✈️ Trip</div>
-          <div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">+ Other</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="vibe-pills"></div>
+      </div>
+
+      <!-- NAME A CUSTOM MOMENT TYPE -->
+      <div id="add-vibe-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+        <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
+          <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Name this kind of moment</div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <input id="vibe-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="🏷️">
+            <input id="vibe-label" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. Board game night, Road trip" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomVibe();}">
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="hideAddVibe()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+            <button onclick="saveCustomVibe()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
+          </div>
         </div>
       </div>
 
@@ -1783,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();}}
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 let _photoCur=0, _photoTimer=null;
 function _startPhotoRotation(){
   if(_photoTimer) clearInterval(_photoTimer);
@@ -2052,8 +2060,49 @@ function goToStep(n) {
   }
 }
 
+var BUILTIN_VIBES = ['⚾ Game','🎪 Festival','🎵 Concert','🍽️ Meal','🍺 Hangout','✈️ Trip','📷 Photo op','🏖️ Beach day','🎲 Game night','🎂 Birthday','🚴 Bike ride','☕ Coffee'];
+
+function renderVibePills() {
+  var container = document.getElementById('vibe-pills');
+  if (!container) return;
+  var custom = (window.userData && window.userData.customVibes) || [];
+  var current = window._momentVibe || BUILTIN_VIBES[0];
+  var all = BUILTIN_VIBES.concat(custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; }));
+  container.innerHTML = all.map(function(v){
+    var active = v === current;
+    return '<div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (active ? '600' : '500') + ';color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + _escapeHtml(v) + '</div>';
+  }).join('') +
+  '<div class="vibe-other" onclick="showAddVibe()" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:1px dashed var(--indigo-mid);font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer">+ Other</div>';
+}
+
+function showAddVibe() { var m = document.getElementById('add-vibe-modal'); if (m) m.style.display = 'flex'; }
+function hideAddVibe() { var m = document.getElementById('add-vibe-modal'); if (m) m.style.display = 'none'; }
+
+function saveCustomVibe() {
+  var emojiEl = document.getElementById('vibe-emoji');
+  var labelEl = document.getElementById('vibe-label');
+  var emoji = emojiEl ? emojiEl.value.trim() : '';
+  var label = labelEl ? labelEl.value.trim() : '';
+  if (!label) { hideAddVibe(); return; }
+  if (!emoji) emoji = '🏷️';
+  window.userData = window.userData || {};
+  var list = (window.userData.customVibes || []).slice();
+  list.push({ emoji: emoji, label: label });
+  window.userData.customVibes = list;
+  window._momentVibe = emoji + ' ' + label;
+  renderVibePills();
+  if (emojiEl) emojiEl.value = '';
+  if (labelEl) labelEl.value = '';
+  hideAddVibe();
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ customVibes: list }, { merge: true })
+      .catch(function(err){ console.error('Save custom vibe error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+}
+
 function selectVibe(el) {
-  var pills = document.querySelectorAll('#vibe-pills > div');
+  var pills = document.querySelectorAll('#vibe-pills > div:not(.vibe-other)');
   pills.forEach(function(p) {
     p.style.background = '#F6F6F9';
     p.style.color = '#8E8EA8';
@@ -2140,6 +2189,7 @@ function resetMomentForm() {
   window._momentVibe = '⚾ Game';
   window._momentPeople = [];
   window._momentExtraPhotos = [];
+  if (typeof renderVibePills === 'function') renderVibePills();
   if (typeof renderMomentPeople === 'function') renderMomentPeople();
   if (typeof backToStep0 === 'function') backToStep0();
 }
@@ -2317,6 +2367,8 @@ auth.onAuthStateChanged(function(user) {
         var photos = pdata.profilePhotos || (pdata.profilePhoto ? [pdata.profilePhoto] : []);
         if (photos.length && typeof applyProfilePhoto === 'function') applyProfilePhoto(photos);
         if (typeof renderInterests === 'function') renderInterests(pdata.interests || []);
+        window.userData.customVibes = pdata.customVibes || [];
+        if (typeof renderVibePills === 'function') renderVibePills();
         nav('feed');
       } else {
         ib_showStep('ob-name-step');
