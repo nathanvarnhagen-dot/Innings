@@ -665,23 +665,9 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
       <!-- VIBE -->
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of moment</div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">What kind of moment</div>
+        <input id="vibe-input" style="width:100%;font-size:16px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit;margin-bottom:10px" placeholder="Name this kind of moment" oninput="_syncVibeInput()">
         <div style="display:flex;flex-wrap:wrap;gap:8px" id="vibe-pills"></div>
-      </div>
-
-      <!-- NAME A CUSTOM MOMENT TYPE -->
-      <div id="add-vibe-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-        <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
-          <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Name this kind of moment</div>
-          <div style="display:flex;gap:8px;margin-bottom:16px">
-            <input id="vibe-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="🏷️">
-            <input id="vibe-label" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. Board game night, Road trip" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCustomVibe();}">
-          </div>
-          <div style="display:flex;gap:8px">
-            <button onclick="hideAddVibe()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
-            <button onclick="saveCustomVibe()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
-          </div>
-        </div>
       </div>
 
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
@@ -2060,44 +2046,47 @@ function goToStep(n) {
   }
 }
 
-var BUILTIN_VIBES = ['⚾ Game','🎪 Festival','🎵 Concert','🍽️ Meal','🍺 Hangout','✈️ Trip','📷 Photo op','🏖️ Beach day','🎲 Game night','🎂 Birthday','🚴 Bike ride','☕ Coffee'];
+var VIBE_EXAMPLES = ['⚾ Game','🎪 Festival','🍽️ Meal','🍺 Hangout','✈️ Trip'];
 
 function renderVibePills() {
   var container = document.getElementById('vibe-pills');
   if (!container) return;
   var custom = (window.userData && window.userData.customVibes) || [];
-  var current = window._momentVibe || BUILTIN_VIBES[0];
-  var all = BUILTIN_VIBES.concat(custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; }));
+  var all = VIBE_EXAMPLES.concat(custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; }));
   container.innerHTML = all.map(function(v){
-    var active = v === current;
-    return '<div onclick="selectVibe(this)" style="padding:8px 14px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (active ? '600' : '500') + ';color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + _escapeHtml(v) + '</div>';
-  }).join('') +
-  '<div class="vibe-other" onclick="showAddVibe()" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:1px dashed var(--indigo-mid);font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer">+ Other</div>';
+    return '<div onclick="quickVibe(\'' + v.replace(/'/g, "\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">' + _escapeHtml(v) + '</div>';
+  }).join('');
 }
 
-function showAddVibe() { var m = document.getElementById('add-vibe-modal'); if (m) m.style.display = 'flex'; }
-function hideAddVibe() { var m = document.getElementById('add-vibe-modal'); if (m) m.style.display = 'none'; }
+function quickVibe(v) {
+  var inp = document.getElementById('vibe-input');
+  if (inp) inp.value = v;
+  window._momentVibe = v;
+}
 
-function saveCustomVibe() {
-  var emojiEl = document.getElementById('vibe-emoji');
-  var labelEl = document.getElementById('vibe-label');
-  var emoji = emojiEl ? emojiEl.value.trim() : '';
-  var label = labelEl ? labelEl.value.trim() : '';
-  if (!label) { hideAddVibe(); return; }
-  if (!emoji) emoji = '🏷️';
+function _syncVibeInput() {
+  var inp = document.getElementById('vibe-input');
+  window._momentVibe = inp ? inp.value.trim() : '';
+}
+
+function _persistCustomVibeIfNew(vibeStr) {
+  if (!vibeStr) return;
+  if (VIBE_EXAMPLES.indexOf(vibeStr) !== -1) return;
   window.userData = window.userData || {};
   var list = (window.userData.customVibes || []).slice();
+  var already = list.some(function(v){ return (v.emoji || '🏷️') + ' ' + v.label === vibeStr; });
+  if (already) return;
+  var parts = vibeStr.split(' ');
+  var emoji = parts[0];
+  var label = parts.slice(1).join(' ').trim();
+  if (!label) { label = emoji; emoji = '🏷️'; }
   list.push({ emoji: emoji, label: label });
   window.userData.customVibes = list;
-  window._momentVibe = emoji + ' ' + label;
   renderVibePills();
-  if (emojiEl) emojiEl.value = '';
-  if (labelEl) labelEl.value = '';
-  hideAddVibe();
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && window.db) {
     window.db.collection('users').doc(user.uid).set({ customVibes: list }, { merge: true })
-      .catch(function(err){ console.error('Save custom vibe error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+      .catch(function(err){ console.error('Save custom vibe error:', err); });
   }
 }
 
@@ -2140,6 +2129,7 @@ function saveNewMoment() {
   var rememberEl = document.getElementById('remember-text');
   var dedication = rememberEl ? rememberEl.value.trim() : '';
   var vibe = window._momentVibe || '⚾ Game';
+  _persistCustomVibeIfNew(vibe);
   var photo = window._momentPhoto || '';
   var people = (window._momentPeople || []).slice();
   var photos = (window._momentExtraPhotos || []).slice();
@@ -2186,7 +2176,8 @@ function resetMomentForm() {
   var extraPrev = document.getElementById('moment-photo-preview');
   if (extraPrev) extraPrev.innerHTML = '';
   window._momentPhoto = '';
-  window._momentVibe = '⚾ Game';
+  window._momentVibe = '';
+  var vibeInputEl = document.getElementById('vibe-input'); if (vibeInputEl) vibeInputEl.value = '';
   window._momentPeople = [];
   window._momentExtraPhotos = [];
   if (typeof renderVibePills === 'function') renderVibePills();
