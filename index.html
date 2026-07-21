@@ -666,7 +666,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <!-- VIBE -->
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">What kind of moment</div>
-        <input id="vibe-input" style="width:100%;font-size:16px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit;margin-bottom:10px" placeholder="Name this kind of moment" oninput="_syncVibeInput()">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="vibe-emoji-input" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:12px 0;outline:none;font-family:inherit;background:var(--bg)" placeholder="🏷️" oninput="_syncVibeInput()">
+          <input id="vibe-name-input" style="flex:1;font-size:16px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit" placeholder="Name this kind of moment" oninput="_syncVibeInput()">
+        </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px" id="vibe-pills"></div>
       </div>
 
@@ -2059,14 +2062,22 @@ function renderVibePills() {
 }
 
 function quickVibe(v) {
-  var inp = document.getElementById('vibe-input');
-  if (inp) inp.value = v;
+  var parts = v.split(' ');
+  var emoji = parts[0];
+  var name = parts.slice(1).join(' ');
+  var emojiEl = document.getElementById('vibe-emoji-input');
+  var nameEl = document.getElementById('vibe-name-input');
+  if (emojiEl) emojiEl.value = emoji;
+  if (nameEl) nameEl.value = name;
   window._momentVibe = v;
 }
 
 function _syncVibeInput() {
-  var inp = document.getElementById('vibe-input');
-  window._momentVibe = inp ? inp.value.trim() : '';
+  var emojiEl = document.getElementById('vibe-emoji-input');
+  var nameEl = document.getElementById('vibe-name-input');
+  var emoji = emojiEl ? emojiEl.value.trim() : '';
+  var name = nameEl ? nameEl.value.trim() : '';
+  window._momentVibe = name ? (emoji || '🏷️') + ' ' + name : '';
 }
 
 function _persistCustomVibeIfNew(vibeStr) {
@@ -2177,7 +2188,8 @@ function resetMomentForm() {
   if (extraPrev) extraPrev.innerHTML = '';
   window._momentPhoto = '';
   window._momentVibe = '';
-  var vibeInputEl = document.getElementById('vibe-input'); if (vibeInputEl) vibeInputEl.value = '';
+  var vibeEmojiEl = document.getElementById('vibe-emoji-input'); if (vibeEmojiEl) vibeEmojiEl.value = '';
+  var vibeNameEl = document.getElementById('vibe-name-input'); if (vibeNameEl) vibeNameEl.value = '';
   window._momentPeople = [];
   window._momentExtraPhotos = [];
   if (typeof renderVibePills === 'function') renderVibePills();
