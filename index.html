@@ -1884,14 +1884,14 @@ function renderActChat(msgs) {
     var badges = _reactionBadgesHtml(c.reactions, false);
     if (mine) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div>' +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
-      '<div>' +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
   }).join('');
@@ -2244,13 +2244,23 @@ function oslDay2(day) {
 <!-- ═══ FUTURE MOMENT DETAIL ═══ -->
 <div class="screen" id="screen-future-detail" style="background:var(--bg)">
   <div class="status-light"><span class="st-dark">9:41</span></div>
-  <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+  <div id="fd-header-view" style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
     <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+    </button>
+    <button id="fd-edit-btn" onclick="enterFutureEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--indigo);font-family:inherit">Edit</button>
+  </div>
+  <div id="fd-header-edit" style="display:none;background:var(--card);padding:4px 16px 12px;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <button onclick="exitFutureEdit()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Back
     </button>
     <button onclick="futureDetailDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
   </div>
   <div class="scroll" id="fd-scroll" style="padding:0"></div>
+  <div id="fd-composer" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;flex-shrink:0">
+    <input id="fd-chat-field" class="msg-input" placeholder="Message the group..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFutureMomentMessage();}">
+    <button class="send-btn" onclick="sendFutureMomentMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+  </div>
 </div>
 
 <!-- ═══ PROFILE ═══ -->
@@ -2389,7 +2399,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.35.0-imessage-tapbacks';
+window.INNINGS_BUILD = 'v4.36.0-chat-bubble-fix-plan-chat';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3406,11 +3416,183 @@ function openFutureDetail(momentId) {
   var m = (window._futureMomentsCache || {})[momentId];
   if (!m) return;
   window._openFutureId = momentId;
-  renderFutureDetail(m);
+  window._futureDetailMode = 'view';
+  _showFutureHeader('view');
+  renderFutureView(m);
   nav('future-detail');
 }
 
-function renderFutureDetail(m) {
+function _showFutureHeader(mode) {
+  var v = document.getElementById('fd-header-view');
+  var e = document.getElementById('fd-header-edit');
+  var c = document.getElementById('fd-composer');
+  if (v) v.style.display = mode === 'view' ? 'flex' : 'none';
+  if (e) e.style.display = mode === 'edit' ? 'flex' : 'none';
+  if (c) c.style.display = mode === 'view' ? 'flex' : 'none';
+}
+
+function enterFutureEdit() {
+  var m = (window._futureMomentsCache || {})[window._openFutureId];
+  if (!m) return;
+  window._futureDetailMode = 'edit';
+  _showFutureHeader('edit');
+  renderFutureEdit(m);
+}
+
+function exitFutureEdit() {
+  var m = (window._futureMomentsCache || {})[window._openFutureId];
+  if (!m) return;
+  window._futureDetailMode = 'view';
+  _showFutureHeader('view');
+  renderFutureView(m);
+}
+
+// Default landing view for a plan: hero + RSVP (or guest summary if you're
+// the owner) + a group chat scoped to this plan, so tapping into a plan
+// coordinates with people instead of dropping straight into an edit form.
+function renderFutureView(m) {
+  var box = document.getElementById('fd-scroll');
+  if (!box) return;
+  var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var isOwner = !!(user && m.ownerUid === user.uid);
+  var myRsvp = user ? ((m.rsvps || {})[user.uid] || '') : '';
+
+  var rsvpSection = isOwner
+    ? '<div id="fd-guest-summary"></div>'
+    : '<div style="display:flex;gap:8px">' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='going'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='going'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='maybe'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='maybe'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='no'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='no'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+      '</div>';
+
+  box.innerHTML =
+    '<div style="background:' + theme + ';padding:26px 20px">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + (m.public ? '  ·  🌎 Public' : '') + '</div>' +
+      '<div style="font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' + rsvpSection + '</div>' +
+    '<div id="future-chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>' +
+    '<div id="future-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">' +
+      '<div style="font-size:30px">💬</div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--black)">No messages yet</div>' +
+      '<div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Coordinate with everyone here.</div>' +
+    '</div>';
+
+  if (isOwner) _renderFutureGuestSummary(m);
+  startFutureMomentChat(m._id);
+}
+
+function futureDetailRsvp(momentId, val) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  var m = (window._futureMomentsCache || {})[momentId];
+  if (m) { m.rsvps = m.rsvps || {}; m.rsvps[user.uid] = val; renderFutureView(m); }
+  var update = {};
+  update['rsvps.' + user.uid] = val;
+  window.db.collection('futureMoments').doc(momentId).update(update)
+    .then(function(){
+      if (typeof loadFutureMoments === 'function') loadFutureMoments();
+      if (typeof loadFeedMoments === 'function') loadFeedMoments();
+    })
+    .catch(function(err){ console.error('Future RSVP error:', err); if (typeof ib_toast === 'function') ib_toast('Could not RSVP — try again'); });
+}
+
+function _renderFutureGuestSummary(m) {
+  var box = document.getElementById('fd-guest-summary');
+  if (!box || !window.db) return;
+  var uids = m.taggedUids || [];
+  var goingCount = Object.keys(m.rsvps || {}).filter(function(k){ return m.rsvps[k] === 'going'; }).length;
+  if (!uids.length) {
+    box.innerHTML = '<div style="font-size:13px;color:var(--subtle)">' + goingCount + ' going · no one tagged yet</div>';
+    return;
+  }
+  box.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">' + goingCount + ' going</div>';
+  Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+    var rsvps = m.rsvps || {};
+    box.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">' + goingCount + ' going</div>' +
+      docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        var status = rsvps[doc.id] || 'pending';
+        var label = status === 'going' ? 'Going' : status === 'maybe' ? 'Maybe' : status === 'no' ? "Can't go" : 'Pending';
+        var color = status === 'going' ? 'var(--win)' : status === 'no' ? 'var(--loss)' : 'var(--subtle)';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0">' +
+          '<div style="width:28px;height:28px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:' + color + '">' + label + '</div>' +
+        '</div>';
+      }).join('');
+  }).catch(function(err){ console.error('Load guest summary error:', err); });
+}
+
+// ── PER-PLAN GROUP CHAT ──
+window._futureChatStarted = {};
+
+function startFutureMomentChat(momentId) {
+  if (window._futureChatStarted[momentId]) return;
+  if (!window.db) return;
+  window._futureChatStarted[momentId] = true;
+  window.db.collection('futureMomentChat').where('momentId','==',momentId).limit(300).onSnapshot(function(snap){
+    if (window._openFutureId !== momentId) return;
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    msgs.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
+    renderFutureMomentChat(msgs);
+  }, function(err){
+    console.error('Future moment chat error:', err);
+    window._futureChatStarted[momentId] = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderFutureMomentChat(msgs) {
+  var box = document.getElementById('future-chat-msgs');
+  var empty = document.getElementById('future-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function(c){
+    var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
+    if (mine) {
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        badges +
+      '</div></div>';
+  }).join('');
+  var panel = document.getElementById('fd-scroll');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function deleteFutureMomentMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('futureMomentChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete future chat message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function sendFutureMomentMessage() {
+  if (!window._openFutureId) return;
+  var inp = document.getElementById('fd-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  window.db.collection('futureMomentChat').add({ momentId: window._openFutureId, uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('Future chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+}
+
+function renderFutureEdit(m) {
   var box = document.getElementById('fd-scroll');
   if (!box) return;
   var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
@@ -3603,7 +3785,18 @@ function futureDetailSave() {
     if (typeof ib_toast === 'function') ib_toast('Plan updated');
     if (typeof loadFutureMoments === 'function') loadFutureMoments();
     if (typeof loadFeedMoments === 'function') loadFeedMoments();
-    nav('feed');
+    var m = (window._futureMomentsCache || {})[id];
+    if (m) {
+      m.title = t && t.value.trim() ? t.value.trim() : 'Untitled plan';
+      m.date = d ? d.value : '';
+      m.time = tm ? tm.value : '';
+      m.location = l && l.value.trim() ? l.value.trim() : '';
+      m.theme = window._fdTheme || m.theme;
+      m.vibe = window._fdVibe || m.vibe;
+      m.taggedUids = window._fdInvitees || [];
+      m.public = !!window._fdPublic;
+    }
+    exitFutureEdit();
   }).catch(function(err){
     console.error('Save future detail error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
@@ -4295,6 +4488,7 @@ function _reactionSheetDelete() {
   if (target.collection === 'oslChat') deleteOslMessage(target.msgId);
   else if (target.collection === 'feedbackChat') deleteFeedbackMessage(target.msgId);
   else if (target.collection === 'actChat') deleteActMessage(target.msgId);
+  else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
 }
 
 // Renders grouped emoji badges (with a count if more than one person picked
@@ -4342,14 +4536,14 @@ function renderOslChat(msgs) {
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div>' +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
-      '<div>' +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
   }).join('');
