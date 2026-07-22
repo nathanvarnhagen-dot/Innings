@@ -1860,21 +1860,36 @@ function oslDay2(day) {
 </div>
 
 <!-- ═══ MEMORY DETAIL ═══ -->
-<div class="screen" id="screen-memory-detail" style="background:var(--bg)">
-  <div class="status-light"><span class="st-dark">9:41</span></div>
-  <div id="md-header-view" style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
-      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+<div class="screen" id="screen-memory-detail" style="background:var(--indigo-deep)">
+  <div id="md-bg-rotator" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
+  <div style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(10,10,20,0.5) 0%,rgba(10,10,20,0.08) 22%,rgba(10,10,20,0.12) 55%,rgba(10,10,20,0.78) 100%)"></div>
+
+  <div class="status-light" style="position:relative;z-index:2;background:transparent"><span class="st-light">9:41</span></div>
+
+  <div id="md-bg-progress" style="position:relative;z-index:2;display:flex;gap:4px;padding:0 16px 10px"></div>
+
+  <div id="md-header-view" style="position:relative;z-index:2;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
     </button>
-    <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--indigo);font-family:inherit">Edit</button>
+    <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#fff;font-family:inherit">Edit</button>
   </div>
-  <div id="md-header-edit" style="display:none;background:var(--card);padding:4px 16px 12px;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-    <button onclick="exitMemoryEdit()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
-      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Back
+  <div id="md-header-edit" style="display:none;position:relative;z-index:2;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 16px 12px;align-items:center;justify-content:space-between;flex-shrink:0">
+    <button onclick="exitMemoryEdit()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Back
     </button>
-    <button onclick="momentDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
+    <button onclick="momentDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#FF9270;font-family:inherit">Delete</button>
   </div>
-  <div class="scroll" id="md-scroll" style="padding:0"></div>
+
+  <div class="scroll" id="md-scroll" style="position:relative;z-index:2;padding:14px 16px 18px;background:transparent"></div>
+
+  <div id="md-composer" style="position:relative;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0">
+    <input id="md-comment" placeholder="What's today's story?" onkeydown="if(event.key==='Enter'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.14)">
+    <button onclick="momentAddComment()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+    </button>
+  </div>
+
   <div id="photo-lightbox" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.94);z-index:200;align-items:center;justify-content:center;flex-direction:column">
     <div onclick="closePhotoLightbox()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:white">×</div>
     <img id="lightbox-img" src="" style="max-width:92%;max-height:72%;object-fit:contain;border-radius:8px">
@@ -2022,7 +2037,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.32.14-osl-lineup';
+window.INNINGS_BUILD = 'v4.32.15-imessage-memory';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3237,8 +3252,12 @@ function openMemory(id) {
 function _showMemoryHeader(mode) {
   var v = document.getElementById('md-header-view');
   var e = document.getElementById('md-header-edit');
+  var c = document.getElementById('md-composer');
+  var p = document.getElementById('md-bg-progress');
   if (v) v.style.display = mode === 'view' ? 'flex' : 'none';
   if (e) e.style.display = mode === 'edit' ? 'flex' : 'none';
+  if (c) c.style.display = mode === 'view' ? 'flex' : 'none';
+  if (p) p.style.display = mode === 'view' ? 'flex' : 'none';
 }
 
 function enterMemoryEdit() {
@@ -3275,83 +3294,89 @@ function _startMemoryPhotoRotation(count) {
   if (count < 2) return;
   var i = 0;
   window._mdPhotoTimer = setInterval(function(){
-    var slides = document.querySelectorAll('#md-photo-rotator .md-slide');
-    var dots = document.querySelectorAll('#md-photo-rotator .md-dot');
+    var slides = document.querySelectorAll('#md-bg-rotator .md-bg-slide');
+    var segs = document.querySelectorAll('#md-bg-progress .md-bg-seg');
     if (slides.length < 2) return;
     slides[i].style.opacity = 0;
-    if (dots[i]) dots[i].style.background = 'rgba(255,255,255,0.35)';
+    if (segs[i]) segs[i].style.background = 'rgba(255,255,255,0.3)';
     i = (i + 1) % slides.length;
     slides[i].style.opacity = 1;
-    if (dots[i]) dots[i].style.background = '#fff';
-  }, 3200);
+    if (segs[i]) segs[i].style.background = 'rgba(255,255,255,0.9)';
+  }, 5000);
 }
 
 function renderMemoryView(m) {
-  var box = document.getElementById('md-scroll');
-  if (!box) return;
+  var scroll = document.getElementById('md-scroll');
+  var bgBox = document.getElementById('md-bg-rotator');
+  var progBox = document.getElementById('md-bg-progress');
+  if (!scroll || !bgBox) return;
   var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
 
-  var photoBlock;
+  // Full-bleed rotating photo backdrop
   if (allPhotos.length) {
-    var slides = allPhotos.map(function(p, i){
-      return '<div class="md-slide" onclick="openPhotoLightbox(\'' + p.replace(/'/g, "\\'") + '\')" style="position:absolute;inset:0;background-image:url(' + p + ');background-size:cover;background-position:center;opacity:' + (i === 0 ? '1' : '0') + ';transition:opacity 0.8s ease;cursor:pointer"></div>';
+    bgBox.innerHTML = allPhotos.map(function(p, i){
+      return '<div class="md-bg-slide" onclick="openPhotoLightbox(\'' + p.replace(/'/g, "\\'") + '\')" style="position:absolute;inset:0;background-image:url(' + p + ');background-size:cover;background-position:center;opacity:' + (i === 0 ? '1' : '0') + ';transition:opacity 1.6s ease;cursor:pointer"></div>';
     }).join('');
-    var dots = allPhotos.length > 1
-      ? '<div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px">' +
-        allPhotos.map(function(_, i){ return '<div class="md-dot" style="width:5px;height:5px;border-radius:50%;background:' + (i === 0 ? '#fff' : 'rgba(255,255,255,0.35)') + '"></div>'; }).join('') +
-        '</div>'
-      : '';
-    photoBlock = '<div id="md-photo-rotator" style="height:220px;position:relative;overflow:hidden">' + slides + dots + '</div>';
   } else {
-    photoBlock = '<div style="height:150px;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:52px">' + _escapeHtml((m.vibe || '⚾').split(' ')[0]) + '</div>';
+    bgBox.innerHTML = '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:130px;opacity:0.22">' + _escapeHtml((m.vibe || '⚾').split(' ')[0]) + '</div>';
+  }
+  if (progBox) {
+    progBox.innerHTML = allPhotos.length > 1
+      ? allPhotos.map(function(_, i){ return '<div class="md-bg-seg" style="flex:1;height:3px;border-radius:2px;background:' + (i === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)') + '"></div>'; }).join('')
+      : '';
   }
 
+  var youName = (window.userData && window.userData.name) || 'You';
   var people = (m.people || []);
-  var peopleChips = '<div class="av av-a" style="width:34px;height:34px;font-size:11px">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
+  var peopleChips = '<div class="av av-a" style="width:32px;height:32px;font-size:11px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(youName)) + '</div>' +
     people.map(function(nm, i){
-      return '<div style="position:relative"><div class="av av-b" style="width:34px;height:34px;font-size:11px;margin-left:-6px;border:2px solid white">' + _escapeHtml(_initials(nm)) + '</div>' +
+      return '<div style="position:relative"><div class="av av-b" style="width:32px;height:32px;font-size:11px;margin-left:-8px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(nm)) + '</div>' +
         '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--loss);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div></div>';
     }).join('');
 
+  // Conversation thread: your highlight + dedication + comments, iMessage-style bubbles
+  var thread = '';
+  if (m.highlight) {
+    thread += '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">' +
+      '<div style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:15px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,0.2)">' + _escapeHtml(m.highlight) + '</div></div>';
+  }
+  if (m.dedication) {
+    thread += '<div style="display:flex;justify-content:center;margin:2px 0 14px">' +
+      '<div style="max-width:82%;background:rgba(255,255,255,0.18);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:14px;padding:9px 14px;font-size:12.5px;line-height:1.5;font-style:italic;text-align:center">💜 ' + _escapeHtml(m.dedication) + '</div></div>';
+  }
   var comments = (m.comments || []);
-  var commentHtml = comments.length
-    ? comments.map(function(c){
-        return '<div style="display:flex;gap:8px;margin-bottom:12px">' +
-          '<div class="av av-c" style="width:28px;height:28px;font-size:10px;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
-          '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--black)">' + _escapeHtml(c.author) + '</div>' +
-          '<div style="font-size:13px;color:var(--mid);line-height:1.5;margin-top:1px">' + _escapeHtml(c.text) + '</div></div></div>';
-      }).join('')
-    : '<div style="font-size:13px;color:var(--subtle);padding:4px 0">Nobody\'s said anything yet.</div>';
+  if (comments.length) {
+    thread += comments.map(function(c){
+      var mine = c.author === youName;
+      if (mine) {
+        return '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">' +
+          '<div style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:15px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,0.2)">' + _escapeHtml(c.text) + '</div></div>';
+      }
+      return '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">' +
+        '<div class="av av-c" style="width:26px;height:26px;font-size:10px;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="max-width:74%">' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
+          '<div style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:15px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,0.14)">' + _escapeHtml(c.text) + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+  if (!thread) {
+    thread = '<div style="text-align:center;padding:26px 10px;color:rgba(255,255,255,0.6);font-size:13px;font-style:italic">No highlight or messages yet — say something below.</div>';
+  }
 
-  box.innerHTML =
-    photoBlock +
-    '<div style="padding:16px">' +
-      '<div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px;margin-bottom:4px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
-      '<div style="font-size:12px;color:var(--subtle);margin-bottom:16px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
+  scroll.innerHTML =
+    '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
+      '<div style="font-size:19px;font-weight:700;color:#fff;letter-spacing:-0.4px;margin-bottom:3px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:14px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
 
-      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
+      '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
       '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:20px">' +
-        '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:13px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 12px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
-        '<button onclick="momentTagPerson()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
+      '<div style="display:flex;gap:8px">' +
+        '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:13px;border:0.5px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 12px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.1)">' +
+        '<button onclick="momentTagPerson()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
       '</div>' +
-
-      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
-      (m.highlight
-        ? '<div style="font-size:15px;color:var(--black);line-height:1.6;margin-bottom:20px">' + _escapeHtml(m.highlight) + '</div>'
-        : '<div style="font-size:14px;color:var(--subtle);font-style:italic;margin-bottom:20px">No highlight yet — tap Edit to add one.</div>') +
-
-      (m.dedication ? '<div style="background:var(--indigo-light);border-radius:14px;padding:12px 14px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Dedication</div><div style="font-size:14px;color:var(--indigo-dark);line-height:1.55;font-style:italic">' + _escapeHtml(m.dedication) + '</div></div>' : '') +
-
-      '<div style="border-top:0.5px solid var(--rule);padding-top:18px">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Talk about it!</div>' +
-        '<div id="md-comments">' + commentHtml + '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:6px">' +
-          '<input id="md-comment" placeholder="What\'s today\'s story?" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
-          '<button onclick="momentAddComment()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Post</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+    '</div>' +
+    '<div style="padding-top:6px">' + thread + '</div>';
 
   _startMemoryPhotoRotation(allPhotos.length);
 }
@@ -3363,7 +3388,7 @@ function renderMemoryEdit(m) {
   var photoCount = allPhotos.length;
 
   box.innerHTML =
-    '<div style="padding:16px">' +
+    '<div style="background:var(--card);border-radius:18px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,0.3)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Moment name</div>' +
       '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);letter-spacing:-0.4px;font-family:inherit;margin-bottom:16px">' +
 
