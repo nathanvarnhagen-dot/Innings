@@ -1881,15 +1881,28 @@ function renderActChat(msgs) {
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
     if (mine) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+        '<div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          badges +
+        '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
-      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+      '<div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        badges +
+      '</div></div>';
   }).join('');
   var panel = document.getElementById('act-detail-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function deleteActMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('actChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete act message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 function sendActMessage() {
@@ -2366,8 +2379,17 @@ function oslDay2(day) {
 </div>
 
 </div>
+
+<!-- ═══ MESSAGE REACTIONS — shared across OSL chat, Feedback chat, and Artist chat ═══ -->
+<div id="msg-reaction-sheet" onclick="closeReactionSheet()" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.4);align-items:flex-end;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:var(--card);width:100%;max-width:430px;border-radius:20px 20px 0 0;padding:22px 18px 28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 -8px 30px rgba(0,0,0,0.2)">
+    <div id="msg-reaction-emojis" style="display:flex;justify-content:space-between;gap:2px"></div>
+    <button id="msg-reaction-delete-btn" onclick="_reactionSheetDelete()" style="display:none;width:100%;background:var(--bg);border:0.5px solid var(--rule);color:var(--loss);border-radius:14px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Delete Message</button>
+    <button onclick="closeReactionSheet()" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);color:var(--subtle);border-radius:14px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
+  </div>
+</div>
 <script>
-window.INNINGS_BUILD = 'v4.34.1-apple-music-live-lookup';
+window.INNINGS_BUILD = 'v4.35.0-imessage-tapbacks';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4214,40 +4236,83 @@ function startOslChat() {
   });
 }
 
-function oslMsgPressStart(el) {
-  el._pressTimer = setTimeout(function(){
-    el._heldReady = true;
-    el._confirmStage = false;
-    var txt = el.querySelector('.b-t');
-    if (txt) txt.textContent = 'Tap to delete';
-    el.style.opacity = '0.6';
-    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
-  }, 550);
-}
+// ── MESSAGE REACTIONS (tapbacks) — shared by OSL chat, Feedback chat, Artist chat ──
+var REACTION_EMOJIS = ['❤️','👍','👎','😂','‼️','❓'];
+window._reactionSheetTarget = null;
 
-function oslMsgPressCancel(el) {
-  if (el._pressTimer) { clearTimeout(el._pressTimer); el._pressTimer = null; }
-}
-
-function oslMsgResetPress(el) {
-  el._heldReady = false;
-  el._confirmStage = false;
-  el.style.opacity = '1';
-  var txt = el.querySelector('.b-t');
-  if (txt) txt.textContent = el.getAttribute('data-ts-label') || '';
-}
-
-function oslMsgTap(el, msgId) {
-  if (!el._heldReady) return;
-  if (el._resetTimer) clearTimeout(el._resetTimer);
-  if (!el._confirmStage) {
-    el._confirmStage = true;
-    var txt = el.querySelector('.b-t');
-    if (txt) txt.textContent = 'Tap again to confirm delete';
-    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
-    return;
+// Double tap/click detection: fires openReactionSheet() on the second tap
+// within 400ms, mirroring iMessage's tapback gesture. Single taps do nothing.
+function _msgDoubleTap(el, collection, msgId, isMine) {
+  var now = Date.now();
+  if (el._lastTapTs && (now - el._lastTapTs) < 400) {
+    el._lastTapTs = 0;
+    openReactionSheet(collection, msgId, isMine);
+  } else {
+    el._lastTapTs = now;
   }
-  deleteOslMessage(msgId);
+}
+
+function openReactionSheet(collection, msgId, canDelete) {
+  window._reactionSheetTarget = { collection: collection, msgId: msgId };
+  var box = document.getElementById('msg-reaction-emojis');
+  if (box) {
+    box.innerHTML = REACTION_EMOJIS.map(function(e){
+      return '<button onclick="_pickReaction(\'' + e + '\')" style="flex:1;background:none;border:none;font-size:28px;cursor:pointer;padding:6px 2px;line-height:1">' + e + '</button>';
+    }).join('');
+  }
+  var delBtn = document.getElementById('msg-reaction-delete-btn');
+  if (delBtn) delBtn.style.display = canDelete ? 'block' : 'none';
+  var sheet = document.getElementById('msg-reaction-sheet');
+  if (sheet) sheet.style.display = 'flex';
+}
+
+function closeReactionSheet() {
+  var sheet = document.getElementById('msg-reaction-sheet');
+  if (sheet) sheet.style.display = 'none';
+  window._reactionSheetTarget = null;
+}
+
+function _pickReaction(emoji) {
+  var target = window._reactionSheetTarget;
+  closeReactionSheet();
+  if (!target || !window.db) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user) { if (typeof ib_toast==='function') ib_toast('Sign in to react'); return; }
+  var ref = window.db.collection(target.collection).doc(target.msgId);
+  ref.get().then(function(doc){
+    var current = (doc.exists && doc.data() && doc.data().reactions) || {};
+    var update = {};
+    var key = 'reactions.' + user.uid;
+    update[key] = (current[user.uid] === emoji) ? firebase.firestore.FieldValue.delete() : emoji;
+    return ref.update(update);
+  }).catch(function(err){ console.error('React error:', err); if (typeof ib_toast==='function') ib_toast('Could not react — try again'); });
+}
+
+function _reactionSheetDelete() {
+  var target = window._reactionSheetTarget;
+  closeReactionSheet();
+  if (!target) return;
+  if (target.collection === 'oslChat') deleteOslMessage(target.msgId);
+  else if (target.collection === 'feedbackChat') deleteFeedbackMessage(target.msgId);
+  else if (target.collection === 'actChat') deleteActMessage(target.msgId);
+}
+
+// Renders grouped emoji badges (with a count if more than one person picked
+// the same reaction) just under a message bubble.
+function _reactionBadgesHtml(reactions, dark) {
+  reactions = reactions || {};
+  var counts = {};
+  Object.keys(reactions).forEach(function(uid){ var e = reactions[uid]; if (e) counts[e] = (counts[e] || 0) + 1; });
+  var emojis = Object.keys(counts);
+  if (!emojis.length) return '';
+  var bg = dark ? 'rgba(255,255,255,0.16)' : 'var(--card)';
+  var border = dark ? 'none' : '0.5px solid var(--rule)';
+  var color = dark ? '#fff' : 'var(--black)';
+  return '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">' +
+    emojis.map(function(e){
+      return '<div style="background:' + bg + ';border:' + border + ';border-radius:10px;padding:2px 7px;font-size:11px;color:' + color + '">' + e + (counts[e] > 1 ? ' ' + counts[e] : '') + '</div>';
+    }).join('') +
+    '</div>';
 }
 
 function deleteOslMessage(msgId) {
@@ -4273,13 +4338,20 @@ function renderOslChat(msgs) {
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
-        '<div class="bubble me" data-ts-label="' + _escapeHtml(tsLabel) + '" onmousedown="oslMsgPressStart(this)" ontouchstart="oslMsgPressStart(this)" onmouseup="oslMsgPressCancel(this)" onmouseleave="oslMsgPressCancel(this)" ontouchend="oslMsgPressCancel(this)" ontouchcancel="oslMsgPressCancel(this)" onclick="oslMsgTap(this, \'' + c._id + '\')" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div></div>';
+        '<div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          badges +
+        '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
-      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+      '<div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        badges +
+      '</div></div>';
   }).join('');
   var panel = document.getElementById('osl2-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
@@ -4331,35 +4403,24 @@ function renderFeedbackChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     var tsLabel = _fmtTime(c.ts);
+    var badges = _reactionBadgesHtml(c.reactions, true);
     if (mine) {
-      return '<div style="display:flex;justify-content:flex-end">' +
-        '<div data-ts-label="' + _escapeHtml(tsLabel) + '" onmousedown="oslMsgPressStart(this)" ontouchstart="oslMsgPressStart(this)" onmouseup="oslMsgPressCancel(this)" onmouseleave="oslMsgPressCancel(this)" ontouchend="oslMsgPressCancel(this)" ontouchcancel="oslMsgPressCancel(this)" onclick="feedbackMsgTap(this, \'' + c._id + '\')" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
+      return '<div style="display:flex;flex-direction:column;align-items:flex-end">' +
+        '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',true)" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
         '<div class="b-txt">' + _escapeHtml(c.text) + '</div>' +
         '<div class="b-t" style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:3px">' + _escapeHtml(tsLabel) + '</div>' +
-        '</div></div>';
+        '</div>' + badges + '</div>';
     }
     return '<div style="display:flex;gap:8px;align-items:flex-end">' +
       '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="max-width:74%">' +
         '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
-        '<div style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5">' + _escapeHtml(c.text) + '</div>' +
+        '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _escapeHtml(c.text) + '</div>' +
+        badges +
       '</div></div>';
   }).join('');
   var panel = document.getElementById('feedback-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
-}
-
-function feedbackMsgTap(el, msgId) {
-  if (!el._heldReady) return;
-  if (el._resetTimer) clearTimeout(el._resetTimer);
-  if (!el._confirmStage) {
-    el._confirmStage = true;
-    var txt = el.querySelector('.b-t');
-    if (txt) txt.textContent = 'Tap again to delete';
-    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
-    return;
-  }
-  deleteFeedbackMessage(msgId);
 }
 
 function deleteFeedbackMessage(msgId) {
