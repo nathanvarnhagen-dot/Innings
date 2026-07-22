@@ -1770,6 +1770,7 @@ function openActDetail(actName, actTime, isHeadliner) {
   var appleEl = document.getElementById('act-detail-apple');
   if (spotifyEl) spotifyEl.href = 'https://open.spotify.com/search/' + encodeURIComponent(actName);
   if (appleEl) appleEl.href = 'https://music.apple.com/us/search?term=' + encodeURIComponent(actName);
+  _lookupAppleMusicArtist(actName);
 
   renderActRsvpButtons(actName);
   loadActGoing(actName);
@@ -1777,6 +1778,24 @@ function openActDetail(actName, actTime, isHeadliner) {
 
   var box = document.getElementById('osl2-act-detail');
   if (box) box.style.display = 'flex';
+}
+
+// Apple's iTunes Search API is free and needs no login/API key, so we can
+// resolve the exact artist page live instead of just linking to a search.
+// Spotify has no equivalent open endpoint — every Spotify Web API call,
+// even a plain search, requires an OAuth token from a registered developer
+// app, so that one stays a search link unless a Client ID/Secret is wired in.
+function _lookupAppleMusicArtist(actName) {
+  var appleEl = document.getElementById('act-detail-apple');
+  if (!appleEl) return;
+  fetch('https://itunes.apple.com/search?entity=musicArtist&limit=1&term=' + encodeURIComponent(actName))
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (!window._actDetailCurrent || window._actDetailCurrent.name !== actName) return; // a different act is open now
+      var result = data && data.results && data.results[0];
+      if (result && result.artistLinkUrl && appleEl) appleEl.href = result.artistLinkUrl;
+    })
+    .catch(function(err){ console.error('Apple Music lookup error:', err); });
 }
 
 function closeActDetail() {
@@ -2348,7 +2367,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.34.0-artist-detail-myfest-notifs-fix';
+window.INNINGS_BUILD = 'v4.34.1-apple-music-live-lookup';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
