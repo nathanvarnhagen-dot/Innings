@@ -859,6 +859,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div style="font-size:12px;color:var(--subtle);margin-top:8px">Only Innings friends can RSVP directly right now — texted invites won't show a live RSVP.</div>
       </div>
 
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
+        <div style="max-width:220px">
+          <div style="font-size:14px;font-weight:600;color:var(--black)">Make it public</div>
+          <div style="font-size:12px;color:var(--subtle);margin-top:2px;line-height:1.4">Anyone in your Innings circle can see it in their feed and ask to come — not just people you tag.</div>
+        </div>
+        <div id="future-public-toggle" onclick="toggleFuturePublic()" style="width:46px;height:28px;border-radius:20px;background:var(--rule);position:relative;cursor:pointer;flex-shrink:0">
+          <div id="future-public-knob" style="width:22px;height:22px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:left 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
+        </div>
+      </div>
+
       <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
         <button onclick="saveFutureMoment()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Send the invite</button>
         <button onclick="goToFutureStep(1)" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
@@ -891,14 +901,27 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Aug 7–9 · Golden Gate Park · Tap to open →</div>
       </div>
     </div>
-    <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;padding:4px 2px">Moments</div>
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;gap:10px">
-      <div style="width:56px;height:56px;border-radius:18px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px">⚾</div>
-      <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">Your feed is waiting</div>
-      <div style="font-size:13px;color:var(--subtle);line-height:1.6;max-width:240px">Create a moment, invite your people, and it'll come alive here.</div>
-      <button onclick="nav('create-group')" style="margin-top:6px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Create your first moment</button>
+
+    <!-- FEEDBACK BANNER -->
+    <div style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="nav('feedback-group')">
+      <div style="font-size:28px">💬</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:white">Feedback</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Tell Nate what's working (and what's not) · Tap to open →</div>
+      </div>
     </div>
-    <!-- PLACEHOLDER GROUP CARDS -->
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 2px 6px">
+      <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px">Coming up</div>
+      <div onclick="startFuturePlan()" style="font-size:12px;font-weight:700;color:var(--indigo);cursor:pointer">＋ It's coming up</div>
+    </div>
+    <div id="feed-upcoming-list" style="display:none;flex-direction:column"></div>
+    <div id="feed-upcoming-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;gap:10px">
+      <div style="width:56px;height:56px;border-radius:18px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px">⚾</div>
+      <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">Nothing coming up yet</div>
+      <div style="font-size:13px;color:var(--subtle);line-height:1.6;max-width:250px">Post something you're going to — make it public and anyone in your circle can see it and come along if they want.</div>
+      <button onclick="startFuturePlan()" style="margin-top:6px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Post what's coming up</button>
+    </div>
 
   </div>
     <div class="bottom-nav">
@@ -910,7 +933,43 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 </div>
 
-<!-- ═══ CALENDAR ═══ -->
+<!-- ═══ FEEDBACK GROUP ═══ -->
+<div class="screen" id="screen-feedback-group" style="background:var(--indigo-deep)">
+  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
+    <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
+      <button class="back-btn" onclick="nav('feed')">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
+      </button>
+      <span style="font-size:15px;font-weight:600;color:white">9:41</span>
+    </div>
+    <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:center;gap:12px">
+      <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💬</div>
+      <div>
+        <div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px">Feedback</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Open to everyone · say anything</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="feedback-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
+    <div style="display:flex;gap:8px">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">N</div>
+      <div style="max-width:82%">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);margin:0 0 3px 2px">Nate</div>
+        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">Hey everyone, thank you so much for giving Innings a shot! I'd very much appreciate feedback on the good/bad/and ugly about this platform. Please help me make this better. All feedback is welcome especially the criticism. Means the world to me! -Nate</div>
+      </div>
+    </div>
+    <div id="feedback-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div style="position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 14px 24px;gap:10px;align-items:center;display:flex;flex-shrink:0">
+    <input id="feedback-chat-field" placeholder="Share your feedback..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.3);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.12)">
+    <button onclick="sendFeedbackMessage()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+    </button>
+  </div>
+</div>
 <div class="screen" id="screen-calendar">
   <div class="status-light"><span class="st-dark">9:41</span><i class="ti ti-battery" style="font-size:14px;color:var(--black)"></i></div>
   <div class="topbar-light"><div><span class="app-name">Inn<em>ings</em></span><div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div></div></div>
@@ -948,11 +1007,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div style="width:40px"></div>
   </div>
   <div class="scroll" id="notif-list">
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
+    <div id="notif-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
       <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">🔔</div>
       <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">No notifications yet</div>
       <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">Friend requests, tags, and highlights on your moments will show up here.</div>
     </div>
+    <div id="notif-items" style="display:none;flex-direction:column;gap:8px"></div>
   </div>
 </div>
 
@@ -1253,11 +1313,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- ── PHOTOS PANEL ── -->
   <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
-    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:6px">
       <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
-        <button onclick="oslPhotosSaveAll()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save All</button>
-        <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button id="osl-select-btn" onclick="oslPhotosEnterSelect()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Select</button>
+        <button onclick="oslPhotosSaveAll()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ All</button>
+        <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
         <input type="file" id="osl-photo-input" accept="image/*" multiple style="display:none" onchange="addOslPhoto(this)">
       </div>
     </div>
@@ -1267,6 +1328,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Everyone in this group can add photos from the weekend.</div>
     </div>
     <div id="osl-photos-grid" style="display:none;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 16px 20px;overflow-y:auto"></div>
+    <div id="osl-select-bar" style="display:none;padding:10px 16px 24px;gap:8px;align-items:center;border-top:0.5px solid var(--rule);background:var(--card);flex-shrink:0">
+      <button onclick="oslPhotosSelectAll()" style="flex:1;background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);border-radius:12px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Select All</button>
+      <button id="osl-download-selected-btn" onclick="oslPhotosDownloadSelected()" style="flex:1.5;background:var(--indigo);color:white;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Download (0)</button>
+      <button onclick="oslPhotosExitSelect()" style="background:none;border:none;color:var(--subtle);font-size:13px;font-weight:600;cursor:pointer;padding:11px 6px;font-family:inherit">Cancel</button>
+    </div>
   </div>
 
   <!-- PHOTO VIEWER / LIGHTBOX -->
@@ -1691,8 +1757,11 @@ function oslDay2(day) {
 
 <!-- ═══ VIEW PROFILE (someone else's) ═══ -->
 <div class="screen" id="screen-view-profile" style="background:var(--bg)">
-  <div class="photo-hdr" style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%)">
+  <div class="photo-hdr">
+    <div id="vp-photo-slides"><div class="photo-slide slide-1 active"></div></div>
+    <div class="photo-overlay"></div>
     <div class="photo-status"><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
+    <div class="photo-dots" id="vp-photo-dots"></div>
     <button onclick="closeViewProfile()" style="position:absolute;top:52px;left:16px;z-index:6;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
       <span style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.6)">Back</span>
@@ -1705,6 +1774,17 @@ function oslDay2(day) {
       </div>
     </div>
   </div>
+
+  <!-- STREAK BAR -->
+  <div class="streak-bar">
+    <div class="streak-lbl">2026</div>
+    <div class="streak-cards">
+      <div class="s-card" id="vp-stat-streak-card"><div class="s-val" id="vp-stat-streak">0</div><div class="s-unit">social streak</div></div>
+      <div class="s-card"><div class="s-val" id="vp-stat-events">0</div><div class="s-unit">social events</div></div>
+      <div class="s-card"><div class="s-val" id="vp-stat-memories">0</div><div class="s-unit">memories</div></div>
+    </div>
+  </div>
+
   <div style="padding:20px 20px 0">
     <div id="vp-friend-area"></div>
   </div>
@@ -1912,12 +1992,12 @@ function oslDay2(day) {
   <div id="md-bg-progress" style="position:relative;z-index:2;display:flex;gap:4px;padding:0 16px 10px"></div>
 
   <div id="md-header-view" style="position:relative;z-index:2;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
-      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
+    <button onclick="closeMemoryDetail()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> <span id="md-back-label">Memories</span>
     </button>
     <div style="display:flex;align-items:center;gap:14px">
       <button id="md-save-all-btn" onclick="mdPhotosSaveAll()" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">⬇ Save All</button>
-      <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#fff;font-family:inherit">Edit</button>
+      <button id="md-edit-btn" onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#fff;font-family:inherit">Edit</button>
     </div>
   </div>
   <div id="md-header-edit" style="display:none;position:relative;z-index:2;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 16px 12px;align-items:center;justify-content:space-between;flex-shrink:0">
@@ -2083,7 +2163,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.32.16-save-all-stage-bg';
+window.INNINGS_BUILD = 'v4.33.0-feed-notifs-profiles';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2091,7 +2171,7 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 let _photoCur=0, _photoTimer=null;
 function _startPhotoRotation(){
   if(_photoTimer) clearInterval(_photoTimer);
@@ -2237,6 +2317,15 @@ function selectFutureVibe(el) {
   window._futureVibe = el.textContent.trim();
 }
 
+window._futurePublic = false;
+function toggleFuturePublic() {
+  window._futurePublic = !window._futurePublic;
+  var track = document.getElementById('future-public-toggle');
+  var knob = document.getElementById('future-public-knob');
+  if (track) track.style.background = window._futurePublic ? 'var(--indigo)' : 'var(--rule)';
+  if (knob) knob.style.left = window._futurePublic ? '21px' : '3px';
+}
+
 window._futureInvitees = [];
 function loadFutureFriendPicker() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
@@ -2310,13 +2399,14 @@ function saveFutureMoment() {
     theme: theme,
     vibe: vibe,
     taggedUids: invitees,
+    public: !!window._futurePublic,
     rsvps: {},
     ts: Date.now()
   }).then(function(){
     _savingFuture = false;
     resetFutureForm();
     if (typeof ib_toast === 'function') ib_toast('Invite sent 🎉');
-    nav('memories');
+    nav('feed');
   }).catch(function(err){
     _savingFuture = false;
     console.error('Save future moment error:', err);
@@ -2332,6 +2422,11 @@ function resetFutureForm() {
   window._futureTheme = null;
   window._futureVibe = '⚾ Game';
   window._futureInvitees = [];
+  window._futurePublic = false;
+  var track = document.getElementById('future-public-toggle');
+  var knob = document.getElementById('future-public-knob');
+  if (track) track.style.background = 'var(--rule)';
+  if (knob) knob.style.left = '3px';
   if (typeof backToStep0 === 'function') backToStep0();
 }
 
@@ -2923,7 +3018,9 @@ function _initials(name) {
 }
 
 window._moments = [];
+window._foreignMomentCache = {};
 function _findMoment(id) {
+  if (window._foreignMomentCache && window._foreignMomentCache[id]) return window._foreignMomentCache[id];
   for (var i = 0; i < window._moments.length; i++) { if (window._moments[i]._id === id) return window._moments[i]; }
   return null;
 }
@@ -2994,6 +3091,81 @@ function loadFutureMoments() {
   }).catch(function(err){ console.error('Load future moments error:', err); });
 }
 
+// ── FEED: public "coming up" stream — your own plans, plans you're tagged
+// in, and any public plan posted by an accepted friend ──
+function loadFeedMoments() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var listEl = document.getElementById('feed-upcoming-list');
+  var emptyEl = document.getElementById('feed-upcoming-empty');
+  if (!user || !window.db || !listEl) return;
+  listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Loading…</div>';
+  listEl.style.display = 'flex';
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var friendUids = [];
+    results[0].forEach(function(d){ friendUids.push(d.data().toUid); });
+    results[1].forEach(function(d){ friendUids.push(d.data().fromUid); });
+    friendUids = friendUids.filter(function(v,i){ return friendUids.indexOf(v) === i; }).slice(0, 10);
+
+    var queries = [
+      window.db.collection('futureMoments').where('ownerUid','==',user.uid).get(),
+      window.db.collection('futureMoments').where('taggedUids','array-contains',user.uid).get()
+    ];
+    if (friendUids.length) {
+      queries.push(window.db.collection('futureMoments').where('public','==',true).where('ownerUid','in',friendUids).get());
+    }
+    return Promise.all(queries);
+  }).then(function(results){
+    var map = {};
+    results.forEach(function(snap){ snap.forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); }); });
+    var arr = Object.keys(map).map(function(k){ return map[k]; });
+    var today = new Date().toISOString().slice(0,10);
+    arr = arr.filter(function(m){ return !m.date || m.date >= today; });
+    arr.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    window._feedMomentsCache = {};
+    arr.forEach(function(m){ window._feedMomentsCache[m._id] = m; });
+
+    if (emptyEl) emptyEl.style.display = arr.length ? 'none' : 'flex';
+    listEl.style.display = arr.length ? 'flex' : 'none';
+
+    listEl.innerHTML = arr.map(function(m){
+      var isOwner = m.ownerUid === user.uid;
+      var myRsvp = (m.rsvps || {})[user.uid] || '';
+      var goingCount = Object.keys(m.rsvps || {}).filter(function(k){ return m.rsvps[k] === 'going'; }).length;
+      var byline = isOwner ? 'Your plan' : _escapeHtml((m.ownerName || 'A friend').split(' ')[0]) + ' is going';
+      var rsvpUi = isOwner
+        ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going · tap to edit</div>'
+        : '<div style="display:flex;gap:6px;margin-top:12px">' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,0.2);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+        '</div>';
+      return '<div ' + (isOwner ? 'onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between">' +
+          '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
+          (m.public ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px">🌎 Public</div>' : '') +
+        '</div>' +
+        '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px">' + byline + '</div>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+        rsvpUi +
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    console.error('Load feed moments error:', err);
+    listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load feed — try again</div>';
+  });
+}
+
+function startFuturePlan() {
+  nav('create-group');
+  chooseMomentType('future');
+}
+
 function futureRsvp(momentId, val) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) return;
@@ -3057,6 +3229,15 @@ function renderFutureDetail(m) {
       '<div style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:10px;cursor:pointer" onclick="fdToggleAddFriends()">＋ Add more friends</div>' +
       '<div id="fd-add-friends" style="display:none;margin-top:10px"></div>' +
     '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">' +
+      '<div style="max-width:220px">' +
+        '<div style="font-size:14px;font-weight:600;color:var(--black)">Make it public</div>' +
+        '<div style="font-size:12px;color:var(--subtle);margin-top:2px;line-height:1.4">Anyone in your Innings circle can see it in their feed and ask to come.</div>' +
+      '</div>' +
+      '<div id="fd-public-toggle" onclick="fdTogglePublic()" style="width:46px;height:28px;border-radius:20px;background:' + (m.public ? 'var(--indigo)' : 'var(--rule)') + ';position:relative;cursor:pointer;flex-shrink:0">' +
+        '<div id="fd-public-knob" style="width:22px;height:22px;border-radius:50%;background:white;position:absolute;top:3px;left:' + (m.public ? '21px' : '3px') + ';transition:left 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>' +
+      '</div>' +
+    '</div>' +
     '<div style="padding:20px">' +
       '<button onclick="futureDetailSave()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Save changes</button>' +
     '</div>';
@@ -3064,7 +3245,16 @@ function renderFutureDetail(m) {
   window._fdTheme = theme;
   window._fdVibe = m.vibe || '⚾ Game';
   window._fdInvitees = (m.taggedUids || []).slice();
+  window._fdPublic = !!m.public;
   renderFdGuestList(m);
+}
+
+function fdTogglePublic() {
+  window._fdPublic = !window._fdPublic;
+  var track = document.getElementById('fd-public-toggle');
+  var knob = document.getElementById('fd-public-knob');
+  if (track) track.style.background = window._fdPublic ? 'var(--indigo)' : 'var(--rule)';
+  if (knob) knob.style.left = window._fdPublic ? '21px' : '3px';
 }
 
 function renderFdGuestList(m) {
@@ -3181,11 +3371,13 @@ function futureDetailSave() {
     location: l && l.value.trim() ? l.value.trim() : '',
     theme: window._fdTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
     vibe: window._fdVibe || '⚾ Game',
-    taggedUids: window._fdInvitees || []
+    taggedUids: window._fdInvitees || [],
+    public: !!window._fdPublic
   }).then(function(){
     if (typeof ib_toast === 'function') ib_toast('Plan updated');
     if (typeof loadFutureMoments === 'function') loadFutureMoments();
-    nav('memories');
+    if (typeof loadFeedMoments === 'function') loadFeedMoments();
+    nav('feed');
   }).catch(function(err){
     console.error('Save future detail error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
@@ -3201,7 +3393,8 @@ function futureDetailDelete() {
     .then(function(){
       if (typeof ib_toast === 'function') ib_toast('Plan deleted');
       if (typeof loadFutureMoments === 'function') loadFutureMoments();
-      nav('memories');
+      if (typeof loadFeedMoments === 'function') loadFeedMoments();
+      nav('feed');
     }).catch(function(err){
       console.error('Delete future moment error:', err);
       if (typeof ib_toast === 'function') ib_toast('Could not delete — try again');
@@ -3282,17 +3475,54 @@ function updateProfileStats(moments) {
 
 // ── MEMORY DETAIL / EDIT / COMMENT / DELETE ──
 window._openMomentId = null;
+window._openMomentOwnerUid = null;
+window._memoryReturnTo = 'memories';
 window._memoryDetailMode = 'view';
 window._mdPhotoTimer = null;
 
 function openMemory(id) {
   var m = _findMoment(id);
   if (!m) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
   window._openMomentId = id;
+  window._openMomentOwnerUid = user ? user.uid : null;
+  window._memoryReturnTo = 'memories';
   window._memoryDetailMode = 'view';
   _showMemoryHeader('view');
   renderMemoryView(m);
   nav('memory-detail');
+}
+
+// Opens a memory that belongs to someone else — reached via a notification
+// like "X marked a memory with you". Fetches it once (not a live listener),
+// renders it read-mostly (no edit/tag, but comments still work), and remembers
+// where to return to when the person taps Back.
+function openSharedMemory(ownerUid, momentId, returnTo) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!window.db || !ownerUid || !momentId) return;
+  if (user && ownerUid === user.uid) { openMemory(momentId); return; }
+  window._memoryReturnTo = returnTo || 'notifications';
+  window.db.collection('users').doc(ownerUid).get().then(function(ownerDoc){
+    var ownerName = (ownerDoc.exists && ownerDoc.data().name) || 'a friend';
+    return window.db.collection('users').doc(ownerUid).collection('moments').doc(momentId).get().then(function(doc){
+      if (!doc.exists) { if (typeof ib_toast==='function') ib_toast('That memory is no longer available'); return; }
+      var m = Object.assign({ _id: doc.id, _ownerName: ownerName }, doc.data());
+      window._foreignMomentCache[momentId] = m;
+      window._openMomentId = momentId;
+      window._openMomentOwnerUid = ownerUid;
+      window._memoryDetailMode = 'view';
+      _showMemoryHeader('view');
+      renderMemoryView(m);
+      nav('memory-detail');
+    });
+  }).catch(function(err){
+    console.error('Open shared memory error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not open that memory');
+  });
+}
+
+function closeMemoryDetail() {
+  nav(window._memoryReturnTo || 'memories');
 }
 
 function _showMemoryHeader(mode) {
@@ -3357,6 +3587,13 @@ function renderMemoryView(m) {
   var progBox = document.getElementById('md-bg-progress');
   if (!scroll || !bgBox) return;
   var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
+  var curUser = window.currentUser || (window.auth && window.auth.currentUser);
+  var isForeign = !!(window._openMomentOwnerUid && curUser && window._openMomentOwnerUid !== curUser.uid);
+
+  var editBtn = document.getElementById('md-edit-btn');
+  if (editBtn) editBtn.style.display = isForeign ? 'none' : 'inline';
+  var backLbl = document.getElementById('md-back-label');
+  if (backLbl) backLbl.textContent = isForeign ? 'Back' : 'Memories';
 
   // Full-bleed rotating photo backdrop
   if (allPhotos.length) {
@@ -3374,10 +3611,12 @@ function renderMemoryView(m) {
 
   var youName = (window.userData && window.userData.name) || 'You';
   var people = (m.people || []);
-  var peopleChips = '<div class="av av-a" style="width:32px;height:32px;font-size:11px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(youName)) + '</div>' +
+  var ownerInitials = isForeign ? _initials(m._ownerName || 'Them') : _initials(youName);
+  var peopleChips = '<div class="av av-a" style="width:32px;height:32px;font-size:11px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(ownerInitials) + '</div>' +
     people.map(function(nm, i){
+      var removeBtn = isForeign ? '' : '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--loss);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div>';
       return '<div style="position:relative"><div class="av av-b" style="width:32px;height:32px;font-size:11px;margin-left:-8px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(nm)) + '</div>' +
-        '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--loss);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div></div>';
+        removeBtn + '</div>';
     }).join('');
 
   // Conversation thread: your highlight + dedication + comments, iMessage-style bubbles
@@ -3410,17 +3649,22 @@ function renderMemoryView(m) {
     thread = '<div style="text-align:center;padding:26px 10px;color:rgba(255,255,255,0.6);font-size:13px;font-style:italic">No highlight or messages yet — say something below.</div>';
   }
 
-  scroll.innerHTML =
-    '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
-      '<div style="font-size:19px;font-weight:700;color:#fff;letter-spacing:-0.4px;margin-bottom:3px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:14px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
-
-      '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
-      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
+  var sharedByLine = isForeign ? '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px">Shared by ' + _escapeHtml(m._ownerName || 'a friend') + '</div>' : '';
+  var tagRow = isForeign ? '' :
       '<div style="display:flex;gap:8px">' +
         '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:13px;border:0.5px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 12px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.1)">' +
         '<button onclick="momentTagPerson()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
-      '</div>' +
+      '</div>';
+
+  scroll.innerHTML =
+    '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
+      '<div style="font-size:19px;font-weight:700;color:#fff;letter-spacing:-0.4px;margin-bottom:3px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:' + (isForeign ? '2' : '14') + 'px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
+      sharedByLine +
+
+      '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
+      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
+      tagRow +
     '</div>' +
     '<div style="padding-top:6px">' + thread + '</div>';
 
@@ -3458,11 +3702,15 @@ function renderMemoryEdit(m) {
 function _persistMoment(m, fields, okMsg) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in first'); return; }
-  window.db.collection('users').doc(user.uid).collection('moments').doc(m._id).update(fields)
+  var ownerUid = window._openMomentOwnerUid || user.uid;
+  var isForeign = ownerUid !== user.uid;
+  window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).update(fields)
     .then(function(){
       if (okMsg && typeof ib_toast==='function') ib_toast(okMsg);
-      renderMoments(window._moments);
-      updateProfileStats(window._moments);
+      if (!isForeign) {
+        renderMoments(window._moments);
+        updateProfileStats(window._moments);
+      }
     })
     .catch(function(err){ console.error('Update error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
 }
@@ -3486,6 +3734,45 @@ function momentTagPerson() {
   if (inp) inp.value = '';
   renderMemoryView(m);
   _persistMoment(m, { people: m.people }, 'Tagged ' + name);
+  _notifyIfFriendTagged(name, m);
+}
+
+// If the tagged name matches one of your accepted friends, let them know —
+// this is the "X marked a memory with you" notification from the product
+// vision. Does nothing if no match (tags stay simple free text otherwise).
+function _notifyIfFriendTagged(name, m) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) return null;
+    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      var match = null;
+      for (var i = 0; i < docs.length; i++) {
+        var d = docs[i].data() || {};
+        if ((d.name || '').trim().toLowerCase() === name.trim().toLowerCase()) { match = docs[i]; break; }
+      }
+      if (!match) return null;
+      var ownerName = (window.userData && window.userData.name) || 'Someone';
+      return window.db.collection('notifications').add({
+        toUid: match.id,
+        type: 'tagged',
+        fromUid: user.uid,
+        fromName: ownerName,
+        momentOwnerUid: user.uid,
+        momentId: m._id,
+        momentName: m.name || 'a memory',
+        ts: Date.now(),
+        read: false
+      });
+    });
+  }).catch(function(err){ console.error('Notify tagged friend error:', err); });
 }
 
 function momentRemovePerson(i) {
@@ -3810,6 +4097,79 @@ function sendOslMessage() {
     .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules'); });
 }
 
+// ── FEEDBACK GROUP CHAT ──
+window._feedbackChatStarted = false;
+function startFeedbackChat() {
+  if (window._feedbackChatStarted) return;
+  if (!window.db) return;
+  window._feedbackChatStarted = true;
+  window.db.collection('feedbackChat').orderBy('ts').limit(300).onSnapshot(function(snap){
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    renderFeedbackChat(msgs);
+  }, function(err){
+    console.error('Feedback chat error:', err);
+    window._feedbackChatStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Feedback unavailable — check Firestore rules');
+  });
+}
+
+function renderFeedbackChat(msgs) {
+  var box = document.getElementById('feedback-chat-msgs');
+  if (!box) return;
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function(c){
+    var mine = c.uid && c.uid === myUid;
+    var tsLabel = _fmtTime(c.ts);
+    if (mine) {
+      return '<div style="display:flex;justify-content:flex-end">' +
+        '<div data-ts-label="' + _escapeHtml(tsLabel) + '" onmousedown="oslMsgPressStart(this)" ontouchstart="oslMsgPressStart(this)" onmouseup="oslMsgPressCancel(this)" onmouseleave="oslMsgPressCancel(this)" ontouchend="oslMsgPressCancel(this)" ontouchcancel="oslMsgPressCancel(this)" onclick="feedbackMsgTap(this, \'' + c._id + '\')" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
+        '<div class="b-txt">' + _escapeHtml(c.text) + '</div>' +
+        '<div class="b-t" style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:3px">' + _escapeHtml(tsLabel) + '</div>' +
+        '</div></div>';
+    }
+    return '<div style="display:flex;gap:8px;align-items:flex-end">' +
+      '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="max-width:74%">' +
+        '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
+        '<div style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5">' + _escapeHtml(c.text) + '</div>' +
+      '</div></div>';
+  }).join('');
+  var panel = document.getElementById('feedback-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function feedbackMsgTap(el, msgId) {
+  if (!el._heldReady) return;
+  if (el._resetTimer) clearTimeout(el._resetTimer);
+  if (!el._confirmStage) {
+    el._confirmStage = true;
+    var txt = el.querySelector('.b-t');
+    if (txt) txt.textContent = 'Tap again to delete';
+    el._resetTimer = setTimeout(function(){ oslMsgResetPress(el); }, 4000);
+    return;
+  }
+  deleteFeedbackMessage(msgId);
+}
+
+function deleteFeedbackMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('feedbackChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete feedback message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function sendFeedbackMessage() {
+  var inp = document.getElementById('feedback-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to send feedback'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  window.db.collection('feedbackChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+}
+
 // ── OUTSIDE LANDS SHARED PHOTOS ──
 window._oslPhotosStarted = false;
 function startOslPhotos() {
@@ -3835,8 +4195,68 @@ function renderOslPhotos(photos) {
   if (empty) empty.style.display = photos.length ? 'none' : 'flex';
   grid.style.display = photos.length ? 'grid' : 'none';
   grid.innerHTML = photos.map(function(p, i){
-    return '<div onclick="openOslPhoto(' + i + ')" style="width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer"></div>';
+    var selMode = window._oslSelectMode;
+    var selected = selMode && !!window._oslSelected[p._id];
+    var tapHandler = selMode ? 'oslPhotosToggleOne(\'' + p._id + '\')' : 'openOslPhoto(' + i + ')';
+    var check = selMode
+      ? '<div style="position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:' + (selected ? 'var(--indigo)' : 'rgba(0,0,0,0.4)') + ';border:1.5px solid rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:700">' + (selected ? '✓' : '') + '</div>'
+      : '';
+    return '<div onclick="' + tapHandler + '" style="position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer;' + (selected ? 'outline:3px solid var(--indigo);outline-offset:-3px' : '') + '">' + check + '</div>';
   }).join('');
+}
+
+window._oslSelectMode = false;
+window._oslSelected = {};
+
+function oslPhotosEnterSelect() {
+  window._oslSelectMode = true;
+  window._oslSelected = {};
+  var btn = document.getElementById('osl-select-btn');
+  var bar = document.getElementById('osl-select-bar');
+  if (btn) btn.style.display = 'none';
+  if (bar) bar.style.display = 'flex';
+  _oslUpdateSelectCount();
+  renderOslPhotos(window._oslPhotosData || []);
+}
+
+function oslPhotosExitSelect() {
+  window._oslSelectMode = false;
+  window._oslSelected = {};
+  var btn = document.getElementById('osl-select-btn');
+  var bar = document.getElementById('osl-select-bar');
+  if (btn) btn.style.display = 'inline-block';
+  if (bar) bar.style.display = 'none';
+  renderOslPhotos(window._oslPhotosData || []);
+}
+
+function oslPhotosToggleOne(id) {
+  if (window._oslSelected[id]) delete window._oslSelected[id];
+  else window._oslSelected[id] = true;
+  _oslUpdateSelectCount();
+  renderOslPhotos(window._oslPhotosData || []);
+}
+
+function oslPhotosSelectAll() {
+  var photos = window._oslPhotosData || [];
+  var allSelected = photos.length > 0 && photos.every(function(p){ return window._oslSelected[p._id]; });
+  window._oslSelected = {};
+  if (!allSelected) photos.forEach(function(p){ window._oslSelected[p._id] = true; });
+  _oslUpdateSelectCount();
+  renderOslPhotos(photos);
+}
+
+function _oslUpdateSelectCount() {
+  var n = Object.keys(window._oslSelected).length;
+  var btn = document.getElementById('osl-download-selected-btn');
+  if (btn) btn.textContent = '⬇ Download (' + n + ')';
+}
+
+function oslPhotosDownloadSelected() {
+  var photos = window._oslPhotosData || [];
+  var chosen = photos.filter(function(p){ return window._oslSelected[p._id]; });
+  if (!chosen.length) { if (typeof ib_toast==='function') ib_toast('Select at least one photo'); return; }
+  _saveAllToCameraRoll(chosen.map(function(p, i){ return { src: p.photo, name: 'innings-osl-' + (i + 1) + '.jpg' }; }));
+  oslPhotosExitSelect();
 }
 
 function openOslPhoto(i) {
@@ -3975,6 +4395,64 @@ function addOslPhoto(input) {
   input.value = '';
 }
 
+// ── NOTIFICATIONS ──
+function _fmtRelativeTime(ts) {
+  if (!ts) return '';
+  var diff = Date.now() - ts;
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function loadNotifications() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var emptyEl = document.getElementById('notif-empty');
+  var itemsEl = document.getElementById('notif-items');
+  if (!user || !window.db || !itemsEl) return;
+  window.db.collection('notifications').where('toUid','==',user.uid).orderBy('ts','desc').limit(100).get().then(function(snap){
+    var items = [];
+    snap.forEach(function(doc){ items.push(Object.assign({ _id: doc.id }, doc.data())); });
+    window._notificationsCache = {};
+    items.forEach(function(n){ window._notificationsCache[n._id] = n; });
+    if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'flex';
+    itemsEl.style.display = items.length ? 'flex' : 'none';
+    itemsEl.innerHTML = items.map(function(n){
+      var label = n.type === 'tagged'
+        ? '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> marked a memory with you'
+        : '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
+      return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:' + (n.read ? 'var(--card)' : 'var(--indigo-light)') + ';border:0.5px solid var(--rule);cursor:pointer">' +
+        '<div class="av av-a" style="width:36px;height:36px;font-size:12px;flex-shrink:0">' + _escapeHtml(_initialsFallback(n.fromName || '?')) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13.5px;color:var(--black);line-height:1.4">' + label + '</div>' +
+          (n.momentName ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(n.momentName) + '</div>' : '') +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--subtle);flex-shrink:0">' + _fmtRelativeTime(n.ts) + '</div>' +
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    console.error('Load notifications error:', err);
+    if (itemsEl) itemsEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load notifications — try again</div>';
+    if (itemsEl) itemsEl.style.display = 'flex';
+    if (emptyEl) emptyEl.style.display = 'none';
+  });
+}
+
+function notifTap(notifId) {
+  var n = (window._notificationsCache || {})[notifId];
+  if (!n) return;
+  if (window.db && !n.read) {
+    window.db.collection('notifications').doc(notifId).update({ read: true }).catch(function(){});
+  }
+  if (n.type === 'tagged' && n.momentOwnerUid && n.momentId) {
+    openSharedMemory(n.momentOwnerUid, n.momentId, 'notifications');
+  }
+}
+
 // ── FRIENDS ──
 function _initialsFallback(nm){ return typeof _initials==='function' ? _initials(nm) : (nm||'?').charAt(0).toUpperCase(); }
 
@@ -3990,6 +4468,8 @@ function openUserProfile(uid) {
   var areaEl = document.getElementById('vp-friend-area');
   if (nameEl) nameEl.textContent = 'Loading…';
   if (areaEl) areaEl.innerHTML = '';
+  _renderVpPhotos([]);
+  ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '—'; });
   window.db.collection('users').doc(uid).get().then(function(doc){
     var d = doc.exists ? doc.data() : {};
     var nm = d.name || 'Innings User';
@@ -4006,14 +4486,74 @@ function openUserProfile(uid) {
         avEl.textContent = _initialsFallback(nm);
       }
     }
+    _renderVpPhotos(d.profilePhotos || []);
     _renderFriendArea(uid);
+    _computeAndRenderUserStats(uid);
   }).catch(function(err){
     console.error('View profile error:', err);
     if (nameEl) nameEl.textContent = 'Could not load profile';
   });
 }
 
+// ── VIEWED PROFILE: photo rotator (mirrors _startPhotoRotation, kept separate
+// so it never collides with the signed-in user's own profile rotation state) ──
+window._vpPhotoTimer = null;
+window._vpPhotoCur = 0;
+function _renderVpPhotos(photos) {
+  var slidesBox = document.getElementById('vp-photo-slides');
+  var dotsBox = document.getElementById('vp-photo-dots');
+  if (!slidesBox) return;
+  if (window._vpPhotoTimer) { clearInterval(window._vpPhotoTimer); window._vpPhotoTimer = null; }
+  if (!photos.length) {
+    slidesBox.innerHTML = '<div class="photo-slide slide-1 active"></div>';
+    if (dotsBox) dotsBox.innerHTML = '';
+    return;
+  }
+  slidesBox.innerHTML = photos.map(function(url, i){
+    return '<div class="photo-slide has-photo' + (i === 0 ? ' active' : '') + '" style="background-image:url(' + url + ')"></div>';
+  }).join('');
+  if (dotsBox) dotsBox.innerHTML = photos.length > 1
+    ? photos.map(function(_, i){ return '<div class="pdot' + (i === 0 ? ' active' : '') + '"></div>'; }).join('')
+    : '';
+  if (photos.length > 1) {
+    window._vpPhotoCur = 0;
+    window._vpPhotoTimer = setInterval(function(){
+      var sl = document.querySelectorAll('#vp-photo-slides .photo-slide');
+      var dt = document.querySelectorAll('#vp-photo-dots .pdot');
+      if (sl.length < 2) return;
+      sl[window._vpPhotoCur].classList.remove('active'); if (dt[window._vpPhotoCur]) dt[window._vpPhotoCur].classList.remove('active');
+      window._vpPhotoCur = (window._vpPhotoCur + 1) % sl.length;
+      sl[window._vpPhotoCur].classList.add('active'); if (dt[window._vpPhotoCur]) dt[window._vpPhotoCur].classList.add('active');
+    }, 3000);
+  }
+}
+
+// ── VIEWED PROFILE: social streak / social events / memories, computed the
+// same way updateProfileStats() does for your own profile, but read from
+// their moments subcollection instead of the local window._moments cache ──
+function _computeAndRenderUserStats(uid) {
+  if (!window.db) return;
+  window.db.collection('users').doc(uid).collection('moments').get().then(function(snap){
+    var moments = [];
+    snap.forEach(function(doc){ moments.push(doc.data()); });
+    var social = moments.filter(function(m){ return (m.people || []).length > 0; });
+    var streak = computeWeeklyStreak(social);
+    var memEl = document.getElementById('vp-stat-memories');
+    var evEl = document.getElementById('vp-stat-events');
+    var stEl = document.getElementById('vp-stat-streak');
+    var stCard = document.getElementById('vp-stat-streak-card');
+    if (memEl) memEl.textContent = moments.length;
+    if (evEl) evEl.textContent = social.length;
+    if (stEl) stEl.textContent = streak;
+    if (stCard) stCard.className = 's-card' + (streak > 0 ? ' on' : '');
+  }).catch(function(err){
+    console.error('Load user stats error:', err);
+    ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '0'; });
+  });
+}
+
 function closeViewProfile() {
+  if (window._vpPhotoTimer) { clearInterval(window._vpPhotoTimer); window._vpPhotoTimer = null; }
   nav(window._profileReturnTo || 'feed');
 }
 
