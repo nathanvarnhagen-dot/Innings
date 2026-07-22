@@ -1205,10 +1205,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
 
     <!-- STAGE DETAIL VIEW — slides in over stages -->
-    <div id="osl2-stage-detail" style="display:none;flex-direction:column;flex:1;overflow-y:auto;background:#0D0820;position:absolute;inset:0;z-index:10">
+    <div id="osl2-stage-detail" style="display:none;flex-direction:column;background:#0D0820;position:absolute;inset:0;z-index:10">
+      <div id="stage-detail-bg" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
+      <div style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(13,8,32,0.55) 0%,rgba(13,8,32,0.22) 30%,rgba(13,8,32,0.62) 100%)"></div>
       <!-- Stage detail header -->
-      <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;flex-shrink:0;background:#0D0820">
-        <button onclick="closeStage()" style="background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <div style="position:relative;z-index:2;padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;flex-shrink:0;background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
+        <button onclick="closeStage()" style="background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
           <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         </button>
         <div>
@@ -1217,7 +1219,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
       </div>
       <!-- Acts list -->
-      <div id="stage-detail-acts" style="padding:14px 16px;display:flex;flex-direction:column;gap:0"></div>
+      <div id="stage-detail-acts" style="position:relative;z-index:2;flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:0"></div>
     </div>
   </div>
 
@@ -1251,10 +1253,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- ── PHOTOS PANEL ── -->
   <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
-    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
       <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
-      <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
-      <input type="file" id="osl-photo-input" accept="image/*" multiple style="display:none" onchange="addOslPhoto(this)">
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button onclick="oslPhotosSaveAll()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save All</button>
+        <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+        <input type="file" id="osl-photo-input" accept="image/*" multiple style="display:none" onchange="addOslPhoto(this)">
+      </div>
     </div>
     <div id="osl-photos-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
       <div style="font-size:34px">📸</div>
@@ -1487,18 +1492,53 @@ var stageData = {
 
 var myRsvps = {}; // actName -> 'going'|'maybe'|'no'
 
+// Background photo for each physical stage (same 5 stages recur Fri/Sat/Sun).
+// Paste your own chosen image for each one — a URL to a hosted image (e.g. a file
+// you commit to the GitHub repo and reference like 'images/stages/sutro.jpg', or
+// any public image URL). Leave '' to keep the default gradient + emoji look.
+var stageImages = {
+  'lands-end': '',
+  'soma': '',
+  'twin-peaks': '',
+  'sutro': '',
+  'panhandle': ''
+};
+
+// Tints the stage-overview rows (the list you see before opening a stage) with a
+// preview of that stage's background photo, if one has been set above.
+function applyStageRowBackgrounds() {
+  document.querySelectorAll('[onclick^="openStage("]').forEach(function(el){
+    var match = el.getAttribute('onclick').match(/openStage\('([^']+)','([^']+)'\)/);
+    if (!match) return;
+    var img = stageImages[match[2]];
+    if (!img) return;
+    el.style.backgroundImage = 'linear-gradient(100deg,rgba(13,8,32,0.82),rgba(13,8,32,0.5)),url(' + img + ')';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  });
+}
+applyStageRowBackgrounds();
+
 function openStage(day, stageId) {
   var data = stageData[day] && stageData[day][stageId];
   if (!data) return;
   document.getElementById('stage-detail-name').textContent = data.emoji + '  ' + data.name;
   document.getElementById('stage-detail-day').textContent = data.day;
-  
+
+  var bgEl = document.getElementById('stage-detail-bg');
+  if (bgEl) {
+    var stageImg = stageImages[stageId];
+    bgEl.innerHTML = stageImg
+      ? '<div style="position:absolute;inset:0;background-image:url(' + stageImg + ');background-size:cover;background-position:center"></div>'
+      : '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:130px;opacity:0.18">' + (data.emoji || '🎪') + '</div>';
+  }
+
   var actsEl = document.getElementById('stage-detail-acts');
   actsEl.innerHTML = '';
 
   if (data.predicted || data.timesTBD) {
     var banner = document.createElement('div');
-    banner.style.cssText = 'background:rgba(255,193,133,0.1);border:0.5px solid rgba(255,193,133,0.25);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:rgba(255,193,133,0.85);line-height:1.4';
+    banner.style.cssText = 'background:rgba(255,193,133,0.12);border:0.5px solid rgba(255,193,133,0.25);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:rgba(255,193,133,0.9);line-height:1.4';
     banner.textContent = data.predicted
       ? '⚠ Predicted lineup — Outside Lands hasn\'t released official stage assignments yet. This is a fan-sourced guess.'
       : '✓ Stage is official — exact set times haven\'t been released yet.';
@@ -1507,16 +1547,19 @@ function openStage(day, stageId) {
 
   data.acts.forEach(function(act) {
     var rsvp = myRsvps[act.name] || '';
+    var hasImg = !!act.image;
     var div = document.createElement('div');
-    div.style.cssText = 'padding:14px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)';
-    div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+    div.style.cssText = hasImg
+      ? 'margin-bottom:10px;border-radius:14px;overflow:hidden;background-image:linear-gradient(180deg,rgba(13,8,32,0.15),rgba(13,8,32,0.88)),url(' + act.image + ');background-size:cover;background-position:center'
+      : 'padding:14px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)';
+    div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;' + (hasImg ? 'padding:18px 14px 10px' : 'margin-bottom:10px') + '">' +
       '<div>' +
         '<div style="font-size:' + (act.headliner ? '16' : '15') + 'px;font-weight:' + (act.headliner ? '700' : '600') + ';color:white">' + act.name + '</div>' +
         '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + act.time + (act.headliner ? ' · Headliner' : '') + '</div>' +
       '</div>' +
       (act.headliner ? '<div style="background:rgba(168,159,232,0.9);color:#0D0820;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">HEADLINER</div>' : '') +
     '</div>' +
-    '<div style="display:flex;gap:6px" data-act="' + act.name + '">' +
+    '<div style="display:flex;gap:6px;' + (hasImg ? 'padding:0 14px 14px' : '') + '" data-act="' + act.name + '">' +
       '<button onclick="actRsvp2(this,\'' + act.name + '\',\'going\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='going' ? '#0D0820' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='going' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✓ Going</button>' +
       '<button onclick="actRsvp2(this,\'' + act.name + '\',\'maybe\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(254,243,226,0.15)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='maybe' ? '#FEF3E2' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='maybe' ? '700' : '600') + ';cursor:pointer;font-family:inherit">? Maybe</button>' +
       '<button onclick="actRsvp2(this,\'' + act.name + '\',\'no\')" style="flex:1;padding:7px 4px;border-radius:10px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ Skip</button>' +
@@ -1872,7 +1915,10 @@ function oslDay2(day) {
     <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
     </button>
-    <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#fff;font-family:inherit">Edit</button>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button id="md-save-all-btn" onclick="mdPhotosSaveAll()" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">⬇ Save All</button>
+      <button onclick="enterMemoryEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#fff;font-family:inherit">Edit</button>
+    </div>
   </div>
   <div id="md-header-edit" style="display:none;position:relative;z-index:2;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 16px 12px;align-items:center;justify-content:space-between;flex-shrink:0">
     <button onclick="exitMemoryEdit()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);font-family:inherit">
@@ -2037,7 +2083,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.32.15-imessage-memory';
+window.INNINGS_BUILD = 'v4.32.16-save-all-stage-bg';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3378,6 +3424,9 @@ function renderMemoryView(m) {
     '</div>' +
     '<div style="padding-top:6px">' + thread + '</div>';
 
+  var saveAllBtn = document.getElementById('md-save-all-btn');
+  if (saveAllBtn) saveAllBtn.style.display = allPhotos.length ? 'inline' : 'none';
+
   _startMemoryPhotoRotation(allPhotos.length);
 }
 
@@ -3825,6 +3874,51 @@ function oslPhotoDownload() {
     console.error('Photo download error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not download — try pressing and holding the photo instead');
   });
+}
+
+// Shared helper: takes an array of {src, name} and saves them all to the camera roll
+// in one go via the native share sheet (iOS/Android), or falls back to staggered
+// browser downloads on desktop where the multi-file share sheet isn't available.
+function _saveAllToCameraRoll(items) {
+  if (!items || !items.length) { if (typeof ib_toast === 'function') ib_toast('No photos to save'); return; }
+  if (typeof ib_toast === 'function') ib_toast('Preparing ' + items.length + ' photo' + (items.length === 1 ? '' : 's') + '…');
+  Promise.all(items.map(function(item){
+    return fetch(item.src).then(function(res){ return res.blob(); }).then(function(blob){
+      return new File([blob], item.name, { type: blob.type || 'image/jpeg' });
+    });
+  })).then(function(files){
+    if (navigator.canShare && navigator.canShare({ files: files })) {
+      navigator.share({ files: files }).catch(function(){});
+    } else {
+      files.forEach(function(file, i){
+        setTimeout(function(){
+          var url = URL.createObjectURL(file);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+        }, i * 350);
+      });
+      if (typeof ib_toast === 'function') ib_toast('Downloading ' + files.length + ' photos…');
+    }
+  }).catch(function(err){
+    console.error('Save all photos error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not save all — try saving one at a time');
+  });
+}
+
+function oslPhotosSaveAll() {
+  var photos = window._oslPhotosData || [];
+  _saveAllToCameraRoll(photos.map(function(p, i){ return { src: p.photo, name: 'innings-osl-' + (i + 1) + '.jpg' }; }));
+}
+
+function mdPhotosSaveAll() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  var allPhotos = (m.photo ? [m.photo] : []).concat(m.photos || []);
+  _saveAllToCameraRoll(allPhotos.map(function(p, i){ return { src: p, name: 'innings-memory-' + (i + 1) + '.jpg' }; }));
 }
 
 function oslPhotoNav(delta) {
