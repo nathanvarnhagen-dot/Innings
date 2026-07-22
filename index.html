@@ -1292,7 +1292,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="myfest-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px">
       <div style="font-size:32px;margin-bottom:4px">🎪</div>
       <div style="font-size:16px;font-weight:700;color:white">No plans yet</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.35);max-width:240px;line-height:1.6">Go to Lineup, tap an act and mark yourself as Going — it'll show up here.</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.35);max-width:240px;line-height:1.6">Go to Lineup, mark an act Going or Maybe — it'll show up here.</div>
     </div>
     <div id="myfest-list" style="padding:12px 16px;display:none;flex-direction:column;gap:8px"></div>
   </div>
@@ -1344,6 +1344,43 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="osl-photo-viewer-caption" style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
     <button id="osl-photo-viewer-download" onclick="oslPhotoDownload()" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
     <button id="osl-photo-viewer-delete" onclick="deleteOslPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+  </div>
+
+  <!-- ── ARTIST DETAIL — who's going, Spotify/Apple Music, per-artist chat ── -->
+  <div id="osl2-act-detail" style="display:none;flex-direction:column;background:#0D0820;position:absolute;inset:0;z-index:80">
+    <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;flex-shrink:0;background:#0D0820">
+      <button onclick="closeActDetail()" style="background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="flex:1;min-width:0">
+        <div id="act-detail-name" style="font-size:15px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <div id="act-detail-meta" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px"></div>
+      </div>
+      <a id="act-detail-spotify" href="#" target="_blank" rel="noopener" style="width:30px;height:30px;border-radius:50%;background:rgba(29,185,84,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;text-decoration:none" aria-label="Find on Spotify">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.48.12-1.021-.12-1.141-.6-.12-.48.12-1.02.6-1.14 4.322-1.32 9.682-.66 13.381 1.62.361.181.54.78.361 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+      </a>
+      <a id="act-detail-apple" href="#" target="_blank" rel="noopener" style="width:30px;height:30px;border-radius:50%;background:rgba(250,60,90,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;text-decoration:none" aria-label="Find on Apple Music">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#FA3C5A"><path d="M23.997 6.124a9.23 9.23 0 0 0-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043C21.003.517 20.373.285 19.7.164c-.517-.093-1.038-.135-1.564-.15-.04-.001-.083-.007-.124-.01H5.988c-.152.01-.303.017-.455.028-.53.038-1.055.107-1.564.278a5.222 5.222 0 0 0-2.235 1.456A5.415 5.415 0 0 0 .606 3.71c-.24.653-.353 1.33-.394 2.02-.008.135-.012.27-.012.406v12.037c.005.19.012.38.024.57.036.53.1 1.058.264 1.567.396 1.24 1.14 2.24 2.235 2.94.65.416 1.373.65 2.13.75.42.056.842.087 1.267.09.02 0 .04.003.058.008h12.6c.11-.01.22-.017.33-.026.53-.04 1.055-.106 1.564-.278a5.147 5.147 0 0 0 2.29-1.516c.633-.72 1.017-1.55 1.19-2.49.1-.53.13-1.065.13-1.6V6.395c0-.09-.003-.18-.006-.27z"/></svg>
+      </a>
+    </div>
+
+    <div style="padding:12px 16px 4px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Who's going</div>
+    <div id="act-detail-going" style="background:#0D0820;padding:8px 16px 14px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
+
+    <div id="act-detail-rsvp" style="display:flex;gap:6px;padding:0 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
+
+    <div id="act-detail-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
+      <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
+        <div style="font-size:30px">🎤</div>
+        <div style="font-size:14px;font-weight:700;color:var(--black)">No messages yet</div>
+        <div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Say what you're most excited to hear.</div>
+      </div>
+      <div id="act-detail-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+    <div style="background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;display:flex;flex-shrink:0">
+      <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendActMessage();}">
+      <button class="send-btn" onclick="sendActMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
   </div>
 
 </div>
@@ -1614,14 +1651,16 @@ function openStage(day, stageId) {
   data.acts.forEach(function(act) {
     var rsvp = myRsvps[act.name] || '';
     var hasImg = !!act.image;
+    var safeName = act.name.replace(/'/g, "\\'");
+    var safeTime = (act.time || '').replace(/'/g, "\\'");
     var div = document.createElement('div');
     div.style.cssText = hasImg
       ? 'margin-bottom:10px;border-radius:14px;overflow:hidden;background-image:linear-gradient(180deg,rgba(13,8,32,0.15),rgba(13,8,32,0.88)),url(' + act.image + ');background-size:cover;background-position:center'
       : 'padding:14px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)';
-    div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;' + (hasImg ? 'padding:18px 14px 10px' : 'margin-bottom:10px') + '">' +
+    div.innerHTML = '<div onclick="openActDetail(\'' + safeName + '\',\'' + safeTime + '\',' + (act.headliner ? 'true' : 'false') + ')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;' + (hasImg ? 'padding:18px 14px 10px' : 'margin-bottom:10px') + '">' +
       '<div>' +
         '<div style="font-size:' + (act.headliner ? '16' : '15') + 'px;font-weight:' + (act.headliner ? '700' : '600') + ';color:white">' + act.name + '</div>' +
-        '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + act.time + (act.headliner ? ' · Headliner' : '') + '</div>' +
+        '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + act.time + (act.headliner ? ' · Headliner' : '') + ' · tap for chat & who\'s going</div>' +
       '</div>' +
       (act.headliner ? '<div style="background:rgba(168,159,232,0.9);color:#0D0820;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">HEADLINER</div>' : '') +
     '</div>' +
@@ -1671,9 +1710,10 @@ function actRsvp2(btn, actName, val) {
 
 function updateMyFest() {
   var going = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'going'; });
+  var maybe = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'maybe'; });
   var listEl = document.getElementById('myfest-list');
   var emptyEl = document.getElementById('myfest-empty');
-  if (going.length === 0) {
+  if (going.length === 0 && maybe.length === 0) {
     listEl.style.display = 'none';
     emptyEl.style.display = 'flex';
     return;
@@ -1681,24 +1721,169 @@ function updateMyFest() {
   emptyEl.style.display = 'none';
   listEl.style.display = 'flex';
   listEl.innerHTML = '';
-  // Find time for each act
+  // Find time/stage/headliner for each act
   var allActs = {};
   Object.keys(stageData).forEach(function(day) {
     Object.keys(stageData[day]).forEach(function(stage) {
       stageData[day][stage].acts.forEach(function(act) {
-        allActs[act.name] = {time: act.time, stage: stageData[day][stage].name, day: stageData[day][stage].day};
+        allActs[act.name] = {time: act.time, stage: stageData[day][stage].name, day: stageData[day][stage].day, headliner: !!act.headliner};
       });
     });
   });
-  going.forEach(function(actName) {
+  var rows = going.map(function(n){ return {name: n, status: 'going'}; }).concat(maybe.map(function(n){ return {name: n, status: 'maybe'}; }));
+  rows.forEach(function(row){
+    var actName = row.name;
     var info = allActs[actName] || {};
+    var isGoing = row.status === 'going';
     var div = document.createElement('div');
-    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px';
-    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:rgba(168,159,232,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer';
+    div.onclick = function(){ openActDetail(actName, info.time, info.headliner); };
+    var icon = isGoing
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
+    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
       '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + actName + '</div>' +
-      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + (info.stage || '') + ' · ' + (info.time || 'TBD') + '</div></div>';
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + (info.stage || '') + ' · ' + (info.time || 'TBD') + '</div></div>' +
+      '<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>';
     listEl.appendChild(div);
   });
+}
+
+// ── ARTIST DETAIL: who's going, Spotify/Apple Music search links, per-artist chat ──
+function _slugifyAct(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'act';
+}
+
+window._actDetailCurrent = null;
+window._actChatStarted = {};
+
+function openActDetail(actName, actTime, isHeadliner) {
+  var actId = _slugifyAct(actName);
+  window._actDetailCurrent = { name: actName, actId: actId };
+
+  var nameEl = document.getElementById('act-detail-name');
+  var metaEl = document.getElementById('act-detail-meta');
+  if (nameEl) nameEl.textContent = actName;
+  if (metaEl) metaEl.textContent = (actTime || '') + (isHeadliner ? ' · Headliner' : '');
+
+  var spotifyEl = document.getElementById('act-detail-spotify');
+  var appleEl = document.getElementById('act-detail-apple');
+  if (spotifyEl) spotifyEl.href = 'https://open.spotify.com/search/' + encodeURIComponent(actName);
+  if (appleEl) appleEl.href = 'https://music.apple.com/us/search?term=' + encodeURIComponent(actName);
+
+  renderActRsvpButtons(actName);
+  loadActGoing(actName);
+  startActChat(actId);
+
+  var box = document.getElementById('osl2-act-detail');
+  if (box) box.style.display = 'flex';
+}
+
+function closeActDetail() {
+  var box = document.getElementById('osl2-act-detail');
+  if (box) box.style.display = 'none';
+  window._actDetailCurrent = null;
+}
+
+function renderActRsvpButtons(actName) {
+  var box = document.getElementById('act-detail-rsvp');
+  if (!box) return;
+  var rsvp = myRsvps[actName] || '';
+  box.innerHTML =
+    '<button onclick="actDetailRsvp(\'going\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='going' ? '#0D0820' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Going</button>' +
+    '<button onclick="actDetailRsvp(\'maybe\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(254,243,226,0.15)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='maybe' ? '#FEF3E2' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">? Maybe</button>' +
+    '<button onclick="actDetailRsvp(\'no\')" style="flex:1;padding:10px 4px;border-radius:10px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ Skip</button>';
+}
+
+function actDetailRsvp(val) {
+  if (!window._actDetailCurrent) return;
+  var actName = window._actDetailCurrent.name;
+  myRsvps[actName] = val;
+  window.userData = window.userData || {};
+  window.userData.oslActRsvps = myRsvps;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true })
+      .then(function(){ loadActGoing(actName); })
+      .catch(function(err){ console.error('Act RSVP save error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+  renderActRsvpButtons(actName);
+  updateMyFest();
+}
+
+function loadActGoing(actName) {
+  var box = document.getElementById('act-detail-going');
+  if (!box || !window.db) return;
+  box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Loading who\'s going…</div>';
+  window.db.collection('users').where(new firebase.firestore.FieldPath('oslActRsvps', actName), '==', 'going').limit(40).get().then(function(snap){
+    if (!window._actDetailCurrent || window._actDetailCurrent.name !== actName) return;
+    if (snap.empty) {
+      box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Nobody\'s marked Going yet — be the first.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    snap.forEach(function(doc){
+      var d = doc.data() || {};
+      var nm = d.name || 'Innings User';
+      var chip = document.createElement('div');
+      chip.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer';
+      chip.onclick = function(){ openUserProfile(doc.id); };
+      chip.innerHTML = '<div class="av av-a" style="width:32px;height:32px;font-size:11px">' + _escapeHtml(_initialsFallback(nm)) + '</div><div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">' + _escapeHtml(nm.split(' ')[0]) + '</div>';
+      box.appendChild(chip);
+    });
+  }).catch(function(err){
+    console.error('Load act going error:', err);
+    box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Could not load — check Firestore rules</div>';
+  });
+}
+
+function startActChat(actId) {
+  if (window._actChatStarted[actId]) return;
+  if (!window.db) return;
+  window._actChatStarted[actId] = true;
+  window.db.collection('actChat').where('actId','==',actId).limit(200).onSnapshot(function(snap){
+    if (!window._actDetailCurrent || window._actDetailCurrent.actId !== actId) return;
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    msgs.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
+    renderActChat(msgs);
+  }, function(err){
+    console.error('Act chat error:', err);
+    window._actChatStarted[actId] = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderActChat(msgs) {
+  var box = document.getElementById('act-detail-chat-msgs');
+  var empty = document.getElementById('act-detail-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function(c){
+    var mine = c.uid && c.uid === myUid;
+    if (mine) {
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div></div>';
+  }).join('');
+  var panel = document.getElementById('act-detail-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function sendActMessage() {
+  if (!window._actDetailCurrent) return;
+  var inp = document.getElementById('act-detail-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  window.db.collection('actChat').add({ actId: window._actDetailCurrent.actId, actName: window._actDetailCurrent.name, uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
 }
 
 function oslTab(tab, evt) {
@@ -2163,7 +2348,7 @@ function oslDay2(day) {
 
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.33.0-feed-notifs-profiles';
+window.INNINGS_BUILD = 'v4.34.0-artist-detail-myfest-notifs-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3760,17 +3945,23 @@ function _notifyIfFriendTagged(name, m) {
       }
       if (!match) return null;
       var ownerName = (window.userData && window.userData.name) || 'Someone';
-      return window.db.collection('notifications').add({
-        toUid: match.id,
-        type: 'tagged',
-        fromUid: user.uid,
-        fromName: ownerName,
-        momentOwnerUid: user.uid,
-        momentId: m._id,
-        momentName: m.name || 'a memory',
-        ts: Date.now(),
-        read: false
-      });
+      m.taggedUids = (m.taggedUids || []).concat([match.id]).filter(function(v,i,arr){ return arr.indexOf(v) === i; });
+      return Promise.all([
+        window.db.collection('users').doc(user.uid).collection('moments').doc(m._id).update({
+          taggedUids: firebase.firestore.FieldValue.arrayUnion(match.id)
+        }),
+        window.db.collection('notifications').add({
+          toUid: match.id,
+          type: 'tagged',
+          fromUid: user.uid,
+          fromName: ownerName,
+          momentOwnerUid: user.uid,
+          momentId: m._id,
+          momentName: m.name || 'a memory',
+          ts: Date.now(),
+          read: false
+        })
+      ]);
     });
   }).catch(function(err){ console.error('Notify tagged friend error:', err); });
 }
@@ -4414,9 +4605,10 @@ function loadNotifications() {
   var emptyEl = document.getElementById('notif-empty');
   var itemsEl = document.getElementById('notif-items');
   if (!user || !window.db || !itemsEl) return;
-  window.db.collection('notifications').where('toUid','==',user.uid).orderBy('ts','desc').limit(100).get().then(function(snap){
+  window.db.collection('notifications').where('toUid','==',user.uid).limit(100).get().then(function(snap){
     var items = [];
     snap.forEach(function(doc){ items.push(Object.assign({ _id: doc.id }, doc.data())); });
+    items.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
     window._notificationsCache = {};
     items.forEach(function(n){ window._notificationsCache[n._id] = n; });
     if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'flex';
