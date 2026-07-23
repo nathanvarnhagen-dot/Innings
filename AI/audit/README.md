@@ -1,6 +1,6 @@
 # Codex audit trail
 
-This directory contains the chronological record of Codex work performed on the Innings project.
+This directory contains the chronological record of Codex work performed on the Innings project. It lives under `AI/` with the project's other AI-specific work products.
 
 Audit files are named by local date: `YYYY-MM-DD.md`. Each chat request receives one entry with this structure:
 
