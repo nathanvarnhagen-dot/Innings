@@ -1382,7 +1382,9 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- ── ARTIST DETAIL — who's going, Spotify/Apple Music, per-artist chat ── -->
   <div id="osl2-act-detail" style="display:none;flex-direction:column;background:#0D0820;position:absolute;inset:0;z-index:80">
-    <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;flex-shrink:0;background:#0D0820">
+    <div id="act-detail-bg" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
+    <div style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)"></div>
+    <div style="position:relative;z-index:2;padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
       <button onclick="closeActDetail()" style="background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
       </button>
@@ -1398,22 +1400,40 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </a>
     </div>
 
-    <div style="padding:12px 16px 4px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Who's going</div>
-    <div id="act-detail-going" style="background:#0D0820;padding:8px 16px 14px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
+    <div style="position:relative;z-index:2;padding:12px 16px 4px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Who's going</div>
+    <div id="act-detail-going" style="position:relative;z-index:2;padding:8px 16px 14px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
 
-    <div id="act-detail-rsvp" style="display:flex;gap:6px;padding:0 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
+    <div id="act-detail-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:0 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
 
-    <div id="act-detail-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
+    <div style="position:relative;z-index:2;padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em">Photos</div>
+      <button onclick="document.getElementById('act-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+      <input type="file" id="act-photo-input" accept="image/*" multiple style="display:none" onchange="addActPhoto(this)">
+    </div>
+    <div id="act-detail-photos" style="position:relative;z-index:2;padding:6px 16px 14px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.08)"></div>
+
+    <div id="act-detail-chat" style="position:relative;z-index:2;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
       <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
         <div style="font-size:30px">🎤</div>
-        <div style="font-size:14px;font-weight:700;color:var(--black)">No messages yet</div>
-        <div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Say what you're most excited to hear.</div>
+        <div style="font-size:14px;font-weight:700;color:white">No messages yet</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.55);max-width:220px;line-height:1.5">Say what you're most excited to hear.</div>
       </div>
       <div id="act-detail-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
-    <div style="background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;display:flex;flex-shrink:0">
+    <div style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;display:flex;flex-shrink:0">
       <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendActMessage();}">
       <button class="send-btn" onclick="sendActMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
+
+    <!-- ARTIST PHOTO VIEWER / LIGHTBOX -->
+    <div id="act-photo-viewer" style="display:none;position:absolute;inset:0;z-index:100;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;padding:20px" ontouchstart="actPhotoSwipeStart(event)" ontouchend="actPhotoSwipeEnd(event)">
+      <button onclick="closeActPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
+      <button onclick="actPhotoNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">‹</button>
+      <button onclick="actPhotoNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">›</button>
+      <img id="act-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
+      <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
+      <button onclick="actPhotoDownload()" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
+      <button id="act-photo-viewer-delete" onclick="deleteActPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
     </div>
   </div>
 
@@ -1790,10 +1810,149 @@ function _slugifyAct(name) {
 
 window._actDetailCurrent = null;
 window._actChatStarted = {};
+window._actPhotosStarted = {};
+window._actPhotosData = {};
+
+// Artist photos — anyone signed in can add one; the newest becomes the backdrop
+// behind the header/going/chat, and all of them show as a tappable strip.
+function setActDetailBg(url) {
+  var bg = document.getElementById('act-detail-bg');
+  if (!bg) return;
+  bg.style.backgroundImage = url ? 'url(' + url + ')' : '';
+  bg.style.backgroundSize = 'cover';
+  bg.style.backgroundPosition = 'center';
+}
+
+function renderActPhotos(photos) {
+  var strip = document.getElementById('act-detail-photos');
+  if (strip) {
+    strip.innerHTML = photos.length
+      ? photos.map(function(p, i){ return '<div onclick="openActPhoto(' + i + ')" style="width:56px;height:56px;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer;flex-shrink:0"></div>'; }).join('')
+      : '<div style="font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0">Be the first to add one</div>';
+  }
+  setActDetailBg(photos.length ? photos[0].photo : null);
+}
+
+function startActPhotos(actId) {
+  if (window._actPhotosStarted[actId]) return;
+  if (!window.db) return;
+  window._actPhotosStarted[actId] = true;
+  window.db.collection('actPhotos').where('actId','==',actId).limit(80).onSnapshot(function(snap){
+    var arr = [];
+    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id }, doc.data())); });
+    arr.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); }); // newest first
+    window._actPhotosData[actId] = arr;
+    if (window._actDetailCurrent && window._actDetailCurrent.actId === actId) renderActPhotos(arr);
+  }, function(err){
+    console.error('Act photos error:', err);
+    window._actPhotosStarted[actId] = false;
+    if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules');
+  });
+}
+
+function addActPhoto(input) {
+  if (!input.files || !input.files.length) return;
+  if (!window._actDetailCurrent) return;
+  var actId = window._actDetailCurrent.actId;
+  var actName = window._actDetailCurrent.name;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to add photos'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var files = Array.from(input.files);
+  if (typeof ib_toast==='function') ib_toast('Uploading…');
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      _downscaleImage(e.target.result, 1000, function(small){
+        window.db.collection('actPhotos').add({ actId: actId, actName: actName, uid: user.uid, author: author, photo: small, ts: Date.now() })
+          .catch(function(err){ console.error('Add act photo error:', err); if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules'); });
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+window._actPhotoViewerIndex = 0;
+window._actPhotoViewerSrc = null;
+
+function openActPhoto(i) {
+  if (!window._actDetailCurrent) return;
+  var photos = window._actPhotosData[window._actDetailCurrent.actId] || [];
+  var p = photos[i];
+  if (!p) return;
+  window._actPhotoViewerIndex = i;
+  window._actPhotoViewerSrc = p.photo;
+  var img = document.getElementById('act-photo-viewer-img');
+  var del = document.getElementById('act-photo-viewer-delete');
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (img) img.src = p.photo;
+  if (del) del.style.display = (user && p.uid === user.uid) ? 'block' : 'none';
+  var viewer = document.getElementById('act-photo-viewer');
+  if (viewer) viewer.style.display = 'flex';
+}
+
+function closeActPhoto() {
+  var viewer = document.getElementById('act-photo-viewer');
+  if (viewer) viewer.style.display = 'none';
+}
+
+function actPhotoNav(delta) {
+  if (!window._actDetailCurrent) return;
+  var photos = window._actPhotosData[window._actDetailCurrent.actId] || [];
+  var newIndex = (window._actPhotoViewerIndex || 0) + delta;
+  if (newIndex < 0 || newIndex >= photos.length) return;
+  openActPhoto(newIndex);
+}
+
+var _actPhotoSwipeStartX = null;
+function actPhotoSwipeStart(e) { if (e.touches && e.touches.length === 1) _actPhotoSwipeStartX = e.touches[0].clientX; }
+function actPhotoSwipeEnd(e) {
+  if (_actPhotoSwipeStartX === null) return;
+  var endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : _actPhotoSwipeStartX;
+  var delta = endX - _actPhotoSwipeStartX;
+  _actPhotoSwipeStartX = null;
+  if (Math.abs(delta) < 40) return;
+  actPhotoNav(delta < 0 ? 1 : -1);
+}
+
+function actPhotoDownload() {
+  var src = window._actPhotoViewerSrc;
+  if (!src) return;
+  fetch(src).then(function(res){ return res.blob(); }).then(function(blob){
+    var file = new File([blob], 'innings-artist-photo.jpg', { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] }).catch(function(){});
+    } else {
+      var a = document.createElement('a');
+      a.href = src;
+      a.download = 'innings-artist-photo.jpg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
+    }
+  }).catch(function(err){
+    console.error('Photo download error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not download — try pressing and holding the photo instead');
+  });
+}
+
+function deleteActPhoto() {
+  if (!window._actDetailCurrent) return;
+  var photos = window._actPhotosData[window._actDetailCurrent.actId] || [];
+  var p = photos[window._actPhotoViewerIndex];
+  if (!p || !p._id || !window.db) return;
+  window.db.collection('actPhotos').doc(p._id).delete()
+    .then(function(){ closeActPhoto(); if (typeof ib_toast==='function') ib_toast('Photo deleted'); })
+    .catch(function(err){ console.error('Delete act photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
 
 function openActDetail(actName, actTime, isHeadliner) {
   var actId = _slugifyAct(actName);
   window._actDetailCurrent = { name: actName, actId: actId };
+  renderActPhotos(window._actPhotosData[actId] || []);
+  startActPhotos(actId);
 
   var nameEl = document.getElementById('act-detail-name');
   var metaEl = document.getElementById('act-detail-meta');
@@ -2433,7 +2592,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.38.3-osl-ambient-lights';
+window.INNINGS_BUILD = 'v4.38.5-artist-photo-album';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
