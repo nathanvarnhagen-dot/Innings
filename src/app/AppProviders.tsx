@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type PropsWithChildren } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './AuthProvider';
+import { ToastProvider } from '../components/ui/Toast';
 
 export function AppProviders({ children }: PropsWithChildren) {
   const [queryClient] = useState(() => new QueryClient({
@@ -10,7 +11,7 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>{children}</AuthProvider>
+        <ToastProvider><AuthProvider>{children}</AuthProvider></ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

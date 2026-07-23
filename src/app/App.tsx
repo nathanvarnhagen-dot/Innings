@@ -11,6 +11,7 @@ import { MomentDetailPage } from '../features/moments/MomentDetailPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { FestivalPage } from '../features/festival/FestivalPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
+import { AddToHomeScreenPage } from '../features/auth/AddToHomeScreenPage';
 
 export default function App() {
   const { user, profile, loading } = useAuth();
@@ -28,6 +29,7 @@ export default function App() {
     <Route path="moments/:kind/:momentId" element={<MomentDetailPage />} />
     <Route path="festival" element={<FestivalPage />} />
     <Route path="notifications" element={<NotificationsPage />} />
+    <Route path="add-to-home" element={<AddToHomeScreenPage />} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;
 }

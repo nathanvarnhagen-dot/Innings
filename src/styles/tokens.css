@@ -1,0 +1,18 @@
+:root {
+  --indigo: #3d3580;
+  --indigo-dark: #2a2460;
+  --indigo-deep: #1a1640;
+  --indigo-light: #eeedf8;
+  --indigo-mid: #6b63b5;
+  --bg: #f6f6f9;
+  --card: #fff;
+  --black: #0a0a0f;
+  --mid: #3c3c52;
+  --subtle: #8e8ea8;
+  --rule: #eaeaf0;
+  --loss: #993c1d;
+  --radius-control: 16px;
+  --radius-card: 20px;
+  --app-width: 430px;
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 4%);
+}

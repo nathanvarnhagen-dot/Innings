@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './app/App';
 import { AppProviders } from './app/AppProviders';
 import './styles/index.css';
+import './styles/foundation.css';
 
 registerSW({ immediate: true });
 
