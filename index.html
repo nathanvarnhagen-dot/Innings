@@ -28,6 +28,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.22s ease;background:var(--bg)}
 .screen.active{opacity:1;pointer-events:all}
 
+/* LOGIN SPLASH — plays every time someone lands in the app after auth */
+#login-splash{position:absolute;inset:0;z-index:9999;background:var(--indigo-deep);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.35s ease}
+#login-splash.show{opacity:1;pointer-events:all}
+.ls-badge{width:88px;height:88px;border-radius:24px;background:var(--indigo-deep);border:2px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(0,0,0,0.4);transform:scale(0.7);opacity:0;transition:transform 0.55s cubic-bezier(.34,1.56,.64,1),opacity 0.4s ease}
+#login-splash.show .ls-badge{transform:scale(1);opacity:1}
+.ls-badge span{font-size:44px;font-weight:800;color:white;letter-spacing:-3px;line-height:1}
+.ls-word{margin-top:16px;font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;opacity:0;transform:translateY(6px);transition:opacity 0.4s ease 0.25s,transform 0.4s ease 0.25s}
+#login-splash.show .ls-word{opacity:1;transform:translateY(0)}
+.ls-word em{color:#A89FE8;font-style:normal}
+
 /* ONBOARDING — dark top for brand, white bottom for form */
 .ob-screen{background:var(--card)}
 .ob-wrap{flex:1;display:flex;flex-direction:column}
@@ -419,6 +429,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 <body>
 <div class="app">
 
+<!-- ═══ LOGIN SPLASH ═══ -->
+<div id="login-splash">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div class="ls-badge"><span>I<span style="color:#A89FE8">N</span></span></div>
+    <div class="ls-word">Inn<em>ings</em></div>
+  </div>
+</div>
+
 <!-- ═══ ONBOARDING ═══ -->
 <div class="screen active ob-screen" id="screen-onboard">
   <div class="ob-wrap">
@@ -592,8 +610,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- BOTTOM BUTTON -->
   <div style="padding:20px 32px env(safe-area-inset-bottom,28px);flex-shrink:0;display:flex;flex-direction:column;gap:10px">
-    <button onclick="nav('feed')" style="width:100%;background:white;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">I've added it — let's go</button>
-    <button onclick="nav('feed')" style="width:100%;background:transparent;color:rgba(255,255,255,0.35);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Skip for now</button>
+    <button onclick="playLoginSplash(function(){ nav('feed'); })" style="width:100%;background:white;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">I've added it — let's go</button>
+    <button onclick="playLoginSplash(function(){ nav('feed'); })" style="width:100%;background:transparent;color:rgba(255,255,255,0.35);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Skip for now</button>
   </div>
 
 </div>
@@ -2399,7 +2417,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.38.1-calendar-future-osl';
+window.INNINGS_BUILD = 'v4.38.2-login-splash';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2428,6 +2446,17 @@ function nav(id){
 function navBack(fallback){
   var prev=window._navStack.pop();
   _navApplyScreen(prev||fallback||'feed');
+}
+
+// Plays the IN-badge splash, then calls cb (used right before landing on the feed post-login)
+function playLoginSplash(cb){
+  var el = document.getElementById('login-splash');
+  if(!el){ if(cb) cb(); return; }
+  el.classList.add('show');
+  setTimeout(function(){
+    el.classList.remove('show');
+    if(cb) cb();
+  }, 1100);
 }
 let _photoCur=0, _photoTimer=null;
 function _startPhotoRotation(){
@@ -3011,7 +3040,7 @@ window.saveProfile = function() {
     if (isIOS && !isStandalone) {
       nav('add-to-home');
     } else {
-      nav('feed');
+      playLoginSplash(function(){ nav('feed'); });
     }
   }).catch(function(err) {
     console.error('Save error:', err);
@@ -3035,7 +3064,7 @@ auth.onAuthStateChanged(function(user) {
         if (typeof renderInterests === 'function') renderInterests(pdata.interests || []);
         window.userData.customVibes = pdata.customVibes || [];
         if (typeof renderVibePills === 'function') renderVibePills();
-        nav('feed');
+        playLoginSplash(function(){ nav('feed'); });
       } else {
         ib_showStep('ob-name-step');
       }
