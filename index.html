@@ -602,7 +602,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 <div class="screen" id="screen-create-group" style="background:var(--bg)">
   <div class="status-light"><span class="st-dark">9:41</span></div>
   <div style="background:var(--card);padding:4px 24px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-    <button onclick="nav('feed')" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">Cancel</button>
+    <button onclick="navBack()" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">Cancel</button>
     <div style="font-size:16px;font-weight:700;color:var(--black);letter-spacing:-0.3px">New moment</div>
     <button onclick="headerSaveMoment()" style="background:none;border:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--indigo);font-family:inherit">Save</button>
   </div>
@@ -938,7 +938,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
-      <button class="back-btn" onclick="nav('feed')">
+      <button class="back-btn" onclick="navBack()">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
       </button>
@@ -1000,7 +1000,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 <div class="screen" id="screen-notifications">
   <div class="status-light"><span class="st-dark">9:41</span><i class="ti ti-battery" style="font-size:14px;color:var(--black)"></i></div>
   <div style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-    <button onclick="nav('feed')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+    <button onclick="navBack()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Feed
     </button>
     <span style="font-size:16px;font-weight:700;color:var(--black)">Notifications</span>
@@ -1023,7 +1023,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
-      <button class="back-btn" onclick="nav('feed')">
+      <button class="back-btn" onclick="navBack()">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
       </button>
@@ -2010,7 +2010,7 @@ function oslDay2(day) {
 <!-- ═══ GROUP DETAIL ═══ -->
 <div class="screen" id="screen-group-detail">
   <div class="g-hdr">
-    <div class="gh-status"><button class="back-btn" onclick="nav('feed')"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
+    <div class="gh-status"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
     <div class="gh-main">
       <div class="gh-icon">⚾</div>
       <div><div class="gh-name">The League 2026</div><div class="gh-sub">12 members · Invite only · Season 14</div></div>
@@ -2088,7 +2088,7 @@ function oslDay2(day) {
 <div class="screen" id="screen-matchup">
   <div class="status-dark"><span class="st-light">9:41</span><i class="ti ti-battery" style="font-size:14px;color:white"></i></div>
   <div class="match-hdr">
-    <div class="back-row"><button class="back-btn" onclick="nav('fantasy')"><i class="ti ti-chevron-left"></i> The League 2026</button><div class="wk-lbl">Week 13</div><div style="width:80px"></div></div>
+    <div class="back-row"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> The League 2026</button><div class="wk-lbl">Week 13</div><div style="width:80px"></div></div>
     <div class="teams-hero">
       <div class="t-blk"><div class="t-av you">You</div><div class="t-name">Busted</div><div class="t-rec">10–0 · 1st</div></div>
       <div class="vs-blk"><div class="vs-sc">7–3</div><div class="vs-cats">categories</div><div class="vs-stat">▲ Winning</div></div>
@@ -2245,7 +2245,7 @@ function oslDay2(day) {
 <div class="screen" id="screen-future-detail" style="background:var(--bg)">
   <div class="status-light"><span class="st-dark">9:41</span></div>
   <div id="fd-header-view" style="background:var(--card);padding:4px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-    <button onclick="nav('memories')" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
+    <button onclick="navBack()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--subtle);font-family:inherit">
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg> Memories
     </button>
     <button id="fd-edit-btn" onclick="enterFutureEdit()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--indigo);font-family:inherit">Edit</button>
@@ -2399,7 +2399,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.36.0-chat-bubble-fix-plan-chat';
+window.INNINGS_BUILD = 'v4.37.0-nav-back-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2407,7 +2407,28 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <script>
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+// ── NAVIGATION HISTORY ──
+// _navStack holds the trail of screens the user actually passed through via nav(),
+// so navBack() can return to wherever they came from instead of a hardcoded screen.
+// _navApplyScreen does the actual switching + per-screen side effects, with no
+// history bookkeeping — used by nav()/navBack(), and by the few flows (view-profile,
+// memory-detail) that already track their own bespoke "return to" destination and
+// should not also push/pop the general stack.
+window._navStack = window._navStack || [];
+
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+
+function nav(id){
+  var current=document.querySelector('.screen.active');
+  var currentId=current?current.id.replace('screen-',''):null;
+  if(currentId&&currentId!==id){window._navStack.push(currentId);}
+  _navApplyScreen(id);
+}
+
+function navBack(fallback){
+  var prev=window._navStack.pop();
+  _navApplyScreen(prev||fallback||'feed');
+}
 let _photoCur=0, _photoTimer=null;
 function _startPhotoRotation(){
   if(_photoTimer) clearInterval(_photoTimer);
@@ -3909,7 +3930,7 @@ function openMemory(id) {
   window._memoryDetailMode = 'view';
   _showMemoryHeader('view');
   renderMemoryView(m);
-  nav('memory-detail');
+  _navApplyScreen('memory-detail');
 }
 
 // Opens a memory that belongs to someone else — reached via a notification
@@ -3932,7 +3953,7 @@ function openSharedMemory(ownerUid, momentId, returnTo) {
       window._memoryDetailMode = 'view';
       _showMemoryHeader('view');
       renderMemoryView(m);
-      nav('memory-detail');
+      _navApplyScreen('memory-detail');
     });
   }).catch(function(err){
     console.error('Open shared memory error:', err);
@@ -3941,7 +3962,7 @@ function openSharedMemory(ownerUid, momentId, returnTo) {
 }
 
 function closeMemoryDetail() {
-  nav(window._memoryReturnTo || 'memories');
+  _navApplyScreen(window._memoryReturnTo || 'memories');
 }
 
 function _showMemoryHeader(mode) {
@@ -4927,7 +4948,7 @@ function openUserProfile(uid) {
   if (!window.db || !uid) return;
   if (user && uid === user.uid) { nav('profile'); return; }
   window._profileReturnTo = document.querySelector('.screen.active') ? document.querySelector('.screen.active').id.replace('screen-','') : 'osl-group';
-  nav('view-profile');
+  _navApplyScreen('view-profile');
   var avEl = document.getElementById('vp-av');
   var nameEl = document.getElementById('vp-name');
   var locEl = document.getElementById('vp-location');
@@ -5020,7 +5041,7 @@ function _computeAndRenderUserStats(uid) {
 
 function closeViewProfile() {
   if (window._vpPhotoTimer) { clearInterval(window._vpPhotoTimer); window._vpPhotoTimer = null; }
-  nav(window._profileReturnTo || 'feed');
+  _navApplyScreen(window._profileReturnTo || 'feed');
 }
 
 function _renderFriendArea(theirUid) {
