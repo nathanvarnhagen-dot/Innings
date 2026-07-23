@@ -2399,7 +2399,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.37.0-nav-back-fix';
+window.INNINGS_BUILD = 'v4.38.0-calendar-grid';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4413,24 +4413,118 @@ function renderCalendar() {
       '</div>';
   }
 
-  // Moments timeline (most recent first)
-  if (moments.length) {
-    html += '<div class="sec-title">Your moments</div><div style="display:flex;flex-direction:column;gap:8px">';
-    html += moments.map(function(m){
+  // Month calendar grid — replaces the old flat list with an actual calendar
+  var momentsByDate = {};
+  moments.forEach(function(m){
+    if (!m.date) return;
+    (momentsByDate[m.date] = momentsByDate[m.date] || []).push(m);
+  });
+
+  if (window._calYear == null) {
+    var today0 = new Date();
+    window._calYear = today0.getFullYear();
+    window._calMonth = today0.getMonth();
+  }
+
+  html += _calRenderMonth(window._calYear, window._calMonth, momentsByDate);
+  html += _calRenderDayDetail(momentsByDate);
+
+  var hasContent = true;
+  content.innerHTML = html;
+  content.style.display = 'block';
+  if (empty) empty.style.display = 'none';
+}
+
+// ── CALENDAR GRID ──
+window._calYear = null;
+window._calMonth = null;
+window._calSelectedDate = null;
+var CAL_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var CAL_WEEKDAY_LABELS = ['S','M','T','W','T','F','S'];
+
+function _calGoToMonth(delta) {
+  var d = new Date(window._calYear, window._calMonth + delta, 1);
+  window._calYear = d.getFullYear();
+  window._calMonth = d.getMonth();
+  window._calSelectedDate = null;
+  renderCalendar();
+}
+
+function _calSelectDay(dateStr) {
+  window._calSelectedDate = (window._calSelectedDate === dateStr) ? null : dateStr;
+  renderCalendar();
+}
+
+function _calCreateForDate(dateStr) {
+  var d = document.getElementById('moment-date');
+  if (d) d.value = dateStr;
+  nav('create-group');
+}
+
+function _calRenderMonth(year, month, momentsByDate) {
+  var pad = function(n){ return n < 10 ? '0' + n : '' + n; };
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var firstWeekday = new Date(year, month, 1).getDay();
+  var todayStr = new Date().toISOString().slice(0, 10);
+
+  var cells = '';
+  for (var i = 0; i < firstWeekday; i++) cells += '<div></div>';
+  for (var day = 1; day <= daysInMonth; day++) {
+    var dateStr = year + '-' + pad(month + 1) + '-' + pad(day);
+    var dayMoments = momentsByDate[dateStr] || [];
+    var isToday = dateStr === todayStr;
+    var isSelected = dateStr === window._calSelectedDate;
+    var bg = isSelected ? 'var(--indigo)' : 'transparent';
+    var textColor = isSelected ? 'white' : 'var(--black)';
+    var ring = (isToday && !isSelected) ? 'box-shadow:inset 0 0 0 1.5px var(--indigo);' : '';
+    var dot = dayMoments.length ? ('<div style="width:5px;height:5px;border-radius:50%;background:' + (isSelected ? 'white' : 'var(--indigo)') + ';margin-top:2px"></div>') : '<div style="height:5px;margin-top:2px"></div>';
+    cells += '<div onclick="_calSelectDay(\'' + dateStr + '\')" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;background:' + bg + ';' + ring + '">' +
+      '<div style="font-size:13px;font-weight:' + (isToday ? '800' : '600') + ';color:' + textColor + '">' + day + '</div>' + dot +
+    '</div>';
+  }
+  var totalCells = firstWeekday + daysInMonth;
+  var trailing = (7 - (totalCells % 7)) % 7;
+  for (var j = 0; j < trailing; j++) cells += '<div></div>';
+
+  return '<div style="margin-bottom:16px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<button onclick="_calGoToMonth(-1)" style="background:var(--card);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--subtle);font-family:inherit">‹</button>' +
+      '<div style="font-size:15px;font-weight:700;color:var(--black)">' + CAL_MONTH_NAMES[month] + ' ' + year + '</div>' +
+      '<button onclick="_calGoToMonth(1)" style="background:var(--card);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--subtle);font-family:inherit">›</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">' +
+      CAL_WEEKDAY_LABELS.map(function(l){ return '<div style="text-align:center;font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.04em">' + l + '</div>'; }).join('') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">' + cells + '</div>' +
+  '</div>';
+}
+
+function _calRenderDayDetail(momentsByDate) {
+  var selected = window._calSelectedDate;
+
+  if (!selected) {
+    return '<div style="text-align:center;padding:20px 0;font-size:13px;color:var(--subtle)">Tap a day to see what happened</div>';
+  }
+
+  var dayMoments = momentsByDate[selected] || [];
+  var header = '<div class="sec-title">' + _formatCalDate(selected) + '</div>';
+
+  if (!dayMoments.length) {
+    return header + '<div style="text-align:center;padding:16px;background:var(--card);border:1px solid var(--rule);border-radius:16px">' +
+      '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">Nothing saved for this day yet</div>' +
+      '<button onclick="_calCreateForDate(\'' + selected + '\')" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add a moment</button>' +
+    '</div>';
+  }
+
+  return header + '<div style="display:flex;flex-direction:column;gap:8px">' +
+    dayMoments.map(function(m){
       var emoji = (m.vibe || '⚾').trim().split(' ')[0];
       return '<div onclick="openMemory(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
         '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
-        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
-        '<div style="font-size:12px;color:var(--subtle);margin-top:1px">' + _escapeHtml(m.date ? _formatCalDate(m.date) : '') + '</div></div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.name || 'Untitled moment') + '</div></div>' +
       '</div>';
-    }).join('');
-    html += '</div>';
-  }
-
-  var hasContent = html.length > 0;
-  content.innerHTML = html;
-  content.style.display = hasContent ? 'block' : 'none';
-  if (empty) empty.style.display = hasContent ? 'none' : 'flex';
+    }).join('') +
+  '</div>';
 }
 
 // ── OUTSIDE LANDS GROUP CHAT (shared across everyone) ──
