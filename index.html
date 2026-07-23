@@ -937,15 +937,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- THE LEAGUE 2026 BANNER -->
-    <div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="nav('group-detail')">
-      <div style="font-size:28px">⚾</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:white">The League 2026</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Season 14 · 12 members · Tap to open →</div>
-      </div>
-    </div>
-
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 2px 6px">
       <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px">Coming up</div>
       <div onclick="startFuturePlan()" style="font-size:12px;font-weight:700;color:var(--indigo);cursor:pointer">＋ It's coming up</div>
@@ -2243,7 +2234,7 @@ function groupTab(tab, evt) {
   document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t) { t.classList.remove('active'); });
   if (evt && evt.target) evt.target.classList.add('active');
 
-  ['gd-chat-panel', 'gd-chat-input', 'gd-games-panel', 'gd-members-panel'].forEach(function(id) {
+  ['gd-chat-panel', 'gd-chat-input', 'gd-members-panel'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -2251,11 +2242,10 @@ function groupTab(tab, evt) {
   if (tab === 'chat') {
     document.getElementById('gd-chat-panel').style.display = 'flex';
     document.getElementById('gd-chat-input').style.display = 'flex';
-    if (typeof startLeagueChat === 'function') startLeagueChat();
-  } else if (tab === 'games') {
-    document.getElementById('gd-games-panel').style.display = 'flex';
+    if (window._activeGroupId && typeof startGroupChat === 'function') startGroupChat(window._activeGroupId);
   } else if (tab === 'members') {
     document.getElementById('gd-members-panel').style.display = 'flex';
+    if (typeof renderGroupMembers === 'function') renderGroupMembers();
   }
 }
 
@@ -2319,63 +2309,33 @@ function oslDay2(day) {
   <div class="g-hdr">
     <div class="gh-status"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
     <div class="gh-main">
-      <div class="gh-icon">⚾</div>
-      <div><div class="gh-name">The League 2026</div><div class="gh-sub">12 members · Invite only · Season 14</div></div>
+      <div class="gh-icon" id="gd-icon">💬</div>
+      <div><div class="gh-name" id="gd-name">Group</div><div class="gh-sub" id="gd-sub">1 member</div></div>
     </div>
   </div>
-  <div class="members-strip">
-    <div class="mem-item"><div class="m-av-sm av-a">You</div><div class="m-nm-sm">You</div></div>
-    <div class="mem-item"><div class="m-av-sm av-b">GA</div><div class="m-nm-sm">Alex</div></div>
-    <div class="mem-item"><div class="m-av-sm av-c">JC</div><div class="m-nm-sm">Chris</div></div>
-    <div class="mem-item"><div class="m-av-sm av-d">DR</div><div class="m-nm-sm">David</div></div>
-    <div class="mem-item"><div class="m-av-sm av-e">AG</div><div class="m-nm-sm">Andrew</div></div>
-    <div class="mem-item"><div class="m-av-sm av-b">JM</div><div class="m-nm-sm">Justin</div></div>
-    <div class="mem-item"><div class="m-av-sm av-c">AV</div><div class="m-nm-sm">Alex</div></div>
-    <div class="mem-item"><div class="m-av-sm av-d">AN</div><div class="m-nm-sm">Andreas</div></div>
-    <div class="mem-item"><div class="m-av-sm" style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center"><i class="ti ti-dots" style="font-size:13px;color:var(--subtle)"></i></div><div class="m-nm-sm">+4</div></div>
-  </div>
+  <div class="members-strip" id="gd-members-strip"></div>
   <div class="g-tabs tabs-light">
-    <div class="tab-l active" onclick="groupTab('chat', event)">Chat</div><div class="tab-l" onclick="groupTab('games', event)">Games</div><div class="tab-l" onclick="groupTab('members', event)">Members</div>
+    <div class="tab-l active" onclick="groupTab('chat', event)">Chat</div><div class="tab-l" onclick="groupTab('members', event)">Members</div>
   </div>
 
   <!-- CHAT PANEL -->
   <div class="convo" id="gd-chat-panel">
     <div class="date-div">Today</div>
-    <div class="msg"><div class="m-av av-a" style="width:30px;height:30px">N</div><div><div style="background:var(--indigo-light);color:var(--indigo);border-radius:4px 18px 18px 18px;padding:11px 15px;font-size:14px;line-height:1.55;max-width:82%">Yo league — this is our spot now. Trash talk, box scores, Giants content, whatever. Let's run it back for year 14. 🏆</div><div style="font-size:10px;color:var(--subtle);margin-top:3px;padding:0 4px">Pinned</div></div></div>
-    <div id="league-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 16px">
-      <div style="font-size:28px">⚾</div>
-      <div style="font-size:13px;color:var(--subtle)">No messages yet — say something</div>
+    <div id="group-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:40px 16px">
+      <div style="font-size:28px" id="group-chat-empty-icon">💬</div>
+      <div style="font-size:13px;color:var(--subtle)">No messages yet — say the first thing</div>
     </div>
-    <div id="league-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div id="group-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
   <div class="input-zone" id="gd-chat-input">
-    <input id="league-chat-field" class="msg-input" placeholder="Message The League 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendLeagueMessage();}">
-    <button class="send-btn" onclick="sendLeagueMessage()"><i class="ti ti-send"></i></button>
-  </div>
-
-  <!-- GAMES PANEL -->
-  <div id="gd-games-panel" style="display:none;flex:1;overflow-y:auto;padding:16px">
-    <div class="card" style="padding:20px 16px;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">🏆</div>
-      <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:4px">Season 14 hub</div>
-      <div style="font-size:13px;color:var(--subtle);line-height:1.5;margin-bottom:16px">Matchups, standings, and roster moves</div>
-      <button onclick="nav('fantasy')" style="background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Open Season 14</button>
-    </div>
+    <input id="group-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupMessage();}">
+    <button class="send-btn" onclick="sendGroupMessage()"><i class="ti ti-send"></i></button>
   </div>
 
   <!-- MEMBERS PANEL -->
   <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-a" style="width:44px;height:44px;font-size:13px">You</div><div class="m-nm-sm">You</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-b" style="width:44px;height:44px;font-size:13px">GA</div><div class="m-nm-sm">Alex</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-c" style="width:44px;height:44px;font-size:13px">JC</div><div class="m-nm-sm">Chris</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-d" style="width:44px;height:44px;font-size:13px">DR</div><div class="m-nm-sm">David</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-e" style="width:44px;height:44px;font-size:13px">AG</div><div class="m-nm-sm">Andrew</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-b" style="width:44px;height:44px;font-size:13px">JM</div><div class="m-nm-sm">Justin</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-c" style="width:44px;height:44px;font-size:13px">AV</div><div class="m-nm-sm">Alex</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-d" style="width:44px;height:44px;font-size:13px">AN</div><div class="m-nm-sm">Andreas</div></div>
-    </div>
-    <div style="font-size:11px;color:var(--subtle);text-align:center;margin-top:20px;line-height:1.5">Full roster management is on the roadmap — for now this reflects the beta group.</div>
+    <div id="gd-members-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px"></div>
+    <div style="font-size:11px;color:var(--subtle);text-align:center;margin-top:20px;line-height:1.5">Inviting others into a group is coming soon.</div>
   </div>
 </div>
 
@@ -2685,12 +2645,37 @@ function oslDay2(day) {
       </div>
     </div>
         <!-- MY GROUPS -->
-    <div class="sec-title">My groups</div>
-    <div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px" onclick="nav('group-detail')">
-      <div style="font-size:28px">⚾</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:white">The League 2026</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">12 members · Season 14 · Tap to open →</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="sec-title" style="margin-bottom:0">My groups</div>
+      <div onclick="showNewGroupModal()" style="font-size:12px;font-weight:600;color:var(--indigo);cursor:pointer">+ New</div>
+    </div>
+    <div id="my-groups-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
+    <div id="my-groups-empty" class="card" style="padding:16px;text-align:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--subtle);margin-bottom:8px">You're not in any groups yet</div>
+      <button onclick="showNewGroupModal()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Create a group</button>
+    </div>
+
+    <!-- NEW GROUP MODAL -->
+    <div id="new-group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Create a group</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input id="new-group-icon" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾" maxlength="2">
+          <input id="new-group-name" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. The League, Roommates, Book Club">
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Quick picks</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+          <div onclick="quickGroupIcon('⚾')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">⚾</div>
+          <div onclick="quickGroupIcon('🏠')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🏠</div>
+          <div onclick="quickGroupIcon('🎉')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎉</div>
+          <div onclick="quickGroupIcon('🎮')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎮</div>
+          <div onclick="quickGroupIcon('✈️')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
+          <div onclick="quickGroupIcon('💬')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="hideNewGroupModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+          <button onclick="saveNewGroup()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Create</button>
+        </div>
       </div>
     </div>
 
@@ -2722,7 +2707,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.39.0-my-groups-league-chat';
+window.INNINGS_BUILD = 'v4.40.0-create-your-own-groups';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2739,7 +2724,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&typeof startLeagueChat==='function')startLeagueChat();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroupId&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 
 function nav(id){
   var current=document.querySelector('.screen.active');
@@ -4980,7 +4965,7 @@ function _reactionSheetDelete() {
   else if (target.collection === 'feedbackChat') deleteFeedbackMessage(target.msgId);
   else if (target.collection === 'actChat') deleteActMessage(target.msgId);
   else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
-  else if (target.collection === 'leagueChat') deleteLeagueMessage(target.msgId);
+  else if (target.collection === 'groupChats') deleteGroupMessage(target.msgId);
 }
 
 // Renders grouped emoji badges (with a count if more than one person picked
@@ -5127,26 +5112,161 @@ function sendFeedbackMessage() {
     .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
 }
 
-// ── THE LEAGUE 2026 GROUP CHAT ──
-window._leagueChatStarted = false;
-function startLeagueChat() {
-  if (window._leagueChatStarted) return;
+// ── USER-CREATED GROUPS ──
+window._myGroupsStarted = false;
+function loadMyGroups() {
+  if (window._myGroupsStarted) return;
   if (!window.db) return;
-  window._leagueChatStarted = true;
-  window.db.collection('leagueChat').orderBy('ts').limit(300).onSnapshot(function(snap){
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user) return;
+  window._myGroupsStarted = true;
+  window.db.collection('groups').where('memberUids', 'array-contains', user.uid).onSnapshot(function(snap){
+    var groups = [];
+    snap.forEach(function(doc){ groups.push(Object.assign({ _id: doc.id }, doc.data())); });
+    groups.sort(function(a,b){ return (b.createdAt || 0) - (a.createdAt || 0); });
+    window._myGroups = groups;
+    renderMyGroups(groups);
+  }, function(err){
+    console.error('My groups error:', err);
+    window._myGroupsStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Groups unavailable — check Firestore rules');
+  });
+}
+
+function renderMyGroups(groups) {
+  var list = document.getElementById('my-groups-list');
+  var empty = document.getElementById('my-groups-empty');
+  if (!list) return;
+  if (empty) empty.style.display = groups.length ? 'none' : 'block';
+  list.innerHTML = groups.map(function(g){
+    var count = (g.members && g.members.length) || (g.memberUids && g.memberUids.length) || 1;
+    return '<div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openGroupById(\'' + g._id + '\')">' +
+      '<div style="font-size:28px">' + _escapeHtml(g.icon || '💬') + '</div>' +
+      '<div style="flex:1">' +
+        '<div style="font-size:14px;font-weight:700;color:white">' + _escapeHtml(g.name || 'Group') + '</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">' + count + ' member' + (count === 1 ? '' : 's') + ' · Tap to open →</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openGroupById(groupId) {
+  var g = (window._myGroups || []).filter(function(x){ return x._id === groupId; })[0];
+  if (!g) return;
+  openGroup(g);
+}
+
+function openGroup(g) {
+  window._activeGroupId = g._id;
+  window._activeGroup = g;
+  var iconEl = document.getElementById('gd-icon');
+  var nameEl = document.getElementById('gd-name');
+  var subEl = document.getElementById('gd-sub');
+  var count = (g.members && g.members.length) || (g.memberUids && g.memberUids.length) || 1;
+  if (iconEl) iconEl.textContent = g.icon || '💬';
+  if (nameEl) nameEl.textContent = g.name || 'Group';
+  if (subEl) subEl.textContent = count + ' member' + (count === 1 ? '' : 's') + ' · Invite only';
+  var emptyIcon = document.getElementById('group-chat-empty-icon');
+  if (emptyIcon) emptyIcon.textContent = g.icon || '💬';
+  var fieldEl = document.getElementById('group-chat-field');
+  if (fieldEl) fieldEl.placeholder = 'Message ' + (g.name || 'the group') + '...';
+  renderGroupMembersStrip();
+  document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t, i){ t.classList.toggle('active', i === 0); });
+  var membersPanel = document.getElementById('gd-members-panel');
+  if (membersPanel) membersPanel.style.display = 'none';
+  document.getElementById('gd-chat-panel').style.display = 'flex';
+  document.getElementById('gd-chat-input').style.display = 'flex';
+  nav('group-detail');
+  startGroupChat(g._id);
+}
+
+function renderGroupMembersStrip() {
+  var strip = document.getElementById('gd-members-strip');
+  if (!strip) return;
+  var g = window._activeGroup;
+  var members = (g && g.members) || [];
+  var colors = ['av-a', 'av-b', 'av-c', 'av-d', 'av-e'];
+  strip.innerHTML = members.map(function(m, i){
+    return '<div class="mem-item"><div class="m-av-sm ' + colors[i % colors.length] + '">' + _escapeHtml(_initials(m.name)) + '</div><div class="m-nm-sm">' + _escapeHtml(m.name) + '</div></div>';
+  }).join('');
+}
+
+function renderGroupMembers() {
+  var grid = document.getElementById('gd-members-grid');
+  if (!grid) return;
+  var g = window._activeGroup;
+  var members = (g && g.members) || [];
+  var colors = ['av-a', 'av-b', 'av-c', 'av-d', 'av-e'];
+  grid.innerHTML = members.map(function(m, i){
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm ' + colors[i % colors.length] + '" style="width:44px;height:44px;font-size:13px">' + _escapeHtml(_initials(m.name)) + '</div><div class="m-nm-sm">' + _escapeHtml(m.name) + '</div></div>';
+  }).join('');
+}
+
+// ── NEW GROUP CREATION ──
+function showNewGroupModal() {
+  var m = document.getElementById('new-group-modal');
+  if (m) m.style.display = 'flex';
+}
+function hideNewGroupModal() {
+  var m = document.getElementById('new-group-modal');
+  if (m) m.style.display = 'none';
+  var nameEl = document.getElementById('new-group-name');
+  var iconEl = document.getElementById('new-group-icon');
+  if (nameEl) nameEl.value = '';
+  if (iconEl) iconEl.value = '';
+}
+function quickGroupIcon(emoji) {
+  var iconEl = document.getElementById('new-group-icon');
+  if (iconEl) iconEl.value = emoji;
+}
+function saveNewGroup() {
+  var nameEl = document.getElementById('new-group-name');
+  var iconEl = document.getElementById('new-group-icon');
+  var name = nameEl ? nameEl.value.trim() : '';
+  var icon = iconEl ? iconEl.value.trim() : '';
+  if (!name) { if (typeof ib_toast==='function') ib_toast('Give your group a name'); return; }
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to create a group'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var groupData = {
+    name: name,
+    icon: icon || '💬',
+    createdBy: user.uid,
+    createdAt: Date.now(),
+    memberUids: [user.uid],
+    members: [{ uid: user.uid, name: author }]
+  };
+  window.db.collection('groups').add(groupData).then(function(ref){
+    hideNewGroupModal();
+    openGroup(Object.assign({ _id: ref.id }, groupData));
+  }).catch(function(err){
+    console.error('Create group error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not create group — check Firestore rules');
+  });
+}
+
+// ── GROUP CHAT (per-group, dynamic) ──
+window._groupChatUnsub = null;
+window._groupChatSubscribedId = null;
+function startGroupChat(groupId) {
+  if (!window.db || !groupId) return;
+  if (window._groupChatSubscribedId === groupId && window._groupChatUnsub) return;
+  if (window._groupChatUnsub) { window._groupChatUnsub(); window._groupChatUnsub = null; }
+  window._groupChatSubscribedId = groupId;
+  window._groupChatUnsub = window.db.collection('groupChats').where('groupId', '==', groupId).orderBy('ts').limit(300).onSnapshot(function(snap){
     var msgs = [];
     snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
-    renderLeagueChat(msgs);
+    renderGroupChat(msgs);
   }, function(err){
-    console.error('League chat error:', err);
-    window._leagueChatStarted = false;
+    console.error('Group chat error:', err);
+    window._groupChatSubscribedId = null;
     if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
   });
 }
 
-function renderLeagueChat(msgs) {
-  var box = document.getElementById('league-chat-msgs');
-  var empty = document.getElementById('league-chat-empty');
+function renderGroupChat(msgs) {
+  var box = document.getElementById('group-chat-msgs');
+  var empty = document.getElementById('group-chat-empty');
   if (!box) return;
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
@@ -5157,13 +5277,13 @@ function renderLeagueChat(msgs) {
       var tsLabel = _fmtTime(c.ts);
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'leagueChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'leagueChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
   }).join('');
@@ -5171,22 +5291,23 @@ function renderLeagueChat(msgs) {
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
 
-function sendLeagueMessage() {
-  var inp = document.getElementById('league-chat-field');
+function sendGroupMessage() {
+  var inp = document.getElementById('group-chat-field');
   var text = inp ? inp.value.trim() : '';
   if (!text) return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var groupId = window._activeGroupId;
+  if (!user || !window.db || !groupId) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
-  window.db.collection('leagueChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('League send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+  window.db.collection('groupChats').add({ groupId: groupId, uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('Group send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
 }
 
-function deleteLeagueMessage(msgId) {
+function deleteGroupMessage(msgId) {
   if (!window.db || !msgId) return;
-  window.db.collection('leagueChat').doc(msgId).delete()
-    .catch(function(err){ console.error('Delete league message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+  window.db.collection('groupChats').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete group message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 // ── OUTSIDE LANDS SHARED PHOTOS ──
