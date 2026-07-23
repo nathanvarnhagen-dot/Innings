@@ -937,6 +937,15 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
+    <!-- THE LEAGUE 2026 BANNER -->
+    <div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="nav('group-detail')">
+      <div style="font-size:28px">⚾</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:white">The League 2026</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Season 14 · 12 members · Tap to open →</div>
+      </div>
+    </div>
+
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 2px 6px">
       <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px">Coming up</div>
       <div onclick="startFuturePlan()" style="font-size:12px;font-weight:700;color:var(--indigo);cursor:pointer">＋ It's coming up</div>
@@ -2229,6 +2238,27 @@ function oslTab(tab, evt) {
   }
 }
 
+function groupTab(tab, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t) { t.classList.remove('active'); });
+  if (evt && evt.target) evt.target.classList.add('active');
+
+  ['gd-chat-panel', 'gd-chat-input', 'gd-games-panel', 'gd-members-panel'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  if (tab === 'chat') {
+    document.getElementById('gd-chat-panel').style.display = 'flex';
+    document.getElementById('gd-chat-input').style.display = 'flex';
+    if (typeof startLeagueChat === 'function') startLeagueChat();
+  } else if (tab === 'games') {
+    document.getElementById('gd-games-panel').style.display = 'flex';
+  } else if (tab === 'members') {
+    document.getElementById('gd-members-panel').style.display = 'flex';
+  }
+}
+
 function oslDay2(day) {
   ['fri','sat','sun'].forEach(function(d) {
     var panel = document.getElementById('osl2-' + d);
@@ -2305,17 +2335,48 @@ function oslDay2(day) {
     <div class="mem-item"><div class="m-av-sm" style="width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px dashed var(--rule);display:flex;align-items:center;justify-content:center"><i class="ti ti-dots" style="font-size:13px;color:var(--subtle)"></i></div><div class="m-nm-sm">+4</div></div>
   </div>
   <div class="g-tabs tabs-light">
-    <div class="tab-l active">Chat</div><div class="tab-l">Games</div><div class="tab-l">Members</div>
+    <div class="tab-l active" onclick="groupTab('chat', event)">Chat</div><div class="tab-l" onclick="groupTab('games', event)">Games</div><div class="tab-l" onclick="groupTab('members', event)">Members</div>
   </div>
-  <div class="convo">
+
+  <!-- CHAT PANEL -->
+  <div class="convo" id="gd-chat-panel">
     <div class="date-div">Today</div>
-    <div class="msg"><div class="m-av av-b" style="width:30px;height:30px">GA</div><div><div class="art-share"><div class="art-thumb">📰</div><div class="art-body"><div class="art-src">The Athletic</div><div class="art-title">Buster Posey's handling of the pride night fallout is the biggest SF Giants story of the year</div><div class="art-foot"><i class="ti ti-external-link" style="font-size:11px"></i> Read article</div></div></div><div style="font-size:10px;color:var(--subtle);margin-top:3px;padding:0 4px">2:12 PM</div></div></div>
-    <div class="msg"><div class="m-av av-c" style="width:30px;height:30px">JC</div><div class="bubble them"><div class="b-who">Chris</div><div class="b-txt">RIP to whoever has him on their roster</div><div class="b-t">2:18 PM</div></div></div>
-    <div class="msg"><div class="m-av av-d" style="width:30px;height:30px">DR</div><div class="bubble them"><div class="b-who">David</div><div class="b-txt">Chat, did we cook? 🚨🚨🚨</div><div class="b-t">2:31 PM</div></div></div>
-    <div class="msg"><div class="m-av av-e" style="width:30px;height:30px">AG</div><div class="bubble them"><div class="b-who">Andrew</div><div class="b-txt">Saw that 😊🔫</div><div class="b-t">2:44 PM</div></div></div>
-    <div class="msg mine"><div class="m-av av-a" style="width:30px;height:30px">You</div><div class="bubble me"><div class="b-txt">scared money don't make money</div><div class="b-t" style="text-align:right">3:02 PM</div></div></div>
+    <div class="msg"><div class="m-av av-a" style="width:30px;height:30px">N</div><div><div style="background:var(--indigo-light);color:var(--indigo);border-radius:4px 18px 18px 18px;padding:11px 15px;font-size:14px;line-height:1.55;max-width:82%">Yo league — this is our spot now. Trash talk, box scores, Giants content, whatever. Let's run it back for year 14. 🏆</div><div style="font-size:10px;color:var(--subtle);margin-top:3px;padding:0 4px">Pinned</div></div></div>
+    <div id="league-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 16px">
+      <div style="font-size:28px">⚾</div>
+      <div style="font-size:13px;color:var(--subtle)">No messages yet — say something</div>
+    </div>
+    <div id="league-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
-  <div class="input-zone"><input class="msg-input" placeholder="Message The League 2026..."><button class="send-btn"><i class="ti ti-send"></i></button></div>
+  <div class="input-zone" id="gd-chat-input">
+    <input id="league-chat-field" class="msg-input" placeholder="Message The League 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendLeagueMessage();}">
+    <button class="send-btn" onclick="sendLeagueMessage()"><i class="ti ti-send"></i></button>
+  </div>
+
+  <!-- GAMES PANEL -->
+  <div id="gd-games-panel" style="display:none;flex:1;overflow-y:auto;padding:16px">
+    <div class="card" style="padding:20px 16px;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">🏆</div>
+      <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:4px">Season 14 hub</div>
+      <div style="font-size:13px;color:var(--subtle);line-height:1.5;margin-bottom:16px">Matchups, standings, and roster moves</div>
+      <button onclick="nav('fantasy')" style="background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Open Season 14</button>
+    </div>
+  </div>
+
+  <!-- MEMBERS PANEL -->
+  <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-a" style="width:44px;height:44px;font-size:13px">You</div><div class="m-nm-sm">You</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-b" style="width:44px;height:44px;font-size:13px">GA</div><div class="m-nm-sm">Alex</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-c" style="width:44px;height:44px;font-size:13px">JC</div><div class="m-nm-sm">Chris</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-d" style="width:44px;height:44px;font-size:13px">DR</div><div class="m-nm-sm">David</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-e" style="width:44px;height:44px;font-size:13px">AG</div><div class="m-nm-sm">Andrew</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-b" style="width:44px;height:44px;font-size:13px">JM</div><div class="m-nm-sm">Justin</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-c" style="width:44px;height:44px;font-size:13px">AV</div><div class="m-nm-sm">Alex</div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="m-av-sm av-d" style="width:44px;height:44px;font-size:13px">AN</div><div class="m-nm-sm">Andreas</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--subtle);text-align:center;margin-top:20px;line-height:1.5">Full roster management is on the roadmap — for now this reflects the beta group.</div>
+  </div>
 </div>
 
 <!-- ═══ FANTASY ═══ -->
@@ -2623,29 +2684,14 @@ function oslDay2(day) {
         </div>
       </div>
     </div>
-        <!-- MY TEAMS -->
-    <div class="sec-title">My teams</div>
-    <div class="card" style="padding:14px 16px">
-      <div style="text-align:center;padding:8px 0">
-        <div style="font-size:13px;color:var(--subtle);margin-bottom:8px">Your moments show up here as a taste signal for friends</div>
-        <button onclick="nav('create-group')" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Create your first moment</button>
+        <!-- MY GROUPS -->
+    <div class="sec-title">My groups</div>
+    <div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px" onclick="nav('group-detail')">
+      <div style="font-size:28px">⚾</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:white">The League 2026</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">12 members · Season 14 · Tap to open →</div>
       </div>
-    </div>
-    <!-- I–ITE / REFERRAL LINK -->
-    <div class="sec-title">Invite someone</div>
-    <div class="card" style="padding:14px 16px">
-      <div style="font-size:13px;color:var(--mid);line-height:1.55;margin-bottom:12px">Share your personal invite link via text — the only way to bring someone onto Innings.</div>
-      <div style="background:var(--indigo-light);border-radius:12px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-        <div>
-          <div style="font-size:10px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px">Your code</div>
-          <div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--indigo);letter-spacing:0.04em">YourCodeHere</div>
-        </div>
-        <button style="background:var(--indigo);color:white;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Edit</button>
-      </div>
-      <button style="width:100%;background:var(--indigo);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-        Send invite via text
-      </button>
     </div>
 
     <!-- PRIVACY NOTE -->
@@ -2676,7 +2722,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.38.6-artist-photo-primary-album';
+window.INNINGS_BUILD = 'v4.39.0-my-groups-league-chat';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2693,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&typeof startLeagueChat==='function')startLeagueChat();if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 
 function nav(id){
   var current=document.querySelector('.screen.active');
@@ -4934,6 +4980,7 @@ function _reactionSheetDelete() {
   else if (target.collection === 'feedbackChat') deleteFeedbackMessage(target.msgId);
   else if (target.collection === 'actChat') deleteActMessage(target.msgId);
   else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
+  else if (target.collection === 'leagueChat') deleteLeagueMessage(target.msgId);
 }
 
 // Renders grouped emoji badges (with a count if more than one person picked
@@ -5078,6 +5125,68 @@ function sendFeedbackMessage() {
   if (inp) inp.value = '';
   window.db.collection('feedbackChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
     .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+}
+
+// ── THE LEAGUE 2026 GROUP CHAT ──
+window._leagueChatStarted = false;
+function startLeagueChat() {
+  if (window._leagueChatStarted) return;
+  if (!window.db) return;
+  window._leagueChatStarted = true;
+  window.db.collection('leagueChat').orderBy('ts').limit(300).onSnapshot(function(snap){
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    renderLeagueChat(msgs);
+  }, function(err){
+    console.error('League chat error:', err);
+    window._leagueChatStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderLeagueChat(msgs) {
+  var box = document.getElementById('league-chat-msgs');
+  var empty = document.getElementById('league-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function(c){
+    var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
+    if (mine) {
+      var tsLabel = _fmtTime(c.ts);
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'leagueChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'leagueChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        badges +
+      '</div></div>';
+  }).join('');
+  var panel = document.getElementById('gd-chat-panel');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function sendLeagueMessage() {
+  var inp = document.getElementById('league-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  window.db.collection('leagueChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
+    .catch(function(err){ console.error('League send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+}
+
+function deleteLeagueMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('leagueChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete league message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 // ── OUTSIDE LANDS SHARED PHOTOS ──
