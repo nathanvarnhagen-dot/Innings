@@ -2399,7 +2399,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.38.0-calendar-grid';
+window.INNINGS_BUILD = 'v4.38.1-calendar-future-osl';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3345,6 +3345,7 @@ function loadFutureMoments() {
         rsvpUi +
       '</div>';
     }).join('');
+    if (typeof renderCalendar === 'function') renderCalendar();
   }).catch(function(err){ console.error('Load future moments error:', err); });
 }
 
@@ -4420,6 +4421,22 @@ function renderCalendar() {
     (momentsByDate[m.date] = momentsByDate[m.date] || []).push(m);
   });
 
+  // Future/planned moments (RSVP'd plans) show up on their date too, tagged _future
+  var futureCache = window._futureMomentsCache || {};
+  Object.keys(futureCache).forEach(function(id){
+    var m = futureCache[id];
+    if (!m.date) return;
+    (momentsByDate[m.date] = momentsByDate[m.date] || []).push(Object.assign({}, m, { _id: id, _future: true }));
+  });
+
+  // Outside Lands isn't a "moment" record — it's an RSVP flag — so synthesize
+  // entries for its three dates when the user is going/maybe, tagged _osl
+  if (rsvp === 'going' || rsvp === 'maybe') {
+    ['2026-08-07','2026-08-08','2026-08-09'].forEach(function(d){
+      (momentsByDate[d] = momentsByDate[d] || []).push({ _osl: true, date: d });
+    });
+  }
+
   if (window._calYear == null) {
     var today0 = new Date();
     window._calYear = today0.getFullYear();
@@ -4477,7 +4494,17 @@ function _calRenderMonth(year, month, momentsByDate) {
     var bg = isSelected ? 'var(--indigo)' : 'transparent';
     var textColor = isSelected ? 'white' : 'var(--black)';
     var ring = (isToday && !isSelected) ? 'box-shadow:inset 0 0 0 1.5px var(--indigo);' : '';
-    var dot = dayMoments.length ? ('<div style="width:5px;height:5px;border-radius:50%;background:' + (isSelected ? 'white' : 'var(--indigo)') + ';margin-top:2px"></div>') : '<div style="height:5px;margin-top:2px"></div>';
+    var hasPast = dayMoments.some(function(m){ return !m._future && !m._osl; });
+    var hasUpcoming = dayMoments.some(function(m){ return m._future || m._osl; });
+    var dotColor = isSelected ? 'white' : 'var(--indigo)';
+    var dot;
+    if (hasPast) {
+      dot = '<div style="width:5px;height:5px;border-radius:50%;background:' + dotColor + ';margin-top:2px"></div>';
+    } else if (hasUpcoming) {
+      dot = '<div style="width:5px;height:5px;border-radius:50%;border:1px solid ' + dotColor + ';margin-top:2px"></div>';
+    } else {
+      dot = '<div style="height:5px;margin-top:2px"></div>';
+    }
     cells += '<div onclick="_calSelectDay(\'' + dateStr + '\')" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;background:' + bg + ';' + ring + '">' +
       '<div style="font-size:13px;font-weight:' + (isToday ? '800' : '600') + ';color:' + textColor + '">' + day + '</div>' + dot +
     '</div>';
@@ -4518,6 +4545,21 @@ function _calRenderDayDetail(momentsByDate) {
 
   return header + '<div style="display:flex;flex-direction:column;gap:8px">' +
     dayMoments.map(function(m){
+      if (m._osl) {
+        return '<div onclick="nav(\'osl-group\')" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎪</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:white">Outside Lands 2026</div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:1px">Golden Gate Park</div></div>' +
+        '</div>';
+      }
+      if (m._future) {
+        var futureEmoji = (m.vibe || '📅').trim().split(' ')[0];
+        return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(futureEmoji) + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:var(--indigo);margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Upcoming</div></div>' +
+        '</div>';
+      }
       var emoji = (m.vibe || '⚾').trim().split(' ')[0];
       return '<div onclick="openMemory(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
         '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
