@@ -1406,11 +1406,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="act-detail-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:0 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
 
     <div style="position:relative;z-index:2;padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em">Photos</div>
-      <button onclick="document.getElementById('act-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Photos</div>
+        <div onclick="openActAlbum()" style="font-size:11px;font-weight:600;color:rgba(168,159,232,0.9);cursor:pointer;flex-shrink:0">— Album</div>
+      </div>
+      <button onclick="document.getElementById('act-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">＋ Add</button>
       <input type="file" id="act-photo-input" accept="image/*" multiple style="display:none" onchange="addActPhoto(this)">
     </div>
-    <div id="act-detail-photos" style="position:relative;z-index:2;padding:6px 16px 14px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.08)"></div>
+    <div id="act-detail-photos" style="position:relative;z-index:2;padding:6px 16px 14px;display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.08)"></div>
 
     <div id="act-detail-chat" style="position:relative;z-index:2;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
       <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
@@ -1432,8 +1435,20 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <button onclick="actPhotoNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">›</button>
       <img id="act-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
       <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
-      <button onclick="actPhotoDownload()" style="margin-top:14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
+      <button onclick="setActPrimaryPhotoFromViewer()" style="margin-top:14px;background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">★ Set as Background</button>
+      <button onclick="actPhotoDownload()" style="margin-top:12px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
       <button id="act-photo-viewer-delete" onclick="deleteActPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+    </div>
+
+    <!-- ARTIST PHOTO ALBUM — full grid of everything added for this artist -->
+    <div id="act-photo-album" style="display:none;position:absolute;inset:0;z-index:95;background:#0D0820;flex-direction:column">
+      <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button onclick="closeActAlbum()" style="background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        </button>
+        <div id="act-album-title" style="font-size:15px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
+      <div id="act-album-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 16px 20px;align-content:start"></div>
     </div>
   </div>
 
@@ -1812,9 +1827,13 @@ window._actDetailCurrent = null;
 window._actChatStarted = {};
 window._actPhotosStarted = {};
 window._actPhotosData = {};
+window._actPrimaryStarted = {};
+window._actPrimaryPhotoId = {};
 
-// Artist photos — anyone signed in can add one; the newest becomes the backdrop
-// behind the header/going/chat, and all of them show as a tappable strip.
+// Artist photos — anyone signed in can add one, and anyone can pick which one
+// is the backdrop behind the header/going/chat (the "primary" photo, tracked
+// per-artist in actPrimaryPhoto). Falls back to the newest photo if nobody's
+// picked one yet, and to the gradient if there are no photos at all.
 function setActDetailBg(url) {
   var bg = document.getElementById('act-detail-bg');
   if (!bg) return;
@@ -1824,13 +1843,23 @@ function setActDetailBg(url) {
 }
 
 function renderActPhotos(photos) {
+  var actId = window._actDetailCurrent && window._actDetailCurrent.actId;
+  var primaryId = actId ? window._actPrimaryPhotoId[actId] : null;
   var strip = document.getElementById('act-detail-photos');
   if (strip) {
     strip.innerHTML = photos.length
-      ? photos.map(function(p, i){ return '<div onclick="openActPhoto(' + i + ')" style="width:56px;height:56px;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer;flex-shrink:0"></div>'; }).join('')
+      ? photos.map(function(p, i){
+          var isPrimary = !!(primaryId && p._id === primaryId);
+          var star = isPrimary ? '<div style="position:absolute;bottom:2px;right:2px;width:15px;height:15px;border-radius:50%;background:rgba(168,159,232,0.95);display:flex;align-items:center;justify-content:center;font-size:9px;color:#0D0820">★</div>' : '';
+          return '<div onclick="openActPhoto(' + i + ')" style="position:relative;width:56px;height:56px;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer;flex-shrink:0' + (isPrimary ? ';outline:2px solid rgba(168,159,232,0.95);outline-offset:2px' : '') + '">' + star + '</div>';
+        }).join('')
       : '<div style="font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0">Be the first to add one</div>';
   }
-  setActDetailBg(photos.length ? photos[0].photo : null);
+  var primaryMatch = primaryId ? photos.filter(function(p){ return p._id === primaryId; })[0] : null;
+  var bgPhoto = primaryMatch ? primaryMatch.photo : (photos.length ? photos[0].photo : null);
+  setActDetailBg(bgPhoto);
+  var albumBox = document.getElementById('act-photo-album');
+  if (albumBox && albumBox.style.display !== 'none') renderActAlbum(photos);
 }
 
 function startActPhotos(actId) {
@@ -1848,6 +1877,38 @@ function startActPhotos(actId) {
     window._actPhotosStarted[actId] = false;
     if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules');
   });
+}
+
+function startActPrimaryPhoto(actId) {
+  if (window._actPrimaryStarted[actId]) return;
+  if (!window.db) return;
+  window._actPrimaryStarted[actId] = true;
+  window.db.collection('actPrimaryPhoto').doc(actId).onSnapshot(function(doc){
+    window._actPrimaryPhotoId[actId] = doc.exists ? doc.data().photoId : null;
+    if (window._actDetailCurrent && window._actDetailCurrent.actId === actId) renderActPhotos(window._actPhotosData[actId] || []);
+  }, function(err){
+    console.error('Act primary photo error:', err);
+    window._actPrimaryStarted[actId] = false;
+  });
+}
+
+// Anyone can call this — not just whoever added the photo.
+function setActPrimaryPhoto(photoId) {
+  if (!window._actDetailCurrent) return;
+  var actId = window._actDetailCurrent.actId;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to do that'); return; }
+  window.db.collection('actPrimaryPhoto').doc(actId).set({ photoId: photoId, setByUid: user.uid, ts: Date.now() })
+    .then(function(){ if (typeof ib_toast==='function') ib_toast('Set as background'); })
+    .catch(function(err){ console.error('Set primary photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not set — check Firestore rules'); });
+}
+
+function setActPrimaryPhotoFromViewer() {
+  if (!window._actDetailCurrent) return;
+  var photos = window._actPhotosData[window._actDetailCurrent.actId] || [];
+  var p = photos[window._actPhotoViewerIndex];
+  if (!p || !p._id) return;
+  setActPrimaryPhoto(p._id);
 }
 
 function addActPhoto(input) {
@@ -1948,11 +2009,34 @@ function deleteActPhoto() {
     .catch(function(err){ console.error('Delete act photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
+function openActAlbum() {
+  if (!window._actDetailCurrent) return;
+  var titleEl = document.getElementById('act-album-title');
+  if (titleEl) titleEl.textContent = window._actDetailCurrent.name;
+  renderActAlbum(window._actPhotosData[window._actDetailCurrent.actId] || []);
+  var box = document.getElementById('act-photo-album');
+  if (box) box.style.display = 'flex';
+}
+
+function closeActAlbum() {
+  var box = document.getElementById('act-photo-album');
+  if (box) box.style.display = 'none';
+}
+
+function renderActAlbum(photos) {
+  var grid = document.getElementById('act-album-grid');
+  if (!grid) return;
+  grid.innerHTML = photos.length
+    ? photos.map(function(p, i){ return '<div onclick="openActPhoto(' + i + ')" style="width:100%;aspect-ratio:1/1;border-radius:8px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer"></div>'; }).join('')
+    : '<div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;padding:40px 0">No photos yet — be the first to add one</div>';
+}
+
 function openActDetail(actName, actTime, isHeadliner) {
   var actId = _slugifyAct(actName);
   window._actDetailCurrent = { name: actName, actId: actId };
   renderActPhotos(window._actPhotosData[actId] || []);
   startActPhotos(actId);
+  startActPrimaryPhoto(actId);
 
   var nameEl = document.getElementById('act-detail-name');
   var metaEl = document.getElementById('act-detail-meta');
@@ -2592,7 +2676,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.38.5-artist-photo-album';
+window.INNINGS_BUILD = 'v4.38.6-artist-photo-primary-album';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
