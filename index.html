@@ -2367,8 +2367,19 @@ function oslDay2(day) {
   <!-- MEMBERS PANEL -->
   <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px">
     <div id="gd-members-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px"></div>
-    <div style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:18px;cursor:pointer;text-align:center" onclick="groupToggleAddFriends()">＋ Add friends</div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:18px">
+      <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="groupToggleAddFriends()">＋ Add friends</div>
+      <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="groupToggleTextInvite()">＋ Invite by text</div>
+    </div>
     <div id="gd-add-friends" style="display:none;margin-top:12px"></div>
+    <div id="gd-text-invite" style="display:none;margin-top:12px">
+      <div style="display:flex;gap:8px">
+        <input id="gd-invite-phone" type="tel" placeholder="(555) 123-4567" maxlength="14" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)">
+        <button onclick="sendGroupTextInviteFromPanel()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Send</button>
+      </div>
+      <div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">They'll get a text with the link, and join this group automatically the moment they create an Innings account.</div>
+      <div id="gd-invite-sent-list" style="margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
@@ -2696,26 +2707,40 @@ function oslDay2(day) {
 
     <!-- NEW GROUP MODAL -->
     <div id="new-group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
-        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Create a group</div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <input id="new-group-icon" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾" maxlength="2">
-          <input id="new-group-name" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. The League, Roommates, Book Club">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+        <div style="padding:20px 20px 0;flex-shrink:0">
+          <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Create a group</div>
         </div>
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Quick picks</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-          <div onclick="quickGroupIcon('⚾')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">⚾</div>
-          <div onclick="quickGroupIcon('🏠')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🏠</div>
-          <div onclick="quickGroupIcon('🎉')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎉</div>
-          <div onclick="quickGroupIcon('🎮')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎮</div>
-          <div onclick="quickGroupIcon('✈️')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
-          <div onclick="quickGroupIcon('💬')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
+        <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input id="new-group-icon" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾" maxlength="2">
+            <input id="new-group-name" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="e.g. The League, Roommates, Book Club">
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Quick picks</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+            <div onclick="quickGroupIcon('⚾')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">⚾</div>
+            <div onclick="quickGroupIcon('🏠')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🏠</div>
+            <div onclick="quickGroupIcon('🎉')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎉</div>
+            <div onclick="quickGroupIcon('🎮')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎮</div>
+            <div onclick="quickGroupIcon('✈️')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
+            <div onclick="quickGroupIcon('💬')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Who's in it</div>
+          <div id="new-group-invitee-list" style="margin-bottom:8px"></div>
+          <div style="display:flex;gap:14px;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="newGroupToggleAddFriends()">＋ Add friends</div>
+            <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="newGroupToggleTextInvite()">＋ Invite by text</div>
+          </div>
+          <div id="new-group-add-friends" style="display:none;margin-bottom:12px"></div>
+          <div id="new-group-text-invite" style="display:none;margin-bottom:16px">
+            <div style="display:flex;gap:8px">
+              <input id="new-group-phone" type="tel" placeholder="(555) 123-4567" maxlength="14" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)">
+              <button onclick="newGroupQueuePhoneInvite()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
+            </div>
+            <div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">They'll get a text with the link, and join this group automatically the moment they create an Innings account.</div>
+          </div>
         </div>
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Who's in it</div>
-        <div id="new-group-invitee-list" style="margin-bottom:8px"></div>
-        <div style="font-size:12px;color:var(--indigo);font-weight:600;margin-bottom:10px;cursor:pointer" onclick="newGroupToggleAddFriends()">＋ Add friends</div>
-        <div id="new-group-add-friends" style="display:none;margin-bottom:16px"></div>
-        <div style="display:flex;gap:8px">
+        <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
           <button onclick="hideNewGroupModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
           <button onclick="saveNewGroup()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Create</button>
         </div>
@@ -2724,32 +2749,38 @@ function oslDay2(day) {
 
     <!-- ADD FEATURE MODAL -->
     <div id="feature-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
-        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add a feature</div>
-        <div style="font-size:13px;color:var(--subtle);margin-bottom:16px;line-height:1.5">Build your group one piece at a time.</div>
-        <div onclick="addGroupFeature('chat')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
-          <div style="font-size:24px">💬</div>
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:700;color:var(--indigo)">Group Chat</div>
-            <div style="font-size:12px;color:var(--indigo);opacity:0.75">A live chat for everyone in the group</div>
-          </div>
-          <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+      <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+        <div style="padding:20px 20px 0;flex-shrink:0">
+          <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add a feature</div>
+          <div style="font-size:13px;color:var(--subtle);margin-bottom:16px;line-height:1.5">Build your group one piece at a time.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px">
-          <div style="font-size:24px">📷</div>
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
-            <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
+        <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+          <div onclick="addGroupFeature('chat')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+            <div style="font-size:24px">💬</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700;color:var(--indigo)">Group Chat</div>
+              <div style="font-size:12px;color:var(--indigo);opacity:0.75">A live chat for everyone in the group</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px">
+            <div style="font-size:24px">📷</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
+              <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px">
+            <div style="font-size:24px">🗓️</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
+              <div style="font-size:12px;color:var(--subtle)">Schedule and Going/Maybe/Can't go — coming soon</div>
+            </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px">
-          <div style="font-size:24px">🗓️</div>
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
-            <div style="font-size:12px;color:var(--subtle)">Schedule and Going/Maybe/Can't go — coming soon</div>
-          </div>
+        <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule)">
+          <button onclick="hideFeaturePicker()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Close</button>
         </div>
-        <button onclick="hideFeaturePicker()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Close</button>
       </div>
     </div>
 
@@ -2781,7 +2812,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.41.0-group-features-and-friends';
+window.INNINGS_BUILD = 'v4.42.0-text-invite-and-modal-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3398,6 +3429,7 @@ window.saveProfile = function() {
     window.currentUser = user;
     window.userData = { name: name, phone: user.phoneNumber };
     ib_setProfileDisplay(name);
+    if (typeof consumePendingGroupInvites === 'function') consumePendingGroupInvites(user, name);
     // Show Add to Home Screen on iOS Safari
     var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     var isStandalone = window.navigator.standalone;
@@ -3428,6 +3460,7 @@ auth.onAuthStateChanged(function(user) {
         if (typeof renderInterests === 'function') renderInterests(pdata.interests || []);
         window.userData.customVibes = pdata.customVibes || [];
         if (typeof renderVibePills === 'function') renderVibePills();
+        if (typeof consumePendingGroupInvites === 'function') consumePendingGroupInvites(user, pdata.name || '');
         playLoginSplash(function(){ nav('feed'); });
       } else {
         ib_showStep('ob-name-step');
@@ -5340,6 +5373,104 @@ function groupAddMember(uid, name) {
   });
 }
 
+// ── INVITE BY TEXT (works for anyone, not just existing friends — they join
+// the group automatically the moment they create an Innings account with
+// this phone number) ──
+function _phoneDigitsOnly(v) { return (v || '').replace(/\D/g, ''); }
+function _formatPhoneDisplay(digits) {
+  if (digits.length !== 10) return digits;
+  return '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
+}
+
+// Writes the pending invite (so the group auto-adds them at signup) and,
+// unless silent, opens the native text-message composer with the invite link.
+function sendGroupTextInvite(digits, groupId, groupName, silent) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return Promise.reject(new Error('not signed in'));
+  var phone = '+1' + digits;
+  var inviteId = groupId + '_' + phone;
+  var inviterName = (window.userData && window.userData.name) || 'A friend';
+  return window.db.collection('pendingGroupInvites').doc(inviteId).set({
+    phone: phone,
+    groupId: groupId,
+    groupName: groupName,
+    invitedBy: user.uid,
+    invitedByName: inviterName,
+    ts: Date.now()
+  }).then(function(){
+    if (!silent) {
+      var inviteUrl = 'https://innings-zeta.vercel.app';
+      var message = inviterName + ' added you to "' + groupName + '" on Innings — a private space for memories with the people that matter. Create your account and you\'ll be in: ' + inviteUrl;
+      if (navigator.share) {
+        navigator.share({ title: 'Join ' + groupName + ' on Innings', text: message, url: inviteUrl }).catch(function(){});
+      } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.open('sms:?&body=' + encodeURIComponent(message));
+      } else {
+        window.open('sms:?body=' + encodeURIComponent(message));
+      }
+    }
+  });
+}
+
+function groupToggleTextInvite() {
+  var el = document.getElementById('gd-text-invite');
+  var friendsEl = document.getElementById('gd-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (friendsEl) friendsEl.style.display = 'none';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+window._groupInvitesSentThisSession = [];
+function sendGroupTextInviteFromPanel() {
+  var g = window._activeGroup;
+  var inp = document.getElementById('gd-invite-phone');
+  var digits = _phoneDigitsOnly(inp ? inp.value : '');
+  if (!g) return;
+  if (digits.length !== 10) { if (typeof ib_toast==='function') ib_toast('Enter a valid 10-digit US number'); return; }
+  sendGroupTextInvite(digits, g._id, g.name || 'the group', false).then(function(){
+    if (inp) inp.value = '';
+    window._groupInvitesSentThisSession.push(digits);
+    var listEl = document.getElementById('gd-invite-sent-list');
+    if (listEl) {
+      listEl.innerHTML = window._groupInvitesSentThisSession.map(function(d){
+        return '<div style="font-size:12px;color:var(--subtle);padding:4px 0">📱 ' + _formatPhoneDisplay(d) + ' — invited, waiting for them to join</div>';
+      }).join('');
+    }
+    if (typeof ib_toast==='function') ib_toast('Invite sent 📲');
+  }).catch(function(err){
+    console.error('Send group text invite error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not send invite — check Firestore rules');
+  });
+}
+
+// Called right after a phone-auth account is created or logged into — checks
+// whether this phone number was invited into any group and, if so, joins it
+// automatically and clears the invite. Safe to call every time someone signs
+// in; it's a no-op once there's nothing pending for their number.
+function consumePendingGroupInvites(user, name) {
+  if (!user || !user.phoneNumber || !window.db) return;
+  window.db.collection('pendingGroupInvites').where('phone', '==', user.phoneNumber).get().then(function(snap){
+    snap.forEach(function(doc){
+      var invite = doc.data();
+      var groupId = invite.groupId;
+      if (!groupId) return;
+      window.db.collection('groups').doc(groupId).update({
+        memberUids: firebase.firestore.FieldValue.arrayUnion(user.uid),
+        members: firebase.firestore.FieldValue.arrayUnion({ uid: user.uid, name: name || 'New member' })
+      }).then(function(){
+        return doc.ref.delete();
+      }).then(function(){
+        if (typeof loadMyGroups === 'function') loadMyGroups();
+        if (typeof ib_toast==='function') ib_toast('Added to "' + (invite.groupName || 'a group') + '" 🎉');
+      }).catch(function(err){ console.error('Consume group invite error:', err); });
+    });
+  }).catch(function(err){ console.error('Check pending group invites error:', err); });
+}
+
 // ── ADD A FEATURE TO A GROUP (blank canvas → chosen modules) ──
 function showFeaturePicker() {
   var m = document.getElementById('feature-picker-modal');
@@ -5367,11 +5498,17 @@ function addGroupFeature(key) {
 
 // ── NEW GROUP CREATION ──
 window._newGroupInvitees = [];
+window._newGroupPhoneInvites = [];
 function showNewGroupModal() {
   window._newGroupInvitees = [];
+  window._newGroupPhoneInvites = [];
   renderNewGroupInviteeList();
   var addEl = document.getElementById('new-group-add-friends');
   if (addEl) addEl.style.display = 'none';
+  var textEl = document.getElementById('new-group-text-invite');
+  if (textEl) textEl.style.display = 'none';
+  var phoneEl = document.getElementById('new-group-phone');
+  if (phoneEl) phoneEl.value = '';
   var m = document.getElementById('new-group-modal');
   if (m) m.style.display = 'flex';
 }
@@ -5383,31 +5520,70 @@ function hideNewGroupModal() {
   if (nameEl) nameEl.value = '';
   if (iconEl) iconEl.value = '';
   window._newGroupInvitees = [];
+  window._newGroupPhoneInvites = [];
 }
 function quickGroupIcon(emoji) {
   var iconEl = document.getElementById('new-group-icon');
   if (iconEl) iconEl.value = emoji;
 }
 
+function newGroupToggleTextInvite() {
+  var el = document.getElementById('new-group-text-invite');
+  var friendsEl = document.getElementById('new-group-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (friendsEl) friendsEl.style.display = 'none';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function newGroupQueuePhoneInvite() {
+  var inp = document.getElementById('new-group-phone');
+  var digits = _phoneDigitsOnly(inp ? inp.value : '');
+  if (digits.length !== 10) { if (typeof ib_toast==='function') ib_toast('Enter a valid 10-digit US number'); return; }
+  window._newGroupPhoneInvites = window._newGroupPhoneInvites || [];
+  if (window._newGroupPhoneInvites.indexOf(digits) === -1) window._newGroupPhoneInvites.push(digits);
+  if (inp) inp.value = '';
+  renderNewGroupInviteeList();
+}
+
+function newGroupRemovePhoneInvite(digits) {
+  window._newGroupPhoneInvites = (window._newGroupPhoneInvites || []).filter(function(d){ return d !== digits; });
+  renderNewGroupInviteeList();
+}
+
 function renderNewGroupInviteeList() {
   var listEl = document.getElementById('new-group-invitee-list');
   if (!listEl) return;
   var invitees = window._newGroupInvitees || [];
-  if (!invitees.length) { listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Just you so far</div>'; return; }
-  listEl.innerHTML = invitees.map(function(m){
+  var phoneInvites = window._newGroupPhoneInvites || [];
+  if (!invitees.length && !phoneInvites.length) { listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Just you so far</div>'; return; }
+  var friendRows = invitees.map(function(m){
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--rule)">' +
       '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(m.name)) + '</div>' +
       '<div style="flex:1;font-size:14px;font-weight:600;color:var(--black)">' + _escapeHtml(m.name) + '</div>' +
       '<div onclick="newGroupRemoveInvitee(\'' + m.uid + '\')" style="width:20px;height:20px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--subtle);cursor:pointer">×</div>' +
     '</div>';
   }).join('');
+  var phoneRows = phoneInvites.map(function(digits){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:1px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-size:14px">📱</div>' +
+      '<div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--black)">' + _formatPhoneDisplay(digits) + '</div><div style="font-size:11px;color:var(--subtle)">Will get an invite text</div></div>' +
+      '<div onclick="newGroupRemovePhoneInvite(\'' + digits + '\')" style="width:20px;height:20px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--subtle);cursor:pointer">×</div>' +
+    '</div>';
+  }).join('');
+  listEl.innerHTML = friendRows + phoneRows;
 }
 
 function newGroupToggleAddFriends() {
   var el = document.getElementById('new-group-add-friends');
+  var textEl = document.getElementById('new-group-text-invite');
   if (!el) return;
   if (el.style.display === 'none') {
     el.style.display = 'block';
+    if (textEl) textEl.style.display = 'none';
     newGroupLoadAddableFriends();
   } else {
     el.style.display = 'none';
@@ -5470,6 +5646,7 @@ function saveNewGroup() {
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to create a group'); return; }
   var author = (window.userData && window.userData.name) || 'You';
   var invitees = window._newGroupInvitees || [];
+  var phoneInvites = (window._newGroupPhoneInvites || []).slice();
   var memberUids = [user.uid].concat(invitees.map(function(m){ return m.uid; }));
   var members = [{ uid: user.uid, name: author }].concat(invitees.map(function(m){ return { uid: m.uid, name: m.name }; }));
   var groupData = {
@@ -5484,6 +5661,13 @@ function saveNewGroup() {
   window.db.collection('groups').add(groupData).then(function(ref){
     hideNewGroupModal();
     openGroup(Object.assign({ _id: ref.id }, groupData));
+    if (phoneInvites.length) {
+      Promise.all(phoneInvites.map(function(digits){ return sendGroupTextInvite(digits, ref.id, name, true); }))
+        .then(function(){
+          if (typeof ib_toast==='function') ib_toast(phoneInvites.length + ' text invite' + (phoneInvites.length === 1 ? '' : 's') + ' queued — share the link with them from Members whenever you\'re ready');
+        })
+        .catch(function(err){ console.error('Queue phone invites error:', err); });
+    }
   }).catch(function(err){
     console.error('Create group error:', err);
     if (typeof ib_toast==='function') ib_toast('Could not create group — check Firestore rules');
