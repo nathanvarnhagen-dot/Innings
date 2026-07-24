@@ -495,6 +495,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
     <!-- STEP 1: PHONE -->
     <div class="ob-bottom" id="ob-phone-step">
+      <div id="ob-group-invite-banner" style="display:none;background:var(--indigo-light);color:var(--indigo);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:600;line-height:1.4;margin-bottom:14px"></div>
       <div class="ob-fields">
         <div>
           <div class="ob-field-lbl">Mobile number</div>
@@ -2365,8 +2366,10 @@ function oslDay2(day) {
 <!-- ═══ GROUP DETAIL ═══ -->
 <div class="screen" id="screen-group-detail">
   <div class="g-hdr">
-    <div class="gh-status"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
-    <div class="gh-main">
+    <div id="gd-bg-photo" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 0.2s"></div>
+    <div id="gd-bg-overlay" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,8,32,0.25) 0%,rgba(13,8,32,0.8) 100%);opacity:0;transition:opacity 0.2s;pointer-events:none"></div>
+    <div class="gh-status" style="position:relative;z-index:2"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
+    <div class="gh-main" style="position:relative;z-index:2">
       <div class="gh-icon" id="gd-icon">💬</div>
       <div style="flex:1"><div class="gh-name" id="gd-name">Group</div><div class="gh-sub" id="gd-sub">1 member</div></div>
       <div onclick="showEditGroupModal()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><i class="ti ti-pencil" style="font-size:15px;color:rgba(255,255,255,0.85)"></i></div>
@@ -2434,6 +2437,15 @@ function oslDay2(day) {
           <div onclick="document.getElementById('edit-group-icon').value='🎮'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎮</div>
           <div onclick="document.getElementById('edit-group-icon').value='✈️'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
           <div onclick="document.getElementById('edit-group-icon').value='💬'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
+        </div>
+        <div id="edit-group-bg-section" style="display:none;margin-top:18px">
+          <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Cover photo</div>
+          <div id="edit-group-bg-preview" style="width:100%;aspect-ratio:2.4/1;border-radius:14px;background:var(--bg) center/cover no-repeat;border:0.5px solid var(--rule);display:flex;align-items:center;justify-content:center;color:var(--subtle);font-size:12px;margin-bottom:8px">No cover photo yet</div>
+          <input type="file" id="edit-group-bg-input" accept="image/*" style="display:none" onchange="groupBgPhotoSelected(this)">
+          <div style="display:flex;gap:14px">
+            <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="document.getElementById('edit-group-bg-input').click()">＋ Change photo</div>
+            <div id="edit-group-bg-remove" style="display:none;font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer" onclick="removeGroupBgPhoto()">Remove photo</div>
+          </div>
         </div>
       </div>
       <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
@@ -2873,7 +2885,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.47.0-link-previews-everywhere';
+window.INNINGS_BUILD = 'v4.48.0-group-invite-links-and-cover-photo';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3382,6 +3394,30 @@ function ib_toast(msg) {
   clearTimeout(t._t);
   t._t = setTimeout(function(){ t.style.display = 'none'; }, 2800);
 }
+
+// If this page was opened from a group text-invite link, remember which
+// group it's for so we can show the person what they're joining before
+// they even verify their number, and clear the URL after so a refresh
+// doesn't repeat it. The actual join is still gated by their phone number
+// matching a pendingGroupInvites doc — this is UX only, not a security path.
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var gid = params.get('groupInvite');
+    if (!gid) return;
+    window._pendingGroupInviteId = gid;
+    window._pendingGroupInviteName = params.get('groupName') || 'a group';
+    window._pendingGroupInviteInviter = params.get('inviter') || 'Someone';
+    var banner = document.getElementById('ob-group-invite-banner');
+    if (banner) {
+      banner.textContent = '🎉 ' + window._pendingGroupInviteInviter + ' invited you to "' + window._pendingGroupInviteName + '" — verify your number below to join instantly.';
+      banner.style.display = 'block';
+    }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  } catch (e) { console.error('Group invite link parse error:', e); }
+})();
 
 function ib_showStep(stepId) {
   // Force hide all steps first
@@ -5402,20 +5438,68 @@ function openGroupById(groupId) {
 }
 
 // ── EDIT AN EXISTING GROUP (name/icon — any member can do this, matching
-// the existing groups security rule) ──
+// the existing groups security rule; cover photo is creator-only, gated
+// client-side since Nathan wants only the creator setting it) ──
+window._pendingGroupBgPhoto = undefined; // undefined = no change, null = remove, dataURL = new photo
 function showEditGroupModal() {
   var g = window._activeGroup;
   if (!g) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  window._pendingGroupBgPhoto = undefined;
   var nameEl = document.getElementById('edit-group-name');
   var iconEl = document.getElementById('edit-group-icon');
   if (nameEl) nameEl.value = g.name || '';
   if (iconEl) iconEl.value = g.icon || '';
+  var bgSection = document.getElementById('edit-group-bg-section');
+  var isCreator = !!(user && g.createdBy === user.uid);
+  if (bgSection) bgSection.style.display = isCreator ? 'block' : 'none';
+  _renderEditGroupBgPreview(g.backgroundPhoto || '');
   var m = document.getElementById('edit-group-modal');
   if (m) m.style.display = 'flex';
 }
 function hideEditGroupModal() {
   var m = document.getElementById('edit-group-modal');
   if (m) m.style.display = 'none';
+  window._pendingGroupBgPhoto = undefined;
+}
+function _renderEditGroupBgPreview(url) {
+  var preview = document.getElementById('edit-group-bg-preview');
+  var removeBtn = document.getElementById('edit-group-bg-remove');
+  if (!preview) return;
+  if (url) {
+    preview.style.backgroundImage = 'url(' + url + ')';
+    preview.textContent = '';
+    if (removeBtn) removeBtn.style.display = 'block';
+  } else {
+    preview.style.backgroundImage = '';
+    preview.textContent = 'No cover photo yet';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+function groupBgPhotoSelected(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _downscaleImage(e.target.result, 1200, function(small) {
+      window._pendingGroupBgPhoto = small;
+      _renderEditGroupBgPreview(small);
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value = '';
+}
+function removeGroupBgPhoto() {
+  window._pendingGroupBgPhoto = null;
+  _renderEditGroupBgPreview('');
+}
+function _applyGroupBgPhoto(url) {
+  var bgEl = document.getElementById('gd-bg-photo');
+  var overlayEl = document.getElementById('gd-bg-overlay');
+  if (bgEl) {
+    bgEl.style.backgroundImage = url ? 'url(' + url + ')' : '';
+    bgEl.style.opacity = url ? '1' : '0';
+  }
+  if (overlayEl) overlayEl.style.opacity = url ? '1' : '0';
 }
 function saveGroupEdits() {
   var g = window._activeGroup;
@@ -5425,9 +5509,13 @@ function saveGroupEdits() {
   var name = nameEl ? nameEl.value.trim() : '';
   var icon = iconEl ? iconEl.value.trim() : '';
   if (!name) { if (typeof ib_toast==='function') ib_toast('Give your group a name'); return; }
-  window.db.collection('groups').doc(g._id).update({ name: name, icon: icon || '💬' }).then(function(){
+  var updates = { name: name, icon: icon || '💬' };
+  var bgChanged = window._pendingGroupBgPhoto !== undefined;
+  if (bgChanged) updates.backgroundPhoto = window._pendingGroupBgPhoto || firebase.firestore.FieldValue.delete();
+  window.db.collection('groups').doc(g._id).update(updates).then(function(){
     g.name = name;
     g.icon = icon || '💬';
+    if (bgChanged) g.backgroundPhoto = window._pendingGroupBgPhoto || '';
     var iconDisp = document.getElementById('gd-icon');
     var nameDisp = document.getElementById('gd-name');
     var emptyIcon = document.getElementById('group-chat-empty-icon');
@@ -5436,9 +5524,10 @@ function saveGroupEdits() {
     if (nameDisp) nameDisp.textContent = g.name;
     if (emptyIcon) emptyIcon.textContent = g.icon;
     if (fieldEl) fieldEl.placeholder = 'Message ' + g.name + '...';
+    if (bgChanged) _applyGroupBgPhoto(g.backgroundPhoto || '');
     if (window._myGroups) {
       var cached = window._myGroups.filter(function(x){ return x._id === g._id; })[0];
-      if (cached) { cached.name = g.name; cached.icon = g.icon; renderMyGroups(window._myGroups); }
+      if (cached) { cached.name = g.name; cached.icon = g.icon; if (bgChanged) cached.backgroundPhoto = g.backgroundPhoto; renderMyGroups(window._myGroups); }
     }
     hideEditGroupModal();
     if (typeof ib_toast==='function') ib_toast('Group updated');
@@ -5459,6 +5548,7 @@ function openGroup(g) {
   if (iconEl) iconEl.textContent = g.icon || '💬';
   if (nameEl) nameEl.textContent = g.name || 'Group';
   if (subEl) subEl.textContent = count + ' member' + (count === 1 ? '' : 's') + ' · Invite only';
+  _applyGroupBgPhoto(g.backgroundPhoto || '');
   var emptyIcon = document.getElementById('group-chat-empty-icon');
   if (emptyIcon) emptyIcon.textContent = g.icon || '💬';
   var fieldEl = document.getElementById('group-chat-field');
@@ -5598,8 +5688,9 @@ function sendGroupTextInvite(digits, groupId, groupName, silent) {
     ts: Date.now()
   }).then(function(){
     if (!silent) {
-      var inviteUrl = 'https://innings-zeta.vercel.app';
-      var message = inviterName + ' added you to "' + groupName + '" on Innings — a private space for memories with the people that matter. Create your account and you\'ll be in: ' + inviteUrl;
+      var inviteUrl = 'https://innings-zeta.vercel.app/?groupInvite=' + encodeURIComponent(groupId) +
+        '&groupName=' + encodeURIComponent(groupName) + '&inviter=' + encodeURIComponent(inviterName);
+      var message = inviterName + ' added you to "' + groupName + '" on Innings — a private space for memories with the people that matter. Tap to join: ' + inviteUrl;
       if (navigator.share) {
         navigator.share({ title: 'Join ' + groupName + ' on Innings', text: message, url: inviteUrl }).catch(function(){});
       } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
