@@ -2812,7 +2812,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.42.0-text-invite-and-modal-fix';
+window.INNINGS_BUILD = 'v4.43.0-notifications-and-group-errors';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5352,6 +5352,8 @@ function groupLoadAddableFriends() {
 function groupAddMember(uid, name) {
   var g = window._activeGroup;
   if (!g || !window.db) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var myName = (window.userData && window.userData.name) || 'Someone';
   var memberUids = (g.memberUids || []).slice();
   var members = (g.members || []).slice();
   if (memberUids.indexOf(uid) !== -1) return;
@@ -5367,9 +5369,21 @@ function groupAddMember(uid, name) {
     renderGroupMembers();
     groupLoadAddableFriends();
     if (typeof ib_toast==='function') ib_toast(name + ' added to the group');
+    if (user) {
+      window.db.collection('notifications').add({
+        toUid: uid,
+        type: 'added_to_group',
+        fromUid: user.uid,
+        fromName: myName,
+        groupId: g._id,
+        groupName: g.name || 'a group',
+        ts: Date.now(),
+        read: false
+      }).catch(function(err){ console.error('Added-to-group notification error:', err); });
+    }
   }).catch(function(err){
     console.error('Add member error:', err);
-    if (typeof ib_toast==='function') ib_toast('Could not add — check Firestore rules');
+    if (typeof ib_toast==='function') ib_toast('Could not add — ' + (err && err.message ? err.message : 'check Firestore rules'));
   });
 }
 
@@ -5661,6 +5675,20 @@ function saveNewGroup() {
   window.db.collection('groups').add(groupData).then(function(ref){
     hideNewGroupModal();
     openGroup(Object.assign({ _id: ref.id }, groupData));
+    if (invitees.length) {
+      Promise.all(invitees.map(function(m){
+        return window.db.collection('notifications').add({
+          toUid: m.uid,
+          type: 'added_to_group',
+          fromUid: user.uid,
+          fromName: author,
+          groupId: ref.id,
+          groupName: name,
+          ts: Date.now(),
+          read: false
+        });
+      })).catch(function(err){ console.error('Added-to-group notification error:', err); });
+    }
     if (phoneInvites.length) {
       Promise.all(phoneInvites.map(function(digits){ return sendGroupTextInvite(digits, ref.id, name, true); }))
         .then(function(){
@@ -5670,7 +5698,7 @@ function saveNewGroup() {
     }
   }).catch(function(err){
     console.error('Create group error:', err);
-    if (typeof ib_toast==='function') ib_toast('Could not create group — check Firestore rules');
+    if (typeof ib_toast==='function') ib_toast('Could not create group — ' + (err && err.message ? err.message : 'check Firestore rules'));
   });
 }
 
@@ -5992,21 +6020,25 @@ function loadNotifications() {
     if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'flex';
     itemsEl.style.display = items.length ? 'flex' : 'none';
     itemsEl.innerHTML = items.map(function(n){
-      var label = n.type === 'tagged'
-        ? '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> marked a memory with you'
-        : '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
+      var label;
+      if (n.type === 'tagged') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> marked a memory with you';
+      else if (n.type === 'friend_request') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a friend request';
+      else if (n.type === 'friend_accepted') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> accepted your friend request';
+      else if (n.type === 'added_to_group') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> added you to a group';
+      else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
+      var subLabel = n.momentName || n.groupName || '';
       return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:' + (n.read ? 'var(--card)' : 'var(--indigo-light)') + ';border:0.5px solid var(--rule);cursor:pointer">' +
         '<div class="av av-a" style="width:36px;height:36px;font-size:12px;flex-shrink:0">' + _escapeHtml(_initialsFallback(n.fromName || '?')) + '</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:13.5px;color:var(--black);line-height:1.4">' + label + '</div>' +
-          (n.momentName ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(n.momentName) + '</div>' : '') +
+          (subLabel ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(subLabel) + '</div>' : '') +
         '</div>' +
         '<div style="font-size:11px;color:var(--subtle);flex-shrink:0">' + _fmtRelativeTime(n.ts) + '</div>' +
       '</div>';
     }).join('');
   }).catch(function(err){
     console.error('Load notifications error:', err);
-    if (itemsEl) itemsEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load notifications — try again</div>';
+    if (itemsEl) itemsEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load notifications — ' + (err && err.message ? err.message : 'try again') + '</div>';
     if (itemsEl) itemsEl.style.display = 'flex';
     if (emptyEl) emptyEl.style.display = 'none';
   });
@@ -6020,6 +6052,11 @@ function notifTap(notifId) {
   }
   if (n.type === 'tagged' && n.momentOwnerUid && n.momentId) {
     openSharedMemory(n.momentOwnerUid, n.momentId, 'notifications');
+  } else if (n.type === 'added_to_group' && n.groupId) {
+    if (typeof openGroupById === 'function') openGroupById(n.groupId);
+    if (typeof loadMyGroups === 'function') loadMyGroups();
+  } else if ((n.type === 'friend_request' || n.type === 'friend_accepted') && n.fromUid) {
+    if (typeof openUserProfile === 'function') openUserProfile(n.fromUid);
   }
 }
 
@@ -6164,13 +6201,27 @@ function _renderFriendArea(theirUid) {
 function sendFriendRequest(theirUid) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) return;
+  var myName = (window.userData && window.userData.name) || 'Someone';
   window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: theirUid, status: 'pending', ts: Date.now() })
-    .then(function(){ if (typeof ib_toast==='function') ib_toast('Friend request sent'); _renderFriendArea(theirUid); })
-    .catch(function(err){ console.error('Send friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not send request — try again'); });
+    .then(function(){
+      if (typeof ib_toast==='function') ib_toast('Friend request sent');
+      _renderFriendArea(theirUid);
+      window.db.collection('notifications').add({
+        toUid: theirUid,
+        type: 'friend_request',
+        fromUid: user.uid,
+        fromName: myName,
+        ts: Date.now(),
+        read: false
+      }).catch(function(err){ console.error('Friend request notification error:', err); });
+    })
+    .catch(function(err){ console.error('Send friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not send request — ' + (err && err.message ? err.message : 'try again')); });
 }
 
 function acceptFriendRequest(reqId) {
   if (!window.db) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var myName = (window.userData && window.userData.name) || 'Someone';
   var theirUid = null;
   window.db.collection('friendRequests').doc(reqId).get().then(function(doc){
     theirUid = doc.exists ? doc.data().fromUid : null;
@@ -6179,7 +6230,17 @@ function acceptFriendRequest(reqId) {
     if (typeof ib_toast==='function') ib_toast("You're friends now 🎉");
     if (theirUid) _renderFriendArea(theirUid);
     if (typeof loadMyFriendsList === 'function') loadMyFriendsList();
-  }).catch(function(err){ console.error('Accept friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not accept — try again'); });
+    if (theirUid && user) {
+      window.db.collection('notifications').add({
+        toUid: theirUid,
+        type: 'friend_accepted',
+        fromUid: user.uid,
+        fromName: myName,
+        ts: Date.now(),
+        read: false
+      }).catch(function(err){ console.error('Friend accepted notification error:', err); });
+    }
+  }).catch(function(err){ console.error('Accept friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not accept — ' + (err && err.message ? err.message : 'try again')); });
 }
 
 function declineFriendRequest(reqId) {
