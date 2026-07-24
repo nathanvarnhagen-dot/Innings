@@ -2229,24 +2229,46 @@ function oslTab(tab, evt) {
   }
 }
 
-function groupTab(tab, evt) {
-  evt = evt || window.event;
-  document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t) { t.classList.remove('active'); });
-  if (evt && evt.target) evt.target.classList.add('active');
-
-  ['gd-chat-panel', 'gd-chat-input', 'gd-members-panel'].forEach(function(id) {
+function groupShowPanel(key) {
+  ['gd-blank-panel', 'gd-chat-panel', 'gd-chat-input', 'gd-members-panel'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-
-  if (tab === 'chat') {
+  if (key === 'chat') {
     document.getElementById('gd-chat-panel').style.display = 'flex';
     document.getElementById('gd-chat-input').style.display = 'flex';
     if (window._activeGroupId && typeof startGroupChat === 'function') startGroupChat(window._activeGroupId);
-  } else if (tab === 'members') {
+  } else if (key === 'members') {
     document.getElementById('gd-members-panel').style.display = 'flex';
     if (typeof renderGroupMembers === 'function') renderGroupMembers();
+  } else {
+    var blank = document.getElementById('gd-blank-panel');
+    if (blank) blank.style.display = 'flex';
   }
+}
+
+function groupTab(key, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t) { t.classList.remove('active'); });
+  if (evt && evt.target) evt.target.classList.add('active');
+  groupShowPanel(key);
+}
+
+// Builds the tab bar from the group's active features (currently just 'chat'),
+// always includes Members, and a trailing + to add more features later.
+function renderGroupTabs() {
+  var g = window._activeGroup || {};
+  var features = g.features || [];
+  var tabsEl = document.getElementById('gd-tabs');
+  if (!tabsEl) return;
+  var tabs = [];
+  if (features.indexOf('chat') !== -1) tabs.push({ key: 'chat', label: 'Chat' });
+  tabs.push({ key: 'members', label: 'Members' });
+  var defaultKey = features.length ? tabs[0].key : null;
+  tabsEl.innerHTML = tabs.map(function(t) {
+    return '<div class="tab-l' + (t.key === defaultKey ? ' active' : '') + '" onclick="groupTab(\'' + t.key + '\', event)">' + t.label + '</div>';
+  }).join('') + '<div class="tab-l" style="flex:0 0 44px;font-weight:700" onclick="showFeaturePicker()">+</div>';
+  groupShowPanel(defaultKey || 'blank');
 }
 
 function oslDay2(day) {
@@ -2301,6 +2323,10 @@ function oslDay2(day) {
 
   <div style="padding:20px 20px 0">
     <div id="vp-friend-area"></div>
+    <div id="vp-friends-section" style="display:none;margin-top:20px">
+      <div class="sec-title">Friends</div>
+      <div id="vp-friends-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+    </div>
   </div>
 </div>
 
@@ -2314,12 +2340,18 @@ function oslDay2(day) {
     </div>
   </div>
   <div class="members-strip" id="gd-members-strip"></div>
-  <div class="g-tabs tabs-light">
-    <div class="tab-l active" onclick="groupTab('chat', event)">Chat</div><div class="tab-l" onclick="groupTab('members', event)">Members</div>
+  <div class="g-tabs tabs-light" id="gd-tabs"></div>
+
+  <!-- BLANK CANVAS -->
+  <div id="gd-blank-panel" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:10px">
+    <div style="font-size:34px">🧩</div>
+    <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">This group is a blank canvas</div>
+    <div style="font-size:13px;color:var(--subtle);line-height:1.6;max-width:260px">Add a feature to get it going — start with a group chat.</div>
+    <button onclick="showFeaturePicker()" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Add a feature</button>
   </div>
 
   <!-- CHAT PANEL -->
-  <div class="convo" id="gd-chat-panel">
+  <div class="convo" id="gd-chat-panel" style="display:none">
     <div class="date-div">Today</div>
     <div id="group-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:40px 16px">
       <div style="font-size:28px" id="group-chat-empty-icon">💬</div>
@@ -2327,7 +2359,7 @@ function oslDay2(day) {
     </div>
     <div id="group-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
-  <div class="input-zone" id="gd-chat-input">
+  <div class="input-zone" id="gd-chat-input" style="display:none">
     <input id="group-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupMessage();}">
     <button class="send-btn" onclick="sendGroupMessage()"><i class="ti ti-send"></i></button>
   </div>
@@ -2335,7 +2367,8 @@ function oslDay2(day) {
   <!-- MEMBERS PANEL -->
   <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px">
     <div id="gd-members-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px"></div>
-    <div style="font-size:11px;color:var(--subtle);text-align:center;margin-top:20px;line-height:1.5">Inviting others into a group is coming soon.</div>
+    <div style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:18px;cursor:pointer;text-align:center" onclick="groupToggleAddFriends()">＋ Add friends</div>
+    <div id="gd-add-friends" style="display:none;margin-top:12px"></div>
   </div>
 </div>
 
@@ -2644,6 +2677,12 @@ function oslDay2(day) {
         </div>
       </div>
     </div>
+        <!-- FRIENDS -->
+    <div class="sec-title">Friends</div>
+    <div id="my-friends-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px"></div>
+    <div id="my-friends-empty" class="card" style="padding:14px 16px;text-align:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--subtle)">No friends yet — add friends from inside a group</div>
+    </div>
         <!-- MY GROUPS -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="sec-title" style="margin-bottom:0">My groups</div>
@@ -2672,10 +2711,45 @@ function oslDay2(day) {
           <div onclick="quickGroupIcon('✈️')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
           <div onclick="quickGroupIcon('💬')" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
         </div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Who's in it</div>
+        <div id="new-group-invitee-list" style="margin-bottom:8px"></div>
+        <div style="font-size:12px;color:var(--indigo);font-weight:600;margin-bottom:10px;cursor:pointer" onclick="newGroupToggleAddFriends()">＋ Add friends</div>
+        <div id="new-group-add-friends" style="display:none;margin-bottom:16px"></div>
         <div style="display:flex;gap:8px">
           <button onclick="hideNewGroupModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
           <button onclick="saveNewGroup()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Create</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ADD FEATURE MODAL -->
+    <div id="feature-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add a feature</div>
+        <div style="font-size:13px;color:var(--subtle);margin-bottom:16px;line-height:1.5">Build your group one piece at a time.</div>
+        <div onclick="addGroupFeature('chat')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+          <div style="font-size:24px">💬</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--indigo)">Group Chat</div>
+            <div style="font-size:12px;color:var(--indigo);opacity:0.75">A live chat for everyone in the group</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px">
+          <div style="font-size:24px">📷</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
+            <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px">
+          <div style="font-size:24px">🗓️</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
+            <div style="font-size:12px;color:var(--subtle)">Schedule and Going/Maybe/Can't go — coming soon</div>
+          </div>
+        </div>
+        <button onclick="hideFeaturePicker()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Close</button>
       </div>
     </div>
 
@@ -2707,7 +2781,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.40.0-create-your-own-groups';
+window.INNINGS_BUILD = 'v4.41.0-group-features-and-friends';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -2724,7 +2798,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroupId&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 
 function nav(id){
   var current=document.querySelector('.screen.active');
@@ -5159,6 +5233,7 @@ function openGroupById(groupId) {
 function openGroup(g) {
   window._activeGroupId = g._id;
   window._activeGroup = g;
+  if (!window._activeGroup.features) window._activeGroup.features = [];
   var iconEl = document.getElementById('gd-icon');
   var nameEl = document.getElementById('gd-name');
   var subEl = document.getElementById('gd-sub');
@@ -5171,13 +5246,8 @@ function openGroup(g) {
   var fieldEl = document.getElementById('group-chat-field');
   if (fieldEl) fieldEl.placeholder = 'Message ' + (g.name || 'the group') + '...';
   renderGroupMembersStrip();
-  document.querySelectorAll('#screen-group-detail .g-tabs .tab-l').forEach(function(t, i){ t.classList.toggle('active', i === 0); });
-  var membersPanel = document.getElementById('gd-members-panel');
-  if (membersPanel) membersPanel.style.display = 'none';
-  document.getElementById('gd-chat-panel').style.display = 'flex';
-  document.getElementById('gd-chat-input').style.display = 'flex';
+  renderGroupTabs();
   nav('group-detail');
-  startGroupChat(g._id);
 }
 
 function renderGroupMembersStrip() {
@@ -5202,8 +5272,106 @@ function renderGroupMembers() {
   }).join('');
 }
 
+// ── ADD FRIENDS TO AN EXISTING GROUP (any member can do this) ──
+function groupToggleAddFriends() {
+  var el = document.getElementById('gd-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    groupLoadAddableFriends();
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function groupLoadAddableFriends() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var el = document.getElementById('gd-add-friends');
+  if (!user || !window.db || !el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  var existingUids = (window._activeGroup && window._activeGroup.memberUids) || [];
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && existingUids.indexOf(v) === -1; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can add is already in this group.</div>'; return; }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      el.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        return '<div onclick="groupAddMember(\'' + doc.id + '\',\'' + nm.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
+        '</div>';
+      }).join('');
+    });
+  }).catch(function(err){
+    console.error('Load addable friends error:', err);
+    el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>';
+  });
+}
+
+function groupAddMember(uid, name) {
+  var g = window._activeGroup;
+  if (!g || !window.db) return;
+  var memberUids = (g.memberUids || []).slice();
+  var members = (g.members || []).slice();
+  if (memberUids.indexOf(uid) !== -1) return;
+  memberUids.push(uid);
+  members.push({ uid: uid, name: name });
+  window.db.collection('groups').doc(g._id).update({ memberUids: memberUids, members: members }).then(function(){
+    g.memberUids = memberUids;
+    g.members = members;
+    var count = members.length;
+    var subEl = document.getElementById('gd-sub');
+    if (subEl) subEl.textContent = count + ' member' + (count === 1 ? '' : 's') + ' · Invite only';
+    renderGroupMembersStrip();
+    renderGroupMembers();
+    groupLoadAddableFriends();
+    if (typeof ib_toast==='function') ib_toast(name + ' added to the group');
+  }).catch(function(err){
+    console.error('Add member error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not add — check Firestore rules');
+  });
+}
+
+// ── ADD A FEATURE TO A GROUP (blank canvas → chosen modules) ──
+function showFeaturePicker() {
+  var m = document.getElementById('feature-picker-modal');
+  if (m) m.style.display = 'flex';
+}
+function hideFeaturePicker() {
+  var m = document.getElementById('feature-picker-modal');
+  if (m) m.style.display = 'none';
+}
+function addGroupFeature(key) {
+  var g = window._activeGroup;
+  if (!g || !window.db) return;
+  var features = (g.features || []).slice();
+  if (features.indexOf(key) === -1) features.push(key);
+  window.db.collection('groups').doc(g._id).update({ features: features }).then(function(){
+    g.features = features;
+    hideFeaturePicker();
+    renderGroupTabs();
+    if (typeof ib_toast==='function' && key === 'chat') ib_toast('Group Chat added 💬');
+  }).catch(function(err){
+    console.error('Add feature error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not add feature — try again');
+  });
+}
+
 // ── NEW GROUP CREATION ──
+window._newGroupInvitees = [];
 function showNewGroupModal() {
+  window._newGroupInvitees = [];
+  renderNewGroupInviteeList();
+  var addEl = document.getElementById('new-group-add-friends');
+  if (addEl) addEl.style.display = 'none';
   var m = document.getElementById('new-group-modal');
   if (m) m.style.display = 'flex';
 }
@@ -5214,11 +5382,84 @@ function hideNewGroupModal() {
   var iconEl = document.getElementById('new-group-icon');
   if (nameEl) nameEl.value = '';
   if (iconEl) iconEl.value = '';
+  window._newGroupInvitees = [];
 }
 function quickGroupIcon(emoji) {
   var iconEl = document.getElementById('new-group-icon');
   if (iconEl) iconEl.value = emoji;
 }
+
+function renderNewGroupInviteeList() {
+  var listEl = document.getElementById('new-group-invitee-list');
+  if (!listEl) return;
+  var invitees = window._newGroupInvitees || [];
+  if (!invitees.length) { listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Just you so far</div>'; return; }
+  listEl.innerHTML = invitees.map(function(m){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(m.name)) + '</div>' +
+      '<div style="flex:1;font-size:14px;font-weight:600;color:var(--black)">' + _escapeHtml(m.name) + '</div>' +
+      '<div onclick="newGroupRemoveInvitee(\'' + m.uid + '\')" style="width:20px;height:20px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--subtle);cursor:pointer">×</div>' +
+    '</div>';
+  }).join('');
+}
+
+function newGroupToggleAddFriends() {
+  var el = document.getElementById('new-group-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    newGroupLoadAddableFriends();
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function newGroupLoadAddableFriends() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var el = document.getElementById('new-group-add-friends');
+  if (!user || !window.db || !el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  var existingUids = (window._newGroupInvitees || []).map(function(x){ return x.uid; });
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && existingUids.indexOf(v) === -1; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You haven\'t added any friends yet — add friends from a group first, then they\'ll show up here.</div>'; return; }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      el.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        return '<div onclick="newGroupAddInvitee(\'' + doc.id + '\',\'' + nm.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
+        '</div>';
+      }).join('');
+    });
+  }).catch(function(err){
+    console.error('Load new-group addable friends error:', err);
+    el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>';
+  });
+}
+
+function newGroupAddInvitee(uid, name) {
+  window._newGroupInvitees = window._newGroupInvitees || [];
+  if (window._newGroupInvitees.map(function(x){ return x.uid; }).indexOf(uid) === -1) {
+    window._newGroupInvitees.push({ uid: uid, name: name });
+  }
+  renderNewGroupInviteeList();
+  newGroupLoadAddableFriends();
+}
+
+function newGroupRemoveInvitee(uid) {
+  window._newGroupInvitees = (window._newGroupInvitees || []).filter(function(x){ return x.uid !== uid; });
+  renderNewGroupInviteeList();
+}
+
 function saveNewGroup() {
   var nameEl = document.getElementById('new-group-name');
   var iconEl = document.getElementById('new-group-icon');
@@ -5228,13 +5469,17 @@ function saveNewGroup() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to create a group'); return; }
   var author = (window.userData && window.userData.name) || 'You';
+  var invitees = window._newGroupInvitees || [];
+  var memberUids = [user.uid].concat(invitees.map(function(m){ return m.uid; }));
+  var members = [{ uid: user.uid, name: author }].concat(invitees.map(function(m){ return { uid: m.uid, name: m.name }; }));
   var groupData = {
     name: name,
     icon: icon || '💬',
     createdBy: user.uid,
     createdAt: Date.now(),
-    memberUids: [user.uid],
-    members: [{ uid: user.uid, name: author }]
+    memberUids: memberUids,
+    members: members,
+    features: []
   };
   window.db.collection('groups').add(groupData).then(function(ref){
     hideNewGroupModal();
@@ -5607,8 +5852,10 @@ function openUserProfile(uid) {
   var nameEl = document.getElementById('vp-name');
   var locEl = document.getElementById('vp-location');
   var areaEl = document.getElementById('vp-friend-area');
+  var friendsSectionEl = document.getElementById('vp-friends-section');
   if (nameEl) nameEl.textContent = 'Loading…';
   if (areaEl) areaEl.innerHTML = '';
+  if (friendsSectionEl) friendsSectionEl.style.display = 'none';
   _renderVpPhotos([]);
   ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '—'; });
   window.db.collection('users').doc(uid).get().then(function(doc){
@@ -5711,6 +5958,8 @@ function _renderFriendArea(theirUid) {
     var received = results[1].empty ? null : { id: results[1].docs[0].id, data: results[1].docs[0].data() };
     if ((sent && sent.data.status === 'accepted') || (received && received.data.status === 'accepted')) {
       areaEl.innerHTML = '<div style="display:flex;align-items:center;gap:6px;color:var(--indigo);font-size:14px;font-weight:700"><span>✓</span> Friends</div>';
+      _ensureFriendListed(theirUid);
+      _renderMutualFriendsList(theirUid);
     } else if (received && received.data.status === 'pending') {
       areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">Wants to be friends</div>' +
         '<div style="display:flex;gap:8px">' +
@@ -5745,6 +5994,7 @@ function acceptFriendRequest(reqId) {
   }).then(function(){
     if (typeof ib_toast==='function') ib_toast("You're friends now 🎉");
     if (theirUid) _renderFriendArea(theirUid);
+    if (typeof loadMyFriendsList === 'function') loadMyFriendsList();
   }).catch(function(err){ console.error('Accept friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not accept — try again'); });
 }
 
@@ -5757,6 +6007,72 @@ function declineFriendRequest(reqId) {
   }).then(function(){
     if (theirUid) _renderFriendArea(theirUid);
   }).catch(function(err){ console.error('Decline friend request error:', err); });
+}
+
+// ── FRIENDS LIST (visible on a profile only to that person's mutual friends) ──
+// Each user keeps their own private/friends doc — this keeps the security rule
+// simple (only the owner can write it) at the cost of the list syncing lazily:
+// it fills in as each side happens to view the other's profile, not instantly
+// on both sides the moment a request is accepted.
+function _ensureFriendListed(theirUid) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db || !theirUid) return;
+  window.db.collection('users').doc(user.uid).collection('private').doc('friends')
+    .set({ uids: firebase.firestore.FieldValue.arrayUnion(theirUid) }, { merge: true })
+    .catch(function(err){ console.error('Sync friends list error:', err); });
+}
+
+function _renderFriendChips(containerEl, uids) {
+  if (!containerEl) return;
+  if (!uids.length) { containerEl.innerHTML = ''; return; }
+  containerEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading…</div>';
+  Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+    containerEl.innerHTML = docs.map(function(doc){
+      var d = doc.data() || {};
+      var nm = d.name || 'Innings User';
+      return '<div onclick="openUserProfile(\'' + doc.id + '\')" style="display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;cursor:pointer">' +
+        '<div style="width:48px;height:48px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+        '<div style="font-size:11px;font-weight:600;color:var(--black);text-align:center;line-height:1.3">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    console.error('Render friend chips error:', err);
+    containerEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>';
+  });
+}
+
+// Own profile — always visible to yourself.
+window._myFriendsStarted = false;
+function loadMyFriendsList() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var listEl = document.getElementById('my-friends-list');
+  var emptyEl = document.getElementById('my-friends-empty');
+  if (!user || !window.db || !listEl) return;
+  window.db.collection('users').doc(user.uid).collection('private').doc('friends').get().then(function(doc){
+    var uids = (doc.exists && doc.data().uids) || [];
+    if (emptyEl) emptyEl.style.display = uids.length ? 'none' : 'block';
+    _renderFriendChips(listEl, uids);
+  }).catch(function(err){
+    console.error('Load my friends error:', err);
+  });
+}
+
+// Someone else's profile — only renders if the read succeeds, which the
+// Firestore rules only allow when the viewer is already listed as a friend.
+function _renderMutualFriendsList(theirUid) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var sectionEl = document.getElementById('vp-friends-section');
+  var listEl = document.getElementById('vp-friends-list');
+  if (!user || !window.db || !sectionEl || !listEl) return;
+  window.db.collection('users').doc(theirUid).collection('private').doc('friends').get().then(function(doc){
+    var uids = ((doc.exists && doc.data().uids) || []).filter(function(u){ return u !== user.uid; });
+    if (!uids.length) { sectionEl.style.display = 'none'; return; }
+    sectionEl.style.display = 'block';
+    _renderFriendChips(listEl, uids);
+  }).catch(function(err){
+    // Permission denied here just means we're not (yet) mutual — keep it hidden, no error shown.
+    sectionEl.style.display = 'none';
+  });
 }
 </script>
 </body>
