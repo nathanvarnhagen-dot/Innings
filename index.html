@@ -2336,7 +2336,8 @@ function oslDay2(day) {
     <div class="gh-status"><button class="back-btn" onclick="navBack()"><i class="ti ti-chevron-left"></i> Back</button><span style="font-size:15px;font-weight:600;color:white">9:41</span></div>
     <div class="gh-main">
       <div class="gh-icon" id="gd-icon">💬</div>
-      <div><div class="gh-name" id="gd-name">Group</div><div class="gh-sub" id="gd-sub">1 member</div></div>
+      <div style="flex:1"><div class="gh-name" id="gd-name">Group</div><div class="gh-sub" id="gd-sub">1 member</div></div>
+      <div onclick="showEditGroupModal()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><i class="ti ti-pencil" style="font-size:15px;color:rgba(255,255,255,0.85)"></i></div>
     </div>
   </div>
   <div class="members-strip" id="gd-members-strip"></div>
@@ -2379,6 +2380,34 @@ function oslDay2(day) {
       </div>
       <div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">They'll get a text with the link, and join this group automatically the moment they create an Innings account.</div>
       <div id="gd-invite-sent-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- EDIT GROUP MODAL -->
+  <div id="edit-group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:20px 20px 0;flex-shrink:0">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit group</div>
+      </div>
+      <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input id="edit-group-icon" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:10px;outline:none;font-family:inherit" placeholder="⚾" maxlength="2">
+          <input id="edit-group-name" style="flex:1;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Group name">
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Quick picks</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+          <div onclick="document.getElementById('edit-group-icon').value='⚾'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">⚾</div>
+          <div onclick="document.getElementById('edit-group-icon').value='🏠'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🏠</div>
+          <div onclick="document.getElementById('edit-group-icon').value='🎉'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎉</div>
+          <div onclick="document.getElementById('edit-group-icon').value='🎮'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">🎮</div>
+          <div onclick="document.getElementById('edit-group-icon').value='✈️'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">✈️</div>
+          <div onclick="document.getElementById('edit-group-icon').value='💬'" style="padding:8px 12px;border-radius:10px;background:var(--bg);border:0.5px solid var(--rule);font-size:17px;cursor:pointer">💬</div>
+        </div>
+      </div>
+      <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
+        <button onclick="hideEditGroupModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+        <button onclick="saveGroupEdits()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2763,14 +2792,14 @@ function oslDay2(day) {
             </div>
             <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
           </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px">
+          <div onclick="if(typeof ib_toast==='function')ib_toast('Photos are coming soon — Storage setup is in progress')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px;cursor:pointer">
             <div style="font-size:24px">📷</div>
             <div style="flex:1">
               <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
               <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px">
+          <div onclick="if(typeof ib_toast==='function')ib_toast('Lineup & RSVP is coming soon')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px;cursor:pointer">
             <div style="font-size:24px">🗓️</div>
             <div style="flex:1">
               <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
@@ -2812,7 +2841,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.43.0-notifications-and-group-errors';
+window.INNINGS_BUILD = 'v4.45.0-editable-groups';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5263,6 +5292,53 @@ function openGroupById(groupId) {
   openGroup(g);
 }
 
+// ── EDIT AN EXISTING GROUP (name/icon — any member can do this, matching
+// the existing groups security rule) ──
+function showEditGroupModal() {
+  var g = window._activeGroup;
+  if (!g) return;
+  var nameEl = document.getElementById('edit-group-name');
+  var iconEl = document.getElementById('edit-group-icon');
+  if (nameEl) nameEl.value = g.name || '';
+  if (iconEl) iconEl.value = g.icon || '';
+  var m = document.getElementById('edit-group-modal');
+  if (m) m.style.display = 'flex';
+}
+function hideEditGroupModal() {
+  var m = document.getElementById('edit-group-modal');
+  if (m) m.style.display = 'none';
+}
+function saveGroupEdits() {
+  var g = window._activeGroup;
+  if (!g || !window.db) return;
+  var nameEl = document.getElementById('edit-group-name');
+  var iconEl = document.getElementById('edit-group-icon');
+  var name = nameEl ? nameEl.value.trim() : '';
+  var icon = iconEl ? iconEl.value.trim() : '';
+  if (!name) { if (typeof ib_toast==='function') ib_toast('Give your group a name'); return; }
+  window.db.collection('groups').doc(g._id).update({ name: name, icon: icon || '💬' }).then(function(){
+    g.name = name;
+    g.icon = icon || '💬';
+    var iconDisp = document.getElementById('gd-icon');
+    var nameDisp = document.getElementById('gd-name');
+    var emptyIcon = document.getElementById('group-chat-empty-icon');
+    var fieldEl = document.getElementById('group-chat-field');
+    if (iconDisp) iconDisp.textContent = g.icon;
+    if (nameDisp) nameDisp.textContent = g.name;
+    if (emptyIcon) emptyIcon.textContent = g.icon;
+    if (fieldEl) fieldEl.placeholder = 'Message ' + g.name + '...';
+    if (window._myGroups) {
+      var cached = window._myGroups.filter(function(x){ return x._id === g._id; })[0];
+      if (cached) { cached.name = g.name; cached.icon = g.icon; renderMyGroups(window._myGroups); }
+    }
+    hideEditGroupModal();
+    if (typeof ib_toast==='function') ib_toast('Group updated');
+  }).catch(function(err){
+    console.error('Edit group error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not update group — ' + (err && err.message ? err.message : 'try again'));
+  });
+}
+
 function openGroup(g) {
   window._activeGroupId = g._id;
   window._activeGroup = g;
@@ -5717,7 +5793,10 @@ function startGroupChat(groupId) {
   }, function(err){
     console.error('Group chat error:', err);
     window._groupChatSubscribedId = null;
-    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+    var msg = 'Chat unavailable';
+    if (err && err.code === 'failed-precondition') msg = 'Chat needs a Firestore index — check the browser console for a link to create it';
+    else if (err && err.message) msg = 'Chat unavailable — ' + err.message;
+    if (typeof ib_toast==='function') ib_toast(msg);
   });
 }
 
