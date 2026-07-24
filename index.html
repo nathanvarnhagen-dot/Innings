@@ -2159,15 +2159,36 @@ function renderActChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+            badges +
+          '</div></div>';
+      }
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
           '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
@@ -2190,9 +2211,20 @@ function sendActMessage() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
   var author = (window.userData && window.userData.name) || 'You';
+  var actId = window._actDetailCurrent.actId;
+  var actName = window._actDetailCurrent.name;
   if (inp) inp.value = '';
-  window.db.collection('actChat').add({ actId: window._actDetailCurrent.actId, actName: window._actDetailCurrent.name, uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+  var msgData = { actId: actId, actName: actName, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
+  if (!url) {
+    window.db.collection('actChat').add(msgData)
+      .catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('actChat').add(msgData);
+  }).catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 function oslTab(tab, evt) {
@@ -2841,7 +2873,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.45.0-editable-groups';
+window.INNINGS_BUILD = 'v4.47.0-link-previews-everywhere';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4033,15 +4065,36 @@ function renderFutureMomentChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+            badges +
+          '</div></div>';
+      }
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
           '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
@@ -4064,9 +4117,19 @@ function sendFutureMomentMessage() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
   var author = (window.userData && window.userData.name) || 'You';
+  var momentId = window._openFutureId;
   if (inp) inp.value = '';
-  window.db.collection('futureMomentChat').add({ momentId: window._openFutureId, uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Future chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+  var msgData = { momentId: momentId, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
+  if (!url) {
+    window.db.collection('futureMomentChat').add(msgData)
+      .catch(function(err){ console.error('Future chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('futureMomentChat').add(msgData);
+  }).catch(function(err){ console.error('Future chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 function renderFutureEdit(m) {
@@ -5146,16 +5209,37 @@ function renderOslChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _escapeHtml(tsLabel) + '</div>' +
+            badges +
+          '</div></div>';
+      }
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
           '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
@@ -5180,10 +5264,20 @@ function sendOslMessage() {
   }
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
+  var msgData = { uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
   console.log('[oslChat] writing to Firestore…');
-  window.db.collection('oslChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
-    .then(function(ref){ console.log('[oslChat] write succeeded, doc id:', ref.id); })
-    .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules'); });
+  if (!url) {
+    window.db.collection('oslChat').add(msgData)
+      .then(function(ref){ console.log('[oslChat] write succeeded, doc id:', ref.id); })
+      .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('oslChat').add(msgData);
+  }).then(function(ref){ console.log('[oslChat] write succeeded, doc id:', ref.id); })
+    .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 // ── FEEDBACK GROUP CHAT ──
@@ -5211,18 +5305,24 @@ function renderFeedbackChat(msgs) {
     var mine = c.uid && c.uid === myUid;
     var tsLabel = _fmtTime(c.ts);
     var badges = _reactionBadgesHtml(c.reactions, true);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
       return '<div style="display:flex;flex-direction:column;align-items:flex-end">' +
-        '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',true)" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
+        lpHtml +
+        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',true)" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
         '<div class="b-txt">' + _escapeHtml(c.text) + '</div>' +
         '<div class="b-t" style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:3px">' + _escapeHtml(tsLabel) + '</div>' +
-        '</div>' + badges + '</div>';
+        '</div>') +
+        (linkOnly ? '<div style="font-size:10px;color:rgba(255,255,255,0.5)">' + _escapeHtml(tsLabel) + '</div>' : '') +
+        badges + '</div>';
     }
     return '<div style="display:flex;gap:8px;align-items:flex-end">' +
       '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="max-width:74%">' +
         '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
-        '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _escapeHtml(c.text) + '</div>' +
+        lpHtml +
+        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _escapeHtml(c.text) + '</div>') +
         badges +
       '</div></div>';
   }).join('');
@@ -5244,8 +5344,17 @@ function sendFeedbackMessage() {
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to send feedback'); return; }
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
-  window.db.collection('feedbackChat').add({ uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+  var msgData = { uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
+  if (!url) {
+    window.db.collection('feedbackChat').add(msgData)
+      .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('feedbackChat').add(msgData);
+  }).catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 // ── USER-CREATED GROUPS ──
@@ -5800,6 +5909,35 @@ function startGroupChat(groupId) {
   });
 }
 
+// ── LINK PREVIEWS (iMessage-style rich cards for pasted URLs) ──
+// Calls a small Vercel serverless function (/api/unfurl) that fetches the
+// page server-side and pulls its Open Graph tags — this can't be done
+// directly from the browser because most sites block cross-origin fetches.
+function _extractFirstUrl(text) {
+  var m = (text || '').match(/https?:\/\/[^\s]+/i);
+  return m ? m[0].replace(/[),.!?\]]+$/, '') : null;
+}
+
+function _fetchLinkPreview(url) {
+  var timeout = new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 4000); });
+  var req = fetch('/api/unfurl?url=' + encodeURIComponent(url)).then(function(r){
+    return r.ok ? r.json() : null;
+  }).catch(function(){ return null; });
+  return Promise.race([req, timeout]);
+}
+
+function _linkPreviewCardHtml(lp) {
+  if (!lp || !lp.url) return '';
+  var imgHtml = lp.image ? '<img src="' + _escapeHtml(lp.image) + '" style="width:100%;aspect-ratio:1.9/1;object-fit:cover;display:block;background:var(--bg)" onerror="this.style.display=\'none\'">' : '';
+  return '<a href="' + _escapeHtml(lp.url) + '" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border-radius:14px;overflow:hidden;border:0.5px solid var(--rule);background:var(--card);max-width:230px;margin-bottom:5px">' +
+    imgHtml +
+    '<div style="padding:8px 10px">' +
+      (lp.title ? '<div style="font-size:12.5px;font-weight:700;color:var(--black);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + _escapeHtml(lp.title) + '</div>' : '') +
+      '<div style="font-size:11px;color:var(--subtle);margin-top:2px">' + _escapeHtml(lp.siteName || '') + '</div>' +
+    '</div>' +
+  '</a>';
+}
+
 function renderGroupChat(msgs) {
   var box = document.getElementById('group-chat-msgs');
   var empty = document.getElementById('group-chat-empty');
@@ -5809,16 +5947,37 @@ function renderGroupChat(msgs) {
   box.innerHTML = msgs.map(function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _escapeHtml(tsLabel) + '</div>' +
+            badges +
+          '</div></div>';
+      }
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
           '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
           badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
@@ -5836,8 +5995,17 @@ function sendGroupMessage() {
   if (!user || !window.db || !groupId) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
   var author = (window.userData && window.userData.name) || 'You';
   if (inp) inp.value = '';
-  window.db.collection('groupChats').add({ groupId: groupId, uid: user.uid, author: author, text: text, ts: Date.now() })
-    .catch(function(err){ console.error('Group send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — check Firestore rules'); });
+  var msgData = { groupId: groupId, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
+  if (!url) {
+    window.db.collection('groupChats').add(msgData)
+      .catch(function(err){ console.error('Group send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('groupChats').add(msgData);
+  }).catch(function(err){ console.error('Group send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 function deleteGroupMessage(msgId) {
