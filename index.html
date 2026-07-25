@@ -2892,6 +2892,25 @@ function oslDay2(day) {
 
 </div>
 
+<!-- ═══ ATTACH BOX SCORE — shared by past-moment edit and future-plan edit ═══ -->
+<div id="boxscore-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:flex-end">
+  <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:20px 20px 0;flex-shrink:0">
+      <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Attach box score</div>
+    </div>
+    <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="date" id="bs-modal-date" style="flex:1;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;background:var(--bg);font-family:inherit">
+        <button onclick="bsModalSearch()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Search</button>
+      </div>
+      <div id="bs-modal-results" style="display:none;margin-bottom:8px"></div>
+    </div>
+    <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule)">
+      <button onclick="closeBoxScoreModal()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MESSAGE REACTIONS — shared across OSL chat, Feedback chat, and Artist chat ═══ -->
 <div id="msg-reaction-sheet" onclick="closeReactionSheet()" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.4);align-items:flex-end;justify-content:center">
   <div onclick="event.stopPropagation()" style="background:var(--card);width:100%;max-width:430px;border-radius:20px 20px 0 0;padding:22px 18px 28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 -8px 30px rgba(0,0,0,0.2)">
@@ -2901,7 +2920,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.49.0-mlb-box-scores';
+window.INNINGS_BUILD = 'v4.50.0-attach-boxscore-existing-moments';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3365,6 +3384,97 @@ function momentBoxScoreClear() {
   if (idleEl) idleEl.style.display = 'block';
   if (selectedEl) { selectedEl.style.display = 'none'; selectedEl.innerHTML = ''; }
   if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+}
+
+// ── ATTACH BOX SCORE TO AN EXISTING MOMENT (past memory or future plan) ──
+// The create-flow above has its own inline widget; this modal covers
+// attaching (or replacing) a box score after the fact, from the edit view
+// of an already-saved moment. context is one of:
+//   { type: 'moment', ownerUid, momentId }  — a saved past memory
+//   { type: 'future', id }                  — an upcoming plan
+window._bsModalContext = null;
+function openBoxScoreModal(context, defaultDate) {
+  window._bsModalContext = context;
+  var dateEl = document.getElementById('bs-modal-date');
+  if (dateEl) dateEl.value = defaultDate || new Date().toISOString().slice(0, 10);
+  var resultsEl = document.getElementById('bs-modal-results');
+  if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+  var m = document.getElementById('boxscore-modal');
+  if (m) m.style.display = 'flex';
+}
+function closeBoxScoreModal() {
+  var m = document.getElementById('boxscore-modal');
+  if (m) m.style.display = 'none';
+  window._bsModalContext = null;
+}
+function bsModalSearch() {
+  var dateEl = document.getElementById('bs-modal-date');
+  var date = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
+  var resultsEl = document.getElementById('bs-modal-results');
+  if (!resultsEl) return;
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);padding:8px 2px">Looking up games on ' + _escapeHtml(date) + '…</div>';
+  fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(date))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var games = data.games || [];
+      if (!games.length) { resultsEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);padding:8px 2px">No MLB games found on that date.</div>'; return; }
+      resultsEl.innerHTML = games.map(function(g){
+        var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || '');
+        return '<div onclick="bsModalSelectGame(' + g.gamePk + ')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;background:var(--bg);border:0.5px solid var(--rule);margin-bottom:6px;cursor:pointer">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+          '<div style="font-size:12px;color:var(--subtle);flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(err){
+      console.error('MLB schedule lookup error:', err);
+      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);padding:8px 2px">Could not look up games — try again</div>';
+    });
+}
+function bsModalSelectGame(gamePk) {
+  var resultsEl = document.getElementById('bs-modal-results');
+  if (resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);padding:8px 2px">Loading box score…</div>';
+  fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(gamePk))
+    .then(function(r){ return r.json(); })
+    .then(function(box){ _applyBoxScoreToContext(box); })
+    .catch(function(err){
+      console.error('MLB boxscore lookup error:', err);
+      if (resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);padding:8px 2px">Could not load box score — try again</div>';
+    });
+}
+function _applyBoxScoreToContext(box) {
+  var ctx = window._bsModalContext;
+  closeBoxScoreModal();
+  if (!ctx) return;
+  if (ctx.type === 'moment') {
+    var m = _findMoment(window._openMomentId);
+    if (!m) return;
+    m.boxScore = box;
+    renderMemoryEdit(m);
+    _persistMoment(m, { boxScore: box }, 'Box score attached');
+  } else if (ctx.type === 'future') {
+    if (!window.db) return;
+    window.db.collection('futureMoments').doc(ctx.id).update({ boxScore: box }).then(function(){
+      var fm = (window._futureMomentsCache || {})[ctx.id];
+      if (fm) { fm.boxScore = box; renderFutureEdit(fm); }
+      if (typeof ib_toast === 'function') ib_toast('Box score attached');
+    }).catch(function(err){
+      console.error('Attach box score error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not attach — try again');
+    });
+  }
+}
+function futureRemoveBoxScore(id) {
+  if (!window.db) return;
+  window.db.collection('futureMoments').doc(id).update({ boxScore: null }).then(function(){
+    var fm = (window._futureMomentsCache || {})[id];
+    if (fm) { fm.boxScore = null; renderFutureEdit(fm); }
+    if (typeof ib_toast === 'function') ib_toast('Box score removed');
+  }).catch(function(err){
+    console.error('Remove box score error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not remove — try again');
+  });
 }
 
 // Shared renderer — used both in the create-moment preview (light card) and
@@ -4298,6 +4408,13 @@ function renderFutureEdit(m) {
     var active = t === theme;
     return '<div onclick="fdSelectTheme(this,\'' + t + '\')" style="width:34px;height:34px;border-radius:50%;background:' + t + ';cursor:pointer;border:2px solid ' + (active?'#0D0820':'transparent') + '"></div>';
   }).join('');
+  var fdBoxScoreHtml = m.boxScore ?
+    _boxScoreCardHtml(m.boxScore, false) +
+    '<div onclick="futureRemoveBoxScore(\'' + m._id + '\')" style="font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer;margin-top:8px;text-align:center">Remove box score</div>' :
+    '<div onclick="openBoxScoreModal({type:\'future\',id:\'' + m._id + '\'},\'' + _escapeHtml(m.date || '') + '\')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);cursor:pointer">' +
+      '<div style="font-size:20px">⚾</div>' +
+      '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--black)">Attach a box score</div><div style="font-size:11px;color:var(--subtle)">Pulls the final score once the game\'s in</div></div>' +
+    '</div>';
 
   box.innerHTML =
     '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px">' +
@@ -4318,6 +4435,10 @@ function renderFutureEdit(m) {
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>' +
       '<input id="fd-location" value="' + _escapeHtml(m.location || '') + '" placeholder="Add a location" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
+      fdBoxScoreHtml +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>' +
@@ -4795,7 +4916,12 @@ function renderMemoryEdit(m) {
   var boxScoreEditHtml = m.boxScore ?
     '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
     _boxScoreCardHtml(m.boxScore, false) +
-    '<div onclick="momentRemoveBoxScore()" style="font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer;margin:8px 0 20px;text-align:center">Remove box score</div>' : '';
+    '<div onclick="momentRemoveBoxScore()" style="font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer;margin:8px 0 20px;text-align:center">Remove box score</div>' :
+    '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
+    '<div onclick="openBoxScoreModal({type:\'moment\'},\'' + _escapeHtml(m.date || '') + '\')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);cursor:pointer;margin-bottom:20px">' +
+      '<div style="font-size:20px">⚾</div>' +
+      '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--black)">Attach a box score</div><div style="font-size:11px;color:var(--subtle)">Pulls the final score from an MLB game</div></div>' +
+    '</div>';
 
   box.innerHTML =
     '<div style="background:var(--card);border-radius:18px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,0.3)">' +
