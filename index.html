@@ -2173,7 +2173,7 @@ function renderActChat(msgs) {
   if (!box) return;
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  box.innerHTML = msgs.map(function(c){
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -2209,7 +2209,7 @@ function renderActChat(msgs) {
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
-  }).join('');
+  }, true);
   var panel = document.getElementById('act-detail-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -2404,7 +2404,6 @@ function oslDay2(day) {
 
   <!-- CHAT PANEL -->
   <div class="convo" id="gd-chat-panel" style="display:none">
-    <div class="date-div">Today</div>
     <div id="group-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:40px 16px">
       <div style="font-size:28px" id="group-chat-empty-icon">💬</div>
       <div style="font-size:13px;color:var(--subtle)">No messages yet — say the first thing</div>
@@ -2920,7 +2919,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.50.0-attach-boxscore-existing-moments';
+window.INNINGS_BUILD = 'v4.51.0-chat-day-dividers';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4324,7 +4323,7 @@ function renderFutureMomentChat(msgs) {
   if (!box) return;
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  box.innerHTML = msgs.map(function(c){
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -4360,7 +4359,7 @@ function renderFutureMomentChat(msgs) {
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
-  }).join('');
+  });
   var panel = document.getElementById('fd-scroll');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -5493,13 +5492,53 @@ function _fmtTime(ts) {
   return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
 }
 
+// ── DAY DIVIDERS (iMessage-style "Today" / "Yesterday" / weekday breaks) ──
+// Shared by every chat's render function — group() below turns a flat list
+// of messages into groups keyed by calendar day, in original order.
+function _chatDayKey(ts) {
+  var d = new Date(ts || Date.now());
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+function _fmtChatDayDivider(ts) {
+  var d = new Date(ts || Date.now());
+  var now = new Date();
+  var startOfDay = function(x){ return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+  var diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays > 1 && diffDays < 7) return d.toLocaleDateString(undefined, { weekday: 'long' });
+  var opts = { month: 'long', day: 'numeric' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(undefined, opts);
+}
+// Builds the message HTML with a day-divider inserted wherever the calendar
+// day changes between one message and the next. renderOne(c) must return the
+// HTML for a single message (everything each chat already builds per-item).
+// Pass dark=true for chats on a dark background (e.g. the feedback group).
+function _chatHtmlWithDayDividers(msgs, renderOne, dark) {
+  var html = '';
+  var lastDayKey = null;
+  var style = dark ? 'text-align:center;font-size:11px;color:rgba(255,255,255,0.5);font-weight:600' : '';
+  msgs.forEach(function(c){
+    var dayKey = _chatDayKey(c.ts);
+    if (dayKey !== lastDayKey) {
+      html += dark
+        ? '<div style="' + style + '">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>'
+        : '<div class="date-div">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>';
+      lastDayKey = dayKey;
+    }
+    html += renderOne(c);
+  });
+  return html;
+}
+
 function renderOslChat(msgs) {
   var box = document.getElementById('osl-chat-msgs');
   var empty = document.getElementById('osl-chat-empty');
   if (!box) return;
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  box.innerHTML = msgs.map(function(c){
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -5536,7 +5575,7 @@ function renderOslChat(msgs) {
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
-  }).join('');
+  });
   var panel = document.getElementById('osl2-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -5594,7 +5633,7 @@ function renderFeedbackChat(msgs) {
   var box = document.getElementById('feedback-chat-msgs');
   if (!box) return;
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  box.innerHTML = msgs.map(function(c){
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
     var mine = c.uid && c.uid === myUid;
     var tsLabel = _fmtTime(c.ts);
     var badges = _reactionBadgesHtml(c.reactions, true);
@@ -5618,7 +5657,7 @@ function renderFeedbackChat(msgs) {
         (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _escapeHtml(c.text) + '</div>') +
         badges +
       '</div></div>';
-  }).join('');
+  }, true);
   var panel = document.getElementById('feedback-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -6292,7 +6331,7 @@ function renderGroupChat(msgs) {
   if (!box) return;
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  box.innerHTML = msgs.map(function(c){
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -6329,7 +6368,7 @@ function renderGroupChat(msgs) {
         '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
         badges +
       '</div></div>';
-  }).join('');
+  });
   var panel = document.getElementById('gd-chat-panel');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
