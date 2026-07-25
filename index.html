@@ -3053,7 +3053,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.52.0-status-bar-cleanup-and-act-songs';
+window.INNINGS_BUILD = 'v4.53.0-future-plan-text-invites';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3754,28 +3754,40 @@ function ib_toast(msg) {
   t._t = setTimeout(function(){ t.style.display = 'none'; }, 2800);
 }
 
-// If this page was opened from a group text-invite link, remember which
-// group it's for so we can show the person what they're joining before
-// they even verify their number, and clear the URL after so a refresh
-// doesn't repeat it. The actual join is still gated by their phone number
-// matching a pendingGroupInvites doc — this is UX only, not a security path.
+// If this page was opened from a group or future-plan text-invite link,
+// remember which one it's for so we can show the person what they're
+// joining before they even verify their number, and clear the URL after
+// so a refresh doesn't repeat it. The actual join is still gated by their
+// phone number matching a pending invite doc — this is UX only, not a
+// security path.
 (function() {
   try {
     var params = new URLSearchParams(window.location.search);
     var gid = params.get('groupInvite');
-    if (!gid) return;
-    window._pendingGroupInviteId = gid;
-    window._pendingGroupInviteName = params.get('groupName') || 'a group';
-    window._pendingGroupInviteInviter = params.get('inviter') || 'Someone';
+    var fid = params.get('futureInvite');
+    if (!gid && !fid) return;
     var banner = document.getElementById('ob-group-invite-banner');
-    if (banner) {
-      banner.textContent = '🎉 ' + window._pendingGroupInviteInviter + ' invited you to "' + window._pendingGroupInviteName + '" — verify your number below to join instantly.';
-      banner.style.display = 'block';
+    if (gid) {
+      window._pendingGroupInviteId = gid;
+      window._pendingGroupInviteName = params.get('groupName') || 'a group';
+      window._pendingGroupInviteInviter = params.get('inviter') || 'Someone';
+      if (banner) {
+        banner.textContent = '🎉 ' + window._pendingGroupInviteInviter + ' invited you to "' + window._pendingGroupInviteName + '" — verify your number below to join instantly.';
+        banner.style.display = 'block';
+      }
+    } else if (fid) {
+      window._pendingFutureInviteId = fid;
+      window._pendingFutureInviteTitle = params.get('title') || 'a plan';
+      window._pendingFutureInviteInviter = params.get('inviter') || 'Someone';
+      if (banner) {
+        banner.textContent = '🎉 ' + window._pendingFutureInviteInviter + ' invited you to "' + window._pendingFutureInviteTitle + '" — verify your number below to join instantly.';
+        banner.style.display = 'block';
+      }
     }
     if (window.history && window.history.replaceState) {
       window.history.replaceState({}, '', window.location.pathname);
     }
-  } catch (e) { console.error('Group invite link parse error:', e); }
+  } catch (e) { console.error('Invite link parse error:', e); }
 })();
 
 function ib_showStep(stepId) {
@@ -3886,6 +3898,7 @@ window.saveProfile = function() {
     window.userData = { name: name, phone: user.phoneNumber };
     ib_setProfileDisplay(name);
     if (typeof consumePendingGroupInvites === 'function') consumePendingGroupInvites(user, name);
+    if (typeof consumePendingFutureInvites === 'function') consumePendingFutureInvites(user, name);
     // Show Add to Home Screen on iOS Safari
     var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     var isStandalone = window.navigator.standalone;
@@ -3917,6 +3930,7 @@ auth.onAuthStateChanged(function(user) {
         window.userData.customVibes = pdata.customVibes || [];
         if (typeof renderVibePills === 'function') renderVibePills();
         if (typeof consumePendingGroupInvites === 'function') consumePendingGroupInvites(user, pdata.name || '');
+        if (typeof consumePendingFutureInvites === 'function') consumePendingFutureInvites(user, pdata.name || '');
         playLoginSplash(function(){ nav('feed'); });
       } else {
         ib_showStep('ob-name-step');
@@ -4580,8 +4594,19 @@ function renderFutureEdit(m) {
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Who\'s invited</div>' +
       '<div id="fd-guest-list"></div>' +
-      '<div style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:10px;cursor:pointer" onclick="fdToggleAddFriends()">＋ Add more friends</div>' +
+      '<div style="display:flex;gap:16px;margin-top:10px">' +
+        '<div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="fdToggleAddFriends()">＋ Add more friends</div>' +
+        '<div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="fdToggleTextInvite()">＋ Invite by text</div>' +
+      '</div>' +
       '<div id="fd-add-friends" style="display:none;margin-top:10px"></div>' +
+      '<div id="fd-text-invite" style="display:none;margin-top:10px">' +
+        '<div style="display:flex;gap:8px">' +
+          '<input id="fd-invite-phone" type="tel" placeholder="(555) 123-4567" maxlength="14" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black)">' +
+          '<button onclick="sendFutureTextInviteFromPanel()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Send</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">They\'ll get a text with the link, and join this plan automatically the moment they create an Innings account.</div>' +
+        '<div id="fd-invite-sent-list" style="margin-top:10px"></div>' +
+      '</div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">' +
       '<div style="max-width:220px">' +
@@ -4686,6 +4711,42 @@ function fdAddInvitee(uid) {
   var m = (window._futureMomentsCache || {})[window._openFutureId];
   if (m) renderFdGuestList(m);
   fdLoadAddableFriends();
+}
+
+function fdToggleTextInvite() {
+  var el = document.getElementById('fd-text-invite');
+  var friendsEl = document.getElementById('fd-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (friendsEl) friendsEl.style.display = 'none';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+window._futureInvitesSentThisSession = [];
+function sendFutureTextInviteFromPanel() {
+  var momentId = window._openFutureId;
+  var m = (window._futureMomentsCache || {})[momentId];
+  var inp = document.getElementById('fd-invite-phone');
+  var digits = _phoneDigitsOnly(inp ? inp.value : '');
+  if (!m || !momentId) return;
+  if (digits.length !== 10) { if (typeof ib_toast==='function') ib_toast('Enter a valid 10-digit US number'); return; }
+  sendFutureTextInvite(digits, momentId, m.title || 'the plan', false).then(function(){
+    if (inp) inp.value = '';
+    window._futureInvitesSentThisSession.push(digits);
+    var listEl = document.getElementById('fd-invite-sent-list');
+    if (listEl) {
+      listEl.innerHTML = window._futureInvitesSentThisSession.map(function(d){
+        return '<div style="font-size:12px;color:var(--subtle);padding:4px 0">📱 ' + _formatPhoneDisplay(d) + ' — invited, waiting for them to join</div>';
+      }).join('');
+    }
+    if (typeof ib_toast==='function') ib_toast('Invite sent 📲');
+  }).catch(function(err){
+    console.error('Send future text invite error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not send invite — check Firestore rules');
+  });
 }
 
 function fdSelectTheme(el, gradient) {
@@ -6189,6 +6250,55 @@ function consumePendingGroupInvites(user, name) {
       }).catch(function(err){ console.error('Consume group invite error:', err); });
     });
   }).catch(function(err){ console.error('Check pending group invites error:', err); });
+}
+
+// Same idea as sendGroupTextInvite/consumePendingGroupInvites above, but for
+// tagging someone onto a specific upcoming plan instead of a whole group.
+function sendFutureTextInvite(digits, momentId, momentTitle, silent) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return Promise.reject(new Error('not signed in'));
+  var phone = '+1' + digits;
+  var inviteId = momentId + '_' + phone;
+  var inviterName = (window.userData && window.userData.name) || 'A friend';
+  return window.db.collection('pendingFutureInvites').doc(inviteId).set({
+    phone: phone,
+    momentId: momentId,
+    momentTitle: momentTitle,
+    invitedBy: user.uid,
+    invitedByName: inviterName,
+    ts: Date.now()
+  }).then(function(){
+    if (!silent) {
+      var inviteUrl = 'https://innings-zeta.vercel.app/?futureInvite=' + encodeURIComponent(momentId) +
+        '&title=' + encodeURIComponent(momentTitle) + '&inviter=' + encodeURIComponent(inviterName);
+      var message = inviterName + ' invited you to "' + momentTitle + '" on Innings — a private space for memories with the people that matter. Tap to join: ' + inviteUrl;
+      if (navigator.share) {
+        navigator.share({ title: 'Join ' + momentTitle + ' on Innings', text: message, url: inviteUrl }).catch(function(){});
+      } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.open('sms:?&body=' + encodeURIComponent(message));
+      } else {
+        window.open('sms:?body=' + encodeURIComponent(message));
+      }
+    }
+  });
+}
+
+function consumePendingFutureInvites(user, name) {
+  if (!user || !user.phoneNumber || !window.db) return;
+  window.db.collection('pendingFutureInvites').where('phone', '==', user.phoneNumber).get().then(function(snap){
+    snap.forEach(function(doc){
+      var invite = doc.data();
+      var momentId = invite.momentId;
+      if (!momentId) return;
+      window.db.collection('futureMoments').doc(momentId).update({
+        taggedUids: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      }).then(function(){
+        return doc.ref.delete();
+      }).then(function(){
+        if (typeof ib_toast==='function') ib_toast('Added to "' + (invite.momentTitle || 'a plan') + '" 🎉');
+      }).catch(function(err){ console.error('Consume future invite error:', err); });
+    });
+  }).catch(function(err){ console.error('Check pending future invites error:', err); });
 }
 
 // ── ADD A FEATURE TO A GROUP (blank canvas → chosen modules) ──
