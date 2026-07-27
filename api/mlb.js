@@ -39,8 +39,8 @@ module.exports = async function handler(req, res) {
       const url = 'https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live';
       const r = await fetch(url);
       const data = await r.json();
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
-      res.status(200).json(summarize(data));
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+      res.status(200).json(summarize(data, gamePk));
       return;
     }
 
@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function summarize(data) {
+function summarize(data, gamePk) {
   var gameData = data.gameData || {};
   var liveData = data.liveData || {};
   var linescore = liveData.linescore || {};
@@ -59,9 +59,9 @@ function summarize(data) {
 
   var innings = (linescore.innings || []).map(function (inn) {
     return {
-      num: inn.num,
-      away: inn.away ? inn.away.runs : null,
-      home: inn.home ? inn.home.runs : null
+      num: inn.num != null ? inn.num : null,
+      away: (inn.away && inn.away.runs != null) ? inn.away.runs : null,
+      home: (inn.home && inn.home.runs != null) ? inn.home.runs : null
     };
   });
 
@@ -70,24 +70,25 @@ function summarize(data) {
   allPlays.forEach(function (play) {
     if (play.result && play.result.eventType === 'home_run') {
       homeRuns.push({
-        description: play.result.description,
-        batter: play.matchup && play.matchup.batter && play.matchup.batter.fullName
+        description: play.result.description || null,
+        batter: (play.matchup && play.matchup.batter && play.matchup.batter.fullName) || null
       });
     }
   });
 
   return {
-    away: teams.away && teams.away.name,
-    home: teams.home && teams.home.name,
-    awayScore: linescore.teams && linescore.teams.away ? linescore.teams.away.runs : null,
-    homeScore: linescore.teams && linescore.teams.home ? linescore.teams.home.runs : null,
+    gamePk: (gameData.game && gameData.game.pk) || (gamePk ? Number(gamePk) : null),
+    away: (teams.away && teams.away.name) || null,
+    home: (teams.home && teams.home.name) || null,
+    awayScore: (linescore.teams && linescore.teams.away && linescore.teams.away.runs != null) ? linescore.teams.away.runs : null,
+    homeScore: (linescore.teams && linescore.teams.home && linescore.teams.home.runs != null) ? linescore.teams.home.runs : null,
     innings: innings,
-    venue: gameData.venue && gameData.venue.name,
-    date: gameData.datetime && gameData.datetime.officialDate,
-    status: gameData.status && gameData.status.detailedState,
-    winningPitcher: decisions.winner && decisions.winner.fullName,
-    losingPitcher: decisions.loser && decisions.loser.fullName,
-    savePitcher: decisions.save && decisions.save.fullName,
+    venue: (gameData.venue && gameData.venue.name) || null,
+    date: (gameData.datetime && gameData.datetime.officialDate) || null,
+    status: (gameData.status && gameData.status.detailedState) || null,
+    winningPitcher: (decisions.winner && decisions.winner.fullName) || null,
+    losingPitcher: (decisions.loser && decisions.loser.fullName) || null,
+    savePitcher: (decisions.save && decisions.save.fullName) || null,
     homeRuns: homeRuns.slice(0, 10)
   };
 }
