@@ -3041,7 +3041,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.54.0-share-sheet-invites';
+window.INNINGS_BUILD = 'v4.56.0-plans-become-memories';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3475,8 +3475,8 @@ function momentBoxScoreSelectGame(gamePk) {
   fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(gamePk))
     .then(function(r){ return r.json(); })
     .then(function(box){
-      window._momentBoxScore = box;
-      _renderMomentBoxScoreSelected(box);
+      window._momentBoxScore = _sanitizeForFirestore(box);
+      _renderMomentBoxScoreSelected(window._momentBoxScore);
     })
     .catch(function(err){
       console.error('MLB boxscore lookup error:', err);
@@ -3568,6 +3568,7 @@ function _applyBoxScoreToContext(box) {
   var ctx = window._bsModalContext;
   closeBoxScoreModal();
   if (!ctx) return;
+  box = _sanitizeForFirestore(box);
   if (ctx.type === 'moment') {
     var m = _findMoment(window._openMomentId);
     if (!m) return;
@@ -3576,14 +3577,19 @@ function _applyBoxScoreToContext(box) {
     _persistMoment(m, { boxScore: box }, 'Box score attached');
   } else if (ctx.type === 'future') {
     if (!window.db) return;
-    window.db.collection('futureMoments').doc(ctx.id).update({ boxScore: box }).then(function(){
-      var fm = (window._futureMomentsCache || {})[ctx.id];
-      if (fm) { fm.boxScore = box; renderFutureEdit(fm); }
-      if (typeof ib_toast === 'function') ib_toast('Box score attached');
-    }).catch(function(err){
-      console.error('Attach box score error:', err);
-      if (typeof ib_toast === 'function') ib_toast('Could not attach — try again');
-    });
+    try {
+      window.db.collection('futureMoments').doc(ctx.id).update({ boxScore: box }).then(function(){
+        var fm = (window._futureMomentsCache || {})[ctx.id];
+        if (fm) { fm.boxScore = box; renderFutureEdit(fm); }
+        if (typeof ib_toast === 'function') ib_toast('Box score attached');
+      }).catch(function(err){
+        console.error('Attach box score error:', err);
+        if (typeof ib_toast === 'function') ib_toast('Could not attach — ' + (err && err.message ? err.message : 'try again'));
+      });
+    } catch (err) {
+      console.error('Attach box score threw synchronously:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not attach — ' + (err && err.message ? err.message : 'try again'));
+    }
   }
 }
 function futureRemoveBoxScore(id) {
@@ -3659,28 +3665,34 @@ function saveNewMoment() {
   _savingMoment = true;
   if (typeof ib_toast === 'function') ib_toast('Saving…');
 
-  window.db.collection('users').doc(user.uid).collection('moments').add({
-    name: momentName,
-    date: momentDate,
-    vibe: vibe,
-    highlight: highlightText,
-    dedication: dedication,
-    photo: photo,
-    photos: photos,
-    people: people,
-    boxScore: window._momentBoxScore || null,
-    comments: [],
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
+  try {
+    window.db.collection('users').doc(user.uid).collection('moments').add({
+      name: momentName,
+      date: momentDate,
+      vibe: vibe,
+      highlight: highlightText,
+      dedication: dedication,
+      photo: photo,
+      photos: photos,
+      people: people,
+      boxScore: _sanitizeForFirestore(window._momentBoxScore),
+      comments: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      _savingMoment = false;
+      resetMomentForm();
+      if (typeof ib_toast === 'function') ib_toast('Moment saved');
+      nav('memories');
+    }).catch(function(err) {
+      _savingMoment = false;
+      console.error('Save moment error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'try again'));
+    });
+  } catch (err) {
     _savingMoment = false;
-    resetMomentForm();
-    if (typeof ib_toast === 'function') ib_toast('Moment saved');
-    nav('memories');
-  }).catch(function(err) {
-    _savingMoment = false;
-    console.error('Save moment error:', err);
-    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
-  });
+    console.error('Save moment threw synchronously:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'try again'));
+  }
 }
 
 function resetMomentForm() {
@@ -3917,6 +3929,7 @@ auth.onAuthStateChanged(function(user) {
         window.userData.customVibes = pdata.customVibes || [];
         if (typeof renderVibePills === 'function') renderVibePills();
         if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, pdata.name || '');
+        if (typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
         playLoginSplash(function(){ nav('feed'); });
       } else {
         ib_showStep('ob-name-step');
@@ -4136,6 +4149,17 @@ function addMomentPhotos(input) {
 }
 
 // ── MEMORIES: load + render ──
+// Firestore's SDK throws (synchronously, before any .catch can see it) if
+// ANY field anywhere in a write — even nested — is undefined rather than
+// null or simply absent. Data pulled from a third-party API (like the MLB
+// box score) can easily have a missing field come through as undefined.
+// Round-tripping through JSON strips those out safely, since JSON has no
+// concept of undefined (object keys are dropped, array entries become null).
+function _sanitizeForFirestore(obj) {
+  if (obj === undefined || obj === null) return null;
+  try { return JSON.parse(JSON.stringify(obj)); } catch (e) { return null; }
+}
+
 function _escapeHtml(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -4190,8 +4214,62 @@ function loadMoments() {
     });
 }
 
+// ── A PLAN BECOMES A MEMORY ──
+// Future moments and past memories are two different collections with
+// different shapes. There's no server-side cron in this stack, so "the
+// moment it happens" really means "the next time your own device checks" —
+// on sign-in, and every time the Feed loads its "Coming up" list. Only the
+// plan's owner can do this (matches who's allowed to write into that
+// person's own memories), so it always happens from your own device.
+function _convertPastFuturePlans(user) {
+  if (!user || !window.db) return;
+  var today = new Date().toISOString().slice(0, 10);
+  window.db.collection('futureMoments').where('ownerUid', '==', user.uid).get().then(function(snap){
+    var toConvert = [];
+    snap.forEach(function(doc){
+      var m = Object.assign({ _id: doc.id }, doc.data());
+      if (m.date && m.date < today) toConvert.push(m);
+    });
+    if (!toConvert.length) return;
+    Promise.all(toConvert.map(function(m){ return _convertFutureMomentToMemory(m, user); })).then(function(){
+      if (typeof loadMoments === 'function') loadMoments();
+      if (typeof loadFutureMoments === 'function') loadFutureMoments();
+      if (typeof ib_toast === 'function') ib_toast(toConvert.length === 1 ? '"' + (toConvert[0].title || 'Your plan') + '" is now a memory 📖' : toConvert.length + ' plans became memories 📖');
+    }).catch(function(err){ console.error('Convert past plans error:', err); });
+  }).catch(function(err){ console.error('Check past plans error:', err); });
+}
+
+function _convertFutureMomentToMemory(m, user) {
+  var uids = (m.taggedUids || []).slice();
+  return Promise.all(uids.map(function(uid){
+    return window.db.collection('users').doc(uid).get().then(function(doc){
+      return (doc.exists && doc.data().name) ? doc.data().name : 'A friend';
+    }).catch(function(){ return 'A friend'; });
+  })).then(function(names){
+    return window.db.collection('users').doc(user.uid).collection('moments').add({
+      name: m.title || 'Untitled memory',
+      date: m.date,
+      vibe: m.vibe || '',
+      highlight: m.location ? 'at ' + m.location : '',
+      dedication: '',
+      photo: '',
+      photos: [],
+      people: names,
+      taggedUids: uids,
+      boxScore: _sanitizeForFirestore(m.boxScore || null),
+      comments: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(function(){
+    return window.db.collection('futureMoments').doc(m._id).delete();
+  }).catch(function(err){
+    console.error('Convert future plan to memory error:', m._id, err);
+  });
+}
+
 function loadFutureMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
   var listEl = document.getElementById('upcoming-list');
   var wrapEl = document.getElementById('upcoming-section');
   if (!user || !window.db || !listEl) return;
@@ -5095,15 +5173,22 @@ function _persistMoment(m, fields, okMsg) {
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in first'); return; }
   var ownerUid = window._openMomentOwnerUid || user.uid;
   var isForeign = ownerUid !== user.uid;
-  window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).update(fields)
-    .then(function(){
-      if (okMsg && typeof ib_toast==='function') ib_toast(okMsg);
-      if (!isForeign) {
-        renderMoments(window._moments);
-        updateProfileStats(window._moments);
-      }
-    })
-    .catch(function(err){ console.error('Update error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+  var safeFields = {};
+  Object.keys(fields).forEach(function(k){ safeFields[k] = _sanitizeForFirestore(fields[k]); });
+  try {
+    window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).update(safeFields)
+      .then(function(){
+        if (okMsg && typeof ib_toast==='function') ib_toast(okMsg);
+        if (!isForeign) {
+          renderMoments(window._moments);
+          updateProfileStats(window._moments);
+        }
+      })
+      .catch(function(err){ console.error('Update error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'try again')); });
+  } catch (err) {
+    console.error('Update threw synchronously:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'try again'));
+  }
 }
 
 function momentSaveEdits() {
