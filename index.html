@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.60.0-auto-heal-stale-box-scores';
+window.INNINGS_BUILD = 'v4.61.0-unify-friends-source-of-truth';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4840,7 +4840,13 @@ function fdLoadAddableFriends() {
           '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
         '</div>';
       }).join('');
+    }).catch(function(err){
+      console.error('Load friend profiles error:', err);
+      el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — try again</div>';
     });
+  }).catch(function(err){
+    console.error('Load addable friends error:', err);
+    el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — ' + (err && err.message ? err.message : 'try again') + '</div>';
   });
 }
 
@@ -5452,7 +5458,13 @@ function momentEditLoadAddableFriends() {
           '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
         '</div>';
       }).join('');
+    }).catch(function(err){
+      console.error('Load friend profiles error:', err);
+      el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — try again</div>';
     });
+  }).catch(function(err){
+    console.error('Load addable friends error:', err);
+    el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — ' + (err && err.message ? err.message : 'try again') + '</div>';
   });
 }
 
@@ -5572,7 +5584,13 @@ function momentLoadAddableFriends() {
           '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
         '</div>';
       }).join('');
+    }).catch(function(err){
+      console.error('Load friend profiles error:', err);
+      el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — try again</div>';
     });
+  }).catch(function(err){
+    console.error('Load addable friends error:', err);
+    el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — ' + (err && err.message ? err.message : 'try again') + '</div>';
   });
 }
 function addMomentFriend(uid, name) {
@@ -6399,6 +6417,9 @@ function groupLoadAddableFriends() {
           '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
         '</div>';
       }).join('');
+    }).catch(function(err){
+      console.error('Load friend profiles error:', err);
+      el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — try again</div>';
     });
   }).catch(function(err){
     console.error('Load addable friends error:', err);
@@ -6629,6 +6650,9 @@ function newGroupLoadAddableFriends() {
           '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
         '</div>';
       }).join('');
+    }).catch(function(err){
+      console.error('Load friend profiles error:', err);
+      el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends — try again</div>';
     });
   }).catch(function(err){
     console.error('Load new-group addable friends error:', err);
@@ -7342,13 +7366,25 @@ function _renderFriendChips(containerEl, uids) {
 
 // Own profile — always visible to yourself.
 window._myFriendsStarted = false;
+// Your own Friends list — reads friendRequests directly (same source every
+// "Add friends" picker in the app already uses), not the private/friends
+// cache below. That cache only exists to work around a permission limit for
+// *someone else's* mutual-friends display (see _renderMutualFriendsList) —
+// for your own list there's no such limit, so there's no reason to risk the
+// two ever disagreeing.
 function loadMyFriendsList() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   var listEl = document.getElementById('my-friends-list');
   var emptyEl = document.getElementById('my-friends-empty');
   if (!user || !window.db || !listEl) return;
-  window.db.collection('users').doc(user.uid).collection('private').doc('friends').get().then(function(doc){
-    var uids = (doc.exists && doc.data().uids) || [];
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
     if (emptyEl) emptyEl.style.display = uids.length ? 'none' : 'block';
     _renderFriendChips(listEl, uids);
   }).catch(function(err){
