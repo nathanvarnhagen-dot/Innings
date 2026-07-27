@@ -750,6 +750,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
           <input id="new-person-name" placeholder="Add a name" onkeydown="if(event.key==='Enter'){event.preventDefault();addMomentPerson();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">
           <button onclick="addMomentPerson()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:12px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>
         </div>
+        <div onclick="momentToggleAddFriends()" style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:12px;cursor:pointer">＋ Add from your friends</div>
+        <div id="moment-add-friends" style="display:none;margin-top:10px"></div>
         <div onclick="if(typeof sendInviteText==='function')sendInviteText()" style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:12px;cursor:pointer">＋ Text an invite link instead</div>
         <div style="font-size:12px;color:var(--subtle);margin-top:8px">Tagging people is what turns a moment into a shared memory — and keeps your weekly streak alive.</div>
       </div>
@@ -3041,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.56.0-plans-become-memories';
+window.INNINGS_BUILD = 'v4.57.0-friend-picker-and-swipe-back';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3071,6 +3073,54 @@ function navBack(fallback){
   var prev=window._navStack.pop();
   _navApplyScreen(prev||fallback||'feed');
 }
+
+// ── SWIPE-BACK GESTURE ──
+// All the back buttons stay exactly as they are; this just adds the
+// iPhone-style "swipe in from the left edge" shortcut on top. Only starts
+// tracking if the touch begins right at the edge (like iOS's own gesture),
+// so it doesn't hijack normal horizontal scrolling elsewhere on screen —
+// and skips entirely while a modal/sheet is open, since swiping there
+// should dismiss the sheet, not navigate the screen underneath it.
+(function() {
+  var startX = null, startY = null, tracking = false;
+  var EDGE_ZONE = 24, SWIPE_THRESHOLD = 80, MAX_VERTICAL = 60;
+  var MODAL_IDS = ['add-interest-modal','boxscore-modal','edit-group-modal','edit-profile-modal','feature-picker-modal','msg-reaction-sheet','new-group-modal','osl-rsvp-overlay'];
+
+  function anyModalOpen() {
+    for (var i = 0; i < MODAL_IDS.length; i++) {
+      var el = document.getElementById(MODAL_IDS[i]);
+      if (el && el.style.display && el.style.display !== 'none') return true;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    if (!e.touches || e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
+    var t = e.touches[0];
+    if (t.clientX <= EDGE_ZONE) {
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    } else {
+      tracking = false;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!tracking || !e.touches || e.touches.length !== 1) return;
+    if (Math.abs(e.touches[0].clientY - startY) > MAX_VERTICAL) tracking = false;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!tracking) return;
+    tracking = false;
+    var t = (e.changedTouches && e.changedTouches[0]) || null;
+    if (!t) return;
+    var dx = t.clientX - startX;
+    var dy = Math.abs(t.clientY - startY);
+    if (dx > SWIPE_THRESHOLD && dy < MAX_VERTICAL && typeof navBack === 'function') navBack();
+  }, { passive: true });
+})();
 
 // Plays the IN-badge splash, then calls cb (used right before landing on the feed post-login)
 function playLoginSplash(cb){
@@ -3653,7 +3703,9 @@ function saveNewMoment() {
   var vibe = window._momentVibe || '⚾ Game';
   _persistCustomVibeIfNew(vibe);
   var photo = window._momentPhoto || '';
-  var people = (window._momentPeople || []).slice();
+  var peopleObjs = (window._momentPeople || []).slice();
+  var people = peopleObjs.map(function(p){ return p.name; });
+  var taggedUids = peopleObjs.map(function(p){ return p.uid; }).filter(function(uid){ return !!uid; });
   var photos = (window._momentExtraPhotos || []).slice();
 
   var user = window.currentUser || (window.auth && window.auth.currentUser);
@@ -3675,11 +3727,28 @@ function saveNewMoment() {
       photo: photo,
       photos: photos,
       people: people,
+      taggedUids: taggedUids,
       boxScore: _sanitizeForFirestore(window._momentBoxScore),
       comments: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function() {
+    }).then(function(ref) {
       _savingMoment = false;
+      if (taggedUids.length) {
+        var ownerName = (window.userData && window.userData.name) || 'Someone';
+        Promise.all(taggedUids.map(function(uid){
+          return window.db.collection('notifications').add({
+            toUid: uid,
+            type: 'tagged',
+            fromUid: user.uid,
+            fromName: ownerName,
+            momentOwnerUid: user.uid,
+            momentId: ref.id,
+            momentName: momentName,
+            ts: Date.now(),
+            read: false
+          });
+        })).catch(function(err){ console.error('Tag notification error:', err); });
+      }
       resetMomentForm();
       if (typeof ib_toast === 'function') ib_toast('Moment saved');
       nav('memories');
@@ -5319,9 +5388,54 @@ function addMomentPerson() {
   var name = inp ? inp.value.trim() : '';
   if (!name) return;
   if (!window._momentPeople) window._momentPeople = [];
-  window._momentPeople.push(name);
+  window._momentPeople.push({ name: name, uid: null });
   if (inp) inp.value = '';
   renderMomentPeople();
+}
+function momentToggleAddFriends() {
+  var el = document.getElementById('moment-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    momentLoadAddableFriends();
+  } else {
+    el.style.display = 'none';
+  }
+}
+function momentLoadAddableFriends() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var el = document.getElementById('moment-add-friends');
+  if (!user || !window.db || !el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    var already = (window._momentPeople || []).map(function(p){ return p.uid; });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && already.indexOf(v) === -1; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can tag is already added.</div>'; return; }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      el.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        return '<div onclick="addMomentFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
+        '</div>';
+      }).join('');
+    });
+  });
+}
+function addMomentFriend(uid, name) {
+  if (!window._momentPeople) window._momentPeople = [];
+  if (window._momentPeople.some(function(p){ return p.uid === uid; })) return;
+  window._momentPeople.push({ name: name, uid: uid });
+  renderMomentPeople();
+  momentLoadAddableFriends();
 }
 function removeMomentPerson(i) {
   if (!window._momentPeople) return;
@@ -5334,9 +5448,11 @@ function renderMomentPeople() {
   var you = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' +
     '<div style="width:48px;height:48px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
     '<div style="font-size:10px;color:var(--subtle)">You</div></div>';
-  var others = (window._momentPeople || []).map(function(nm, i){
+  var others = (window._momentPeople || []).map(function(p, i){
+    var nm = p.name || '';
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;position:relative">' +
       '<div class="av av-b" style="width:48px;height:48px;font-size:15px">' + _escapeHtml(_initials(nm)) + '</div>' +
+      (p.uid ? '<div style="position:absolute;top:-2px;left:-2px;width:16px;height:16px;border-radius:50%;background:var(--indigo);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;font-size:8px;color:white">✓</div>' : '') +
       '<div style="font-size:10px;color:var(--subtle);max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
       '<div onclick="removeMomentPerson(' + i + ')" style="position:absolute;top:-4px;right:2px;width:18px;height:18px;border-radius:50%;background:var(--loss);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div></div>';
   }).join('');
