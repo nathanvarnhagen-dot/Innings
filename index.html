@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.59.0-box-score-refresh';
+window.INNINGS_BUILD = 'v4.60.0-auto-heal-stale-box-scores';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5020,6 +5020,49 @@ function openMemory(id) {
   _showMemoryHeader('view');
   renderMemoryView(m);
   _navApplyScreen('memory-detail');
+  _autoRefreshStaleBoxScore(m);
+}
+
+// A box score attached before a game finished (or before this feature could
+// track which exact game it was) can be stuck showing pre-game info forever
+// otherwise. Whenever the owner opens a memory, quietly check for that and
+// pull the real result — no button, same as the plan-to-memory conversion.
+function _autoRefreshStaleBoxScore(m) {
+  if (!m || !m.boxScore || m.boxScore.status === 'Final') return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || window._openMomentOwnerUid !== user.uid) return;
+
+  if (m.boxScore.gamePk) {
+    fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(m.boxScore.gamePk))
+      .then(function(r){ return r.json(); })
+      .then(function(box){ _applyRefreshedBoxScore(m, box); })
+      .catch(function(err){ console.error('Auto-refresh box score error:', err); });
+    return;
+  }
+
+  // Older attachments made before gamePk was tracked — re-find the same
+  // game by date + team names so this heals itself without manual action.
+  if (!m.date || !m.boxScore.away || !m.boxScore.home) return;
+  fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(m.date))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var games = data.games || [];
+      var match = games.filter(function(g){ return g.away === m.boxScore.away && g.home === m.boxScore.home; })[0];
+      if (!match) return null;
+      return fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(match.gamePk)).then(function(r){ return r.json(); });
+    })
+    .then(function(box){ if (box) _applyRefreshedBoxScore(m, box); })
+    .catch(function(err){ console.error('Auto-refresh legacy box score error:', err); });
+}
+
+function _applyRefreshedBoxScore(m, box) {
+  if (!box || !box.home) return;
+  var safe = _sanitizeForFirestore(box);
+  m.boxScore = safe;
+  if (window._openMomentId !== m._id) return; // they navigated away before this resolved
+  if (window._memoryDetailMode === 'edit' && typeof renderMemoryEdit === 'function') renderMemoryEdit(m);
+  else if (typeof renderMemoryView === 'function') renderMemoryView(m);
+  _persistMoment(m, { boxScore: safe });
 }
 
 // Opens a memory that belongs to someone else — reached via a notification
