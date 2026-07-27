@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.57.0-friend-picker-and-swipe-back';
+window.INNINGS_BUILD = 'v4.59.0-box-score-refresh';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4310,11 +4310,22 @@ function _convertPastFuturePlans(user) {
 
 function _convertFutureMomentToMemory(m, user) {
   var uids = (m.taggedUids || []).slice();
-  return Promise.all(uids.map(function(uid){
-    return window.db.collection('users').doc(uid).get().then(function(doc){
-      return (doc.exists && doc.data().name) ? doc.data().name : 'A friend';
-    }).catch(function(){ return 'A friend'; });
-  })).then(function(names){
+  var freshBoxScore = Promise.resolve(m.boxScore || null);
+  if (m.boxScore && m.boxScore.gamePk) {
+    freshBoxScore = fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(m.boxScore.gamePk))
+      .then(function(r){ return r.json(); })
+      .catch(function(){ return m.boxScore; });
+  }
+  return Promise.all([
+    Promise.all(uids.map(function(uid){
+      return window.db.collection('users').doc(uid).get().then(function(doc){
+        return (doc.exists && doc.data().name) ? doc.data().name : 'A friend';
+      }).catch(function(){ return 'A friend'; });
+    })),
+    freshBoxScore
+  ]).then(function(results){
+    var names = results[0];
+    var boxScore = results[1];
     return window.db.collection('users').doc(user.uid).collection('moments').add({
       name: m.title || 'Untitled memory',
       date: m.date,
@@ -4325,7 +4336,7 @@ function _convertFutureMomentToMemory(m, user) {
       photos: [],
       people: names,
       taggedUids: uids,
-      boxScore: _sanitizeForFirestore(m.boxScore || null),
+      boxScore: _sanitizeForFirestore(boxScore),
       comments: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -5131,10 +5142,8 @@ function renderMemoryView(m) {
   var people = (m.people || []);
   var ownerInitials = isForeign ? _initials(m._ownerName || 'Them') : _initials(youName);
   var peopleChips = '<div class="av av-a" style="width:32px;height:32px;font-size:11px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(ownerInitials) + '</div>' +
-    people.map(function(nm, i){
-      var removeBtn = isForeign ? '' : '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--loss);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div>';
-      return '<div style="position:relative"><div class="av av-b" style="width:32px;height:32px;font-size:11px;margin-left:-8px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(nm)) + '</div>' +
-        removeBtn + '</div>';
+    people.map(function(nm){
+      return '<div class="av av-b" style="width:32px;height:32px;font-size:11px;margin-left:-8px;border:2px solid rgba(255,255,255,0.55)">' + _escapeHtml(_initials(nm)) + '</div>';
     }).join('');
 
   // Conversation thread: your highlight + dedication + comments, iMessage-style bubbles
@@ -5169,11 +5178,6 @@ function renderMemoryView(m) {
 
   var sharedByLine = isForeign ? '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px">Shared by ' + _escapeHtml(m._ownerName || 'a friend') + '</div>' : '';
   var boxScoreHtml = m.boxScore ? '<div style="margin-bottom:14px">' + _boxScoreCardHtml(m.boxScore, true) + '</div>' : '';
-  var tagRow = isForeign ? '' :
-      '<div style="display:flex;gap:8px">' +
-        '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:13px;border:0.5px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 12px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.1)">' +
-        '<button onclick="momentTagPerson()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
-      '</div>';
 
   scroll.innerHTML =
     '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
@@ -5183,8 +5187,7 @@ function renderMemoryView(m) {
       boxScoreHtml +
 
       '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
-      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:10px">' + peopleChips + '</div>' +
-      tagRow +
+      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:4px">' + peopleChips + '</div>' +
     '</div>' +
     '<div style="padding-top:6px">' + thread + '</div>';
 
@@ -5202,7 +5205,10 @@ function renderMemoryEdit(m) {
   var boxScoreEditHtml = m.boxScore ?
     '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
     _boxScoreCardHtml(m.boxScore, false) +
-    '<div onclick="momentRemoveBoxScore()" style="font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer;margin:8px 0 20px;text-align:center">Remove box score</div>' :
+    '<div style="display:flex;gap:16px;justify-content:center;margin:8px 0 20px">' +
+      (m.boxScore.gamePk ? '<div onclick="momentRefreshBoxScore()" style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer">Refresh score</div>' : '') +
+      '<div onclick="momentRemoveBoxScore()" style="font-size:12px;color:var(--subtle);font-weight:600;cursor:pointer">Remove box score</div>' +
+    '</div>' :
     '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
     '<div onclick="openBoxScoreModal({type:\'moment\'},\'' + _escapeHtml(m.date || '') + '\')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);cursor:pointer;margin-bottom:20px">' +
       '<div style="font-size:20px">⚾</div>' +
@@ -5216,6 +5222,23 @@ function renderMemoryEdit(m) {
 
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
       '<textarea id="md-highlight" placeholder="What do you want to remember?" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:100px;font-family:inherit;line-height:1.6;margin-bottom:20px">' + _escapeHtml(m.highlight || '') + '</textarea>' +
+
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px" id="md-people-list">' +
+        (m.people || []).map(function(nm, i){
+          return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;position:relative">' +
+            '<div class="av av-b" style="width:44px;height:44px;font-size:14px">' + _escapeHtml(_initials(nm)) + '</div>' +
+            '<div style="font-size:10px;color:var(--subtle);max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((nm || '').split(' ')[0]) + '</div>' +
+            '<div onclick="momentRemovePerson(' + i + ')" style="position:absolute;top:-4px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--loss);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '<input id="md-person" placeholder="Tag someone by name" onkeydown="if(event.key===\'Enter\'){event.preventDefault();momentTagPerson();}" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
+        '<button onclick="momentTagPerson()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:12px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Tag</button>' +
+      '</div>' +
+      '<div onclick="momentEditToggleAddFriends()" style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer;margin-bottom:20px">＋ Add from your friends</div>' +
+      '<div id="md-add-friends" style="display:none;margin:-10px 0 20px"></div>' +
 
       boxScoreEditHtml +
 
@@ -5235,6 +5258,22 @@ function momentRemoveBoxScore() {
   m.boxScore = null;
   renderMemoryEdit(m);
   _persistMoment(m, { boxScore: null }, 'Box score removed');
+}
+
+function momentRefreshBoxScore() {
+  var m = _findMoment(window._openMomentId); if (!m || !m.boxScore || !m.boxScore.gamePk) return;
+  if (typeof ib_toast === 'function') ib_toast('Refreshing…');
+  fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(m.boxScore.gamePk))
+    .then(function(r){ return r.json(); })
+    .then(function(box){
+      m.boxScore = _sanitizeForFirestore(box);
+      renderMemoryEdit(m);
+      _persistMoment(m, { boxScore: m.boxScore }, 'Box score updated');
+    })
+    .catch(function(err){
+      console.error('Refresh box score error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not refresh — try again');
+    });
 }
 
 function _persistMoment(m, fields, okMsg) {
@@ -5277,7 +5316,7 @@ function momentTagPerson() {
   if (!name) return;
   m.people = (m.people || []).concat([name]);
   if (inp) inp.value = '';
-  renderMemoryView(m);
+  renderMemoryEdit(m);
   _persistMoment(m, { people: m.people }, 'Tagged ' + name);
   _notifyIfFriendTagged(name, m);
 }
@@ -5329,8 +5368,71 @@ function _notifyIfFriendTagged(name, m) {
 function momentRemovePerson(i) {
   var m = _findMoment(window._openMomentId); if (!m || !m.people) return;
   m.people.splice(i, 1);
-  renderMemoryView(m);
+  renderMemoryEdit(m);
   _persistMoment(m, { people: m.people });
+}
+
+function momentEditToggleAddFriends() {
+  var el = document.getElementById('md-add-friends');
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    momentEditLoadAddableFriends();
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function momentEditLoadAddableFriends() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var el = document.getElementById('md-add-friends');
+  var m = _findMoment(window._openMomentId);
+  if (!user || !window.db || !el || !m) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    var already = m.taggedUids || [];
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && already.indexOf(v) === -1; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can tag is already added.</div>'; return; }
+    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      el.innerHTML = docs.map(function(doc){
+        var d = doc.data() || {};
+        var nm = d.name || 'Friend';
+        return '<div onclick="momentEditAddFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="font-size:12px;color:var(--indigo);font-weight:700">+ Add</div>' +
+        '</div>';
+      }).join('');
+    });
+  });
+}
+
+function momentEditAddFriend(uid, name) {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  m.people = (m.people || []).concat([name]);
+  m.taggedUids = (m.taggedUids || []).concat([uid]).filter(function(v,i,arr){ return arr.indexOf(v) === i; });
+  renderMemoryEdit(m);
+  _persistMoment(m, { people: m.people, taggedUids: m.taggedUids }, 'Tagged ' + name);
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('notifications').add({
+      toUid: uid,
+      type: 'tagged',
+      fromUid: user.uid,
+      fromName: (window.userData && window.userData.name) || 'Someone',
+      momentOwnerUid: user.uid,
+      momentId: m._id,
+      momentName: m.name || 'a memory',
+      ts: Date.now(),
+      read: false
+    }).catch(function(err){ console.error('Tag notification error:', err); });
+  }
 }
 
 function momentAddPhoto(input) {
