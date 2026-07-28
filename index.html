@@ -3004,7 +3004,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.66.0-remove-demo-cards';
+window.INNINGS_BUILD = 'v4.67.0-remove-swipe-back-diagnostic';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3035,53 +3035,10 @@ function navBack(fallback){
   _navApplyScreen(prev||fallback||'feed');
 }
 
-// ── SWIPE-BACK GESTURE ──
-// All the back buttons stay exactly as they are; this just adds the
-// iPhone-style "swipe in from the left edge" shortcut on top. Only starts
-// tracking if the touch begins right at the edge (like iOS's own gesture),
-// so it doesn't hijack normal horizontal scrolling elsewhere on screen —
-// and skips entirely while a modal/sheet is open, since swiping there
-// should dismiss the sheet, not navigate the screen underneath it.
-(function() {
-  var startX = null, startY = null, tracking = false;
-  var EDGE_ZONE = 24, SWIPE_THRESHOLD = 80, MAX_VERTICAL = 60;
-  var MODAL_IDS = ['add-interest-modal','boxscore-modal','edit-group-modal','edit-profile-modal','feature-picker-modal','msg-reaction-sheet','new-group-modal','osl-rsvp-overlay'];
-
-  function anyModalOpen() {
-    for (var i = 0; i < MODAL_IDS.length; i++) {
-      var el = document.getElementById(MODAL_IDS[i]);
-      if (el && el.style.display && el.style.display !== 'none') return true;
-    }
-    return false;
-  }
-
-  document.addEventListener('touchstart', function(e) {
-    if (!e.touches || e.touches.length !== 1 || anyModalOpen()) { tracking = false; return; }
-    var t = e.touches[0];
-    if (t.clientX <= EDGE_ZONE) {
-      startX = t.clientX;
-      startY = t.clientY;
-      tracking = true;
-    } else {
-      tracking = false;
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchmove', function(e) {
-    if (!tracking || !e.touches || e.touches.length !== 1) return;
-    if (Math.abs(e.touches[0].clientY - startY) > MAX_VERTICAL) tracking = false;
-  }, { passive: true });
-
-  document.addEventListener('touchend', function(e) {
-    if (!tracking) return;
-    tracking = false;
-    var t = (e.changedTouches && e.changedTouches[0]) || null;
-    if (!t) return;
-    var dx = t.clientX - startX;
-    var dy = Math.abs(t.clientY - startY);
-    if (dx > SWIPE_THRESHOLD && dy < MAX_VERTICAL && typeof navBack === 'function') navBack();
-  }, { passive: true });
-})();
+// The swipe-from-edge back gesture that used to live here has been removed
+// while we track down a scroll-freeze bug — it was the newest thing
+// listening on every touch across the whole app, and the most likely
+// suspect. All the back buttons are untouched and still work normally.
 
 // Plays the IN-badge splash, then calls cb (used right before landing on the feed post-login)
 function playLoginSplash(cb){
