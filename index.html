@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.64.0-untag-and-scroll-fix';
+window.INNINGS_BUILD = 'v4.65.0-fix-utc-date-bug';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3060,7 +3060,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
 
 function nav(id){
   var current=document.querySelector('.screen.active');
@@ -3495,7 +3495,7 @@ window._momentBoxScore = null;
 
 function momentBoxScoreSearch() {
   var dateEl = document.getElementById('moment-date');
-  var date = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
+  var date = dateEl && dateEl.value ? dateEl.value : _todayLocal();
   var resultsEl = document.getElementById('moment-boxscore-results');
   if (!resultsEl) return;
   resultsEl.style.display = 'block';
@@ -3567,7 +3567,7 @@ window._bsModalContext = null;
 function openBoxScoreModal(context, defaultDate) {
   window._bsModalContext = context;
   var dateEl = document.getElementById('bs-modal-date');
-  if (dateEl) dateEl.value = defaultDate || new Date().toISOString().slice(0, 10);
+  if (dateEl) dateEl.value = defaultDate || _todayLocal();
   var resultsEl = document.getElementById('bs-modal-results');
   if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
   var m = document.getElementById('boxscore-modal');
@@ -3580,7 +3580,7 @@ function closeBoxScoreModal() {
 }
 function bsModalSearch() {
   var dateEl = document.getElementById('bs-modal-date');
-  var date = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
+  var date = dateEl && dateEl.value ? dateEl.value : _todayLocal();
   var resultsEl = document.getElementById('bs-modal-results');
   if (!resultsEl) return;
   resultsEl.style.display = 'block';
@@ -3695,8 +3695,8 @@ function saveNewMoment() {
   var nameEl = document.getElementById('moment-name');
   var momentName = nameEl && nameEl.value.trim() ? nameEl.value.trim() : 'Untitled moment';
   var dateEl = document.getElementById('moment-date');
-  var momentDate = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
-  var today = new Date().toISOString().slice(0, 10);
+  var momentDate = dateEl && dateEl.value ? dateEl.value : _todayLocal();
+  var today = _todayLocal();
   if (momentDate > today) {
     var proceed = window.confirm('That date is in the future. Memories are for things that already happened — did you mean to use "It\'s coming up" instead, so you can invite people and collect RSVPs?\n\nTap OK to save it as a memory anyway, or Cancel to go back.');
     if (!proceed) return;
@@ -3773,7 +3773,7 @@ function resetMomentForm() {
   var nameEl = document.getElementById('moment-name'); if (nameEl) nameEl.value = '';
   var hlEl = document.getElementById('highlight-text'); if (hlEl) hlEl.value = '';
   var remEl = document.getElementById('remember-text'); if (remEl) remEl.value = '';
-  var dateEl = document.getElementById('moment-date'); if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+  var dateEl = document.getElementById('moment-date'); if (dateEl) dateEl.value = _todayLocal();
   var photoPrev = document.getElementById('main-photo-preview');
   if (photoPrev) { photoPrev.style.backgroundImage = ''; }
   var extraPrev = document.getElementById('moment-photo-preview');
@@ -4234,6 +4234,23 @@ function _sanitizeForFirestore(obj) {
   try { return JSON.parse(JSON.stringify(obj)); } catch (e) { return null; }
 }
 
+// Every "today" comparison in this app is against plain YYYY-MM-DD strings
+// from <input type="date">, which are always the browser's LOCAL calendar
+// date — never a timezone. `new Date().toISOString()` returns UTC, which
+// runs a full calendar day ahead of any US timezone for several hours every
+// evening. Comparing a local date string against a UTC "today" can make an
+// still-upcoming plan look like it's already in the past. This is the one
+// correct way to get "today" as a local date string; every date-comparison
+// call site below uses this instead.
+function _todayLocal() {
+  var d = new Date();
+  var mm = String(d.getMonth() + 1);
+  if (mm.length < 2) mm = '0' + mm;
+  var dd = String(d.getDate());
+  if (dd.length < 2) dd = '0' + dd;
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
 function _escapeHtml(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -4297,7 +4314,7 @@ function loadMoments() {
 // person's own memories), so it always happens from your own device.
 function _convertPastFuturePlans(user) {
   if (!user || !window.db) return;
-  var today = new Date().toISOString().slice(0, 10);
+  var today = _todayLocal();
   window.db.collection('futureMoments').where('ownerUid', '==', user.uid).get().then(function(snap){
     var toConvert = [];
     snap.forEach(function(doc){
@@ -4366,7 +4383,7 @@ function loadFutureMoments() {
     results[0].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
     results[1].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
     var arr = Object.keys(map).map(function(k){ return map[k]; });
-    var today = new Date().toISOString().slice(0,10);
+    var today = _todayLocal();
     arr = arr.filter(function(m){ return !m.date || m.date >= today; });
     arr.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
     if (wrapEl) wrapEl.style.display = arr.length ? 'block' : 'none';
@@ -4426,7 +4443,7 @@ function loadFeedMoments() {
     var map = {};
     results.forEach(function(snap){ snap.forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); }); });
     var arr = Object.keys(map).map(function(k){ return map[k]; });
-    var today = new Date().toISOString().slice(0,10);
+    var today = _todayLocal();
     arr = arr.filter(function(m){ return !m.date || m.date >= today; });
     arr.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
     window._feedMomentsCache = {};
@@ -5000,7 +5017,7 @@ function computeWeeklyStreak(socialMoments) {
   if (!socialMoments.length) return 0;
   var weeks = {};
   socialMoments.forEach(function(m){ var w = _weekIndex(m.date); if (w !== null) weeks[w] = true; });
-  var cur = _weekIndex(new Date().toISOString().slice(0,10));
+  var cur = _weekIndex(_todayLocal());
   if (cur === null) return 0;
   if (!weeks[cur] && !weeks[cur-1]) return 0; // streak broken if no social moment this week or last
   var start = weeks[cur] ? cur : cur - 1;
@@ -5283,7 +5300,8 @@ function renderMemoryEdit(m) {
   box.innerHTML =
     '<div style="background:var(--card);border-radius:18px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,0.3)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Moment name</div>' +
-      '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);letter-spacing:-0.4px;font-family:inherit;margin-bottom:16px">' +
+      '<input id="md-name" value="' + _escapeHtml(m.name || '') + '" style="width:100%;font-size:18px;font-weight:700;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);letter-spacing:-0.4px;font-family:inherit;margin-bottom:10px">' +
+      '<div onclick="momentConvertToFuturePlan()" style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer;margin-bottom:16px">This hasn\'t happened yet — move it back to Coming Up</div>' +
 
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Your highlight</div>' +
       '<textarea id="md-highlight" placeholder="What do you want to remember?" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:100px;font-family:inherit;line-height:1.6;margin-bottom:20px">' + _escapeHtml(m.highlight || '') + '</textarea>' +
@@ -5316,6 +5334,41 @@ function renderMemoryEdit(m) {
         '<button onclick="momentSaveEdits()" style="flex:1;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save changes</button>' +
       '</div>' +
     '</div>';
+}
+
+// Manual escape hatch for a memory that shouldn't have been one — moves it
+// back into futureMoments (with RSVPs and the public toggle available
+// again) and removes it from Memories. Doesn't try to guess why it ended
+// up here; it just gives a way out.
+function momentConvertToFuturePlan() {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in first'); return; }
+  if (!window.confirm('Move "' + (m.name || 'this') + '" back to Coming Up as a future plan? It\'ll no longer appear in Memories.')) return;
+  var ownerUid = window._openMomentOwnerUid || user.uid;
+  window.db.collection('futureMoments').add({
+    ownerUid: user.uid,
+    ownerName: (window.userData && window.userData.name) || 'You',
+    title: m.name || 'Untitled plan',
+    date: m.date || _todayLocal(),
+    time: '',
+    location: (m.highlight || '').replace(/^at\s+/i, ''),
+    theme: 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
+    vibe: m.vibe || '⚾ Game',
+    taggedUids: m.taggedUids || [],
+    public: false,
+    rsvps: {},
+    boxScore: _sanitizeForFirestore(m.boxScore || null),
+    ts: Date.now()
+  }).then(function(){
+    return window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).delete();
+  }).then(function(){
+    if (typeof ib_toast === 'function') ib_toast('Moved back to Coming Up 🎉');
+    nav('feed');
+  }).catch(function(err){
+    console.error('Move to future plan error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not move — ' + (err && err.message ? err.message : 'try again'));
+  });
 }
 
 function momentRemoveBoxScore() {
@@ -5840,7 +5893,7 @@ function _calRenderMonth(year, month, momentsByDate) {
   var pad = function(n){ return n < 10 ? '0' + n : '' + n; };
   var daysInMonth = new Date(year, month + 1, 0).getDate();
   var firstWeekday = new Date(year, month, 1).getDay();
-  var todayStr = new Date().toISOString().slice(0, 10);
+  var todayStr = _todayLocal();
 
   var cells = '';
   for (var i = 0; i < firstWeekday; i++) cells += '<div></div>';
