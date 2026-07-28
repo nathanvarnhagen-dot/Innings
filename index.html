@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.61.0-unify-friends-source-of-truth';
+window.INNINGS_BUILD = 'v4.63.0-never-hide-friends';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4828,12 +4828,21 @@ function fdLoadAddableFriends() {
     var uids = [];
     results[0].forEach(function(d){ uids.push(d.data().toUid); });
     results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && (window._fdInvitees||[]).indexOf(v) === -1; });
-    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can invite is already on this plan.</div>'; return; }
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You don\'t have any confirmed Innings friends yet — send a friend request from someone\'s profile, and once they accept, they\'ll show up here.</div>'; return; }
+    var already = window._fdInvitees || [];
     Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
       el.innerHTML = docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
+        var isTagged = already.indexOf(doc.id) !== -1;
+        if (isTagged) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+            '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Already invited</div>' +
+          '</div>';
+        }
         return '<div onclick="fdAddInvitee(\'' + doc.id + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
           '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
@@ -5445,13 +5454,21 @@ function momentEditLoadAddableFriends() {
     var uids = [];
     results[0].forEach(function(d){ uids.push(d.data().toUid); });
     results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You don\'t have any confirmed Innings friends yet — send a friend request from someone\'s profile, and once they accept, they\'ll show up here.</div>'; return; }
     var already = m.taggedUids || [];
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && already.indexOf(v) === -1; });
-    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can tag is already added.</div>'; return; }
     Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
       el.innerHTML = docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
+        var isTagged = already.indexOf(doc.id) !== -1;
+        if (isTagged) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+            '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Already tagged</div>' +
+          '</div>';
+        }
         return '<div onclick="momentEditAddFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
           '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
@@ -5571,13 +5588,21 @@ function momentLoadAddableFriends() {
     var uids = [];
     results[0].forEach(function(d){ uids.push(d.data().toUid); });
     results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You don\'t have any confirmed Innings friends yet — send a friend request from someone\'s profile, and once they accept, they\'ll show up here.</div>'; return; }
     var already = (window._momentPeople || []).map(function(p){ return p.uid; });
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && already.indexOf(v) === -1; });
-    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can tag is already added.</div>'; return; }
     Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
       el.innerHTML = docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
+        var isTagged = already.indexOf(doc.id) !== -1;
+        if (isTagged) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+            '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Already tagged</div>' +
+          '</div>';
+        }
         return '<div onclick="addMomentFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
           '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
@@ -6405,12 +6430,20 @@ function groupLoadAddableFriends() {
     var uids = [];
     results[0].forEach(function(d){ uids.push(d.data().toUid); });
     results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && existingUids.indexOf(v) === -1; });
-    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Everyone you can add is already in this group.</div>'; return; }
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You don\'t have any confirmed Innings friends yet — send a friend request from someone\'s profile, and once they accept, they\'ll show up here.</div>'; return; }
     Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
       el.innerHTML = docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
+        var isMember = existingUids.indexOf(doc.id) !== -1;
+        if (isMember) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+            '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Already in group</div>' +
+          '</div>';
+        }
         return '<div onclick="groupAddMember(\'' + doc.id + '\',\'' + nm.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
           '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
@@ -6638,12 +6671,20 @@ function newGroupLoadAddableFriends() {
     var uids = [];
     results[0].forEach(function(d){ uids.push(d.data().toUid); });
     results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i && existingUids.indexOf(v) === -1; });
-    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You haven\'t added any friends yet — add friends from a group first, then they\'ll show up here.</div>'; return; }
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { el.innerHTML = '<div style="font-size:12px;color:var(--subtle)">You don\'t have any confirmed Innings friends yet — send a friend request from someone\'s profile, and once they accept, they\'ll show up here.</div>'; return; }
     Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
       el.innerHTML = docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
+        var isAdded = existingUids.indexOf(doc.id) !== -1;
+        if (isAdded) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+            '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Already added</div>' +
+          '</div>';
+        }
         return '<div onclick="newGroupAddInvitee(\'' + doc.id + '\',\'' + nm.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
           '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
