@@ -3006,7 +3006,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.71.0-visible-build-stamp';
+window.INNINGS_BUILD = 'v4.72.0-live-boxscore-and-scroll-nudge';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3025,7 +3025,29 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+
+// A scrollable element that's hidden (opacity:0) and shown again can, on
+// iOS Safari, get permanently stuck — no error, no console warning, taps
+// still work, but the drag-to-scroll gesture never engages again until a
+// full reload. Nudging scrollTop by a pixel and back forces WebKit to
+// re-engage its momentum-scroll engine for that element. Runs on every
+// screen transition, on whatever scrollable containers exist in the screen
+// that just became active, as a blanket safeguard rather than chasing one
+// specific trigger.
+function _nudgeScrollers(screenEl){
+  if (!screenEl) return;
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      var scrollers = screenEl.querySelectorAll('.scroll, .scroll-bare');
+      scrollers.forEach(function(s){
+        var st = s.scrollTop;
+        s.scrollTop = st + 1;
+        s.scrollTop = st;
+      });
+    });
+  });
+}
 
 function nav(id){
   var current=document.querySelector('.screen.active');
@@ -4992,6 +5014,22 @@ function openMemory(id) {
   renderMemoryView(m);
   _navApplyScreen('memory-detail');
   _autoRefreshStaleBoxScore(m);
+  _startLiveBoxScorePolling(m);
+}
+
+// While a memory's box score isn't final yet (game still going), poll for
+// an updated score every so often so it stays current while you're looking
+// at it — not just once when you first open it. Always paired with a clear
+// exit point (see the four places _mdPhotoTimer gets cleared) so this can
+// never keep running after you've left the memory.
+window._mdBoxScoreTimer = null;
+function _startLiveBoxScorePolling(m) {
+  if (window._mdBoxScoreTimer) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; }
+  if (!m || !m.boxScore || m.boxScore.status === 'Final') return;
+  window._mdBoxScoreTimer = setInterval(function(){
+    if (window._openMomentId !== m._id) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; return; }
+    _autoRefreshStaleBoxScore(m);
+  }, 45000);
 }
 
 // A box score attached before a game finished (or before this feature could
@@ -5030,11 +5068,19 @@ function _applyRefreshedBoxScore(m, box) {
   if (!box || !box.home) return;
   var safe = _sanitizeForFirestore(box);
   m.boxScore = safe;
-  // Deliberately not re-rendering md-scroll here: replacing a scrolling
-  // container's content while the person may be mid-scroll is a known way
-  // to freeze scrolling on iOS Safari until the page reloads. The data is
-  // already updated in memory and Firestore — it'll show correctly the
-  // next time this memory is opened.
+  // Patch just the box score card in place rather than re-rendering the
+  // whole scrolling container (md-scroll) — replacing an entire scroll
+  // container's content while someone may be mid-scroll is what caused the
+  // freeze this was written to avoid. A single small, non-scrolling <div>
+  // getting new innerHTML doesn't carry that same risk.
+  if (window._openMomentId === m._id) {
+    var slot = document.getElementById('md-boxscore-slot');
+    if (slot) slot.innerHTML = _boxScoreCardHtml(safe, true);
+  }
+  if (safe.status === 'Final' && window._mdBoxScoreTimer) {
+    clearInterval(window._mdBoxScoreTimer);
+    window._mdBoxScoreTimer = null;
+  }
   _persistMoment(m, { boxScore: safe });
 }
 
@@ -5068,6 +5114,7 @@ function openSharedMemory(ownerUid, momentId, returnTo) {
 
 function closeMemoryDetail() {
   if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+  if (window._mdBoxScoreTimer) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; }
   _navApplyScreen(window._memoryReturnTo || 'memories');
 }
 
@@ -5086,6 +5133,7 @@ function enterMemoryEdit() {
   var m = _findMoment(window._openMomentId); if (!m) return;
   window._memoryDetailMode = 'edit';
   if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+  if (window._mdBoxScoreTimer) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; }
   _showMemoryHeader('edit');
   renderMemoryEdit(m);
 }
@@ -5095,6 +5143,7 @@ function exitMemoryEdit() {
   window._memoryDetailMode = 'view';
   _showMemoryHeader('view');
   renderMemoryView(m);
+  _startLiveBoxScorePolling(m);
 }
 
 function openPhotoLightbox(url) {
@@ -5194,7 +5243,7 @@ function renderMemoryView(m) {
   }
 
   var sharedByLine = isForeign ? '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px">Shared by ' + _escapeHtml(m._ownerName || 'a friend') + '</div>' : '';
-  var boxScoreHtml = m.boxScore ? '<div style="margin-bottom:14px">' + _boxScoreCardHtml(m.boxScore, true) + '</div>' : '';
+  var boxScoreHtml = m.boxScore ? '<div id="md-boxscore-slot" style="margin-bottom:14px">' + _boxScoreCardHtml(m.boxScore, true) + '</div>' : '<div id="md-boxscore-slot"></div>';
 
   scroll.innerHTML =
     '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
@@ -5299,6 +5348,7 @@ function momentConvertToFuturePlan() {
     return window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).delete();
   }).then(function(){
     if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+    if (window._mdBoxScoreTimer) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; }
     if (typeof ib_toast === 'function') ib_toast('Moved back to Coming Up 🎉');
     nav('feed');
   }).catch(function(err){
@@ -5556,6 +5606,7 @@ function momentDelete() {
     .then(function(){
       window._moments = window._moments.filter(function(x){ return x._id !== m._id; });
       if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
+      if (window._mdBoxScoreTimer) { clearInterval(window._mdBoxScoreTimer); window._mdBoxScoreTimer = null; }
       if (typeof ib_toast==='function') ib_toast('Moment deleted');
       renderMoments(window._moments);
       updateProfileStats(window._moments);
