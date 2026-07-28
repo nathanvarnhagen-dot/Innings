@@ -3043,7 +3043,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.63.0-never-hide-friends';
+window.INNINGS_BUILD = 'v4.64.0-untag-and-scroll-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3696,6 +3696,11 @@ function saveNewMoment() {
   var momentName = nameEl && nameEl.value.trim() ? nameEl.value.trim() : 'Untitled moment';
   var dateEl = document.getElementById('moment-date');
   var momentDate = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
+  var today = new Date().toISOString().slice(0, 10);
+  if (momentDate > today) {
+    var proceed = window.confirm('That date is in the future. Memories are for things that already happened — did you mean to use "It\'s coming up" instead, so you can invite people and collect RSVPs?\n\nTap OK to save it as a memory anyway, or Cancel to go back.');
+    if (!proceed) return;
+  }
   var highlightEl = document.getElementById('highlight-text');
   var highlightText = highlightEl ? highlightEl.value.trim() : '';
   var rememberEl = document.getElementById('remember-text');
@@ -5074,9 +5079,11 @@ function _applyRefreshedBoxScore(m, box) {
   if (!box || !box.home) return;
   var safe = _sanitizeForFirestore(box);
   m.boxScore = safe;
-  if (window._openMomentId !== m._id) return; // they navigated away before this resolved
-  if (window._memoryDetailMode === 'edit' && typeof renderMemoryEdit === 'function') renderMemoryEdit(m);
-  else if (typeof renderMemoryView === 'function') renderMemoryView(m);
+  // Deliberately not re-rendering md-scroll here: replacing a scrolling
+  // container's content while the person may be mid-scroll is a known way
+  // to freeze scrolling on iOS Safari until the page reloads. The data is
+  // already updated in memory and Firestore — it'll show correctly the
+  // next time this memory is opened.
   _persistMoment(m, { boxScore: safe });
 }
 
@@ -5463,10 +5470,10 @@ function momentEditLoadAddableFriends() {
         var nm = d.name || 'Friend';
         var isTagged = already.indexOf(doc.id) !== -1;
         if (isTagged) {
-          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5">' +
+          return '<div onclick="momentEditUntagFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;opacity:0.6">' +
             '<div style="width:32px;height:32px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
             '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
-            '<div style="font-size:11px;color:var(--subtle)">Already tagged</div>' +
+            '<div style="font-size:11px;color:var(--subtle)">Tagged — tap to remove</div>' +
           '</div>';
         }
         return '<div onclick="momentEditAddFriend(\'' + doc.id + '\',\'' + _escapeHtml(nm).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">' +
@@ -5505,6 +5512,18 @@ function momentEditAddFriend(uid, name) {
       read: false
     }).catch(function(err){ console.error('Tag notification error:', err); });
   }
+}
+
+// Untags directly from the picker — this is how a stray/incorrect tag gets
+// fixed even if it never had a matching chip in "Who was there" (e.g. a
+// leftover taggedUids entry from before someone was actually there).
+function momentEditUntagFriend(uid, name) {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  m.taggedUids = (m.taggedUids || []).filter(function(v){ return v !== uid; });
+  var idx = (m.people || []).indexOf(name);
+  if (idx !== -1) { m.people = m.people.slice(); m.people.splice(idx, 1); }
+  renderMemoryEdit(m);
+  _persistMoment(m, { taggedUids: m.taggedUids, people: m.people }, 'Removed ' + name);
 }
 
 function momentAddPhoto(input) {
