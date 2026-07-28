@@ -3004,7 +3004,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.69.0-remove-legacy-scroll-property';
+window.INNINGS_BUILD = 'v4.70.0-cache-first-moments-render';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4200,6 +4200,17 @@ function _findMoment(id) {
 function loadMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { window._moments = []; renderMoments([]); updateProfileStats([]); return; }
+  // Show cached data immediately so the list is already stable by the time
+  // this screen becomes interactive. The Firestore fetch below is async
+  // with unpredictable timing — if it lands while someone's mid-scroll and
+  // replaces every DOM node in the list at that moment, iOS can permanently
+  // detach the scroll gesture from the new nodes. Rendering from cache
+  // first, then only replacing the DOM if the data actually changed, avoids
+  // that swap happening in the common case where nothing is different.
+  if (window._moments && window._moments.length) {
+    renderMoments(window._moments);
+    updateProfileStats(window._moments);
+  }
   window.db.collection('users').doc(user.uid).collection('moments').get()
     .then(function(snap) {
       var arr = [];
@@ -4210,16 +4221,19 @@ function loadMoments() {
         if (tb !== ta) return tb - ta;
         return (b.date || '').localeCompare(a.date || '');
       });
+      var prevIds = (window._moments || []).map(function(m){ return m._id; }).join(',');
+      var newIds = arr.map(function(m){ return m._id; }).join(',');
+      var listEl = document.getElementById('mem-list');
+      var needsRender = prevIds !== newIds || !listEl || !listEl.children.length;
       window._moments = arr;
-      renderMoments(arr);
+      if (needsRender) renderMoments(arr);
       updateProfileStats(arr);
       if (typeof renderCalendar === 'function') renderCalendar();
       if (typeof loadFutureMoments === 'function') loadFutureMoments();
     })
     .catch(function(err) {
       console.error('Load moments error:', err);
-      renderMoments([]);
-      updateProfileStats([]);
+      if (!window._moments || !window._moments.length) { renderMoments([]); updateProfileStats([]); }
     });
 }
 
