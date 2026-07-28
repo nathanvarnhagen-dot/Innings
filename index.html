@@ -3004,7 +3004,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.67.0-remove-swipe-back-diagnostic';
+window.INNINGS_BUILD = 'v4.68.0-fix-photo-timer-leak';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5049,6 +5049,7 @@ function openSharedMemory(ownerUid, momentId, returnTo) {
 }
 
 function closeMemoryDetail() {
+  if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
   _navApplyScreen(window._memoryReturnTo || 'memories');
 }
 
@@ -5279,6 +5280,7 @@ function momentConvertToFuturePlan() {
   }).then(function(){
     return window.db.collection('users').doc(ownerUid).collection('moments').doc(m._id).delete();
   }).then(function(){
+    if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
     if (typeof ib_toast === 'function') ib_toast('Moved back to Coming Up 🎉');
     nav('feed');
   }).catch(function(err){
@@ -5535,6 +5537,7 @@ function momentDelete() {
   window.db.collection('users').doc(user.uid).collection('moments').doc(m._id).delete()
     .then(function(){
       window._moments = window._moments.filter(function(x){ return x._id !== m._id; });
+      if (window._mdPhotoTimer) { clearInterval(window._mdPhotoTimer); window._mdPhotoTimer = null; }
       if (typeof ib_toast==='function') ib_toast('Moment deleted');
       renderMoments(window._moments);
       updateProfileStats(window._moments);
