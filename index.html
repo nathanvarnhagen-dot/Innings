@@ -2711,45 +2711,6 @@ function oslDay2(day) {
       <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:250px">Every moment deserves a home. Tap + to save your first one.</div>
       <button onclick="nav('create-group')" style="margin-top:6px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save your first moment</button>
     </div>
-
-    <!-- SAMPLE cards (hidden once you have real moments) -->
-    <div id="mem-examples">
-    <div class="mem-snap">
-      <div class="mem-snap-img ballpark">🏟️
-        <div class="mem-snap-score">
-          <div class="mem-snap-score-line">Giants 5 · Phillies 4 · Final</div>
-          <div class="mem-snap-score-det">Walk-off · P. Bailey inside-the-park 3-run HR · 9th inning</div>
-        </div>
-      </div>
-      <div class="mem-snap-body">
-        <div class="mem-snap-who">
-          <div class="av av-a" style="width:28px;height:28px;font-size:10px">You</div>
-          <div class="av av-d" style="width:28px;height:28px;font-size:10px;margin-left:-8px;border:2px solid white">HR</div>
-          <div><div class="mem-snap-names">You + a friend</div><div class="mem-snap-date">Oracle Park · Section 114</div></div>
-        </div>
-        <div class="mem-snap-caption">The perfect sendoff. The baseball gods delivered.</div>
-        <div class="mem-snap-highlight"><i class="ti ti-star-filled"></i><span>Inside-the-park home run — walk-off, three-run, ninth inning.</span></div>
-      </div>
-    </div>
-    <div class="mem-snap">
-      <div class="mem-snap-img" style="background:linear-gradient(135deg,#1c2e20 0%,#0d1f10 50%,#1a2e3c 100%)">🍺
-        <div class="mem-snap-score">
-          <div class="mem-snap-score-line">Giants 6 · Dodgers 3 · Final</div>
-          <div class="mem-snap-score-det">Jun 22 · Oracle Park · Bobblehead night</div>
-        </div>
-      </div>
-      <div class="mem-snap-body">
-        <div class="mem-snap-who">
-          <div class="av av-a" style="width:28px;height:28px;font-size:10px">You</div>
-          <div class="av av-b" style="width:28px;height:28px;font-size:10px;margin-left:-8px;border:2px solid white">GA</div>
-          <div class="av av-c" style="width:28px;height:28px;font-size:10px;margin-left:-8px;border:2px solid white">JC</div>
-          <div><div class="mem-snap-names">You + two friends</div><div class="mem-snap-date">Jun 22 · Oracle Park · Sec 119</div></div>
-        </div>
-        <div class="mem-snap-caption">Bobblehead night + a W against the Dodgers. Classic.</div>
-        <div class="mem-snap-highlight"><i class="ti ti-users"></i><span>Everyone tagged in a memory can see and add to it.</span></div>
-      </div>
-    </div>
-    </div><!-- /mem-examples -->
   </div>
   <div class="bottom-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
@@ -3043,7 +3004,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.65.0-fix-utc-date-bug';
+window.INNINGS_BUILD = 'v4.66.0-remove-demo-cards';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4970,13 +4931,11 @@ function futureDetailDelete() {
 function renderMoments(moments) {
   var list = document.getElementById('mem-list');
   var empty = document.getElementById('mem-empty');
-  var examples = document.getElementById('mem-examples');
   var count = document.getElementById('mem-count');
   if (count) count.textContent = moments.length;
 
   var hasReal = moments.length > 0;
   if (empty) empty.style.display = hasReal ? 'none' : 'flex';
-  if (examples) examples.style.display = hasReal ? 'none' : 'block';
   if (!list) return;
 
   list.innerHTML = moments.map(function(m) {
