@@ -2963,6 +2963,8 @@ function oslDay2(day) {
       <div style="font-size:11px;color:var(--subtle);line-height:1.5">Groups are private. Friends of friends can see your groups and request access. Strangers can only find you by phone number.</div>
     </div>
 
+    <div id="profile-build-stamp" style="text-align:center;font-size:10px;color:var(--subtle);opacity:0.5;margin-top:14px">build</div>
+
   </div>
 
   <div class="bottom-nav">
@@ -3004,11 +3006,13 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.70.0-cache-first-moments-render';
+window.INNINGS_BUILD = 'v4.71.0-visible-build-stamp';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
   if (t) t.textContent = 'build ' + window.INNINGS_BUILD;
+  var p = document.getElementById('profile-build-stamp');
+  if (p) p.textContent = 'build ' + window.INNINGS_BUILD;
 });
 </script>
 <script>
