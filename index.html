@@ -848,7 +848,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <!-- ── FUTURE STEP 1: INVITE DETAILS ── -->
     <div id="create-step-f1" style="display:none;flex-direction:column">
       <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px">
-        <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
+        <input id="future-title" placeholder="Give this a name" oninput="_updateAutoTicketLink()" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
         <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
       </div>
 
@@ -886,6 +886,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
           <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">✈️ Trip</div>
           <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">+ Other</div>
         </div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>
+        <input id="future-ticket-link" placeholder="Paste a ticket link, or we'll suggest one" oninput="futureTicketLinkEdited()" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">
+        <div id="future-ticket-hint" style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Games, festivals, and concerts get a SeatGeek search link automatically — everyone invited can tap it to buy their own tickets. Edit or replace it with a direct link anytime.</div>
       </div>
 
       <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
@@ -3154,7 +3160,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.75.0-tappable-plan-cards';
+window.INNINGS_BUILD = 'v4.76.0-ticket-links';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3367,6 +3373,47 @@ function selectFutureVibe(el) {
   el.style.fontWeight = '600';
   el.style.borderColor = 'transparent';
   window._futureVibe = el.textContent.trim();
+  _updateAutoTicketLink();
+}
+
+// ── TICKET LINKS — auto-suggested for ticketed vibes, always manually
+// overridable ──
+// There's no SeatGeek client_id wired into this app (unlike the free MLB
+// Stats API and iTunes Search API lookups used elsewhere), and SeatGeek's
+// own search page doesn't have a documented, reliable query-string format
+// we can safely guess at for an arbitrary title — getting that wrong would
+// mean silently handing friends a dead link, which is worse than not
+// auto-filling at all. A site-restricted Google search is the one
+// construction that's actually guaranteed to land on the real SeatGeek
+// listing regardless of how the title is worded. If a SeatGeek client_id
+// is ever added (see api/mlb.js for the existing serverless-proxy pattern
+// this would follow), this is the spot to swap in a resolved direct link.
+window._futureTicketLinkAuto = true;
+window._futureVibe = window._futureVibe || '⚾ Game';
+
+function _ticketableVibe(vibe) {
+  return ['⚾ Game', '🎪 Festival', '🎵 Concert'].indexOf(vibe) !== -1;
+}
+
+function _suggestedTicketLink(title) {
+  return 'https://www.google.com/search?q=' + encodeURIComponent('site:seatgeek.com ' + title);
+}
+
+// Only re-suggests while the owner hasn't touched the field themselves —
+// futureTicketLinkEdited() (bound to the input's oninput) flips the flag
+// the moment they type or paste anything of their own.
+function _updateAutoTicketLink() {
+  if (window._futureTicketLinkAuto === false) return;
+  var linkEl = document.getElementById('future-ticket-link');
+  if (!linkEl) return;
+  if (!_ticketableVibe(window._futureVibe || '')) return;
+  var titleEl = document.getElementById('future-title');
+  var title = titleEl ? titleEl.value.trim() : '';
+  linkEl.value = title ? _suggestedTicketLink(title) : '';
+}
+
+function futureTicketLinkEdited() {
+  window._futureTicketLinkAuto = false;
 }
 
 window._futurePublic = false;
@@ -3436,6 +3483,8 @@ function saveFutureMoment() {
   var location = locEl && locEl.value.trim() ? locEl.value.trim() : '';
   var theme = window._futureTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
   var vibe = window._futureVibe || '⚾ Game';
+  var ticketLinkEl = document.getElementById('future-ticket-link');
+  var ticketLink = ticketLinkEl && ticketLinkEl.value.trim() ? ticketLinkEl.value.trim() : '';
   var invitees = (window._futureInvitees || []).slice();
   var ownerName = (window.userData && window.userData.name) || 'You';
 
@@ -3450,6 +3499,7 @@ function saveFutureMoment() {
     location: location,
     theme: theme,
     vibe: vibe,
+    ticketLink: ticketLink,
     taggedUids: invitees,
     public: !!window._futurePublic,
     rsvps: {},
@@ -3471,6 +3521,8 @@ function resetFutureForm() {
   var d = document.getElementById('future-date'); if (d) d.value = '';
   var tm = document.getElementById('future-time'); if (tm) tm.value = '';
   var l = document.getElementById('future-location'); if (l) l.value = '';
+  var tl = document.getElementById('future-ticket-link'); if (tl) tl.value = '';
+  window._futureTicketLinkAuto = true;
   window._futureTheme = null;
   window._futureVibe = '⚾ Game';
   window._futureInvitees = [];
@@ -4529,6 +4581,14 @@ function _convertFutureMomentToMemory(m, user) {
   });
 }
 
+// Compact "🎟️ Tickets" pill shown on plan cards in the Feed and Calendar/
+// Memories lists — stopPropagation keeps it from also triggering the
+// card's openFutureDetail() navigation.
+function _ticketButtonHtml(m) {
+  if (!m.ticketLink) return '';
+  return '<a href="' + _escapeHtml(m.ticketLink) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;background:rgba(255,255,255,0.22);color:white;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:inherit">🎟️ Tickets</a>';
+}
+
 function loadFutureMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
@@ -4564,6 +4624,7 @@ function loadFutureMoments() {
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+        _ticketButtonHtml(m) +
         rsvpUi +
       '</div>';
     }).join('');
@@ -4632,6 +4693,7 @@ function loadFeedMoments() {
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px">' + byline + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+        _ticketButtonHtml(m) +
         rsvpUi +
       '</div>';
     }).join('');
@@ -4729,12 +4791,19 @@ function renderFutureView(m) {
         '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='no'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='no'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
       '</div>';
 
+  var ticketSection = m.ticketLink
+    ? '<div style="background:var(--card);padding:14px 20px;border-bottom:0.5px solid var(--rule)">' +
+        '<a href="' + _escapeHtml(m.ticketLink) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--indigo);color:white;border-radius:14px;padding:13px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit">🎟️ Get Tickets</a>' +
+      '</div>'
+    : '';
+
   box.innerHTML =
     '<div style="background:' + theme + ';padding:26px 20px">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + (m.public ? '  ·  🌎 Public' : '') + '</div>' +
       '<div style="font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
       '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
     '</div>' +
+    ticketSection +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' + rsvpSection + '</div>' +
     '<div id="future-chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>' +
     '<div id="future-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">' +
@@ -4910,7 +4979,7 @@ function renderFutureEdit(m) {
 
   box.innerHTML =
     '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px">' +
-      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">' +
+      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" oninput="_fdUpdateAutoTicketLink()" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>' +
@@ -4935,6 +5004,11 @@ function renderFutureEdit(m) {
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px" id="fd-vibe-pills">' + vibePills + '</div>' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>' +
+      '<input id="fd-ticket-link" value="' + _escapeHtml(m.ticketLink || '') + '" placeholder="Paste a ticket link, or we\'ll suggest one" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">' +
+      (m.ticketLink ? '<div onclick="document.getElementById(\'fd-ticket-link\').value=\'\'" style="font-size:11px;color:var(--subtle);font-weight:600;cursor:pointer;margin-top:6px">Clear link</div>' : '<div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Games, festivals, and concerts get a SeatGeek search link automatically once there\'s a title.</div>') +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Who\'s invited</div>' +
@@ -5089,6 +5163,20 @@ function fdSelectVibe(el, v) {
   el.style.fontWeight = '600';
   el.style.borderColor = 'transparent';
   window._fdVibe = v;
+  _fdUpdateAutoTicketLink();
+}
+
+// Edit-view counterpart to _updateAutoTicketLink() in the create flow —
+// deliberately more conservative here: it only fills the field while it's
+// still empty, so opening an already-ticketed plan to tweak the date or
+// location can never silently overwrite a link that's already saved.
+function _fdUpdateAutoTicketLink() {
+  var linkEl = document.getElementById('fd-ticket-link');
+  if (!linkEl || linkEl.value.trim()) return;
+  if (!_ticketableVibe(window._fdVibe || '')) return;
+  var titleEl = document.getElementById('fd-title');
+  var title = titleEl ? titleEl.value.trim() : '';
+  linkEl.value = title ? _suggestedTicketLink(title) : '';
 }
 
 function futureDetailSave() {
@@ -5098,6 +5186,8 @@ function futureDetailSave() {
   var d = document.getElementById('fd-date');
   var tm = document.getElementById('fd-time');
   var l = document.getElementById('fd-location');
+  var tl = document.getElementById('fd-ticket-link');
+  var ticketLink = tl && tl.value.trim() ? tl.value.trim() : '';
   window.db.collection('futureMoments').doc(id).update({
     title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
     date: d ? d.value : '',
@@ -5105,6 +5195,7 @@ function futureDetailSave() {
     location: l && l.value.trim() ? l.value.trim() : '',
     theme: window._fdTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
     vibe: window._fdVibe || '⚾ Game',
+    ticketLink: ticketLink,
     taggedUids: window._fdInvitees || [],
     public: !!window._fdPublic
   }).then(function(){
@@ -5119,6 +5210,7 @@ function futureDetailSave() {
       m.location = l && l.value.trim() ? l.value.trim() : '';
       m.theme = window._fdTheme || m.theme;
       m.vibe = window._fdVibe || m.vibe;
+      m.ticketLink = ticketLink;
       m.taggedUids = window._fdInvitees || [];
       m.public = !!window._fdPublic;
     }
