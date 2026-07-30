@@ -3154,7 +3154,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.74.0-photo-remove-msg-edit-and-fixes';
+window.INNINGS_BUILD = 'v4.75.0-tappable-plan-cards';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4556,11 +4556,11 @@ function loadFutureMoments() {
       var rsvpUi = isOwner
         ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going · tap to edit</div>'
         : '<div style="display:flex;gap:6px;margin-top:12px">' +
-          '<button onclick="futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
-          '<button onclick="futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
-          '<button onclick="futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div ' + (isOwner ? 'onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -4624,7 +4624,7 @@ function loadFeedMoments() {
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,0.2);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div ' + (isOwner ? 'onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' : 'style="') + 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
           '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
           (m.public ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px">🌎 Public</div>' : '') +
@@ -4656,8 +4656,27 @@ function futureRsvp(momentId, val) {
     .catch(function(err){ console.error('Future RSVP error:', err); if (typeof ib_toast === 'function') ib_toast('Could not RSVP — try again'); });
 }
 
+// The Calendar/Memories "Upcoming" list and the Feed's "Coming up" list load
+// independently and keep separate caches (_futureMomentsCache vs
+// _feedMomentsCache) — a plan seen only in one (e.g. a friend's public plan
+// that only ever loaded into the Feed) wasn't found when tapped, so the
+// card just sat there doing nothing. This checks both, and stashes whatever
+// it finds into _futureMomentsCache too, since every other function here
+// (edit, RSVP, delete, chat) reads only from that one cache by design.
+function _findFutureMoment(id) {
+  var m = (window._futureMomentsCache || {})[id];
+  if (m) return m;
+  m = (window._feedMomentsCache || {})[id];
+  if (m) {
+    window._futureMomentsCache = window._futureMomentsCache || {};
+    window._futureMomentsCache[id] = m;
+    return m;
+  }
+  return null;
+}
+
 function openFutureDetail(momentId) {
-  var m = (window._futureMomentsCache || {})[momentId];
+  var m = _findFutureMoment(momentId);
   if (!m) return;
   window._openFutureId = momentId;
   window._futureDetailMode = 'view';
