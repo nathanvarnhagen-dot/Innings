@@ -670,10 +670,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <!-- PHOTO -->
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <input type="file" id="main-photo-input" accept="image/*" style="display:none" onchange="previewMainPhoto(this)">
-        <div id="main-photo-preview" style="width:100%;height:140px;border-radius:16px;background:var(--bg);border:1.5px dashed var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center" onclick="document.getElementById('main-photo-input').click()">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <div style="font-size:13px;color:var(--subtle);font-weight:500">Add a photo</div>
-          <div style="font-size:11px;color:var(--subtle);opacity:0.6">optional</div>
+        <div style="position:relative">
+          <div id="main-photo-preview" style="width:100%;height:140px;border-radius:16px;background:var(--bg);border:1.5px dashed var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center" onclick="document.getElementById('main-photo-input').click()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div style="font-size:13px;color:var(--subtle);font-weight:500">Add a photo</div>
+            <div style="font-size:11px;color:var(--subtle);opacity:0.6">optional</div>
+          </div>
+          <button id="main-photo-remove" onclick="event.stopPropagation();removeMainPhoto()" style="display:none;position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(10,10,15,0.6);border:none;color:white;font-size:15px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;font-family:inherit">✕</button>
         </div>
       </div>
 
@@ -845,7 +848,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <!-- ── FUTURE STEP 1: INVITE DETAILS ── -->
     <div id="create-step-f1" style="display:none;flex-direction:column">
       <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px">
-        <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;font-family:inherit;letter-spacing:-0.5px">
+        <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
         <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
       </div>
 
@@ -1009,7 +1012,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="feedback-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
   <div style="position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 14px 24px;gap:10px;align-items:center;display:flex;flex-shrink:0">
-    <input id="feedback-chat-field" placeholder="Share your feedback..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.3);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.12)">
+    <input id="feedback-chat-field" placeholder="Share your feedback..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
     <button onclick="sendFeedbackMessage()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
     </button>
@@ -1454,7 +1457,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="act-tab-songs" style="position:relative;z-index:2;flex:1;min-height:0;display:none;flex-direction:column;overflow-y:auto">
       <div style="padding:14px 16px 8px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Favorite songs</div>
       <div style="padding:0 16px 10px;display:flex;gap:8px;flex-shrink:0">
-        <input id="act-song-input" placeholder="Add a song title" style="flex:1;font-size:13px;color:white;border:0.5px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 12px;outline:none;background:rgba(255,255,255,0.08);font-family:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();addActSong();}">
+        <input id="act-song-input" placeholder="Add a song title" style="flex:1;font-size:13px;color:white;-webkit-text-fill-color:white;caret-color:white;border:0.5px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 12px;outline:none;background:rgba(255,255,255,0.14);font-family:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();addActSong();}">
         <button onclick="addActSong()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Add</button>
       </div>
       <div id="act-detail-songs" style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px"></div>
@@ -2369,7 +2372,7 @@ function renderActChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -2385,7 +2388,7 @@ function renderActChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, true);
@@ -2877,7 +2880,7 @@ function oslDay2(day) {
   <div class="scroll" id="md-scroll" style="position:relative;z-index:2;padding:14px 16px 18px;background:transparent"></div>
 
   <div id="md-composer" style="position:relative;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0">
-    <input id="md-comment" placeholder="What's today's story?" onkeydown="if(event.key==='Enter'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;background:rgba(255,255,255,0.14)">
+    <input id="md-comment" placeholder="What's today's story?" onkeydown="if(event.key==='Enter'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
     <button onclick="momentAddComment()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
     </button>
@@ -3129,12 +3132,29 @@ function oslDay2(day) {
 <div id="msg-reaction-sheet" onclick="closeReactionSheet()" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.4);align-items:flex-end;justify-content:center">
   <div onclick="event.stopPropagation()" style="background:var(--card);width:100%;max-width:430px;border-radius:20px 20px 0 0;padding:22px 18px 28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 -8px 30px rgba(0,0,0,0.2)">
     <div id="msg-reaction-emojis" style="display:flex;justify-content:space-between;gap:2px"></div>
+    <button id="msg-reaction-edit-btn" onclick="_reactionSheetEdit()" style="display:none;width:100%;background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:14px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Edit Message</button>
     <button id="msg-reaction-delete-btn" onclick="_reactionSheetDelete()" style="display:none;width:100%;background:var(--bg);border:0.5px solid var(--rule);color:var(--loss);border-radius:14px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Delete Message</button>
     <button onclick="closeReactionSheet()" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);color:var(--subtle);border-radius:14px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Cancel</button>
   </div>
 </div>
+
+<!-- ═══ EDIT MESSAGE — shared by every chat surface (OSL, Feedback, Artist, Future Plan, Group) ═══ -->
+<div id="edit-message-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:flex-end">
+  <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:20px 20px 0;flex-shrink:0">
+      <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit message</div>
+    </div>
+    <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+      <textarea id="edit-message-input" style="width:100%;font-size:15px;color:var(--black);border:0.5px solid var(--rule);border-radius:14px;padding:12px;outline:none;background:var(--bg);resize:none;height:100px;font-family:inherit;line-height:1.6"></textarea>
+    </div>
+    <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
+      <button onclick="closeEditMessageModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+      <button onclick="saveEditedMessage()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+    </div>
+  </div>
+</div>
 <script>
-window.INNINGS_BUILD = 'v4.73.0-artist-activity-tabs-and-friend-festivals';
+window.INNINGS_BUILD = 'v4.74.0-photo-remove-msg-edit-and-fixes';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3846,8 +3866,7 @@ function resetMomentForm() {
   var hlEl = document.getElementById('highlight-text'); if (hlEl) hlEl.value = '';
   var remEl = document.getElementById('remember-text'); if (remEl) remEl.value = '';
   var dateEl = document.getElementById('moment-date'); if (dateEl) dateEl.value = _todayLocal();
-  var photoPrev = document.getElementById('main-photo-preview');
-  if (photoPrev) { photoPrev.style.backgroundImage = ''; }
+  _resetMainPhotoPreviewUI();
   var extraPrev = document.getElementById('moment-photo-preview');
   if (extraPrev) extraPrev.innerHTML = '';
   window._momentPhoto = '';
@@ -4150,9 +4169,33 @@ function previewMainPhoto(input) {
       preview.style.backgroundPosition = 'center';
       preview.style.border = 'none';
       preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = 'none'; });
+      var removeBtn = document.getElementById('main-photo-remove');
+      if (removeBtn) removeBtn.style.display = 'flex';
     });
   };
   reader.readAsDataURL(input.files[0]);
+}
+
+// Clears the picked main photo and puts the "Add a photo" placeholder back
+// exactly as it started — shared by the explicit remove button and by
+// resetMomentForm() after a save, since both need to undo the same
+// hide-everything-but-the-photo state previewMainPhoto() sets up.
+function _resetMainPhotoPreviewUI() {
+  var preview = document.getElementById('main-photo-preview');
+  if (preview) {
+    preview.style.backgroundImage = '';
+    preview.style.border = '1.5px dashed var(--rule)';
+    preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = ''; });
+  }
+  var removeBtn = document.getElementById('main-photo-remove');
+  if (removeBtn) removeBtn.style.display = 'none';
+  var input = document.getElementById('main-photo-input');
+  if (input) input.value = '';
+}
+
+function removeMainPhoto() {
+  window._momentPhoto = '';
+  _resetMainPhotoPreviewUI();
 }
 
 window._profilePhotos = [];
@@ -4238,8 +4281,9 @@ function renderInterests(list) {
     return;
   }
   c.innerHTML = list.map(function(it, i){
+    var emoji = it.emoji || _fallbackInterestEmoji(it.label || '');
     return '<div onclick="removeInterest(' + i + ')" style="display:inline-flex;align-items:center;gap:6px;background:var(--indigo-light);border-radius:20px;padding:7px 13px;cursor:pointer">' +
-      '<span style="font-size:15px">' + _escapeHtml(it.emoji || '✨') + '</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">' + _escapeHtml(it.label || '') + '</span></div>';
+      '<span style="font-size:15px">' + _escapeHtml(emoji) + '</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">' + _escapeHtml(it.label || '') + '</span></div>';
   }).join('') +
   '<div id="add-interest-btn" onclick="showAddInterest()" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;padding:7px 13px;cursor:pointer"><span style="font-size:13px;color:var(--indigo);font-weight:600">+ Add</span></div>';
 }
@@ -4249,9 +4293,10 @@ function hideAddInterest() { var m=document.getElementById('add-interest-modal')
 function quickInterest(e,l) { document.getElementById('interest-emoji').value=e; document.getElementById('interest-label').value=l; }
 
 function saveInterest() {
-  var emoji = document.getElementById('interest-emoji').value.trim() || '✨';
+  var emojiInput = document.getElementById('interest-emoji').value.trim();
   var label = document.getElementById('interest-label').value.trim();
   if (!label) { hideAddInterest(); return; }
+  var emoji = emojiInput || _fallbackInterestEmoji(label);
   window.userData = window.userData || {};
   var list = (window.userData.interests || []).slice();
   list.push({ emoji: emoji, label: label });
@@ -4264,6 +4309,18 @@ function saveInterest() {
     window.db.collection('users').doc(user.uid).set({ interests: list }, { merge: true })
       .catch(function(err){ console.error('Save interest error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
   }
+}
+
+// Interests added without picking an emoji used to all fall back to the
+// same sparkle ✨ — fine once, repetitive and lifeless across a whole list.
+// This picks from a small varied set, keyed off the label text itself, so
+// the same interest always gets the same fallback but different interests
+// don't all look identical.
+var _INTEREST_FALLBACK_EMOJIS = ['🏷️','⭐','🎯','🔖','💡','🌟','📌','🧩'];
+function _fallbackInterestEmoji(label) {
+  var hash = 0;
+  for (var i = 0; i < label.length; i++) { hash = (hash * 31 + label.charCodeAt(i)) >>> 0; }
+  return _INTEREST_FALLBACK_EMOJIS[hash % _INTEREST_FALLBACK_EMOJIS.length];
 }
 
 function removeInterest(i) {
@@ -4280,18 +4337,35 @@ function removeInterest(i) {
 }
 function addMomentPhotos(input) {
   if(!input.files) return;
-  var p=document.getElementById('moment-photo-preview'); if(!p) return;
   if(!window._momentExtraPhotos) window._momentExtraPhotos=[];
-  Array.from(input.files).forEach(function(file){
+  var files = Array.from(input.files);
+  files.forEach(function(file){
     var r=new FileReader(); r.onload=function(e){
       _downscaleImage(e.target.result, 900, function(small){
         window._momentExtraPhotos.push(small);
-        var d=document.createElement('div');
-        d.style.cssText='width:68px;height:68px;border-radius:12px;background-size:cover;background-position:center;flex-shrink:0;background-image:url('+small+')';
-        p.appendChild(d);
+        renderMomentExtraPhotos();
       });
     }; r.readAsDataURL(file);
   });
+  input.value = '';
+}
+
+function renderMomentExtraPhotos() {
+  var p = document.getElementById('moment-photo-preview');
+  if (!p) return;
+  var photos = window._momentExtraPhotos || [];
+  p.innerHTML = photos.map(function(src, i){
+    return '<div style="position:relative;width:68px;height:68px;flex-shrink:0">' +
+      '<div style="width:68px;height:68px;border-radius:12px;background-size:cover;background-position:center;background-image:url(' + src + ')"></div>' +
+      '<div onclick="removeMomentExtraPhoto(' + i + ')" style="position:absolute;top:-5px;right:-5px;width:19px;height:19px;border-radius:50%;background:var(--loss);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.25)">×</div>' +
+    '</div>';
+  }).join('');
+}
+
+function removeMomentExtraPhoto(i) {
+  if (!window._momentExtraPhotos) return;
+  window._momentExtraPhotos.splice(i, 1);
+  renderMomentExtraPhotos();
 }
 
 // ── MEMORIES: load + render ──
@@ -4740,7 +4814,7 @@ function renderFutureMomentChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -4756,7 +4830,7 @@ function renderFutureMomentChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
@@ -4817,7 +4891,7 @@ function renderFutureEdit(m) {
 
   box.innerHTML =
     '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px">' +
-      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;font-family:inherit;letter-spacing:-0.5px">' +
+      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>' +
@@ -5438,7 +5512,18 @@ function renderMemoryEdit(m) {
       boxScoreEditHtml +
 
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Photos</div>' +
-      '<div style="font-size:13px;color:var(--subtle);margin-bottom:12px">' + photoCount + (photoCount === 1 ? ' photo added' : ' photos added') + '</div>' +
+      (allPhotos.length
+        ? '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">' +
+            allPhotos.map(function(src, i){
+              var isMain = (i === 0 && !!m.photo);
+              var extraIdx = m.photo ? (i - 1) : i;
+              return '<div style="position:relative;width:100%;aspect-ratio:1/1">' +
+                '<div style="width:100%;height:100%;border-radius:10px;background-size:cover;background-position:center;background-image:url(' + src + ')"></div>' +
+                '<div onclick="momentRemovePhoto(\'' + (isMain ? 'main' : 'extra') + '\',' + extraIdx + ')" style="position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:var(--loss);color:white;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.25)">×</div>' +
+              '</div>';
+            }).join('') +
+          '</div>'
+        : '<div style="font-size:13px;color:var(--subtle);margin-bottom:12px">No photos yet</div>') +
 
       '<div style="display:flex;gap:8px">' +
         '<input type="file" id="md-photo-input" accept="image/*" multiple style="display:none" onchange="momentAddPhoto(this)">' +
@@ -5711,6 +5796,22 @@ function momentAddPhoto(input) {
     };
     r.readAsDataURL(file);
   });
+  input.value = '';
+}
+
+// Matches the "main photo" / "extra photos" split used throughout this
+// screen (m.photo is the single primary photo, m.photos is everything
+// else) — same split the thumbnail grid above hands back via its onclick.
+function momentRemovePhoto(kind, idx) {
+  var m = _findMoment(window._openMomentId); if (!m) return;
+  if (kind === 'main') {
+    m.photo = '';
+  } else {
+    m.photos = m.photos || [];
+    m.photos.splice(idx, 1);
+  }
+  renderMemoryEdit(m);
+  _persistMoment(m, { photo: m.photo || '', photos: m.photos || [] }, 'Photo removed');
 }
 
 function momentAddComment() {
@@ -6137,6 +6238,8 @@ function openReactionSheet(collection, msgId, canDelete) {
       return '<button onclick="_pickReaction(\'' + e + '\')" style="flex:1;background:none;border:none;font-size:28px;cursor:pointer;padding:6px 2px;line-height:1">' + e + '</button>';
     }).join('');
   }
+  var editBtn = document.getElementById('msg-reaction-edit-btn');
+  if (editBtn) editBtn.style.display = canDelete ? 'block' : 'none';
   var delBtn = document.getElementById('msg-reaction-delete-btn');
   if (delBtn) delBtn.style.display = canDelete ? 'block' : 'none';
   var sheet = document.getElementById('msg-reaction-sheet');
@@ -6174,6 +6277,55 @@ function _reactionSheetDelete() {
   else if (target.collection === 'actChat') deleteActMessage(target.msgId);
   else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
   else if (target.collection === 'groupChats') deleteGroupMessage(target.msgId);
+}
+
+// ── EDIT MESSAGE — reuses the same {collection, msgId} the reaction sheet
+// already tracks. Fetches the live doc to prefill the textarea (rather than
+// hunting down the right in-memory render cache for whichever chat this
+// is), then writes just {text, edited} back — Firestore rules restrict
+// updates to the author's own messages and only those two fields, same
+// shape as the existing reactions-only allowance.
+window._editMessageTarget = null;
+
+function _reactionSheetEdit() {
+  var target = window._reactionSheetTarget;
+  closeReactionSheet();
+  if (!target || !window.db) return;
+  window.db.collection(target.collection).doc(target.msgId).get().then(function(doc){
+    if (!doc.exists) { if (typeof ib_toast==='function') ib_toast('Message no longer exists'); return; }
+    openEditMessageModal(target.collection, target.msgId, (doc.data() || {}).text || '');
+  }).catch(function(err){
+    console.error('Load message for edit error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not load message — try again');
+  });
+}
+
+function openEditMessageModal(collection, msgId, currentText) {
+  window._editMessageTarget = { collection: collection, msgId: msgId };
+  var input = document.getElementById('edit-message-input');
+  if (input) input.value = currentText;
+  var modal = document.getElementById('edit-message-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditMessageModal() {
+  var modal = document.getElementById('edit-message-modal');
+  if (modal) modal.style.display = 'none';
+  window._editMessageTarget = null;
+}
+
+function saveEditedMessage() {
+  var target = window._editMessageTarget;
+  if (!target || !window.db) { closeEditMessageModal(); return; }
+  var input = document.getElementById('edit-message-input');
+  var text = input ? input.value.trim() : '';
+  if (!text) { if (typeof ib_toast==='function') ib_toast('Message can\'t be empty'); return; }
+  window.db.collection(target.collection).doc(target.msgId).update({ text: text, edited: true })
+    .then(function(){ closeEditMessageModal(); if (typeof ib_toast==='function') ib_toast('Message updated'); })
+    .catch(function(err){
+      console.error('Edit message error:', err);
+      if (typeof ib_toast==='function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'check Firestore rules'));
+    });
 }
 
 // Renders grouped emoji badges (with a count if more than one person picked
@@ -6273,7 +6425,7 @@ function renderOslChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -6289,7 +6441,7 @@ function renderOslChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
@@ -7022,7 +7174,7 @@ function renderGroupChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -7038,7 +7190,7 @@ function renderGroupChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
