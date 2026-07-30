@@ -1419,37 +1419,48 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </a>
     </div>
 
-    <div style="position:relative;z-index:2;padding:12px 16px 4px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Who's going</div>
-    <div id="act-detail-going" style="position:relative;z-index:2;padding:8px 16px 14px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
+    <div id="act-detail-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:12px 16px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
 
-    <div id="act-detail-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:0 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
-
-    <div style="position:relative;z-index:2;padding:12px 16px 8px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Favorite songs</div>
-    <div style="position:relative;z-index:2;padding:0 16px 10px;display:flex;gap:8px;flex-shrink:0">
-      <input id="act-song-input" placeholder="Add a song title" style="flex:1;font-size:13px;color:white;border:0.5px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 12px;outline:none;background:rgba(255,255,255,0.08);font-family:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();addActSong();}">
-      <button onclick="addActSong()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Add</button>
+    <div id="act-tabs" style="position:relative;z-index:2;display:flex;padding:0 16px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
+      <div class="act-tab active" onclick="actTab('activity',event)" style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">Activity</div>
+      <div class="act-tab" onclick="actTab('photos',event)" style="flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer">Photos</div>
+      <div class="act-tab" onclick="actTab('songs',event)" style="flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer">Songs</div>
     </div>
-    <div id="act-detail-songs" style="position:relative;z-index:2;padding:0 16px 14px;display:flex;flex-direction:column;gap:8px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
 
-    <div style="position:relative;z-index:2;padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0">
-        <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Photos</div>
-        <div onclick="openActAlbum()" style="font-size:11px;font-weight:600;color:rgba(168,159,232,0.9);cursor:pointer;flex-shrink:0">— Album</div>
+    <!-- ACTIVITY TAB — who's going strip + chat, with RSVP/photo notifications interleaved inline -->
+    <div id="act-tab-activity" style="position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column">
+      <div id="act-detail-going" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.06)"></div>
+      <div id="act-detail-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
+        <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
+          <div style="font-size:30px">🎤</div>
+          <div style="font-size:14px;font-weight:700;color:white">No activity yet</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);max-width:220px;line-height:1.5">RSVPs, photos, and messages will show up here.</div>
+        </div>
+        <div id="act-detail-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
-      <button onclick="document.getElementById('act-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">＋ Add</button>
-      <input type="file" id="act-photo-input" accept="image/*" multiple style="display:none" onchange="addActPhoto(this)">
     </div>
-    <div id="act-detail-photos" style="position:relative;z-index:2;padding:6px 16px 14px;display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.08)"></div>
 
-    <div id="act-detail-chat" style="position:relative;z-index:2;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
-      <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
-        <div style="font-size:30px">🎤</div>
-        <div style="font-size:14px;font-weight:700;color:white">No messages yet</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.55);max-width:220px;line-height:1.5">Say what you're most excited to hear.</div>
+    <!-- PHOTOS TAB -->
+    <div id="act-tab-photos" style="position:relative;z-index:2;flex:1;min-height:0;display:none;flex-direction:column">
+      <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em">Photos</div>
+        <button onclick="document.getElementById('act-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+        <input type="file" id="act-photo-input" accept="image/*" multiple style="display:none" onchange="addActPhoto(this)">
       </div>
-      <div id="act-detail-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div id="act-detail-photos" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 16px;align-content:start"></div>
     </div>
-    <div style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;display:flex;flex-shrink:0">
+
+    <!-- SONGS TAB -->
+    <div id="act-tab-songs" style="position:relative;z-index:2;flex:1;min-height:0;display:none;flex-direction:column;overflow-y:auto">
+      <div style="padding:14px 16px 8px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0">Favorite songs</div>
+      <div style="padding:0 16px 10px;display:flex;gap:8px;flex-shrink:0">
+        <input id="act-song-input" placeholder="Add a song title" style="flex:1;font-size:13px;color:white;border:0.5px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 12px;outline:none;background:rgba(255,255,255,0.08);font-family:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();addActSong();}">
+        <button onclick="addActSong()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:12px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Add</button>
+      </div>
+      <div id="act-detail-songs" style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div id="act-detail-composer" style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;gap:10px;align-items:center;display:flex;flex-shrink:0">
       <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendActMessage();}">
       <button class="send-btn" onclick="sendActMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
@@ -1776,6 +1787,7 @@ function closeStage() {
 }
 
 function actRsvp2(btn, actName, val) {
+  var _prevRsvp = myRsvps[actName];
   myRsvps[actName] = val;
   var row = btn.parentNode;
   var btns = row.querySelectorAll('button');
@@ -1799,8 +1811,25 @@ function actRsvp2(btn, actName, val) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && window.db) {
     window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true })
+      .then(function(){ if (_prevRsvp !== val) _postActRsvpSystemMessage(actName, val); })
       .catch(function(err){ console.error('Act RSVP save error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
   }
+}
+
+// Drops a small activity line into the act's chat/notification feed
+// ("Jason is going ✓") whenever someone marks Going or Maybe, so the
+// Activity tab doubles as a log of who's committed to an act — not just a
+// message thread. Skipped for "no"/skip to keep the feed from filling with
+// negative RSVPs, and only fires on an actual change (guarded by the caller).
+function _postActRsvpSystemMessage(actName, val) {
+  if (val !== 'going' && val !== 'maybe') return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  var author = (window.userData && window.userData.name) || 'Someone';
+  var actId = _slugifyAct(actName);
+  var text = val === 'going' ? author + ' is going ✓' : author + ' might go';
+  window.db.collection('actChat').add({ actId: actId, actName: actName, uid: user.uid, author: author, text: text, ts: Date.now(), system: true, systemType: 'rsvp' })
+    .catch(function(err){ console.error('Post RSVP activity message error:', err); });
 }
 
 function updateMyFest() {
@@ -1874,21 +1903,19 @@ function setActDetailBg(url) {
 function renderActPhotos(photos) {
   var actId = window._actDetailCurrent && window._actDetailCurrent.actId;
   var primaryId = actId ? window._actPrimaryPhotoId[actId] : null;
-  var strip = document.getElementById('act-detail-photos');
-  if (strip) {
-    strip.innerHTML = photos.length
+  var grid = document.getElementById('act-detail-photos');
+  if (grid) {
+    grid.innerHTML = photos.length
       ? photos.map(function(p, i){
           var isPrimary = !!(primaryId && p._id === primaryId);
-          var star = isPrimary ? '<div style="position:absolute;bottom:2px;right:2px;width:15px;height:15px;border-radius:50%;background:rgba(168,159,232,0.95);display:flex;align-items:center;justify-content:center;font-size:9px;color:#0D0820">★</div>' : '';
-          return '<div onclick="openActPhoto(' + i + ')" style="position:relative;width:56px;height:56px;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer;flex-shrink:0' + (isPrimary ? ';outline:2px solid rgba(168,159,232,0.95);outline-offset:2px' : '') + '">' + star + '</div>';
+          var star = isPrimary ? '<div style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(168,159,232,0.95);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0D0820">★</div>' : '';
+          return '<div onclick="openActPhoto(' + i + ')" style="position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer' + (isPrimary ? ';outline:2px solid rgba(168,159,232,0.95);outline-offset:2px' : '') + '">' + star + '</div>';
         }).join('')
-      : '<div style="font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0">Be the first to add one</div>';
+      : '<div style="grid-column:1/-1;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);padding:40px 0">No photos yet — be the first to add one</div>';
   }
   var primaryMatch = primaryId ? photos.filter(function(p){ return p._id === primaryId; })[0] : null;
   var bgPhoto = primaryMatch ? primaryMatch.photo : (photos.length ? photos[0].photo : null);
   setActDetailBg(bgPhoto);
-  var albumBox = document.getElementById('act-photo-album');
-  if (albumBox && albumBox.style.display !== 'none') renderActAlbum(photos);
 }
 
 function startActPhotos(actId) {
@@ -1955,12 +1982,23 @@ function addActPhoto(input) {
     reader.onload = function(e){
       _downscaleImage(e.target.result, 1000, function(small){
         window.db.collection('actPhotos').add({ actId: actId, actName: actName, uid: user.uid, author: author, photo: small, ts: Date.now() })
+          .then(function(){ _postActPhotoSystemMessage(actId, actName, author); })
           .catch(function(err){ console.error('Add act photo error:', err); if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules'); });
       });
     };
     reader.readAsDataURL(file);
   });
   input.value = '';
+}
+
+// Mirrors _postActRsvpSystemMessage — drops "X added a photo 📷" into the
+// same act's chat/notification feed so the Activity tab shows it inline
+// with everything else, right as it happens.
+function _postActPhotoSystemMessage(actId, actName, author) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window.db.collection('actChat').add({ actId: actId, actName: actName, uid: user.uid, author: author || 'Someone', text: (author || 'Someone') + ' added a photo 📷', ts: Date.now(), system: true, systemType: 'photo' })
+    .catch(function(err){ console.error('Post photo activity message error:', err); });
 }
 
 window._actPhotoViewerIndex = 0;
@@ -2063,6 +2101,7 @@ function renderActAlbum(photos) {
 function openActDetail(actName, actTime, isHeadliner) {
   var actId = _slugifyAct(actName);
   window._actDetailCurrent = { name: actName, actId: actId };
+  _actResetTabsToActivity();
   renderActPhotos(window._actPhotosData[actId] || []);
   startActPhotos(actId);
   startActPrimaryPhoto(actId);
@@ -2247,13 +2286,14 @@ function renderActRsvpButtons(actName) {
 function actDetailRsvp(val) {
   if (!window._actDetailCurrent) return;
   var actName = window._actDetailCurrent.name;
+  var _prevRsvp = myRsvps[actName];
   myRsvps[actName] = val;
   window.userData = window.userData || {};
   window.userData.oslActRsvps = myRsvps;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && window.db) {
     window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true })
-      .then(function(){ loadActGoing(actName); })
+      .then(function(){ loadActGoing(actName); if (_prevRsvp !== val) _postActRsvpSystemMessage(actName, val); })
       .catch(function(err){ console.error('Act RSVP save error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
   }
   renderActRsvpButtons(actName);
@@ -2310,6 +2350,9 @@ function renderActChat(msgs) {
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
+    if (c.system) {
+      return '<div style="text-align:center;padding:2px 0 4px"><span style="font-size:11.5px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.07);padding:5px 12px;border-radius:12px;display:inline-block">' + _escapeHtml(c.text) + '</span></div>';
+    }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -2378,6 +2421,61 @@ function sendActMessage() {
     if (lp && lp.url) msgData.linkPreview = lp;
     return window.db.collection('actChat').add(msgData);
   }).catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+}
+
+function actTab(tab, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('#act-tabs .act-tab').forEach(function(t) {
+    t.style.color = 'rgba(255,255,255,0.4)';
+    t.style.fontWeight = '500';
+    t.style.borderBottom = '2px solid transparent';
+  });
+  if (evt && evt.target) {
+    evt.target.style.color = 'rgba(168,159,232,1)';
+    evt.target.style.fontWeight = '700';
+    evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  }
+  ['act-tab-activity','act-tab-photos','act-tab-songs'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var composer = document.getElementById('act-detail-composer');
+  if (tab === 'activity') {
+    document.getElementById('act-tab-activity').style.display = 'flex';
+    if (composer) composer.style.display = 'flex';
+  } else if (tab === 'photos') {
+    document.getElementById('act-tab-photos').style.display = 'flex';
+    if (composer) composer.style.display = 'none';
+  } else if (tab === 'songs') {
+    document.getElementById('act-tab-songs').style.display = 'flex';
+    if (composer) composer.style.display = 'none';
+  }
+}
+
+// Every time a different act is opened, land back on Activity rather than
+// whatever tab was showing for the last act — mirrors how the OSL group tabs
+// (osl2-lineup etc.) always default fresh, and avoids opening Charli XCX's
+// Songs tab because that's where you happened to leave Turnstile's.
+function _actResetTabsToActivity() {
+  document.querySelectorAll('#act-tabs .act-tab').forEach(function(t, i) {
+    if (i === 0) {
+      t.style.color = 'rgba(168,159,232,1)';
+      t.style.fontWeight = '700';
+      t.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+    } else {
+      t.style.color = 'rgba(255,255,255,0.4)';
+      t.style.fontWeight = '500';
+      t.style.borderBottom = '2px solid transparent';
+    }
+  });
+  var activity = document.getElementById('act-tab-activity');
+  var photos = document.getElementById('act-tab-photos');
+  var songs = document.getElementById('act-tab-songs');
+  var composer = document.getElementById('act-detail-composer');
+  if (activity) activity.style.display = 'flex';
+  if (photos) photos.style.display = 'none';
+  if (songs) songs.style.display = 'none';
+  if (composer) composer.style.display = 'flex';
 }
 
 function oslTab(tab, evt) {
@@ -2512,6 +2610,36 @@ function oslDay2(day) {
       <div class="sec-title">Friends</div>
       <div id="vp-friends-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
     </div>
+    <div id="vp-events-section" style="display:none;margin-top:20px;margin-bottom:20px">
+      <div class="sec-title">Events</div>
+      <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FRIEND'S FESTIVAL — read-only view of someone else's OSL picks ═══ -->
+<div class="screen" id="screen-their-festival">
+  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
+    <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
+      <button class="back-btn" onclick="closeTheirFestival()">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
+      </button>
+    </div>
+    <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:center;gap:12px">
+      <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎪</div>
+      <div>
+        <div id="their-festival-title" style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px">Their Festival</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Outside Lands 2026 · Aug 7–9</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll" id="their-festival-list" style="background:#0D0820"></div>
+  <div id="their-festival-empty" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px;background:#0D0820">
+    <div style="font-size:32px;margin-bottom:4px">🎪</div>
+    <div style="font-size:16px;font-weight:700;color:white">No picks yet</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.35);max-width:240px;line-height:1.6">They haven't marked any acts as Going or Maybe.</div>
   </div>
 </div>
 
@@ -3006,7 +3134,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.72.0-live-boxscore-and-scroll-nudge';
+window.INNINGS_BUILD = 'v4.73.0-artist-activity-tabs-and-friend-festivals';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7253,9 +7381,11 @@ function openUserProfile(uid) {
   var locEl = document.getElementById('vp-location');
   var areaEl = document.getElementById('vp-friend-area');
   var friendsSectionEl = document.getElementById('vp-friends-section');
+  var eventsSectionEl = document.getElementById('vp-events-section');
   if (nameEl) nameEl.textContent = 'Loading…';
   if (areaEl) areaEl.innerHTML = '';
   if (friendsSectionEl) friendsSectionEl.style.display = 'none';
+  if (eventsSectionEl) eventsSectionEl.style.display = 'none';
   _renderVpPhotos([]);
   ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '—'; });
   window.db.collection('users').doc(uid).get().then(function(doc){
@@ -7276,6 +7406,7 @@ function openUserProfile(uid) {
     }
     _renderVpPhotos(d.profilePhotos || []);
     _renderFriendArea(uid);
+    _renderVpEvents(uid, nm, d);
     _computeAndRenderUserStats(uid);
   }).catch(function(err){
     console.error('View profile error:', err);
@@ -7343,6 +7474,87 @@ function _computeAndRenderUserStats(uid) {
 function closeViewProfile() {
   if (window._vpPhotoTimer) { clearInterval(window._vpPhotoTimer); window._vpPhotoTimer = null; }
   _navApplyScreen(window._profileReturnTo || 'feed');
+}
+
+// ── EVENTS ON A PROFILE — shows Outside Lands under Friends if this person
+// has RSVP'd going/maybe, and lets you tap in to see their picks read-only.
+// Stashes the data in a plain object keyed by uid rather than embedding it
+// in the onclick attribute, so nothing has to be JSON-escaped into HTML.
+window._vpEventsData = window._vpEventsData || {};
+
+function _renderVpEvents(uid, name, d) {
+  var sectionEl = document.getElementById('vp-events-section');
+  var listEl = document.getElementById('vp-events-list');
+  if (!sectionEl || !listEl) return;
+  var rsvp = d.oslRsvp;
+  if (rsvp !== 'going' && rsvp !== 'maybe') { sectionEl.style.display = 'none'; return; }
+  window._vpEventsData[uid] = { name: name, actRsvps: d.oslActRsvps || {} };
+  sectionEl.style.display = 'block';
+  var badge = rsvp === 'going'
+    ? '<span style="background:var(--win-bg);color:var(--win);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0">GOING</span>'
+    : '<span style="background:#FEF3E2;color:#7A4F10;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0">MAYBE</span>';
+  listEl.innerHTML = '<div onclick="openTheirFestivalFor(\'' + uid + '\')" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+    '<div style="font-size:26px">🎪</div>' +
+    '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:white">Outside Lands 2026</div>' +
+    '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">Tap to see their picks →</div></div>' + badge +
+  '</div>';
+}
+
+function openTheirFestivalFor(uid) {
+  var data = window._vpEventsData[uid];
+  if (!data) return;
+  openTheirFestival(uid, data.name, data.actRsvps);
+}
+
+function openTheirFestival(uid, name, actRsvps) {
+  window._theirFestivalReturnTo = 'view-profile';
+  var titleEl = document.getElementById('their-festival-title');
+  if (titleEl) titleEl.textContent = (name || 'Their') + "'s Festival";
+  var listEl = document.getElementById('their-festival-list');
+  var emptyEl = document.getElementById('their-festival-empty');
+  var rsvps = actRsvps || {};
+  var going = Object.keys(rsvps).filter(function(k){ return rsvps[k] === 'going'; });
+  var maybe = Object.keys(rsvps).filter(function(k){ return rsvps[k] === 'maybe'; });
+
+  if (!going.length && !maybe.length) {
+    if (listEl) listEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'flex';
+    _navApplyScreen('their-festival');
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (listEl) listEl.style.display = 'flex';
+
+  // Same lookup updateMyFest() builds for your own picks, reused here for theirs.
+  var allActs = {};
+  Object.keys(stageData).forEach(function(day) {
+    Object.keys(stageData[day]).forEach(function(stage) {
+      stageData[day][stage].acts.forEach(function(act) {
+        allActs[act.name] = { time: act.time, stage: stageData[day][stage].name, day: stageData[day][stage].day, headliner: !!act.headliner };
+      });
+    });
+  });
+
+  var rows = going.map(function(n){ return { name: n, status: 'going' }; }).concat(maybe.map(function(n){ return { name: n, status: 'maybe' }; }));
+  listEl.innerHTML = rows.map(function(row){
+    var info = allActs[row.name] || {};
+    var isGoing = row.status === 'going';
+    var icon = isGoing
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
+    return '<div style="background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px">' +
+      '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + _escapeHtml(row.name) + '</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + _escapeHtml(info.stage || '') + ' · ' + _escapeHtml(info.time || 'TBD') + '</div></div>' +
+      '<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>' +
+    '</div>';
+  }).join('');
+
+  _navApplyScreen('their-festival');
+}
+
+function closeTheirFestival() {
+  _navApplyScreen(window._theirFestivalReturnTo || 'view-profile');
 }
 
 function _renderFriendArea(theirUid) {
