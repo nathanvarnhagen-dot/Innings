@@ -847,19 +847,41 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
     <!-- ── FUTURE STEP 1: INVITE DETAILS ── -->
     <div id="create-step-f1" style="display:none;flex-direction:column">
-      <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px">
-        <input id="future-title" placeholder="Give this a name" oninput="_updateAutoTicketLink()" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
-        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
+      <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px;position:relative;overflow:hidden">
+        <div id="future-hero-bg-photo" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 0.2s"></div>
+        <div id="future-hero-overlay" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.55));opacity:0;transition:opacity 0.2s;pointer-events:none"></div>
+        <div style="position:relative;z-index:2">
+          <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
+          <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
+        </div>
       </div>
 
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>
-        <div style="display:flex;gap:10px" id="future-theme-pills">
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);cursor:pointer;border:2px solid #0D0820"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%);cursor:pointer;border:2px solid transparent"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F472B6 0%,#FB923C 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F472B6 0%,#FB923C 100%);cursor:pointer;border:2px solid transparent"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%);cursor:pointer;border:2px solid transparent"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FBBF24 0%,#F87171 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FBBF24 0%,#F87171 100%);cursor:pointer;border:2px solid transparent"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px" id="future-theme-pills">
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);cursor:pointer;border:2px solid #0D0820;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F472B6 0%,#FB923C 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F472B6 0%,#FB923C 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FBBF24 0%,#F87171 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FBBF24 0%,#F87171 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#34D399 0%,#3B82F6 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#34D399 0%,#3B82F6 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F87171 0%,#EC4899 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F87171 0%,#EC4899 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FACC15 0%,#4ADE80 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FACC15 0%,#4ADE80 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#818CF8 0%,#F472B6 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#818CF8 0%,#F472B6 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Cover photo</div>
+        <input type="file" id="future-cover-input" accept="image/*" style="display:none" onchange="previewFutureCoverPhoto(this)">
+        <div style="position:relative">
+          <div id="future-cover-preview" style="width:100%;height:110px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center" onclick="document.getElementById('future-cover-input').click()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div style="font-size:12px;color:var(--subtle);font-weight:500">Add a cover photo</div>
+            <div style="font-size:10px;color:var(--subtle);opacity:0.6;text-align:center;padding:0 12px">optional — shown wherever this plan appears</div>
+          </div>
+          <button id="future-cover-remove" onclick="event.stopPropagation();removeFutureCoverPhoto()" style="display:none;position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(10,10,15,0.6);border:none;color:white;font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;font-family:inherit">✕</button>
         </div>
       </div>
 
@@ -878,20 +900,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px" id="future-vibe-pills">
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--indigo-light);border:0.5px solid transparent;font-size:13px;font-weight:600;color:var(--indigo);cursor:pointer">⚾ Game</div>
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎪 Festival</div>
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🎵 Concert</div>
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">🍺 Hangout</div>
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">✈️ Trip</div>
-          <div onclick="selectFutureVibe(this)" style="padding:8px 14px;border-radius:20px;background:var(--bg);border:0.5px solid var(--rule);font-size:13px;font-weight:500;color:var(--subtle);cursor:pointer">+ Other</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="future-vibe-pills"></div>
+        <div id="future-other-input-row" style="display:none;gap:8px;margin-top:10px">
+          <input id="future-other-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:12px 0;outline:none;font-family:inherit;background:var(--bg)" placeholder="🏷️" oninput="_syncFutureOtherVibe()">
+          <input id="future-other-label" style="flex:1;font-size:15px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit" placeholder="What kind of plan is this?" oninput="_syncFutureOtherVibe()">
         </div>
       </div>
 
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>
-        <input id="future-ticket-link" placeholder="Paste a ticket link, or we'll suggest one" oninput="futureTicketLinkEdited()" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">
-        <div id="future-ticket-hint" style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Games, festivals, and concerts get a SeatGeek search link automatically — everyone invited can tap it to buy their own tickets. Edit or replace it with a direct link anytime.</div>
+        <input id="future-ticket-link" placeholder="Paste a ticket link (SeatGeek, Ticketmaster, etc.)" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">
+        <div id="future-ticket-hint" style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Optional — everyone invited will see a "Get Tickets" button that opens this link.</div>
       </div>
 
       <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
@@ -3160,7 +3179,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.76.0-ticket-links';
+window.INNINGS_BUILD = 'v4.77.0-custom-vibes-covers-manual-tickets';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3343,6 +3362,7 @@ function goToFutureStep(n) {
   var s2 = document.getElementById('create-step-f2');
   if (s1) s1.style.display = n === 1 ? 'flex' : 'none';
   if (s2) s2.style.display = n === 2 ? 'flex' : 'none';
+  if (n === 1 && typeof renderFutureVibePills === 'function') renderFutureVibePills();
   if (n === 2 && typeof loadFutureFriendPicker === 'function') loadFutureFriendPicker();
   var container = document.getElementById('screen-create-group');
   if (container) {
@@ -3360,60 +3380,121 @@ function selectFutureTheme(el, gradient) {
   if (hero) hero.style.background = gradient;
 }
 
-function selectFutureVibe(el) {
-  var pills = document.querySelectorAll('#future-vibe-pills > div');
-  pills.forEach(function(p) {
-    p.style.background = '#F6F6F9';
-    p.style.color = '#8E8EA8';
-    p.style.fontWeight = '500';
-    p.style.borderColor = '#EAEAF0';
-  });
-  el.style.background = '#EEEDF8';
-  el.style.color = '#3D3580';
-  el.style.fontWeight = '600';
-  el.style.borderColor = 'transparent';
-  window._futureVibe = el.textContent.trim();
-  _updateAutoTicketLink();
+// ── COVER PHOTO — an optional photo shown behind the title in the hero,
+// and used as the card background everywhere this plan appears (Feed,
+// Calendar/Memories, the detail screen). Falls back to the plain theme
+// gradient when none is set. Mirrors the main-photo-preview pattern from
+// Create Moment: a dashed placeholder tile that becomes the photo once
+// picked, with a small ✕ overlay to clear it.
+function previewFutureCoverPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _downscaleImage(e.target.result, 1200, function(small) {
+      window._futureCoverPhoto = small;
+      var preview = document.getElementById('future-cover-preview');
+      if (preview) {
+        preview.style.backgroundImage = 'url(' + small + ')';
+        preview.style.border = 'none';
+        preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = 'none'; });
+      }
+      var removeBtn = document.getElementById('future-cover-remove');
+      if (removeBtn) removeBtn.style.display = 'flex';
+      _applyFutureHeroCoverPhoto(small);
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
 }
 
-// ── TICKET LINKS — auto-suggested for ticketed vibes, always manually
-// overridable ──
-// There's no SeatGeek client_id wired into this app (unlike the free MLB
-// Stats API and iTunes Search API lookups used elsewhere), and SeatGeek's
-// own search page doesn't have a documented, reliable query-string format
-// we can safely guess at for an arbitrary title — getting that wrong would
-// mean silently handing friends a dead link, which is worse than not
-// auto-filling at all. A site-restricted Google search is the one
-// construction that's actually guaranteed to land on the real SeatGeek
-// listing regardless of how the title is worded. If a SeatGeek client_id
-// is ever added (see api/mlb.js for the existing serverless-proxy pattern
-// this would follow), this is the spot to swap in a resolved direct link.
-window._futureTicketLinkAuto = true;
+function _resetFutureCoverPreviewUI() {
+  var preview = document.getElementById('future-cover-preview');
+  if (preview) {
+    preview.style.backgroundImage = '';
+    preview.style.border = '1.5px dashed var(--rule)';
+    preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = ''; });
+  }
+  var removeBtn = document.getElementById('future-cover-remove');
+  if (removeBtn) removeBtn.style.display = 'none';
+  var input = document.getElementById('future-cover-input');
+  if (input) input.value = '';
+  _applyFutureHeroCoverPhoto('');
+}
+
+function removeFutureCoverPhoto() {
+  window._futureCoverPhoto = null;
+  _resetFutureCoverPreviewUI();
+}
+
+function _applyFutureHeroCoverPhoto(url) {
+  var bgEl = document.getElementById('future-hero-bg-photo');
+  var overlayEl = document.getElementById('future-hero-overlay');
+  if (bgEl) {
+    bgEl.style.backgroundImage = url ? 'url(' + url + ')' : '';
+    bgEl.style.opacity = url ? '1' : '0';
+  }
+  if (overlayEl) overlayEl.style.opacity = url ? '1' : '0';
+}
+
+// ── FUTURE PLAN VIBES — fixed categories, plus any custom vibes the person
+// has created (shared with the past-moment "vibe" bank via customVibes on
+// their user doc, so a vibe made here shows up there too and vice versa),
+// plus an always-present "+ Other" that reveals an emoji + label pair for
+// defining a one-off (or new reusable) vibe on the spot.
+var FUTURE_VIBE_FIXED = ['⚾ Game','🎪 Festival','🎵 Concert','🍺 Hangout','✈️ Trip'];
 window._futureVibe = window._futureVibe || '⚾ Game';
+window._futureVibeMode = window._futureVibeMode || 'fixed';
 
-function _ticketableVibe(vibe) {
-  return ['⚾ Game', '🎪 Festival', '🎵 Concert'].indexOf(vibe) !== -1;
+function renderFutureVibePills() {
+  var container = document.getElementById('future-vibe-pills');
+  if (!container) return;
+  var custom = (window.userData && window.userData.customVibes) || [];
+  var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
+  var all = FUTURE_VIBE_FIXED.concat(customStrs);
+  var current = window._futureVibe || '⚾ Game';
+  var isOther = window._futureVibeMode === 'other';
+  container.innerHTML = all.map(function(v){
+    var active = !isOther && v === current;
+    return '<div onclick="selectFutureVibe(this,\'' + v.replace(/'/g, "\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (active ? '600' : '500') + ';color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + _escapeHtml(v) + '</div>';
+  }).join('') +
+  '<div onclick="selectFutureOther()" style="padding:8px 14px;border-radius:20px;background:' + (isOther ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (isOther ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (isOther ? '600' : '500') + ';color:' + (isOther ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">+ Other</div>';
+  var row = document.getElementById('future-other-input-row');
+  if (row) row.style.display = isOther ? 'flex' : 'none';
 }
 
-function _suggestedTicketLink(title) {
-  return 'https://www.google.com/search?q=' + encodeURIComponent('site:seatgeek.com ' + title);
+function selectFutureVibe(el, v) {
+  window._futureVibeMode = 'fixed';
+  window._futureVibe = v;
+  renderFutureVibePills();
 }
 
-// Only re-suggests while the owner hasn't touched the field themselves —
-// futureTicketLinkEdited() (bound to the input's oninput) flips the flag
-// the moment they type or paste anything of their own.
-function _updateAutoTicketLink() {
-  if (window._futureTicketLinkAuto === false) return;
-  var linkEl = document.getElementById('future-ticket-link');
-  if (!linkEl) return;
-  if (!_ticketableVibe(window._futureVibe || '')) return;
-  var titleEl = document.getElementById('future-title');
-  var title = titleEl ? titleEl.value.trim() : '';
-  linkEl.value = title ? _suggestedTicketLink(title) : '';
+function selectFutureOther() {
+  window._futureVibeMode = 'other';
+  var emojiEl = document.getElementById('future-other-emoji');
+  var labelEl = document.getElementById('future-other-label');
+  if (emojiEl) emojiEl.value = '';
+  if (labelEl) labelEl.value = '';
+  window._futureVibe = '';
+  renderFutureVibePills();
+  if (labelEl) setTimeout(function(){ labelEl.focus(); }, 50);
 }
 
-function futureTicketLinkEdited() {
-  window._futureTicketLinkAuto = false;
+function _syncFutureOtherVibe() {
+  var emojiEl = document.getElementById('future-other-emoji');
+  var labelEl = document.getElementById('future-other-label');
+  var emoji = emojiEl ? emojiEl.value.trim() : '';
+  var label = labelEl ? labelEl.value.trim() : '';
+  window._futureVibe = label ? (emoji || '🏷️') + ' ' + label : '';
+}
+
+// A custom "Other" vibe gets saved to the shared bank so it shows up as its
+// own quick-pick pill next time — here and in the past-moment flow. Guards
+// against re-saving any of this screen's own fixed categories (which could
+// otherwise happen since FUTURE_VIBE_FIXED and the past-moment VIBE_EXAMPLES
+// list differ slightly, e.g. "Concert" isn't one of the past-moment ones).
+function _persistCustomVibeIfNewFromFuture(vibeStr) {
+  if (!vibeStr) return;
+  if (FUTURE_VIBE_FIXED.indexOf(vibeStr) !== -1) return;
+  _persistCustomVibeIfNew(vibeStr);
 }
 
 window._futurePublic = false;
@@ -3485,6 +3566,7 @@ function saveFutureMoment() {
   var vibe = window._futureVibe || '⚾ Game';
   var ticketLinkEl = document.getElementById('future-ticket-link');
   var ticketLink = ticketLinkEl && ticketLinkEl.value.trim() ? ticketLinkEl.value.trim() : '';
+  var coverPhoto = window._futureCoverPhoto || '';
   var invitees = (window._futureInvitees || []).slice();
   var ownerName = (window.userData && window.userData.name) || 'You';
 
@@ -3500,12 +3582,14 @@ function saveFutureMoment() {
     theme: theme,
     vibe: vibe,
     ticketLink: ticketLink,
+    coverPhoto: coverPhoto,
     taggedUids: invitees,
     public: !!window._futurePublic,
     rsvps: {},
     ts: Date.now()
   }).then(function(){
     _savingFuture = false;
+    _persistCustomVibeIfNewFromFuture(vibe);
     resetFutureForm();
     if (typeof ib_toast === 'function') ib_toast('Invite sent 🎉');
     nav('feed');
@@ -3522,9 +3606,15 @@ function resetFutureForm() {
   var tm = document.getElementById('future-time'); if (tm) tm.value = '';
   var l = document.getElementById('future-location'); if (l) l.value = '';
   var tl = document.getElementById('future-ticket-link'); if (tl) tl.value = '';
-  window._futureTicketLinkAuto = true;
+  var oe = document.getElementById('future-other-emoji'); if (oe) oe.value = '';
+  var ol = document.getElementById('future-other-label'); if (ol) ol.value = '';
+  window._futureCoverPhoto = null;
+  _resetFutureCoverPreviewUI();
   window._futureTheme = null;
+  var heroEl = document.getElementById('future-hero');
+  if (heroEl) heroEl.style.background = 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
   window._futureVibe = '⚾ Game';
+  window._futureVibeMode = 'fixed';
   window._futureInvitees = [];
   window._futurePublic = false;
   var track = document.getElementById('future-public-toggle');
@@ -4589,6 +4679,19 @@ function _ticketButtonHtml(m) {
   return '<a href="' + _escapeHtml(m.ticketLink) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;background:rgba(255,255,255,0.22);color:white;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:inherit">🎟️ Tickets</a>';
 }
 
+// Shared background for a future plan's hero and card everywhere it shows
+// up (Feed, Calendar/Memories, the detail screen) — a cover photo with a
+// dark scrim so the white text stays legible, or the plain theme gradient
+// when no photo's been set. Returns a CSS declaration with no trailing
+// semicolon, meant to be dropped straight into a style attribute.
+function _futureBgStyle(m) {
+  var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
+  if (m.coverPhoto) {
+    return 'background-image:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.6)),url(' + m.coverPhoto + ');background-size:cover;background-position:center';
+  }
+  return 'background:' + theme;
+}
+
 function loadFutureMoments() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
@@ -4620,7 +4723,7 @@ function loadFutureMoments() {
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -4685,7 +4788,7 @@ function loadFeedMoments() {
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,0.2);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)') + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
           '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
           (m.public ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px">🌎 Public</div>' : '') +
@@ -4778,7 +4881,6 @@ function exitFutureEdit() {
 function renderFutureView(m) {
   var box = document.getElementById('fd-scroll');
   if (!box) return;
-  var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   var isOwner = !!(user && m.ownerUid === user.uid);
   var myRsvp = user ? ((m.rsvps || {})[user.uid] || '') : '';
@@ -4798,7 +4900,7 @@ function renderFutureView(m) {
     : '';
 
   box.innerHTML =
-    '<div style="background:' + theme + ';padding:26px 20px">' +
+    '<div style="' + _futureBgStyle(m) + ';padding:26px 20px">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + (m.public ? '  ·  🌎 Public' : '') + '</div>' +
       '<div style="font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
       '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -4959,15 +5061,16 @@ function renderFutureEdit(m) {
   var box = document.getElementById('fd-scroll');
   if (!box) return;
   var theme = m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
-  var vibes = ['⚾ Game','🎪 Festival','🎵 Concert','🍺 Hangout','✈️ Trip','+ Other'];
-  var vibePills = vibes.map(function(v){
-    var active = (m.vibe||'') === v;
-    return '<div onclick="fdSelectVibe(this,\'' + v.replace(/'/g,"\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:' + (active?'var(--indigo-light)':'var(--bg)') + ';border:0.5px solid ' + (active?'transparent':'var(--rule)') + ';font-size:13px;font-weight:' + (active?'600':'500') + ';color:' + (active?'var(--indigo)':'var(--subtle)') + ';cursor:pointer">' + v + '</div>';
-  }).join('');
-  var themes = ['linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)','linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)','linear-gradient(135deg,#F472B6 0%,#FB923C 100%)','linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)','linear-gradient(135deg,#FBBF24 0%,#F87171 100%)'];
+  var custom = (window.userData && window.userData.customVibes) || [];
+  var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
+  var knownVibes = FUTURE_VIBE_FIXED.concat(customStrs);
+  var savedVibe = m.vibe || '⚾ Game';
+  window._fdVibe = savedVibe;
+  window._fdVibeMode = knownVibes.indexOf(savedVibe) !== -1 ? 'fixed' : 'other';
+  var themes = ['linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)','linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)','linear-gradient(135deg,#F472B6 0%,#FB923C 100%)','linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)','linear-gradient(135deg,#FBBF24 0%,#F87171 100%)','linear-gradient(135deg,#34D399 0%,#3B82F6 100%)','linear-gradient(135deg,#F87171 0%,#EC4899 100%)','linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%)','linear-gradient(135deg,#FACC15 0%,#4ADE80 100%)','linear-gradient(135deg,#818CF8 0%,#F472B6 100%)'];
   var themeSwatches = themes.map(function(t){
     var active = t === theme;
-    return '<div onclick="fdSelectTheme(this,\'' + t + '\')" style="width:34px;height:34px;border-radius:50%;background:' + t + ';cursor:pointer;border:2px solid ' + (active?'#0D0820':'transparent') + '"></div>';
+    return '<div onclick="fdSelectTheme(this,\'' + t + '\')" style="width:34px;height:34px;border-radius:50%;background:' + t + ';cursor:pointer;border:2px solid ' + (active?'#0D0820':'transparent') + ';flex-shrink:0"></div>';
   }).join('');
   var fdBoxScoreHtml = m.boxScore ?
     _boxScoreCardHtml(m.boxScore, false) +
@@ -4977,13 +5080,33 @@ function renderFutureEdit(m) {
       '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--black)">Attach a box score</div><div style="font-size:11px;color:var(--subtle)">Pulls the final score once the game\'s in</div></div>' +
     '</div>';
 
+  window._fdCoverPhoto = m.coverPhoto || '';
+  var fdCoverHasPhoto = !!m.coverPhoto;
+
   box.innerHTML =
-    '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px">' +
-      '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" oninput="_fdUpdateAutoTicketLink()" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">' +
+    '<div id="fd-hero" style="background:' + theme + ';padding:28px 20px;position:relative;overflow:hidden">' +
+      '<div id="fd-hero-bg-photo" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:' + (fdCoverHasPhoto ? '1' : '0') + ';transition:opacity 0.2s' + (fdCoverHasPhoto ? ';background-image:url(' + m.coverPhoto + ')' : '') + '"></div>' +
+      '<div id="fd-hero-overlay" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.55));opacity:' + (fdCoverHasPhoto ? '1' : '0') + ';transition:opacity 0.2s;pointer-events:none"></div>' +
+      '<div style="position:relative;z-index:2">' +
+        '<input id="fd-title" value="' + _escapeHtml(m.title || '') + '" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">' +
+      '</div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>' +
-      '<div style="display:flex;gap:10px" id="fd-theme-pills">' + themeSwatches + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:10px" id="fd-theme-pills">' + themeSwatches + '</div>' +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Cover photo</div>' +
+      '<input type="file" id="fd-cover-input" accept="image/*" style="display:none" onchange="fdPreviewCoverPhoto(this)">' +
+      '<div style="position:relative">' +
+        '<div id="fd-cover-preview" style="width:100%;height:110px;border-radius:14px;background:var(--bg);border:' + (fdCoverHasPhoto ? 'none' : '1.5px dashed var(--rule)') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center' + (fdCoverHasPhoto ? ';background-image:url(' + m.coverPhoto + ')' : '') + '" onclick="document.getElementById(\'fd-cover-input\').click()">' +
+          (fdCoverHasPhoto ? '' :
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+            '<div style="font-size:12px;color:var(--subtle);font-weight:500">Add a cover photo</div>' +
+            '<div style="font-size:10px;color:var(--subtle);opacity:0.6;text-align:center;padding:0 12px">optional — shown wherever this plan appears</div>') +
+        '</div>' +
+        '<button id="fd-cover-remove" onclick="event.stopPropagation();fdRemoveCoverPhoto()" style="display:' + (fdCoverHasPhoto ? 'flex' : 'none') + ';position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(10,10,15,0.6);border:none;color:white;font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;font-family:inherit">✕</button>' +
+      '</div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">' +
       '<div style="font-size:14px;font-weight:600;color:var(--black)">Date</div>' +
@@ -5003,12 +5126,16 @@ function renderFutureEdit(m) {
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px" id="fd-vibe-pills">' + vibePills + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px" id="fd-vibe-pills"></div>' +
+      '<div id="fd-other-input-row" style="display:none;gap:8px;margin-top:10px">' +
+        '<input id="fd-other-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:12px 0;outline:none;font-family:inherit;background:var(--bg)" placeholder="🏷️" oninput="_syncFdOtherVibe()">' +
+        '<input id="fd-other-label" style="flex:1;font-size:15px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit" placeholder="What kind of plan is this?" oninput="_syncFdOtherVibe()">' +
+      '</div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>' +
-      '<input id="fd-ticket-link" value="' + _escapeHtml(m.ticketLink || '') + '" placeholder="Paste a ticket link, or we\'ll suggest one" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">' +
-      (m.ticketLink ? '<div onclick="document.getElementById(\'fd-ticket-link\').value=\'\'" style="font-size:11px;color:var(--subtle);font-weight:600;cursor:pointer;margin-top:6px">Clear link</div>' : '<div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Games, festivals, and concerts get a SeatGeek search link automatically once there\'s a title.</div>') +
+      '<input id="fd-ticket-link" value="' + _escapeHtml(m.ticketLink || '') + '" placeholder="Paste a ticket link (SeatGeek, Ticketmaster, etc.)" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">' +
+      (m.ticketLink ? '<div onclick="document.getElementById(\'fd-ticket-link\').value=\'\'" style="font-size:11px;color:var(--subtle);font-weight:600;cursor:pointer;margin-top:6px">Clear link</div>' : '<div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Optional — everyone invited will see a "Get Tickets" button that opens this link.</div>') +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Who\'s invited</div>' +
@@ -5036,10 +5163,10 @@ function renderFutureEdit(m) {
     '</div>';
 
   window._fdTheme = theme;
-  window._fdVibe = m.vibe || '⚾ Game';
   window._fdInvitees = (m.taggedUids || []).slice();
   window._fdPublic = !!m.public;
   renderFdGuestList(m);
+  renderFdVibePills();
 }
 
 function fdTogglePublic() {
@@ -5150,33 +5277,106 @@ function fdSelectTheme(el, gradient) {
   if (hero) hero.style.background = gradient;
 }
 
-function fdSelectVibe(el, v) {
-  var pills = document.querySelectorAll('#fd-vibe-pills > div');
-  pills.forEach(function(p) {
-    p.style.background = 'var(--bg)';
-    p.style.color = 'var(--subtle)';
-    p.style.fontWeight = '500';
-    p.style.borderColor = 'var(--rule)';
-  });
-  el.style.background = 'var(--indigo-light)';
-  el.style.color = 'var(--indigo)';
-  el.style.fontWeight = '600';
-  el.style.borderColor = 'transparent';
-  window._fdVibe = v;
-  _fdUpdateAutoTicketLink();
+function fdPreviewCoverPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _downscaleImage(e.target.result, 1200, function(small) {
+      window._fdCoverPhoto = small;
+      var preview = document.getElementById('fd-cover-preview');
+      if (preview) {
+        preview.style.backgroundImage = 'url(' + small + ')';
+        preview.style.border = 'none';
+        preview.innerHTML = '';
+      }
+      var removeBtn = document.getElementById('fd-cover-remove');
+      if (removeBtn) removeBtn.style.display = 'flex';
+      _applyFdHeroCoverPhoto(small);
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
 }
 
-// Edit-view counterpart to _updateAutoTicketLink() in the create flow —
-// deliberately more conservative here: it only fills the field while it's
-// still empty, so opening an already-ticketed plan to tweak the date or
-// location can never silently overwrite a link that's already saved.
-function _fdUpdateAutoTicketLink() {
-  var linkEl = document.getElementById('fd-ticket-link');
-  if (!linkEl || linkEl.value.trim()) return;
-  if (!_ticketableVibe(window._fdVibe || '')) return;
-  var titleEl = document.getElementById('fd-title');
-  var title = titleEl ? titleEl.value.trim() : '';
-  linkEl.value = title ? _suggestedTicketLink(title) : '';
+function fdRemoveCoverPhoto() {
+  window._fdCoverPhoto = '';
+  var preview = document.getElementById('fd-cover-preview');
+  if (preview) {
+    preview.style.backgroundImage = '';
+    preview.style.border = '1.5px dashed var(--rule)';
+    preview.innerHTML =
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+      '<div style="font-size:12px;color:var(--subtle);font-weight:500">Add a cover photo</div>' +
+      '<div style="font-size:10px;color:var(--subtle);opacity:0.6;text-align:center;padding:0 12px">optional — shown wherever this plan appears</div>';
+  }
+  var removeBtn = document.getElementById('fd-cover-remove');
+  if (removeBtn) removeBtn.style.display = 'none';
+  var input = document.getElementById('fd-cover-input');
+  if (input) input.value = '';
+  _applyFdHeroCoverPhoto('');
+}
+
+function _applyFdHeroCoverPhoto(url) {
+  var bgEl = document.getElementById('fd-hero-bg-photo');
+  var overlayEl = document.getElementById('fd-hero-overlay');
+  if (bgEl) {
+    bgEl.style.backgroundImage = url ? 'url(' + url + ')' : '';
+    bgEl.style.opacity = url ? '1' : '0';
+  }
+  if (overlayEl) overlayEl.style.opacity = url ? '1' : '0';
+}
+
+function renderFdVibePills() {
+  var container = document.getElementById('fd-vibe-pills');
+  if (!container) return;
+  var custom = (window.userData && window.userData.customVibes) || [];
+  var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
+  var all = FUTURE_VIBE_FIXED.concat(customStrs);
+  var current = window._fdVibe || '⚾ Game';
+  var isOther = window._fdVibeMode === 'other';
+  container.innerHTML = all.map(function(v){
+    var active = !isOther && v === current;
+    return '<div onclick="fdSelectVibe(this,\'' + v.replace(/'/g, "\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (active ? '600' : '500') + ';color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + _escapeHtml(v) + '</div>';
+  }).join('') +
+  '<div onclick="fdSelectOther()" style="padding:8px 14px;border-radius:20px;background:' + (isOther ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (isOther ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (isOther ? '600' : '500') + ';color:' + (isOther ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">+ Other</div>';
+  var row = document.getElementById('fd-other-input-row');
+  if (row) row.style.display = isOther ? 'flex' : 'none';
+  if (isOther) {
+    var emojiEl = document.getElementById('fd-other-emoji');
+    var labelEl = document.getElementById('fd-other-label');
+    if (emojiEl && labelEl && !labelEl.value && current) {
+      var parts = current.split(' ');
+      emojiEl.value = parts[0] || '';
+      labelEl.value = parts.slice(1).join(' ');
+    }
+  }
+}
+
+function fdSelectVibe(el, v) {
+  window._fdVibeMode = 'fixed';
+  window._fdVibe = v;
+  renderFdVibePills();
+}
+
+function fdSelectOther() {
+  window._fdVibeMode = 'other';
+  var emojiEl = document.getElementById('fd-other-emoji');
+  var labelEl = document.getElementById('fd-other-label');
+  var wasCustom = FUTURE_VIBE_FIXED.indexOf(window._fdVibe || '') === -1;
+  if (!wasCustom) {
+    if (emojiEl) emojiEl.value = '';
+    if (labelEl) labelEl.value = '';
+    window._fdVibe = '';
+  }
+  renderFdVibePills();
+  if (labelEl && !labelEl.value) setTimeout(function(){ labelEl.focus(); }, 50);
+}
+
+function _syncFdOtherVibe() {
+  var emojiEl = document.getElementById('fd-other-emoji');
+  var labelEl = document.getElementById('fd-other-label');
+  var emoji = emojiEl ? emojiEl.value.trim() : '';
+  var label = labelEl ? labelEl.value.trim() : '';
+  window._fdVibe = label ? (emoji || '🏷️') + ' ' + label : '';
 }
 
 function futureDetailSave() {
@@ -5188,6 +5388,7 @@ function futureDetailSave() {
   var l = document.getElementById('fd-location');
   var tl = document.getElementById('fd-ticket-link');
   var ticketLink = tl && tl.value.trim() ? tl.value.trim() : '';
+  var coverPhoto = window._fdCoverPhoto || '';
   window.db.collection('futureMoments').doc(id).update({
     title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
     date: d ? d.value : '',
@@ -5196,10 +5397,12 @@ function futureDetailSave() {
     theme: window._fdTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
     vibe: window._fdVibe || '⚾ Game',
     ticketLink: ticketLink,
+    coverPhoto: coverPhoto,
     taggedUids: window._fdInvitees || [],
     public: !!window._fdPublic
   }).then(function(){
     if (typeof ib_toast === 'function') ib_toast('Plan updated');
+    _persistCustomVibeIfNewFromFuture(window._fdVibe || '⚾ Game');
     if (typeof loadFutureMoments === 'function') loadFutureMoments();
     if (typeof loadFeedMoments === 'function') loadFeedMoments();
     var m = (window._futureMomentsCache || {})[id];
@@ -5211,6 +5414,7 @@ function futureDetailSave() {
       m.theme = window._fdTheme || m.theme;
       m.vibe = window._fdVibe || m.vibe;
       m.ticketLink = ticketLink;
+      m.coverPhoto = coverPhoto;
       m.taggedUids = window._fdInvitees || [];
       m.public = !!window._fdPublic;
     }
