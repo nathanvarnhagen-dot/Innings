@@ -3201,7 +3201,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.80.0-official-osl-set-times';
+window.INNINGS_BUILD = 'v4.81.0-fix-profile-memory-tap';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5545,9 +5545,28 @@ window._mdPhotoTimer = null;
 
 function openMemory(id, returnTo) {
   var m = _findMoment(id);
-  if (!m) return;
+  if (m) { _openMemoryWithData(m, returnTo); return; }
+  // Not in any local cache — this can happen for a memory only ever seen
+  // via someone's profile stats query. Rather than silently doing nothing
+  // (the previous behavior — a tap that looked like it did nothing at
+  // all), fetch it directly, same as the shared-memory path already does.
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  window._openMomentId = id;
+  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in first'); return; }
+  window.db.collection('users').doc(user.uid).collection('moments').doc(id).get().then(function(doc){
+    if (!doc.exists) { if (typeof ib_toast === 'function') ib_toast('That memory is no longer available'); return; }
+    var d = Object.assign({ _id: doc.id }, doc.data());
+    window._foreignMomentCache = window._foreignMomentCache || {};
+    window._foreignMomentCache[id] = d;
+    _openMemoryWithData(d, returnTo);
+  }).catch(function(err){
+    console.error('Open memory fallback fetch error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not open that memory — try again');
+  });
+}
+
+function _openMemoryWithData(m, returnTo) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  window._openMomentId = m._id;
   window._openMomentOwnerUid = user ? user.uid : null;
   window._memoryReturnTo = returnTo || 'memories';
   window._memoryDetailMode = 'view';
@@ -8042,17 +8061,13 @@ function _renderVpSharedMemories(memories) {
   }
   if (emptyEl) emptyEl.style.display = 'none';
   listEl.style.display = 'grid';
-  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
-  listEl.innerHTML = memories.map(function(m){
+  window._vpSharedMemoriesData = memories;
+  listEl.innerHTML = memories.map(function(m, i){
     var emoji = (m.vibe || '⚾').trim().split(' ')[0];
-    var isMine = m._ownerUid === myUid;
     var imgStyle = m.photo
       ? 'background-image:url(' + m.photo + ');background-size:cover;background-position:center'
       : 'background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%)';
-    var onclick = isMine
-      ? "openMemory('" + m._id + "','view-profile')"
-      : "openSharedMemory('" + m._ownerUid + "','" + m._id + "','view-profile')";
-    return '<div onclick="' + onclick + '" style="cursor:pointer;background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--rule);box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
+    return '<div onclick="_openVpSharedMemory(' + i + ')" style="cursor:pointer;background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--rule);box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
       '<div style="height:88px;' + imgStyle + ';display:flex;align-items:center;justify-content:center;font-size:26px">' + (m.photo ? '' : _escapeHtml(emoji)) + '</div>' +
       '<div style="padding:10px 12px">' +
         '<div style="font-size:13px;font-weight:700;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
@@ -8060,6 +8075,21 @@ function _renderVpSharedMemories(memories) {
       '</div>' +
     '</div>';
   }).join('');
+}
+
+// Looked up by index rather than passing IDs through the onclick string —
+// a memory's _id/_ownerUid should always be attribute-safe, but this
+// removes that class of doubt entirely and gives one place to fix if the
+// mine-vs-theirs routing itself is ever wrong.
+function _openVpSharedMemory(i) {
+  var m = (window._vpSharedMemoriesData || [])[i];
+  if (!m) { if (typeof ib_toast === 'function') ib_toast('Could not open that memory'); return; }
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  if (m._ownerUid === myUid) {
+    openMemory(m._id, 'view-profile');
+  } else {
+    openSharedMemory(m._ownerUid, m._id, 'view-profile');
+  }
 }
 
 function closeViewProfile() {
