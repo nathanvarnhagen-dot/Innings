@@ -2858,6 +2858,7 @@ function oslDay2(day) {
 
 
     <!-- REAL SAVED MOMENTS render here (newest first) -->
+    <div id="past-memories-title" style="display:none;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Past Memories</div>
     <div id="mem-list" style="display:flex;flex-direction:column;gap:12px"></div>
 
     <!-- EMPTY STATE -->
@@ -3179,7 +3180,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.77.0-custom-vibes-covers-manual-tickets';
+window.INNINGS_BUILD = 'v4.78.0-past-memories-divider';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5446,10 +5447,12 @@ function renderMoments(moments) {
   var list = document.getElementById('mem-list');
   var empty = document.getElementById('mem-empty');
   var count = document.getElementById('mem-count');
+  var pastTitle = document.getElementById('past-memories-title');
   if (count) count.textContent = moments.length;
 
   var hasReal = moments.length > 0;
   if (empty) empty.style.display = hasReal ? 'none' : 'flex';
+  if (pastTitle) pastTitle.style.display = hasReal ? 'block' : 'none';
   if (!list) return;
 
   list.innerHTML = moments.map(function(m) {
