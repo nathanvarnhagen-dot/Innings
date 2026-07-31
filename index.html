@@ -2634,6 +2634,23 @@ function oslDay2(day) {
 
   <div style="padding:20px 20px 0">
     <div id="vp-friend-area"></div>
+
+    <div id="vp-memories-section" style="margin-top:20px">
+      <div class="sec-title">Memories together</div>
+      <div id="vp-memories-loading" style="font-size:13px;color:var(--subtle);padding:4px 0 8px">Loading…</div>
+      <div id="vp-memories-list" style="display:none;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+      <div id="vp-memories-empty" class="card" style="display:none;padding:18px 16px;text-align:center">
+        <div style="font-size:13px;color:var(--subtle);line-height:1.5">No memories together yet — tag them next time you're hanging out.</div>
+      </div>
+    </div>
+
+    <div id="vp-interests-section" style="display:none;margin-top:20px">
+      <div class="sec-title" id="vp-interests-title">About</div>
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="vp-interests-list"></div>
+      </div>
+    </div>
+
     <div id="vp-friends-section" style="display:none;margin-top:20px">
       <div class="sec-title">Friends</div>
       <div id="vp-friends-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
@@ -3180,7 +3197,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.78.0-past-memories-divider';
+window.INNINGS_BUILD = 'v4.79.0-profile-shared-memories';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5522,13 +5539,13 @@ window._memoryReturnTo = 'memories';
 window._memoryDetailMode = 'view';
 window._mdPhotoTimer = null;
 
-function openMemory(id) {
+function openMemory(id, returnTo) {
   var m = _findMoment(id);
   if (!m) return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   window._openMomentId = id;
   window._openMomentOwnerUid = user ? user.uid : null;
-  window._memoryReturnTo = 'memories';
+  window._memoryReturnTo = returnTo || 'memories';
   window._memoryDetailMode = 'view';
   _showMemoryHeader('view');
   renderMemoryView(m);
@@ -7852,11 +7869,14 @@ function openUserProfile(uid) {
   var areaEl = document.getElementById('vp-friend-area');
   var friendsSectionEl = document.getElementById('vp-friends-section');
   var eventsSectionEl = document.getElementById('vp-events-section');
+  var interestsSectionEl = document.getElementById('vp-interests-section');
   if (nameEl) nameEl.textContent = 'Loading…';
   if (areaEl) areaEl.innerHTML = '';
   if (friendsSectionEl) friendsSectionEl.style.display = 'none';
   if (eventsSectionEl) eventsSectionEl.style.display = 'none';
+  if (interestsSectionEl) interestsSectionEl.style.display = 'none';
   _renderVpPhotos([]);
+  _renderVpSharedMemoriesLoading();
   ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '—'; });
   window.db.collection('users').doc(uid).get().then(function(doc){
     var d = doc.exists ? doc.data() : {};
@@ -7875,6 +7895,7 @@ function openUserProfile(uid) {
       }
     }
     _renderVpPhotos(d.profilePhotos || []);
+    _renderVpInterests(nm, d.interests || []);
     _renderFriendArea(uid);
     _renderVpEvents(uid, nm, d);
     _computeAndRenderUserStats(uid);
@@ -7882,6 +7903,24 @@ function openUserProfile(uid) {
     console.error('View profile error:', err);
     if (nameEl) nameEl.textContent = 'Could not load profile';
   });
+}
+
+// Read-only display of someone else's interests — no add/remove controls,
+// those only make sense on your own profile. "About [Name]" rather than
+// "Who I Am" since that first-person framing only reads right when it's
+// your own card; hidden entirely if they haven't added any.
+function _renderVpInterests(name, interests) {
+  var sectionEl = document.getElementById('vp-interests-section');
+  var titleEl = document.getElementById('vp-interests-title');
+  var listEl = document.getElementById('vp-interests-list');
+  if (!sectionEl || !listEl) return;
+  if (!interests.length) { sectionEl.style.display = 'none'; return; }
+  if (titleEl) titleEl.textContent = 'About ' + ((name || '').split(' ')[0] || name);
+  sectionEl.style.display = 'block';
+  listEl.innerHTML = interests.map(function(it){
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--indigo-light);border-radius:20px;padding:7px 13px">' +
+      '<span style="font-size:15px">' + _escapeHtml(it.emoji || '🏷️') + '</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">' + _escapeHtml(it.label || '') + '</span></div>';
+  }).join('');
 }
 
 // ── VIEWED PROFILE: photo rotator (mirrors _startPhotoRotation, kept separate
@@ -7922,9 +7961,17 @@ function _renderVpPhotos(photos) {
 // their moments subcollection instead of the local window._moments cache ──
 function _computeAndRenderUserStats(uid) {
   if (!window.db) return;
-  window.db.collection('users').doc(uid).collection('moments').get().then(function(snap){
+  var viewer = window.currentUser || (window.auth && window.auth.currentUser);
+  Promise.all([
+    window.db.collection('users').doc(uid).collection('moments').get(),
+    viewer
+      ? window.db.collection('users').doc(viewer.uid).collection('moments').where('taggedUids', 'array-contains', uid).get()
+      : Promise.resolve(null)
+  ]).then(function(results){
+    var theirSnap = results[0];
+    var mySnap = results[1];
     var moments = [];
-    snap.forEach(function(doc){ moments.push(doc.data()); });
+    theirSnap.forEach(function(doc){ var d = doc.data(); d._id = doc.id; moments.push(d); });
     var social = moments.filter(function(m){ return (m.people || []).length > 0; });
     var streak = computeWeeklyStreak(social);
     var memEl = document.getElementById('vp-stat-memories');
@@ -7935,10 +7982,80 @@ function _computeAndRenderUserStats(uid) {
     if (evEl) evEl.textContent = social.length;
     if (stEl) stEl.textContent = streak;
     if (stCard) stCard.className = 's-card' + (streak > 0 ? ' on' : '');
+
+    // Memories together: their moments that tag the viewer (from the fetch
+    // above), plus the viewer's own moments that tag them (queried
+    // directly rather than read from the window._moments cache, since that
+    // cache is only populated once the viewer has opened their own
+    // Memories/Calendar tab this session — querying fresh here means this
+    // is correct the first time, regardless of where someone navigated
+    // from).
+    var theirsWithMe = viewer
+      ? moments.filter(function(m){ return (m.taggedUids || []).indexOf(viewer.uid) !== -1; }).map(function(m){ return Object.assign({}, m, { _ownerUid: uid }); })
+      : [];
+    var mineWithThem = [];
+    if (mySnap) {
+      window._foreignMomentCache = window._foreignMomentCache || {};
+      mySnap.forEach(function(doc){
+        var d = doc.data(); d._id = doc.id; d._ownerUid = viewer.uid;
+        window._foreignMomentCache[d._id] = d; // so openMemory's _findMoment() can look it up even if window._moments hasn't loaded yet
+        mineWithThem.push(d);
+      });
+    }
+    var shared = theirsWithMe.concat(mineWithThem);
+    shared.sort(function(a,b){ return (b.date || '').localeCompare(a.date || ''); });
+    _renderVpSharedMemories(shared);
   }).catch(function(err){
     console.error('Load user stats error:', err);
     ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '0'; });
+    _renderVpSharedMemories([]);
   });
+}
+
+function _renderVpSharedMemoriesLoading() {
+  var loadingEl = document.getElementById('vp-memories-loading');
+  var listEl = document.getElementById('vp-memories-list');
+  var emptyEl = document.getElementById('vp-memories-empty');
+  if (loadingEl) loadingEl.style.display = 'block';
+  if (listEl) listEl.style.display = 'none';
+  if (emptyEl) emptyEl.style.display = 'none';
+}
+
+// Renders the "Memories together" gallery — a shared memory can belong to
+// either person (m._ownerUid tags which), so each card routes to whichever
+// opener actually owns it: openMemory() for the viewer's own, or
+// openSharedMemory() (read-mostly) for one the profile owner made.
+function _renderVpSharedMemories(memories) {
+  var loadingEl = document.getElementById('vp-memories-loading');
+  var listEl = document.getElementById('vp-memories-list');
+  var emptyEl = document.getElementById('vp-memories-empty');
+  if (!listEl) return;
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (!memories.length) {
+    listEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  listEl.style.display = 'grid';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  listEl.innerHTML = memories.map(function(m){
+    var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+    var isMine = m._ownerUid === myUid;
+    var imgStyle = m.photo
+      ? 'background-image:url(' + m.photo + ');background-size:cover;background-position:center'
+      : 'background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%)';
+    var onclick = isMine
+      ? "openMemory('" + m._id + "','view-profile')"
+      : "openSharedMemory('" + m._ownerUid + "','" + m._id + "','view-profile')";
+    return '<div onclick="' + onclick + '" style="cursor:pointer;background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--rule);box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
+      '<div style="height:88px;' + imgStyle + ';display:flex;align-items:center;justify-content:center;font-size:26px">' + (m.photo ? '' : _escapeHtml(emoji)) + '</div>' +
+      '<div style="padding:10px 12px">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+        '<div style="font-size:11px;color:var(--subtle);margin-top:2px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function closeViewProfile() {
