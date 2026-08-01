@@ -1442,7 +1442,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <!-- ── ARTIST DETAIL — who's going, Spotify/Apple Music, per-artist chat ── -->
   <div id="osl2-act-detail" style="display:none;flex-direction:column;background:#0D0820;position:absolute;inset:0;z-index:80">
     <div id="act-detail-bg" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
-    <div style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)"></div>
+    <div id="act-detail-overlay" style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)"></div>
     <div style="position:relative;z-index:2;padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
       <button onclick="closeActDetail()" style="background:rgba(255,255,255,0.08);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
@@ -1459,6 +1459,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </a>
     </div>
 
+    <div id="act-detail-going" style="position:relative;z-index:2;padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.06)"></div>
+
     <div id="act-detail-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:12px 16px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0"></div>
 
     <div id="act-tabs" style="position:relative;z-index:2;display:flex;padding:0 16px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
@@ -1467,9 +1469,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div class="act-tab" onclick="actTab('songs',event)" style="flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer">Songs</div>
     </div>
 
-    <!-- ACTIVITY TAB — who's going strip + chat, with RSVP/photo notifications interleaved inline -->
+    <!-- ACTIVITY TAB — chat, with RSVP/photo notifications interleaved inline. Who's-going now lives up top, above, so it's visible regardless of tab. -->
     <div id="act-tab-activity" style="position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column">
-      <div id="act-detail-going" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.06)"></div>
       <div id="act-detail-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
         <div id="act-detail-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
           <div style="font-size:30px">🎤</div>
@@ -2053,6 +2054,18 @@ function setActDetailBg(url) {
   bg.style.backgroundImage = url ? 'url(' + url + ')' : '';
   bg.style.backgroundSize = 'cover';
   bg.style.backgroundPosition = 'center';
+  // A flat gradient background is uniformly dark already, so the default
+  // overlay is enough. A real photo can have a bright spot anywhere (a
+  // face, a sky, stage lighting) sitting right behind the tabs, RSVP
+  // buttons, or who's-going row — so once a photo's in place, the overlay
+  // needs to be strong and even across the whole height, not just heavy at
+  // the very bottom.
+  var overlay = document.getElementById('act-detail-overlay');
+  if (overlay) {
+    overlay.style.background = url
+      ? 'linear-gradient(180deg,rgba(10,6,20,0.72) 0%,rgba(10,6,20,0.6) 35%,rgba(10,6,20,0.68) 65%,rgba(10,6,20,0.96) 100%)'
+      : 'linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)';
+  }
 }
 
 function renderActPhotos(photos) {
@@ -3417,7 +3430,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.90.0-skip-bug-contrast-affordance-fest-by-day';
+window.INNINGS_BUILD = 'v4.91.0-whos-going-top-and-photo-contrast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
