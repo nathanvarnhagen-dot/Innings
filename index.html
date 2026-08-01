@@ -2545,7 +2545,7 @@ function oslTab(tab, evt) {
 }
 
 function groupShowPanel(key) {
-  ['gd-blank-panel', 'gd-chat-panel', 'gd-chat-input', 'gd-members-panel'].forEach(function(id) {
+  ['gd-blank-panel', 'gd-chat-panel', 'gd-chat-input', 'gd-members-panel', 'gd-games-panel'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -2553,6 +2553,9 @@ function groupShowPanel(key) {
     document.getElementById('gd-chat-panel').style.display = 'flex';
     document.getElementById('gd-chat-input').style.display = 'flex';
     if (window._activeGroupId && typeof startGroupChat === 'function') startGroupChat(window._activeGroupId);
+  } else if (key === 'games') {
+    document.getElementById('gd-games-panel').style.display = 'flex';
+    if (typeof loadGroupGames === 'function') loadGroupGames(window._gdGamesDate || _todayLocal());
   } else if (key === 'members') {
     document.getElementById('gd-members-panel').style.display = 'flex';
     if (typeof renderGroupMembers === 'function') renderGroupMembers();
@@ -2569,7 +2572,7 @@ function groupTab(key, evt) {
   groupShowPanel(key);
 }
 
-// Builds the tab bar from the group's active features (currently just 'chat'),
+// Builds the tab bar from the group's active features (chat, games),
 // always includes Members, and a trailing + to add more features later.
 function renderGroupTabs() {
   var g = window._activeGroup || {};
@@ -2578,6 +2581,7 @@ function renderGroupTabs() {
   if (!tabsEl) return;
   var tabs = [];
   if (features.indexOf('chat') !== -1) tabs.push({ key: 'chat', label: 'Chat' });
+  if (features.indexOf('games') !== -1) tabs.push({ key: 'games', label: 'Games' });
   tabs.push({ key: 'members', label: 'Members' });
   var defaultKey = features.length ? tabs[0].key : null;
   tabsEl.innerHTML = tabs.map(function(t) {
@@ -2738,6 +2742,42 @@ function oslDay2(day) {
     <div onclick="groupShareInvite()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);cursor:pointer;margin-top:18px">
       <div style="font-size:20px">📲</div>
       <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--black)">Invite someone new</div><div style="font-size:11px;color:var(--subtle)">Share a link from your contacts, Messages, or anywhere</div></div>
+    </div>
+  </div>
+
+  <!-- GAMES PANEL -->
+  <div id="gd-games-panel" style="display:none;flex-direction:column;flex:1;min-height:0">
+    <div style="background:var(--card);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
+      <button onclick="gdGamesNav(-1)" style="background:var(--bg);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:var(--subtle);font-family:inherit">‹</button>
+      <div style="text-align:center;cursor:pointer" onclick="gdGamesToday()">
+        <div id="gd-games-date-label" style="font-size:14px;font-weight:700;color:var(--black)">Today</div>
+        <div id="gd-games-today-link" style="display:none;font-size:11px;color:var(--indigo);font-weight:600;margin-top:2px">Jump to today</div>
+      </div>
+      <button onclick="gdGamesNav(1)" style="background:var(--bg);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:var(--subtle);font-family:inherit">›</button>
+    </div>
+    <div id="gd-games-list" class="scroll-bare" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- GAME DETAIL — box score up top, a chat scoped to just this game below -->
+  <div id="gd-game-detail" style="display:none;flex-direction:column;background:var(--bg);position:absolute;inset:0;z-index:20">
+    <div style="background:var(--card);padding:14px 16px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <button onclick="closeGroupGameDetail()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="font-size:14px;font-weight:700;color:var(--black)">Game chat</div>
+    </div>
+    <div id="gd-game-detail-boxscore" style="padding:14px 16px;border-bottom:0.5px solid var(--rule);flex-shrink:0"></div>
+    <div id="gd-game-chat" class="scroll-bare" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div id="gd-game-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
+        <div style="font-size:30px">⚾</div>
+        <div style="font-size:14px;font-weight:700;color:var(--black)">No messages yet</div>
+        <div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Talk about the game right here.</div>
+      </div>
+      <div id="gd-game-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+    <div class="input-zone">
+      <input id="gd-game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupGameMessage();}">
+      <button class="send-btn" onclick="sendGroupGameMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
 
@@ -3114,6 +3154,14 @@ function oslDay2(day) {
             </div>
             <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
           </div>
+          <div onclick="addGroupFeature('games')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+            <div style="font-size:24px">⚾</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700;color:var(--indigo)">Games</div>
+              <div style="font-size:12px;color:var(--indigo);opacity:0.75">Today's MLB games, with its own chat for each one</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+          </div>
           <div onclick="if(typeof ib_toast==='function')ib_toast('Photos are coming soon — Storage setup is in progress')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px;cursor:pointer">
             <div style="font-size:24px">📷</div>
             <div style="flex:1">
@@ -3201,7 +3249,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.82.0-fix-profile-scroll';
+window.INNINGS_BUILD = 'v4.83.0-group-games-tab';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6635,6 +6683,7 @@ function _reactionSheetDelete() {
   else if (target.collection === 'actChat') deleteActMessage(target.msgId);
   else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
   else if (target.collection === 'groupChats') deleteGroupMessage(target.msgId);
+  else if (target.collection === 'groupGameChat') deleteGroupGameMessage(target.msgId);
 }
 
 // ── EDIT MESSAGE — reuses the same {collection, msgId} the reaction sheet
@@ -7064,6 +7113,8 @@ function openGroup(g) {
   window._activeGroupId = g._id;
   window._activeGroup = g;
   if (!window._activeGroup.features) window._activeGroup.features = [];
+  window._gdGamesDate = _todayLocal();
+  if (typeof closeGroupGameDetail === 'function') closeGroupGameDetail();
   var iconEl = document.getElementById('gd-icon');
   var nameEl = document.getElementById('gd-name');
   var subEl = document.getElementById('gd-sub');
@@ -7301,6 +7352,7 @@ function addGroupFeature(key) {
     hideFeaturePicker();
     renderGroupTabs();
     if (typeof ib_toast==='function' && key === 'chat') ib_toast('Group Chat added 💬');
+    if (typeof ib_toast==='function' && key === 'games') ib_toast('Games added ⚾');
   }).catch(function(err){
     console.error('Add feature error:', err);
     if (typeof ib_toast==='function') ib_toast('Could not add feature — try again');
@@ -7582,6 +7634,195 @@ function deleteGroupMessage(msgId) {
   if (!window.db || !msgId) return;
   window.db.collection('groupChats').doc(msgId).delete()
     .catch(function(err){ console.error('Delete group message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+// ── GROUP GAMES — today's MLB schedule by default, browsable to any past
+// or upcoming day, with a chat scoped to each individual game. Reuses the
+// same /api/mlb serverless endpoint (and _boxScoreCardHtml renderer) the
+// box-score-attach feature already relies on elsewhere in the app.
+window._gdGamesDate = window._gdGamesDate || null;
+window._gdGamesList = [];
+window._gdActiveGame = null;
+
+function loadGroupGames(date) {
+  window._gdGamesDate = date || window._gdGamesDate || _todayLocal();
+  var listEl = document.getElementById('gd-games-list');
+  var labelEl = document.getElementById('gd-games-date-label');
+  var todayLinkEl = document.getElementById('gd-games-today-link');
+  var today = _todayLocal();
+  if (labelEl) labelEl.textContent = window._gdGamesDate === today ? 'Today' : _formatMomentDate(window._gdGamesDate);
+  if (todayLinkEl) todayLinkEl.style.display = window._gdGamesDate === today ? 'none' : 'block';
+  if (!listEl) return;
+  var requestedDate = window._gdGamesDate;
+  listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:8px 2px">Loading games…</div>';
+  fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(requestedDate))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (window._gdGamesDate !== requestedDate) return; // superseded by a newer date nav
+      var games = data.games || [];
+      window._gdGamesList = games;
+      if (!games.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">⚾</div><div style="font-size:13px;color:var(--subtle)">No MLB games on this day</div></div>';
+        return;
+      }
+      listEl.innerHTML = games.map(function(g, i){
+        var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : '';
+        return '<div onclick="openGroupGameDetail(' + i + ')" style="background:var(--card);border:0.5px solid var(--rule);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04)">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+          '<div style="text-align:right;flex-shrink:0">' +
+            (scoreLabel ? '<div style="font-size:13px;font-weight:700;color:var(--black)">' + _escapeHtml(scoreLabel) + '</div>' : '') +
+            '<div style="font-size:11px;color:var(--subtle)">' + _escapeHtml(g.status || '') + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(err){
+      if (window._gdGamesDate !== requestedDate) return;
+      console.error('Load group games error:', err);
+      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:var(--subtle)">Could not load games — try again</div>';
+    });
+}
+
+// Noon avoids any DST/timezone edge cases when shifting a plain YYYY-MM-DD
+// string by a day — same care _todayLocal() already takes elsewhere.
+function gdGamesNav(delta) {
+  var d = new Date(window._gdGamesDate + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = '0' + mm;
+  var dd = String(d.getDate()); if (dd.length < 2) dd = '0' + dd;
+  loadGroupGames(d.getFullYear() + '-' + mm + '-' + dd);
+}
+
+function gdGamesToday() {
+  loadGroupGames(_todayLocal());
+}
+
+function openGroupGameDetail(i) {
+  var g = (window._gdGamesList || [])[i];
+  if (!g || !window._activeGroupId) return;
+  window._gdActiveGame = { gamePk: g.gamePk, groupId: window._activeGroupId };
+  var boxEl = document.getElementById('gd-game-detail-boxscore');
+  if (boxEl) boxEl.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--subtle)">Loading box score…</div>';
+  var overlay = document.getElementById('gd-game-detail');
+  if (overlay) overlay.style.display = 'flex';
+  startGroupGameChat(window._activeGroupId, g.gamePk);
+  fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(g.gamePk))
+    .then(function(r){ return r.json(); })
+    .then(function(box){
+      if (!window._gdActiveGame || window._gdActiveGame.gamePk !== g.gamePk) return;
+      if (!boxEl) return;
+      // A game that hasn't started yet may come back with no score/innings
+      // data at all — fall back to the plain schedule-list summary rather
+      // than showing a blank box.
+      boxEl.innerHTML = _boxScoreCardHtml(box, false) ||
+        ('<div style="text-align:center;padding:12px 0;font-size:13px;color:var(--subtle)">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + ' · ' + _escapeHtml(g.status || 'Scheduled') + '</div>');
+    })
+    .catch(function(err){
+      console.error('Load game box score error:', err);
+      if (boxEl) boxEl.innerHTML = '<div style="text-align:center;padding:12px 0;font-size:13px;color:var(--subtle)">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>';
+    });
+}
+
+function closeGroupGameDetail() {
+  var overlay = document.getElementById('gd-game-detail');
+  if (overlay) overlay.style.display = 'none';
+  window._gdActiveGame = null;
+}
+
+window._gdGameChatStarted = {};
+function startGroupGameChat(groupId, gamePk) {
+  var key = groupId + ':' + gamePk;
+  if (window._gdGameChatStarted[key]) return;
+  if (!window.db) return;
+  window._gdGameChatStarted[key] = true;
+  window.db.collection('groupGameChat').where('groupId','==',groupId).where('gamePk','==',gamePk).limit(300).onSnapshot(function(snap){
+    if (!window._gdActiveGame || window._gdActiveGame.groupId !== groupId || window._gdActiveGame.gamePk !== gamePk) return;
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    msgs.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
+    renderGroupGameChat(msgs);
+  }, function(err){
+    console.error('Group game chat error:', err);
+    window._gdGameChatStarted[key] = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderGroupGameChat(msgs) {
+  var box = document.getElementById('gd-game-chat-msgs');
+  var empty = document.getElementById('gd-game-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
+    var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
+    if (mine) {
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+            badges +
+          '</div></div>';
+      }
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+          badges +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        badges +
+      '</div></div>';
+  }, true);
+  var panel = document.getElementById('gd-game-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function deleteGroupGameMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('groupGameChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete group game message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function sendGroupGameMessage() {
+  if (!window._gdActiveGame) return;
+  var inp = document.getElementById('gd-game-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var groupId = window._gdActiveGame.groupId;
+  var gamePk = window._gdActiveGame.gamePk;
+  if (inp) inp.value = '';
+  var msgData = { groupId: groupId, gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var url = _extractFirstUrl(text);
+  if (!url) {
+    window.db.collection('groupGameChat').add(msgData)
+      .catch(function(err){ console.error('Group game chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+    return;
+  }
+  _fetchLinkPreview(url).then(function(lp){
+    if (lp && lp.url) msgData.linkPreview = lp;
+    return window.db.collection('groupGameChat').add(msgData);
+  }).catch(function(err){ console.error('Group game chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
 // ── OUTSIDE LANDS SHARED PHOTOS ──
