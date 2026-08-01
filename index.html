@@ -2811,6 +2811,7 @@ function oslDay2(day) {
         <div class="p-av" id="vp-av">?</div>
         <div class="p-name" id="vp-name" style="color:white">Name</div>
         <div class="p-handle" id="vp-location" style="color:rgba(255,255,255,0.5)"></div>
+        <div id="vp-bio" style="display:none;font-size:12.5px;color:rgba(255,255,255,0.75);margin-top:4px;max-width:240px;line-height:1.4"></div>
       </div>
     </div>
   </div>
@@ -3258,16 +3259,24 @@ function oslDay2(day) {
         <div class="p-av" id="profile-av">?</div>
         <div class="p-name" id="profile-name-display">Your Name</div>
         <div class="p-handle" id="profile-location">Tap Edit to set up your profile</div>
+        <div id="profile-bio" style="display:none;font-size:12.5px;color:rgba(255,255,255,0.75);margin-top:4px;max-width:240px;line-height:1.4"></div>
       </div>
       <button class="edit-btn" onclick="showEditProfile()">Edit</button>
     </div>
   </div>
   <div id="edit-profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-    <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto">
-      <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit profile</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:16px;font-weight:700;color:var(--black)">Edit profile</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Photos</div>
+        <div id="ep-photos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        <input type="file" id="ep-photo-input" accept="image/*" multiple style="display:none" onchange="addProfilePhoto(this)">
+        <div style="font-size:11px;color:var(--subtle);margin-top:6px">These rotate as your profile's cover photo — up to 5.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
         <input id="edit-name" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Your name">
         <input id="edit-location" style="font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black)" placeholder="Your city">
+        <textarea id="edit-bio" style="font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;font-family:inherit;color:var(--black);min-height:64px;resize:none;line-height:1.5" placeholder="A short bio (optional)"></textarea>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="hideEditProfile()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
@@ -3446,7 +3455,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.94.0-feed-first-logo-contrast-fix';
+window.INNINGS_BUILD = 'v4.95.0-edit-profile-depth';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4408,12 +4417,19 @@ function ib_showStep(stepId) {
   }
 }
 
-function ib_setProfileDisplay(name) {
+function ib_setProfileDisplay(name, location, bio) {
   var nameDisplay = document.getElementById('profile-name-display');
   if (nameDisplay && name) nameDisplay.textContent = name;
   var av = document.getElementById('profile-av');
   if (av && name) {
     av.textContent = name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+  }
+  var locEl = document.getElementById('profile-location');
+  if (locEl && location) locEl.textContent = location + ' · joined 2026';
+  var bioEl = document.getElementById('profile-bio');
+  if (bioEl) {
+    if (bio) { bioEl.textContent = bio; bioEl.style.display = 'block'; }
+    else { bioEl.style.display = 'none'; bioEl.textContent = ''; }
   }
 }
 
@@ -4520,7 +4536,7 @@ auth.onAuthStateChanged(function(user) {
     .then(function(snap) {
       if (snap.exists) {
         window.userData = snap.data();
-        ib_setProfileDisplay(snap.data().name || '');
+        ib_setProfileDisplay(snap.data().name || '', snap.data().location || '', snap.data().bio || '');
         var pdata = snap.data();
         var photos = pdata.profilePhotos || (pdata.profilePhoto ? [pdata.profilePhoto] : []);
         if (photos.length && typeof applyProfilePhoto === 'function') applyProfilePhoto(photos);
@@ -4679,6 +4695,7 @@ function addProfilePhoto(input) {
         if (done === files.length) {
           window._profilePhotos = (window._profilePhotos || []).concat(processed).slice(0, PROFILE_PHOTO_MAX);
           renderProfilePhotos();
+          _renderEpPhotosGrid();
           window.userData = window.userData || {};
           window.userData.profilePhotos = window._profilePhotos;
           if (user && window.db) {
@@ -4693,14 +4710,64 @@ function addProfilePhoto(input) {
   });
   input.value = '';
 }
-function showEditProfile() { var m=document.getElementById('edit-profile-modal'); if(m) m.style.display='flex'; }
+function showEditProfile() {
+  var m=document.getElementById('edit-profile-modal');
+  if(m) m.style.display='flex';
+  var nameEl = document.getElementById('edit-name');
+  var locEl = document.getElementById('edit-location');
+  var bioEl = document.getElementById('edit-bio');
+  if (nameEl) nameEl.value = (window.userData && window.userData.name) || '';
+  if (locEl) locEl.value = (window.userData && window.userData.location) || '';
+  if (bioEl) bioEl.value = (window.userData && window.userData.bio) || '';
+  _renderEpPhotosGrid();
+}
 function hideEditProfile() { var m=document.getElementById('edit-profile-modal'); if(m) m.style.display='none'; }
 function saveEditProfile() {
   var name=document.getElementById('edit-name').value.trim();
   var loc=document.getElementById('edit-location').value.trim();
-  if(name){ document.getElementById('profile-name-display').textContent=name; var i=name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); document.getElementById('profile-av').textContent=i; }
-  if(loc) document.getElementById('profile-location').textContent=loc+' · joined 2026';
+  var bio=document.getElementById('edit-bio').value.trim();
+  ib_setProfileDisplay(name, loc, bio);
+  window.userData = window.userData || {};
+  window.userData.name = name;
+  window.userData.location = loc;
+  window.userData.bio = bio;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ name: name, location: loc, bio: bio }, { merge: true })
+      .then(function(){ if (typeof ib_toast==='function') ib_toast('Profile updated'); })
+      .catch(function(err){ console.error('Save profile error:', err); if (typeof ib_toast==='function') ib_toast('Could not save — try again'); });
+  }
   hideEditProfile();
+}
+
+// Thumbnail grid inside the edit sheet — each photo removable, plus an
+// "add" tile up to the same PROFILE_PHOTO_MAX the header rotation uses.
+function _renderEpPhotosGrid() {
+  var grid = document.getElementById('ep-photos-grid');
+  if (!grid) return;
+  var photos = window._profilePhotos || [];
+  var tiles = photos.map(function(url, i){
+    return '<div style="position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background-image:url(' + url + ');background-size:cover;background-position:center">' +
+      '<button onclick="removeProfilePhoto(' + i + ')" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">✕</button>' +
+    '</div>';
+  }).join('');
+  var addTile = photos.length < PROFILE_PHOTO_MAX
+    ? '<div onclick="document.getElementById(\'ep-photo-input\').click()" style="aspect-ratio:1/1;border-radius:10px;border:1.5px dashed var(--rule);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;color:var(--subtle)">+</div>'
+    : '';
+  grid.innerHTML = tiles + addTile || '<div style="grid-column:1/-1;font-size:12px;color:var(--subtle);padding:8px 0">No photos yet</div>';
+}
+
+function removeProfilePhoto(i) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  window._profilePhotos = (window._profilePhotos || []).filter(function(_, idx){ return idx !== i; });
+  renderProfilePhotos();
+  _renderEpPhotosGrid();
+  window.userData = window.userData || {};
+  window.userData.profilePhotos = window._profilePhotos;
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ profilePhotos: window._profilePhotos }, { merge: true })
+      .catch(function(err){ console.error('Remove profile photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not remove — try again'); });
+  }
 }
 function renderInterests(list) {
   window.userData = window.userData || {};
@@ -8641,6 +8708,8 @@ function openUserProfile(uid) {
   if (friendsSectionEl) friendsSectionEl.style.display = 'none';
   if (eventsSectionEl) eventsSectionEl.style.display = 'none';
   if (interestsSectionEl) interestsSectionEl.style.display = 'none';
+  var vpBioEl = document.getElementById('vp-bio');
+  if (vpBioEl) { vpBioEl.style.display = 'none'; vpBioEl.textContent = ''; }
   _renderVpPhotos([]);
   _renderVpSharedMemoriesLoading();
   ['vp-stat-streak','vp-stat-events','vp-stat-memories'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '—'; });
@@ -8649,6 +8718,11 @@ function openUserProfile(uid) {
     var nm = d.name || 'Innings User';
     if (nameEl) nameEl.textContent = nm;
     if (locEl) locEl.textContent = d.location || '';
+    var bioEl = document.getElementById('vp-bio');
+    if (bioEl) {
+      if (d.bio) { bioEl.textContent = d.bio; bioEl.style.display = 'block'; }
+      else { bioEl.style.display = 'none'; bioEl.textContent = ''; }
+    }
     if (avEl) {
       if (d.profilePhotos && d.profilePhotos.length) {
         avEl.style.backgroundImage = 'url(' + d.profilePhotos[0] + ')';
