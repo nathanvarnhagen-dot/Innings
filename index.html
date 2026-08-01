@@ -77,6 +77,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .topbar-light{background:var(--card);padding:4px 24px 14px;display:flex;align-items:flex-end;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--rule)}
 .app-name{font-size:28px;font-weight:800;color:var(--black);letter-spacing:-1.5px}
 .app-name em{color:var(--indigo);font-style:normal}
+
+/* Feed screen specifically wants its logo sitting higher — scoped so it
+   doesn't change the shared spacer on the other screens using these same
+   classes. */
+#screen-feed .status-light{height:26px}
+#screen-feed .topbar-light{padding-top:0}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
 .icon-btn i{font-size:18px;color:var(--mid)}
 .notif-pip::after{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--indigo);border-radius:50%;border:1.5px solid var(--card)}
@@ -1148,16 +1154,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
   </div>
 
-  <!-- TABS — Lineup first -->
+  <!-- TABS — Feed first -->
   <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;padding:0 16px;flex-shrink:0" id="osl-tabs">
-    <div class="osl-main-tab active" onclick="oslTab('lineup', event)" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer;white-space:nowrap">Lineup</div>
+    <div class="osl-main-tab active" onclick="oslTab('chat', event)" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer;white-space:nowrap">Feed</div>
+    <div class="osl-main-tab" onclick="oslTab('lineup', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Lineup</div>
     <div class="osl-main-tab" onclick="oslTab('myfest', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Your Festival</div>
-    <div class="osl-main-tab" onclick="oslTab('chat', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Feed</div>
     <div class="osl-main-tab" onclick="oslTab('photos', event)" style="flex:1;text-align:center;font-size:12px;font-weight:500;padding:11px 0;color:rgba(255,255,255,0.35);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Photos</div>
   </div>
 
   <!-- ── LINEUP PANEL ── -->
-  <div id="osl2-lineup" style="flex:1;overflow-y:auto;background:#0D0820;display:flex;flex-direction:column">
+  <div id="osl2-lineup" style="flex:1;overflow-y:auto;background:#0D0820;display:none;flex-direction:column">
 
     <!-- FESTIVAL POSTER HEADER -->
     <div style="position:relative;padding:20px 16px 16px;overflow:hidden;flex-shrink:0">
@@ -1394,7 +1400,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── CHAT PANEL ── -->
-  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
+  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
     <div id="osl-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
       <div style="font-size:34px">💬</div>
       <div style="font-size:16px;font-weight:700;color:var(--black)">No messages yet</div>
@@ -1402,7 +1408,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div id="osl-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
-  <div id="osl2-chat-input" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
+  <div id="osl2-chat-input" style="display:flex;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
       <input id="osl-chat-field" class="msg-input" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}">
@@ -3440,7 +3446,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.93.0-feed-mirrors-subchat-activity';
+window.INNINGS_BUILD = 'v4.94.0-feed-first-logo-contrast-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3459,7 +3465,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -7250,13 +7256,13 @@ function _oslFeedNoticeHtml(c) {
   } else {
     return '';
   }
-  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:rgba(168,159,232,0.16);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:var(--indigo-light);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
     '<div style="font-size:20px;flex-shrink:0">' + icon + '</div>' +
     '<div style="flex:1;min-width:0">' +
-      '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
-      (detail ? '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
+      '<div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
+      (detail ? '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
     '</div>' +
-    (onclick ? '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' : '') +
+    (onclick ? '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' : '') +
   '</div>';
 }
 
