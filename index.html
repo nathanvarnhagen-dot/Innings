@@ -3263,7 +3263,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.85.0-location-map-links';
+window.INNINGS_BUILD = 'v4.86.0-location-links-in-view-screen';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5008,12 +5008,31 @@ function renderFutureView(m) {
       '</div>'
     : '';
 
+  var locationSection = m.location
+    ? '<div style="background:var(--card);padding:14px 20px;border-bottom:0.5px solid var(--rule)">' +
+        '<div id="fv-location-preview" style="border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">' +
+          '<div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">' +
+            '<div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>' +
+          '</div>' +
+          '<div style="padding:10px 14px">' +
+            '<div id="fv-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>' +
+            '<div style="display:flex;gap:8px">' +
+              '<a id="fv-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
+              '<a id="fv-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
+              '<a id="fv-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    : '';
+
   box.innerHTML =
     '<div style="' + _futureBgStyle(m) + ';padding:26px 20px">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + (m.public ? '  ·  🌎 Public' : '') + '</div>' +
       '<div style="font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
       '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
     '</div>' +
+    locationSection +
     ticketSection +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' + rsvpSection + '</div>' +
     '<div id="future-chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>' +
@@ -5023,6 +5042,7 @@ function renderFutureView(m) {
       '<div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Coordinate with everyone here.</div>' +
     '</div>';
 
+  if (m.location) _updateLocationLinks('fv', m.location);
   if (isOwner) _renderFutureGuestSummary(m);
   startFutureMomentChat(m._id);
 }
