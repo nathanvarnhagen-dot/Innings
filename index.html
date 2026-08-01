@@ -895,7 +895,20 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>
-        <input id="future-location" placeholder="Add a location" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">
+        <input id="future-location" placeholder="Add a location" oninput="_updateLocationLinks('future', this.value)" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">
+        <div id="future-location-preview" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">
+          <div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">
+            <div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>
+          </div>
+          <div style="padding:10px 14px">
+            <div id="future-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px">
+              <a id="future-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>
+              <a id="future-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>
+              <a id="future-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
@@ -3250,7 +3263,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.84.0-fix-feature-picker-modal';
+window.INNINGS_BUILD = 'v4.85.0-location-map-links';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3568,6 +3581,30 @@ function _persistCustomVibeIfNewFromFuture(vibeStr) {
   _persistCustomVibeIfNew(vibeStr);
 }
 
+// ── LOCATION PREVIEW + MAP LINKS ──
+// No API key gets you a live embedded map anymore — Google retired the
+// old keyless embed trick, and the free alternative (OpenStreetMap) needs
+// the address geocoded first, which its usage policy explicitly forbids
+// wiring up automatically like this. So instead: a clean stylized location
+// card plus three deep links that all work with zero setup, using each
+// service's own documented, key-free URL scheme.
+function _updateLocationLinks(prefix, address) {
+  var previewEl = document.getElementById(prefix + '-location-preview');
+  var textEl = document.getElementById(prefix + '-location-preview-text');
+  var googleEl = document.getElementById(prefix + '-location-google');
+  var appleEl = document.getElementById(prefix + '-location-apple');
+  var wazeEl = document.getElementById(prefix + '-location-waze');
+  if (!previewEl) return;
+  var trimmed = (address || '').trim();
+  if (!trimmed) { previewEl.style.display = 'none'; return; }
+  previewEl.style.display = 'block';
+  if (textEl) textEl.textContent = trimmed;
+  var encoded = encodeURIComponent(trimmed);
+  if (googleEl) googleEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+  if (appleEl) appleEl.href = 'https://maps.apple.com/?q=' + encoded;
+  if (wazeEl) wazeEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
+}
+
 window._futurePublic = false;
 function toggleFuturePublic() {
   window._futurePublic = !window._futurePublic;
@@ -3676,6 +3713,7 @@ function resetFutureForm() {
   var d = document.getElementById('future-date'); if (d) d.value = '';
   var tm = document.getElementById('future-time'); if (tm) tm.value = '';
   var l = document.getElementById('future-location'); if (l) l.value = '';
+  _updateLocationLinks('future', '');
   var tl = document.getElementById('future-ticket-link'); if (tl) tl.value = '';
   var oe = document.getElementById('future-other-emoji'); if (oe) oe.value = '';
   var ol = document.getElementById('future-other-label'); if (ol) ol.value = '';
@@ -5189,7 +5227,20 @@ function renderFutureEdit(m) {
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>' +
-      '<input id="fd-location" value="' + _escapeHtml(m.location || '') + '" placeholder="Add a location" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">' +
+      '<input id="fd-location" value="' + _escapeHtml(m.location || '') + '" placeholder="Add a location" oninput="_updateLocationLinks(\'fd\', this.value)" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">' +
+      '<div id="fd-location-preview" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">' +
+        '<div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">' +
+          '<div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>' +
+        '</div>' +
+        '<div style="padding:10px 14px">' +
+          '<div id="fd-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<a id="fd-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
+            '<a id="fd-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
+            '<a id="fd-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Box score</div>' +
@@ -5238,6 +5289,7 @@ function renderFutureEdit(m) {
   window._fdPublic = !!m.public;
   renderFdGuestList(m);
   renderFdVibePills();
+  _updateLocationLinks('fd', m.location);
 }
 
 function fdTogglePublic() {
