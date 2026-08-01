@@ -2656,6 +2656,11 @@ function oslDay2(day) {
   <div class="scroll-bare" style="padding:20px 20px 32px">
     <div id="vp-friend-area"></div>
 
+    <div id="vp-events-section" style="display:none;margin-top:20px">
+      <div class="sec-title">Events</div>
+      <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
     <div id="vp-memories-section" style="margin-top:20px">
       <div class="sec-title">Memories together</div>
       <div id="vp-memories-loading" style="font-size:13px;color:var(--subtle);padding:4px 0 8px">Loading…</div>
@@ -2672,13 +2677,9 @@ function oslDay2(day) {
       </div>
     </div>
 
-    <div id="vp-friends-section" style="display:none;margin-top:20px">
+    <div id="vp-friends-section" style="display:none;margin-top:20px;margin-bottom:20px">
       <div class="sec-title">Friends</div>
       <div id="vp-friends-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
-    </div>
-    <div id="vp-events-section" style="display:none;margin-top:20px;margin-bottom:20px">
-      <div class="sec-title">Events</div>
-      <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
   </div>
 </div>
@@ -3263,7 +3264,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.86.0-location-links-in-view-screen';
+window.INNINGS_BUILD = 'v4.87.0-profile-events-on-top';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
