@@ -1883,15 +1883,15 @@ function actRsvp2(btn, actName, val) {
 // Activity tab doubles as a log of who's committed to an act — not just a
 // message thread. Skipped for "no"/skip to keep the feed from filling with
 // negative RSVPs, and only fires on an actual change (guarded by the caller).
+// Posts to the main OSL Feed, not the artist's own sub-chat — matches how
+// game activity in a group posts to the group's main Feed rather than
+// cluttering up the game-specific chat itself.
 function _postActRsvpSystemMessage(actName, val) {
   if (val !== 'going' && val !== 'maybe') return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) return;
   var author = (window.userData && window.userData.name) || 'Someone';
-  var actId = _slugifyAct(actName);
-  var text = val === 'going' ? author + ' is going ✓' : author + ' might go';
-  window.db.collection('actChat').add({ actId: actId, actName: actName, uid: user.uid, author: author, text: text, ts: Date.now(), system: true, systemType: 'rsvp' })
-    .catch(function(err){ console.error('Post RSVP activity message error:', err); });
+  _postOslFeedNotice({ uid: user.uid, author: author, systemType: 'rsvp', text: val === 'going' ? 'is going' : 'might go', actName: actName });
 }
 
 // ── FRIEND OSL ATTENDANCE — fetched once per session (not once per act),
@@ -2622,14 +2622,14 @@ function sendActMessage() {
   var replyTo = _consumeReplyForSend('actChat');
   if (replyTo) msgData.replyTo = replyTo;
   var url = _extractFirstUrl(text);
-  if (!url) {
-    window.db.collection('actChat').add(msgData)
-      .catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
-    return;
-  }
-  _fetchLinkPreview(url).then(function(lp){
-    if (lp && lp.url) msgData.linkPreview = lp;
-    return window.db.collection('actChat').add(msgData);
+  var sendPromise = url
+    ? _fetchLinkPreview(url).then(function(lp){
+        if (lp && lp.url) msgData.linkPreview = lp;
+        return window.db.collection('actChat').add(msgData);
+      })
+    : window.db.collection('actChat').add(msgData);
+  sendPromise.then(function(){
+    _postOslFeedNotice({ uid: user.uid, author: author, systemType: 'actmsg', text: text, actName: actName });
   }).catch(function(err){ console.error('Act chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
@@ -3440,7 +3440,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.92.0-reply-feed-rename-whosgoing-scroll';
+window.INNINGS_BUILD = 'v4.93.0-feed-mirrors-subchat-activity';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6613,6 +6613,7 @@ function oslCheckRsvp() {
 function oslSetRsvp(val) {
   var overlay = document.getElementById('osl-rsvp-overlay');
   if (overlay) overlay.style.display = 'none';
+  var prevRsvp = (window.userData && window.userData.oslRsvp) || '';
   window.userData = window.userData || {};
   window.userData.oslRsvp = val;
   renderOslState();
@@ -6620,6 +6621,9 @@ function oslSetRsvp(val) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (user && window.db) {
     window.db.collection('users').doc(user.uid).set({ oslRsvp: val }, { merge: true }).catch(function(err){ console.error('OSL rsvp error:', err); });
+    if (val === 'going' && prevRsvp !== 'going') {
+      _postOslFeedNotice({ uid: user.uid, author: (window.userData && window.userData.name) || 'Someone', systemType: 'join' });
+    }
   }
   if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're going 🎉" : val === 'maybe' ? 'Marked as maybe' : 'Marked as not going');
 }
@@ -7160,17 +7164,8 @@ function renderOslChat(msgs) {
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
-    if (c.system && (c.systemType === 'song' || c.systemType === 'photo')) {
-      var isSong = c.systemType === 'song';
-      var onclick = isSong ? "_jumpToActFromFeed('" + c.actName.replace(/'/g, "\\'") + "')" : "_jumpToOslPhotosFromFeed()";
-      return '<div onclick="' + onclick + '" style="cursor:pointer;background:rgba(168,159,232,0.16);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
-        '<div style="font-size:20px;flex-shrink:0">' + (isSong ? '🎵' : '📷') + '</div>' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.author) + (isSong ? ' added a song' : ' added ' + (c.photoCount > 1 ? c.photoCount + ' photos' : 'a photo')) + '</div>' +
-          (isSong ? '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.text) + ' · ' + _escapeHtml(c.actName) + '</div>' : '') +
-        '</div>' +
-        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' +
-      '</div>';
+    if (c.system) {
+      return _oslFeedNoticeHtml(c);
     }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
@@ -7214,13 +7209,55 @@ function renderOslChat(msgs) {
 }
 
 // Posts a card into the OSL Feed for activity worth surfacing to everyone
-// — a new song added, photos added — deliberately NOT used for reactions
+// — a new song added, photos added, an RSVP, a message written in an
+// artist's sub-chat, someone joining — deliberately NOT used for reactions
 // (those only ever update a reactions field on an existing doc, they never
 // create a new one, so they can never trigger this in the first place).
 function _postOslFeedNotice(data) {
   if (!window.db) return;
   var payload = Object.assign({ ts: Date.now(), system: true }, data);
   window.db.collection('oslChat').add(payload).catch(function(err){ console.error('Post OSL feed notice error:', err); });
+}
+
+// One shared renderer for every notice type the Feed carries — keeps the
+// "clickable purple card, icon, author line, jump-back" look consistent
+// regardless of what kind of activity it's reporting.
+function _oslFeedNoticeHtml(c) {
+  var icon = '🎤', onclick = '', headline = '', detail = '';
+  if (c.systemType === 'song') {
+    icon = '🎵';
+    onclick = "_jumpToActFromFeed('" + (c.actName || '').replace(/'/g, "\\'") + "')";
+    headline = _escapeHtml(c.author) + ' added a song';
+    detail = _escapeHtml(c.text) + ' · ' + _escapeHtml(c.actName || '');
+  } else if (c.systemType === 'photo') {
+    icon = '📷';
+    onclick = "_jumpToOslPhotosFromFeed()";
+    headline = _escapeHtml(c.author) + ' added ' + (c.photoCount > 1 ? c.photoCount + ' photos' : 'a photo');
+  } else if (c.systemType === 'rsvp') {
+    icon = '🎫';
+    onclick = "_jumpToActFromFeed('" + (c.actName || '').replace(/'/g, "\\'") + "')";
+    headline = _escapeHtml(c.author) + ' ' + _escapeHtml(c.text);
+    detail = _escapeHtml(c.actName || '');
+  } else if (c.systemType === 'actmsg') {
+    icon = '💬';
+    onclick = "_jumpToActFromFeed('" + (c.actName || '').replace(/'/g, "\\'") + "')";
+    headline = _escapeHtml(c.author) + ' in ' + _escapeHtml(c.actName || '');
+    detail = _escapeHtml(c.text);
+  } else if (c.systemType === 'join') {
+    icon = '👋';
+    onclick = '';
+    headline = _escapeHtml(c.author) + ' joined';
+  } else {
+    return '';
+  }
+  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:rgba(168,159,232,0.16);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+    '<div style="font-size:20px;flex-shrink:0">' + icon + '</div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
+      (detail ? '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
+    '</div>' +
+    (onclick ? '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' : '') +
+  '</div>';
 }
 
 // Looks up an act's time/headliner status from the lineup data so a feed
@@ -7642,6 +7679,8 @@ function groupAddMember(uid, name) {
         read: false
       }).catch(function(err){ console.error('Added-to-group notification error:', err); });
     }
+    window.db.collection('groupChats').add({ groupId: g._id, uid: user.uid, author: name, ts: Date.now(), system: true, systemType: 'join' })
+      .catch(function(err){ console.error('Post join notice error:', err); });
   }).catch(function(err){
     console.error('Add member error:', err);
     if (typeof ib_toast==='function') ib_toast('Could not add — ' + (err && err.message ? err.message : 'check Firestore rules'));
@@ -7720,6 +7759,8 @@ function consumePendingInviteLinks(user, name) {
     }).then(function(){
       if (typeof loadMyGroups === 'function') loadMyGroups();
       if (typeof ib_toast === 'function') ib_toast('Added to "' + (gName || 'the group') + '" 🎉');
+      window.db.collection('groupChats').add({ groupId: gid, uid: user.uid, author: name || 'New member', ts: Date.now(), system: true, systemType: 'join' })
+        .catch(function(err){ console.error('Post join notice error:', err); });
     }).catch(function(err){ console.error('Join group via link error:', err); });
   }
   var fid = window._pendingFutureInviteId;
@@ -7977,6 +8018,9 @@ function renderGroupChat(msgs) {
         '</div>' +
         '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' +
       '</div>';
+    }
+    if (c.system && c.systemType === 'join') {
+      return '<div style="text-align:center;padding:2px 0 4px"><span style="font-size:11.5px;color:var(--subtle);background:var(--bg);padding:5px 12px;border-radius:12px;display:inline-block">👋 ' + _escapeHtml(c.author) + ' joined the group</span></div>';
     }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
