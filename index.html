@@ -2817,6 +2817,50 @@ function oslDay2(day) {
       </div>
     </div>
   </div>
+
+  <div id="feature-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:20px 20px 0;flex-shrink:0">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add a feature</div>
+        <div style="font-size:13px;color:var(--subtle);margin-bottom:16px;line-height:1.5">Build your group one piece at a time.</div>
+      </div>
+      <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+        <div onclick="addGroupFeature('chat')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+          <div style="font-size:24px">💬</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--indigo)">Group Chat</div>
+            <div style="font-size:12px;color:var(--indigo);opacity:0.75">A live chat for everyone in the group</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+        </div>
+        <div onclick="addGroupFeature('games')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+          <div style="font-size:24px">⚾</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--indigo)">Games</div>
+            <div style="font-size:12px;color:var(--indigo);opacity:0.75">Today's MLB games, with its own chat for each one</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+        </div>
+        <div onclick="if(typeof ib_toast==='function')ib_toast('Photos are coming soon — Storage setup is in progress')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px;cursor:pointer">
+          <div style="font-size:24px">📷</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
+            <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
+          </div>
+        </div>
+        <div onclick="if(typeof ib_toast==='function')ib_toast('Lineup & RSVP is coming soon')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px;cursor:pointer">
+          <div style="font-size:24px">🗓️</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
+            <div style="font-size:12px;color:var(--subtle)">Schedule and Going/Maybe/Can't go — coming soon</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule)">
+        <button onclick="hideFeaturePicker()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ FANTASY ═══ -->
@@ -3139,49 +3183,6 @@ function oslDay2(day) {
     </div>
 
     <!-- ADD FEATURE MODAL -->
-    <div id="feature-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
-      <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
-        <div style="padding:20px 20px 0;flex-shrink:0">
-          <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add a feature</div>
-          <div style="font-size:13px;color:var(--subtle);margin-bottom:16px;line-height:1.5">Build your group one piece at a time.</div>
-        </div>
-        <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
-          <div onclick="addGroupFeature('chat')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
-            <div style="font-size:24px">💬</div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--indigo)">Group Chat</div>
-              <div style="font-size:12px;color:var(--indigo);opacity:0.75">A live chat for everyone in the group</div>
-            </div>
-            <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
-          </div>
-          <div onclick="addGroupFeature('games')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
-            <div style="font-size:24px">⚾</div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--indigo)">Games</div>
-              <div style="font-size:12px;color:var(--indigo);opacity:0.75">Today's MLB games, with its own chat for each one</div>
-            </div>
-            <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
-          </div>
-          <div onclick="if(typeof ib_toast==='function')ib_toast('Photos are coming soon — Storage setup is in progress')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:10px;cursor:pointer">
-            <div style="font-size:24px">📷</div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
-              <div style="font-size:12px;color:var(--subtle)">Shared photo album — coming soon</div>
-            </div>
-          </div>
-          <div onclick="if(typeof ib_toast==='function')ib_toast('Lineup & RSVP is coming soon')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--bg);opacity:0.55;margin-bottom:16px;cursor:pointer">
-            <div style="font-size:24px">🗓️</div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--black)">Lineup &amp; RSVP</div>
-              <div style="font-size:12px;color:var(--subtle)">Schedule and Going/Maybe/Can't go — coming soon</div>
-            </div>
-          </div>
-        </div>
-        <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule)">
-          <button onclick="hideFeaturePicker()" style="width:100%;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Close</button>
-        </div>
-      </div>
-    </div>
 
     <!-- PRIVACY NOTE -->
     <div style="display:flex;align-items:flex-start;gap:8px;padding:2px 4px">
@@ -3249,7 +3250,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.83.0-group-games-tab';
+window.INNINGS_BUILD = 'v4.84.0-fix-feature-picker-modal';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
