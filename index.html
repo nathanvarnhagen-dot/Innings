@@ -3264,7 +3264,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.88.0-profile-section-reorder';
+window.INNINGS_BUILD = 'v4.89.0-game-chat-mirrors-to-main-chat';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7641,6 +7641,16 @@ function renderGroupChat(msgs) {
   if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
+    if (c.system && c.systemType === 'game') {
+      return '<div onclick="jumpToGroupGame(' + c.gamePk + ')" style="cursor:pointer;background:var(--indigo-light);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:20px;flex-shrink:0">⚾</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.author) + ' in ' + _escapeHtml(c.gameLabel || 'a game') + '</div>' +
+          '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.text) + '</div>' +
+        '</div>' +
+        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' +
+      '</div>';
+    }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
     var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
@@ -7773,8 +7783,23 @@ function gdGamesToday() {
 
 function openGroupGameDetail(i) {
   var g = (window._gdGamesList || [])[i];
+  if (!g) return;
+  _openGroupGameDetailData(g);
+}
+
+// Jump straight into a specific game's detail/chat from anywhere that only
+// has the gamePk on hand (namely, a game-activity notice in the main group
+// Chat) — doesn't depend on the Games tab's currently-loaded date list at
+// all, so it works regardless of what day is showing there.
+function jumpToGroupGame(gamePk) {
+  _openGroupGameDetailData({ gamePk: gamePk });
+}
+
+// Shared by both entry points above — just needs a gamePk (away/home are
+// optional, used only as a fallback label if the box score fetch fails).
+function _openGroupGameDetailData(g) {
   if (!g || !window._activeGroupId) return;
-  window._gdActiveGame = { gamePk: g.gamePk, groupId: window._activeGroupId };
+  window._gdActiveGame = { gamePk: g.gamePk, groupId: window._activeGroupId, label: (g.away && g.home) ? (g.away + ' @ ' + g.home) : null };
   var boxEl = document.getElementById('gd-game-detail-boxscore');
   if (boxEl) boxEl.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--subtle)">Loading box score…</div>';
   var overlay = document.getElementById('gd-game-detail');
@@ -7788,8 +7813,9 @@ function openGroupGameDetail(i) {
       // A game that hasn't started yet may come back with no score/innings
       // data at all — fall back to the plain schedule-list summary rather
       // than showing a blank box.
+      if (box && box.away && box.home) window._gdActiveGame.label = box.away + ' @ ' + box.home;
       boxEl.innerHTML = _boxScoreCardHtml(box, false) ||
-        ('<div style="text-align:center;padding:12px 0;font-size:13px;color:var(--subtle)">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + ' · ' + _escapeHtml(g.status || 'Scheduled') + '</div>');
+        ('<div style="text-align:center;padding:12px 0;font-size:13px;color:var(--subtle)">' + _escapeHtml(g.away || (box && box.away) || '?') + ' @ ' + _escapeHtml(g.home || (box && box.home) || '?') + ' · ' + _escapeHtml(g.status || 'Scheduled') + '</div>');
     })
     .catch(function(err){
       console.error('Load game box score error:', err);
@@ -7885,18 +7911,38 @@ function sendGroupGameMessage() {
   var author = (window.userData && window.userData.name) || 'You';
   var groupId = window._gdActiveGame.groupId;
   var gamePk = window._gdActiveGame.gamePk;
+  var gameLabel = window._gdActiveGame.label || 'a game';
   if (inp) inp.value = '';
   var msgData = { groupId: groupId, gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now() };
   var url = _extractFirstUrl(text);
-  if (!url) {
-    window.db.collection('groupGameChat').add(msgData)
-      .catch(function(err){ console.error('Group game chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
-    return;
-  }
-  _fetchLinkPreview(url).then(function(lp){
-    if (lp && lp.url) msgData.linkPreview = lp;
-    return window.db.collection('groupGameChat').add(msgData);
+  var sendPromise = url
+    ? _fetchLinkPreview(url).then(function(lp){
+        if (lp && lp.url) msgData.linkPreview = lp;
+        return window.db.collection('groupGameChat').add(msgData);
+      })
+    : window.db.collection('groupGameChat').add(msgData);
+  sendPromise.then(function(){
+    _postGroupGameActivityNotice(groupId, gamePk, gameLabel, author, user.uid, text);
   }).catch(function(err){ console.error('Group game chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+}
+
+// Mirrors a game-chat message into the main group Chat so nothing said in
+// a specific game's thread gets missed by people just watching the main
+// feed — rendered there as a distinct, clickable card (see renderGroupChat)
+// that jumps straight into that game via jumpToGroupGame().
+function _postGroupGameActivityNotice(groupId, gamePk, gameLabel, author, uid, text) {
+  if (!window.db) return;
+  window.db.collection('groupChats').add({
+    groupId: groupId,
+    uid: uid,
+    author: author,
+    text: text,
+    ts: Date.now(),
+    system: true,
+    systemType: 'game',
+    gamePk: gamePk,
+    gameLabel: gameLabel
+  }).catch(function(err){ console.error('Post game activity notice error:', err); });
 }
 
 // ── OUTSIDE LANDS SHARED PHOTOS ──
