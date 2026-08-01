@@ -2656,6 +2656,13 @@ function oslDay2(day) {
   <div class="scroll-bare" style="padding:20px 20px 32px">
     <div id="vp-friend-area"></div>
 
+    <div id="vp-interests-section" style="display:none;margin-top:20px">
+      <div class="sec-title" id="vp-interests-title">About</div>
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="vp-interests-list"></div>
+      </div>
+    </div>
+
     <div id="vp-events-section" style="display:none;margin-top:20px">
       <div class="sec-title">Events</div>
       <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -2667,13 +2674,6 @@ function oslDay2(day) {
       <div id="vp-memories-list" style="display:none;grid-template-columns:repeat(2,1fr);gap:10px"></div>
       <div id="vp-memories-empty" class="card" style="display:none;padding:18px 16px;text-align:center">
         <div style="font-size:13px;color:var(--subtle);line-height:1.5">No memories together yet — tag them next time you're hanging out.</div>
-      </div>
-    </div>
-
-    <div id="vp-interests-section" style="display:none;margin-top:20px">
-      <div class="sec-title" id="vp-interests-title">About</div>
-      <div class="card" style="padding:14px 16px">
-        <div style="display:flex;flex-wrap:wrap;gap:8px" id="vp-interests-list"></div>
       </div>
     </div>
 
@@ -3264,7 +3264,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.87.0-profile-events-on-top';
+window.INNINGS_BUILD = 'v4.88.0-profile-section-reorder';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
