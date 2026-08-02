@@ -1400,7 +1400,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── CHAT PANEL ── -->
-  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg)">
+  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:#F5F2FA">
     <div id="osl-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
       <div style="font-size:34px">💬</div>
       <div style="font-size:16px;font-weight:700;color:var(--black)">No messages yet</div>
@@ -2809,7 +2809,10 @@ function oslDay2(day) {
     <div class="profile-info">
       <div>
         <div class="p-av" id="vp-av">?</div>
-        <div class="p-name" id="vp-name" style="color:white">Name</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="p-name" id="vp-name" style="color:white">Name</div>
+          <div id="vp-friend-badge" style="display:none;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0"></div>
+        </div>
         <div class="p-handle" id="vp-location" style="color:rgba(255,255,255,0.5)"></div>
         <div id="vp-bio" style="display:none;font-size:12.5px;color:rgba(255,255,255,0.75);margin-top:4px;max-width:240px;line-height:1.4"></div>
       </div>
@@ -2827,18 +2830,16 @@ function oslDay2(day) {
   </div>
 
   <div class="scroll-bare" style="padding:20px 20px 32px">
-    <div id="vp-friend-area"></div>
+    <div id="vp-events-section" style="display:none">
+      <div class="sec-title">Upcoming Events</div>
+      <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
 
     <div id="vp-interests-section" style="display:none;margin-top:20px">
       <div class="sec-title" id="vp-interests-title">About</div>
       <div class="card" style="padding:14px 16px">
         <div style="display:flex;flex-wrap:wrap;gap:8px" id="vp-interests-list"></div>
       </div>
-    </div>
-
-    <div id="vp-events-section" style="display:none;margin-top:20px">
-      <div class="sec-title">Events</div>
-      <div id="vp-events-list" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
 
     <div id="vp-memories-section" style="margin-top:20px">
@@ -3455,7 +3456,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.95.0-edit-profile-depth';
+window.INNINGS_BUILD = 'v4.97.0-osl-feed-editorial-scrapbook';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7213,16 +7214,20 @@ function _fmtChatDayDivider(ts) {
 // day changes between one message and the next. renderOne(c) must return the
 // HTML for a single message (everything each chat already builds per-item).
 // Pass dark=true for chats on a dark background (e.g. the feedback group).
-function _chatHtmlWithDayDividers(msgs, renderOne, dark) {
+function _chatHtmlWithDayDividers(msgs, renderOne, mode) {
   var html = '';
   var lastDayKey = null;
-  var style = dark ? 'text-align:center;font-size:11px;color:rgba(255,255,255,0.5);font-weight:600' : '';
+  var style = mode === true ? 'text-align:center;font-size:11px;color:rgba(255,255,255,0.5);font-weight:600' : '';
   msgs.forEach(function(c){
     var dayKey = _chatDayKey(c.ts);
     if (dayKey !== lastDayKey) {
-      html += dark
-        ? '<div style="' + style + '">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>'
-        : '<div class="date-div">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>';
+      if (mode === 'osl') {
+        html += '<div style="text-align:center;margin:4px 0 10px"><span style="display:inline-block;background:var(--indigo-deep);color:var(--accent);font-size:10.5px;font-weight:700;padding:5px 16px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</span></div>';
+      } else if (mode) {
+        html += '<div style="' + style + '">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>';
+      } else {
+        html += '<div class="date-div">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>';
+      }
       lastDayKey = dayKey;
     }
     html += renderOne(c);
@@ -7242,7 +7247,7 @@ function renderOslChat(msgs) {
     }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
-    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var lpHtml = c.linkPreview ? _oslPolaroidLinkPreviewHtml(c.linkPreview) : '';
     var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
@@ -7257,7 +7262,7 @@ function renderOslChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer;background:linear-gradient(135deg,var(--indigo),#4E3F9E);box-shadow:0 4px 14px rgba(61,53,128,0.25)">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -7273,10 +7278,10 @@ function renderOslChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer;background:white;box-shadow:0 2px 10px rgba(61,53,128,0.08)">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
-  });
+  }, 'osl');
   var panel = document.getElementById('osl2-chat');
   if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -7323,8 +7328,8 @@ function _oslFeedNoticeHtml(c) {
   } else {
     return '';
   }
-  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:var(--indigo-light);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
-    '<div style="font-size:20px;flex-shrink:0">' + icon + '</div>' +
+  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:white;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(61,53,128,0.1);margin-bottom:2px">' +
+    '<div style="width:38px;height:38px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">' + icon + '</div>' +
     '<div style="flex:1;min-width:0">' +
       '<div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
       (detail ? '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
@@ -8075,6 +8080,19 @@ function _linkPreviewCardHtml(lp) {
   '</a>';
 }
 
+// OSL Feed's own take on a link preview — a slightly-rotated polaroid with
+// a handwritten-style caption, rather than the plain card every other chat
+// surface uses. Scoped to renderOslChat only.
+function _oslPolaroidLinkPreviewHtml(lp) {
+  if (!lp || !lp.url) return '';
+  var imgHtml = lp.image ? '<div style="height:120px;border-radius:1px;background-size:cover;background-position:center;background-image:url(' + _escapeHtml(lp.image) + ')"></div>' : '';
+  var caption = lp.title || lp.siteName || '';
+  return '<a href="' + _escapeHtml(lp.url) + '" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;background:white;padding:8px 8px 26px;box-shadow:0 6px 16px rgba(61,53,128,0.15);border-radius:2px;transform:rotate(-1.2deg);max-width:210px;margin-bottom:8px;position:relative">' +
+    imgHtml +
+    '<div style="position:absolute;bottom:7px;left:9px;right:9px;font-size:11px;color:var(--mid);font-family:\'Segoe Print\',\'Comic Sans MS\',cursive;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(caption) + '</div>' +
+  '</a>';
+}
+
 function renderGroupChat(msgs) {
   var box = document.getElementById('group-chat-msgs');
   var empty = document.getElementById('group-chat-empty');
@@ -8699,12 +8717,12 @@ function openUserProfile(uid) {
   var avEl = document.getElementById('vp-av');
   var nameEl = document.getElementById('vp-name');
   var locEl = document.getElementById('vp-location');
-  var areaEl = document.getElementById('vp-friend-area');
+  var badgeEl = document.getElementById('vp-friend-badge');
   var friendsSectionEl = document.getElementById('vp-friends-section');
   var eventsSectionEl = document.getElementById('vp-events-section');
   var interestsSectionEl = document.getElementById('vp-interests-section');
   if (nameEl) nameEl.textContent = 'Loading…';
-  if (areaEl) areaEl.innerHTML = '';
+  if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.onclick = null; }
   if (friendsSectionEl) friendsSectionEl.style.display = 'none';
   if (eventsSectionEl) eventsSectionEl.style.display = 'none';
   if (interestsSectionEl) interestsSectionEl.style.display = 'none';
@@ -8736,7 +8754,7 @@ function openUserProfile(uid) {
     }
     _renderVpPhotos(d.profilePhotos || []);
     _renderVpInterests(nm, d.interests || []);
-    _renderFriendArea(uid);
+    _renderVpFriendBadge(uid);
     _renderVpEvents(uid, nm, d);
     _computeAndRenderUserStats(uid);
   }).catch(function(err){
@@ -8995,35 +9013,49 @@ function closeTheirFestival() {
   _navApplyScreen(window._theirFestivalReturnTo || 'view-profile');
 }
 
-function _renderFriendArea(theirUid) {
-  var areaEl = document.getElementById('vp-friend-area');
+// Compact badge sitting right next to their name, rather than a whole
+// section below the header — green check if you're already friends,
+// indigo plus if you're not (one tap sends the request right there), a
+// muted "···" if you've already sent one, and a gold check if THEY sent
+// you one (tap to accept).
+function _renderVpFriendBadge(theirUid) {
+  var badgeEl = document.getElementById('vp-friend-badge');
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!areaEl || !user || !window.db) return;
-  areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Checking friend status…</div>';
+  if (!badgeEl || !user || !window.db) return;
+  badgeEl.style.display = 'none';
   Promise.all([
     window.db.collection('friendRequests').where('fromUid','==',user.uid).where('toUid','==',theirUid).get(),
     window.db.collection('friendRequests').where('fromUid','==',theirUid).where('toUid','==',user.uid).get()
   ]).then(function(results){
     var sent = results[0].empty ? null : { id: results[0].docs[0].id, data: results[0].docs[0].data() };
     var received = results[1].empty ? null : { id: results[1].docs[0].id, data: results[1].docs[0].data() };
+    badgeEl.style.display = 'flex';
     if ((sent && sent.data.status === 'accepted') || (received && received.data.status === 'accepted')) {
-      areaEl.innerHTML = '<div style="display:flex;align-items:center;gap:6px;color:var(--indigo);font-size:14px;font-weight:700"><span>✓</span> Friends</div>';
+      badgeEl.style.background = 'var(--win)';
+      badgeEl.style.cursor = 'default';
+      badgeEl.textContent = '✓';
+      badgeEl.onclick = null;
       _ensureFriendListed(theirUid);
       _renderMutualFriendsList(theirUid);
     } else if (received && received.data.status === 'pending') {
-      areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">Wants to be friends</div>' +
-        '<div style="display:flex;gap:8px">' +
-        '<button onclick="acceptFriendRequest(\'' + received.id + '\')" style="flex:1;padding:12px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Accept</button>' +
-        '<button onclick="declineFriendRequest(\'' + received.id + '\')" style="flex:1;padding:12px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Decline</button>' +
-        '</div>';
+      badgeEl.style.background = '#D4A24C';
+      badgeEl.style.cursor = 'pointer';
+      badgeEl.textContent = '✓';
+      badgeEl.onclick = function(){ acceptFriendRequest(received.id); };
     } else if (sent && sent.data.status === 'pending') {
-      areaEl.innerHTML = '<button disabled style="width:100%;padding:12px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);color:var(--subtle);font-size:14px;font-weight:600;font-family:inherit">Request Sent</button>';
+      badgeEl.style.background = 'rgba(255,255,255,0.25)';
+      badgeEl.style.cursor = 'pointer';
+      badgeEl.textContent = '···';
+      badgeEl.onclick = function(){ if (typeof ib_toast==='function') ib_toast('Friend request already sent'); };
     } else {
-      areaEl.innerHTML = '<button onclick="sendFriendRequest(\'' + theirUid + '\')" style="width:100%;padding:12px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Add Friend</button>';
+      badgeEl.style.background = 'var(--indigo)';
+      badgeEl.style.cursor = 'pointer';
+      badgeEl.textContent = '+';
+      badgeEl.onclick = function(){ sendFriendRequest(theirUid); };
     }
   }).catch(function(err){
     console.error('Friend status error:', err);
-    areaEl.innerHTML = '<div style="font-size:13px;color:var(--subtle)">Could not load friend status</div>';
+    badgeEl.style.display = 'none';
   });
 }
 
@@ -9034,7 +9066,7 @@ function sendFriendRequest(theirUid) {
   window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: theirUid, status: 'pending', ts: Date.now() })
     .then(function(){
       if (typeof ib_toast==='function') ib_toast('Friend request sent');
-      _renderFriendArea(theirUid);
+      _renderVpFriendBadge(theirUid);
       window.db.collection('notifications').add({
         toUid: theirUid,
         type: 'friend_request',
@@ -9057,7 +9089,7 @@ function acceptFriendRequest(reqId) {
     return window.db.collection('friendRequests').doc(reqId).update({ status: 'accepted' });
   }).then(function(){
     if (typeof ib_toast==='function') ib_toast("You're friends now 🎉");
-    if (theirUid) _renderFriendArea(theirUid);
+    if (theirUid) _renderVpFriendBadge(theirUid);
     if (typeof loadMyFriendsList === 'function') loadMyFriendsList();
     if (theirUid && user) {
       window.db.collection('notifications').add({
@@ -9079,7 +9111,7 @@ function declineFriendRequest(reqId) {
     theirUid = doc.exists ? doc.data().fromUid : null;
     return window.db.collection('friendRequests').doc(reqId).delete();
   }).then(function(){
-    if (theirUid) _renderFriendArea(theirUid);
+    if (theirUid) _renderVpFriendBadge(theirUid);
   }).catch(function(err){ console.error('Decline friend request error:', err); });
 }
 
