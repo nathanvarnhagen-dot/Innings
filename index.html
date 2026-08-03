@@ -1923,20 +1923,10 @@ function loadActAttendees() {
   if (!actName || !user || !window.db) return;
   if (goingBox) goingBox.innerHTML = _oslAttendeesEmptyHtml('Loading…');
   if (pendingBox) pendingBox.innerHTML = '';
-  Promise.all([
-    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
-    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
-  ]).then(function(results){
-    var uids = [];
-    results[0].forEach(function(d){ uids.push(d.data().toUid); });
-    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v, i){ return uids.indexOf(v) === i; });
-    uids.push(user.uid);
-    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }));
-  }).then(function(docs){
+  window.db.collection('users').get().then(function(snap){
     if (!window._actDetailCurrent || window._actDetailCurrent.name !== actName) return; // a different act is open now
     var going = [], maybe = [], pending = [];
-    docs.forEach(function(doc){
+    snap.forEach(function(doc){
       var d = doc.data() || {};
       var isMe = doc.id === user.uid;
       var status = (d.oslActRsvps || {})[actName];
@@ -3672,7 +3662,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.111.1-sort-by-end-time';
+window.INNINGS_BUILD = 'v4.111.2-fix-whosgoing-friend-scope-bug';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7059,19 +7049,12 @@ function loadOslAttendees() {
   if (!user || !window.db) return;
   if (goingBox) goingBox.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Loading…</div>';
   if (pendingBox) pendingBox.innerHTML = '';
-  Promise.all([
-    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
-    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
-  ]).then(function(results){
-    var uids = [];
-    results[0].forEach(function(d){ uids.push(d.data().toUid); });
-    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v, i){ return uids.indexOf(v) === i; });
-    uids.push(user.uid);
-    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }));
-  }).then(function(docs){
+  // Everyone in the group, not just the viewer's personal friends — the
+  // friend-graph version only showed people who happened to be friends
+  // with whoever opened the screen, hiding confirmed attendees who weren't
+  window.db.collection('users').get().then(function(snap){
     var going = [], maybe = [], pending = [];
-    docs.forEach(function(doc){
+    snap.forEach(function(doc){
       var d = doc.data() || {};
       var isMe = doc.id === user.uid;
       var entry = { uid: doc.id, name: isMe ? 'You' : (d.name || 'Friend'), isMe: isMe };
