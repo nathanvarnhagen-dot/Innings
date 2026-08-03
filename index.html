@@ -3456,7 +3456,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.97.1-fix-polaroid-link-preview';
+window.INNINGS_BUILD = 'v4.97.2-fix-day-divider-contrast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7222,7 +7222,7 @@ function _chatHtmlWithDayDividers(msgs, renderOne, mode) {
     var dayKey = _chatDayKey(c.ts);
     if (dayKey !== lastDayKey) {
       if (mode === 'osl') {
-        html += '<div style="text-align:center;margin:4px 0 10px"><span style="display:inline-block;background:var(--indigo-deep);color:var(--accent);font-size:10.5px;font-weight:700;padding:5px 16px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</span></div>';
+        html += '<div style="text-align:center;margin:4px 0 10px"><span style="display:inline-block;background:var(--indigo-deep);color:#C9C1F0;font-size:10.5px;font-weight:700;padding:5px 16px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</span></div>';
       } else if (mode) {
         html += '<div style="' + style + '">' + _escapeHtml(_fmtChatDayDivider(c.ts)) + '</div>';
       } else {
