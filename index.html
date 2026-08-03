@@ -2203,6 +2203,32 @@ function updateMyFest() {
     return div;
   }
 
+  // Parses "6:55–8:25 PM" style ranges into minutes-since-midnight for the
+  // START time, so each day's list can be sorted chronologically instead of
+  // just showing acts in whatever order they were marked Going/Maybe
+  function _actStartMinutes(timeStr) {
+    if (!timeStr) return 0;
+    var startPart = timeStr.split('–')[0].trim();
+    var suffixMatch = timeStr.match(/(AM|PM)/i);
+    var suffix = suffixMatch ? suffixMatch[1].toUpperCase() : '';
+    var startSuffixMatch = startPart.match(/(AM|PM)/i);
+    if (startSuffixMatch) suffix = startSuffixMatch[1].toUpperCase();
+    var timeOnly = startPart.replace(/(AM|PM)/i, '').trim();
+    var bits = timeOnly.split(':');
+    var hour = parseInt(bits[0], 10) || 0;
+    var min = parseInt(bits[1], 10) || 0;
+    if (suffix === 'PM' && hour !== 12) hour += 12;
+    if (suffix === 'AM' && hour === 12) hour = 0;
+    return hour * 60 + min;
+  }
+  function _sortRowsByTime(rowsToSort){
+    rowsToSort.sort(function(a, b){
+      return _actStartMinutes((allActs[a.name]||{}).time) - _actStartMinutes((allActs[b.name]||{}).time);
+    });
+  }
+  Object.keys(groups).forEach(function(dayKey){ _sortRowsByTime(groups[dayKey]); });
+  _sortRowsByTime(otherRows);
+
   dayOrder.forEach(function(dayKey){
     var dayRows = groups[dayKey];
     if (!dayRows || !dayRows.length) return;
@@ -3645,7 +3671,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.110.2-stronger-act-tab-contrast';
+window.INNINGS_BUILD = 'v4.111.0-your-festival-chronological-sort';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
