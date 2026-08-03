@@ -1569,8 +1569,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
     <div id="act-tabs" style="position:relative;z-index:2;display:flex;padding:0 16px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
       <div class="act-tab active" onclick="actTab('activity',event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">Activity</div>
-      <div class="act-tab" onclick="actTab('photos',event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.6);border-bottom:2px solid transparent;cursor:pointer">Photos</div>
-      <div class="act-tab" onclick="actTab('songs',event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.6);border-bottom:2px solid transparent;cursor:pointer">Songs</div>
+      <div class="act-tab" onclick="actTab('photos',event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:11px 0;color:rgba(255,255,255,0.85);border-bottom:2px solid transparent;cursor:pointer">Photos</div>
+      <div class="act-tab" onclick="actTab('songs',event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:11px 0;color:rgba(255,255,255,0.85);border-bottom:2px solid transparent;cursor:pointer">Songs</div>
     </div>
 
     <!-- ACTIVITY TAB — chat, with RSVP/photo notifications interleaved inline. Who's-going now lives up top, above, so it's visible regardless of tab. -->
@@ -2031,24 +2031,22 @@ function actRsvp2(btn, actName, val) {
   myRsvps[actName] = val;
   var row = btn.parentNode;
   var btns = row.querySelectorAll('button');
-  btns.forEach(function(b) {
-    b.style.background = 'rgba(255,255,255,0.07)';
-    b.style.color = 'rgba(255,255,255,0.4)';
-    b.style.fontWeight = '600';
+  // Same palette as the card template in openStage() — going/maybe/no in
+  // that fixed order, since that's the DOM order the three buttons render in
+  var palette = [
+    { unselBg: 'rgba(74,222,128,0.14)',   unselColor: 'rgba(74,222,128,0.9)',   unselBorder: 'rgba(74,222,128,0.45)',   selBg: 'rgba(74,222,128,0.92)',   selColor: '#052E10', selBorder: 'rgba(74,222,128,1)' },
+    { unselBg: 'rgba(252,211,77,0.14)',   unselColor: 'rgba(252,211,77,0.9)',   unselBorder: 'rgba(252,211,77,0.45)',   selBg: 'rgba(252,211,77,0.92)',   selColor: '#332404', selBorder: 'rgba(252,211,77,1)' },
+    { unselBg: 'rgba(248,113,113,0.14)',  unselColor: 'rgba(248,113,113,0.9)',  unselBorder: 'rgba(248,113,113,0.45)',  selBg: 'rgba(248,113,113,0.92)',  selColor: '#330A0A', selBorder: 'rgba(248,113,113,1)' }
+  ];
+  var valOrder = ['going', 'maybe', 'no'];
+  btns.forEach(function(b, i) {
+    var p = palette[i];
+    var isSelected = valOrder[i] === val;
+    b.style.background = isSelected ? p.selBg : p.unselBg;
+    b.style.color = isSelected ? p.selColor : p.unselColor;
+    b.style.borderColor = isSelected ? p.selBorder : p.unselBorder;
+    b.style.fontWeight = isSelected ? '700' : '600';
   });
-  if (val === 'going') {
-    btn.style.background = 'rgba(168,159,232,0.9)';
-    btn.style.color = '#0D0820';
-    btn.style.fontWeight = '700';
-  } else if (val === 'maybe') {
-    btn.style.background = 'rgba(254,243,226,0.15)';
-    btn.style.color = '#FEF3E2';
-    btn.style.fontWeight = '700';
-  } else if (val === 'no') {
-    btn.style.background = 'rgba(220,90,90,0.22)';
-    btn.style.color = 'rgba(255,190,190,0.95)';
-    btn.style.fontWeight = '700';
-  }
   updateMyFest();
   window.userData = window.userData || {};
   window.userData.oslActRsvps = myRsvps;
@@ -2818,8 +2816,8 @@ function sendActMessage() {
 function actTab(tab, evt) {
   evt = evt || window.event;
   document.querySelectorAll('#act-tabs .act-tab').forEach(function(t) {
-    t.style.color = 'rgba(255,255,255,0.6)';
-    t.style.fontWeight = '600';
+    t.style.color = 'rgba(255,255,255,0.85)';
+    t.style.fontWeight = '700';
     t.style.borderBottom = '2px solid transparent';
   });
   if (evt && evt.target) {
@@ -2855,8 +2853,8 @@ function _actResetTabsToActivity() {
       t.style.fontWeight = '700';
       t.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
     } else {
-      t.style.color = 'rgba(255,255,255,0.6)';
-      t.style.fontWeight = '600';
+      t.style.color = 'rgba(255,255,255,0.85)';
+      t.style.fontWeight = '700';
       t.style.borderBottom = '2px solid transparent';
     }
   });
@@ -3647,7 +3645,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.110.0-per-act-whos-going';
+window.INNINGS_BUILD = 'v4.110.2-stronger-act-tab-contrast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
