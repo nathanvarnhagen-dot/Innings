@@ -1006,8 +1006,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div class="scroll">
 
     <!-- OSL BANNER -->
-    <div style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="nav('osl-group')">
-      <div style="font-size:28px">🎪</div>
+    <div style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="bannerNavWithPop(this,'osl-group')">
+      <div class="banner-pop-icon" style="font-size:28px;transition:transform 0.32s cubic-bezier(.34,1.56,.64,1)">🎪</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:white">Outside Lands 2026</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Aug 7–9 · Golden Gate Park · Tap to open →</div>
@@ -1015,8 +1015,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
 
     <!-- FEEDBACK BANNER -->
-    <div style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="nav('feedback-group')">
-      <div style="font-size:28px">💬</div>
+    <div style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="bannerNavWithPop(this,'feedback-group')">
+      <div class="banner-pop-icon" style="font-size:28px;transition:transform 0.32s cubic-bezier(.34,1.56,.64,1)">💬</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:white">Feedback</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Tell Nate what's working (and what's not) · Tap to open →</div>
@@ -1835,6 +1835,7 @@ function openStage(day, stageId) {
     actsEl.appendChild(banner);
   }
 
+  loadOslFriendRsvps(function(){
   data.acts.forEach(function(act) {
     var rsvp = myRsvps[act.name] || '';
     var hasImg = !!act.image;
@@ -1851,6 +1852,7 @@ function openStage(day, stageId) {
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
         (act.headliner ? '<div style="background:rgba(168,159,232,0.9);color:#0D0820;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">HEADLINER</div>' : '') +
+        _friendClusterHtml(act.name) +
         '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>' +
       '</div>' +
     '</div>' +
@@ -1860,6 +1862,7 @@ function openStage(day, stageId) {
       '<button onclick="actRsvp2(this,\'' + act.name + '\',\'no\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='no' ? 'rgba(220,90,90,0.22)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='no' ? 'rgba(255,190,190,0.95)' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='no' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✕ Skip</button>' +
     '</div>';
     actsEl.appendChild(div);
+  });
   });
 
   document.getElementById('osl2-stage-detail').style.display = 'flex';
@@ -3476,7 +3479,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.102.1-fix-lead-icon-timing';
+window.INNINGS_BUILD = 'v4.103.0-banner-pop-nav-and-act-clusters';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3517,6 +3520,17 @@ function _nudgeScrollers(screenEl){
       });
     });
   });
+}
+
+// Tapped feed banner (OSL / Feedback): the icon pops big fast, then we navigate in
+function bannerNavWithPop(bannerEl, screenId){
+  var icon = bannerEl.querySelector('.banner-pop-icon');
+  if (!icon) { nav(screenId); return; }
+  icon.style.transform = 'scale(1.7)';
+  setTimeout(function(){
+    nav(screenId);
+    setTimeout(function(){ icon.style.transform = 'scale(1)'; }, 260);
+  }, 180);
 }
 
 function nav(id){
