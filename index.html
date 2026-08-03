@@ -1177,10 +1177,34 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- MEMBERS STRIP -->
-  <div id="osl-members" style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
-      <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:rgba(255,255,255,0.5)">＋</div>
-      <div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div>
+  <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:stretch;flex-shrink:0">
+    <div onclick="openOslAttendees()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 12px;flex-shrink:0;cursor:pointer;border-right:0.5px solid rgba(255,255,255,0.08)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.55);white-space:nowrap;letter-spacing:0.01em">Who's going</div>
+    </div>
+    <div id="osl-members" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex:1;min-width:0">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
+        <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:rgba(255,255,255,0.5)">＋</div>
+        <div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHO'S GOING / PENDING DETAIL OVERLAY -->
+  <div id="osl-attendees-detail" style="display:none;flex-direction:column;background:#0D0820;position:absolute;inset:0;z-index:20">
+    <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <button onclick="closeOslAttendees()" style="background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="font-size:16px;font-weight:700;color:white">Who's going</div>
+    </div>
+    <div style="display:flex;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
+      <div class="osl-att-tab" onclick="oslAttendeesTab('going', event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:12px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">Going</div>
+      <div class="osl-att-tab" onclick="oslAttendeesTab('pending', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:12px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer">Pending</div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div id="osl-attendees-going"></div>
+      <div id="osl-attendees-pending" style="display:none"></div>
     </div>
   </div>
 
@@ -3512,7 +3536,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.106.0-fix-link-card-delete';
+window.INNINGS_BUILD = 'v4.107.0-whos-going-pending-overlay';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6846,6 +6870,96 @@ function oslSetRsvp(val) {
     }
   }
   if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're going 🎉" : val === 'maybe' ? 'Marked as maybe' : 'Marked as not going');
+}
+
+// ── WHO'S GOING / PENDING — reuses the same friend-fetch pattern as
+// loadOslFriendRsvps, but classifies everyone (not just per-act) by their
+// top-level oslRsvp status so "who hasn't responded yet" has somewhere to live
+function openOslAttendees() {
+  var box = document.getElementById('osl-attendees-detail');
+  if (box) box.style.display = 'flex';
+  loadOslAttendees();
+}
+
+function closeOslAttendees() {
+  var box = document.getElementById('osl-attendees-detail');
+  if (box) box.style.display = 'none';
+}
+
+function oslAttendeesTab(tab, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('.osl-att-tab').forEach(function(t){
+    t.style.color = 'rgba(255,255,255,0.55)';
+    t.style.fontWeight = '600';
+    t.style.borderBottom = '2px solid transparent';
+  });
+  if (evt && evt.target) {
+    evt.target.style.color = 'rgba(168,159,232,1)';
+    evt.target.style.fontWeight = '700';
+    evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  }
+  var goingBox = document.getElementById('osl-attendees-going');
+  var pendingBox = document.getElementById('osl-attendees-pending');
+  if (goingBox) goingBox.style.display = tab === 'going' ? 'block' : 'none';
+  if (pendingBox) pendingBox.style.display = tab === 'pending' ? 'block' : 'none';
+}
+
+function _oslAttendeesEmptyHtml(msg) {
+  return '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">' + _escapeHtml(msg) + '</div>';
+}
+
+function _attendeeRowHtml(entry, label, color) {
+  return '<div' + (entry.isMe ? '' : ' onclick="openUserProfile(\'' + entry.uid + '\')"') + ' style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid rgba(255,255,255,0.06)' + (entry.isMe ? '' : ';cursor:pointer') + '">' +
+    '<div class="av av-a" style="width:38px;height:38px;font-size:13px;flex-shrink:0">' + _escapeHtml(_initials(entry.name)) + '</div>' +
+    '<div style="flex:1;font-size:14px;font-weight:600;color:white">' + _escapeHtml(entry.name) + '</div>' +
+    (label ? '<div style="font-size:10px;font-weight:700;color:' + color + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + label + '</div>' : '') +
+  '</div>';
+}
+
+function loadOslAttendees() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var goingBox = document.getElementById('osl-attendees-going');
+  var pendingBox = document.getElementById('osl-attendees-pending');
+  if (!user || !window.db) return;
+  if (goingBox) goingBox.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Loading…</div>';
+  if (pendingBox) pendingBox.innerHTML = '';
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
+    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v, i){ return uids.indexOf(v) === i; });
+    uids.push(user.uid);
+    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }));
+  }).then(function(docs){
+    var going = [], maybe = [], pending = [];
+    docs.forEach(function(doc){
+      var d = doc.data() || {};
+      var isMe = doc.id === user.uid;
+      var entry = { uid: doc.id, name: isMe ? 'You' : (d.name || 'Friend'), isMe: isMe };
+      if (d.oslRsvp === 'going') going.push(entry);
+      else if (d.oslRsvp === 'maybe') maybe.push(entry);
+      else if (d.oslRsvp !== 'no') pending.push(entry);
+    });
+    if (goingBox) {
+      if (!going.length && !maybe.length) {
+        goingBox.innerHTML = _oslAttendeesEmptyHtml("No one's confirmed yet — be the first.");
+      } else {
+        goingBox.innerHTML = going.map(function(e){ return _attendeeRowHtml(e, 'Going', 'rgba(168,159,232,0.9)'); }).join('') +
+          maybe.map(function(e){ return _attendeeRowHtml(e, 'Maybe', '#FEDF9A'); }).join('');
+      }
+    }
+    if (pendingBox) {
+      pendingBox.innerHTML = pending.length
+        ? pending.map(function(e){ return _attendeeRowHtml(e, '', ''); }).join('')
+        : _oslAttendeesEmptyHtml('Everyone has responded.');
+    }
+  }).catch(function(err){
+    console.error('Load OSL attendees error:', err);
+    if (goingBox) goingBox.innerHTML = _oslAttendeesEmptyHtml('Could not load — check Firestore rules');
+  });
 }
 
 function renderOslState() {
