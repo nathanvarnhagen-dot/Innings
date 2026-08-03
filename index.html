@@ -3476,7 +3476,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.102.0-welcome-bigger-text-lead-icons';
+window.INNINGS_BUILD = 'v4.102.1-fix-lead-icon-timing';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4588,7 +4588,7 @@ function wiUpdate(){
   var leadIcons = document.querySelectorAll('.wi-lead-icon');
   leadIcons.forEach(function(el){ el.classList.remove('in'); });
   var activeIcon = document.getElementById('wi-lead-icon-' + wiIdx);
-  if (activeIcon) { setTimeout(function(){ activeIcon.classList.add('in'); }, 80); }
+  if (activeIcon) { setTimeout(function(){ activeIcon.classList.add('in'); }, 520); }
 }
 
 function wiNext(){ if (wiIdx < wiTotal - 1) { wiIdx++; wiUpdate(); } }
