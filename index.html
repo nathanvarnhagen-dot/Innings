@@ -50,6 +50,25 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .wi-lead-icon{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:18px;transform:scale(0.4);opacity:0;transition:transform 0.4s cubic-bezier(.34,1.56,.64,1),opacity 0.3s ease}
 .wi-lead-icon.in{transform:scale(1);opacity:1}
 
+@keyframes bannerCardPress{
+  0%{transform:scale(1);opacity:1}
+  100%{transform:scale(0.96);opacity:0.7}
+}
+@keyframes bannerIconPop{
+  0%{transform:scale(1) rotate(0deg)}
+  45%{transform:scale(1.85) rotate(10deg)}
+  75%{transform:scale(1.5) rotate(-6deg)}
+  100%{transform:scale(1) rotate(0deg)}
+}
+@keyframes bannerGlowPulse{
+  0%{transform:scale(0.3);opacity:0}
+  50%{transform:scale(1.3);opacity:0.9}
+  100%{transform:scale(1.8);opacity:0}
+}
+.banner-pop-card.popping{animation:bannerCardPress 0.42s ease forwards}
+.banner-pop-icon.popping{animation:bannerIconPop 0.42s cubic-bezier(.34,1.56,.64,1)}
+.banner-pop-glow.popping{animation:bannerGlowPulse 0.42s ease}
+
 /* OSL LINEUP HEADER — ambient festival-lights animation */
 .osl-light{position:absolute;width:3px;height:3px;border-radius:50%;background:#A89FE8;opacity:0;box-shadow:0 0 6px 1px rgba(168,159,232,0.85);animation:osl-twinkle 3.6s ease-in-out infinite}
 @keyframes osl-twinkle{0%,100%{opacity:0;transform:scale(0.6)}50%{opacity:0.9;transform:scale(1.3)}}
@@ -1004,8 +1023,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div class="scroll">
 
     <!-- OSL BANNER -->
-    <div style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="bannerNavWithPop(this,'osl-group')">
-      <div class="banner-pop-icon" style="font-size:28px;transition:transform 0.32s cubic-bezier(.34,1.56,.64,1)">🎪</div>
+    <div class="banner-pop-card" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'osl-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
+        <div class="banner-pop-icon" style="position:relative;font-size:28px">🎪</div>
+      </div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:white">Outside Lands 2026</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Aug 7–9 · Golden Gate Park · Tap to open →</div>
@@ -1013,8 +1035,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
 
     <!-- FEEDBACK BANNER -->
-    <div style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px" onclick="bannerNavWithPop(this,'feedback-group')">
-      <div class="banner-pop-icon" style="font-size:28px;transition:transform 0.32s cubic-bezier(.34,1.56,.64,1)">💬</div>
+    <div class="banner-pop-card" style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'feedback-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
+        <div class="banner-pop-icon" style="position:relative;font-size:28px">💬</div>
+      </div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:white">Feedback</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Tell Nate what's working (and what's not) · Tap to open →</div>
@@ -3487,7 +3512,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.104.3-fix-feed-listener-not-starting';
+window.INNINGS_BUILD = 'v4.105.0-improved-banner-pop-animation';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -3530,15 +3555,23 @@ function _nudgeScrollers(screenEl){
   });
 }
 
-// Tapped feed banner (OSL / Feedback): the icon pops big fast, then we navigate in
+// Tapped feed banner (OSL / Feedback): whole card presses down, icon pops
+// with a quick spin, a soft glow pulses behind it — then we navigate in
 function bannerNavWithPop(bannerEl, screenId){
   var icon = bannerEl.querySelector('.banner-pop-icon');
+  var glow = bannerEl.querySelector('.banner-pop-glow');
   if (!icon) { nav(screenId); return; }
-  icon.style.transform = 'scale(1.7)';
+  bannerEl.classList.add('popping');
+  icon.classList.add('popping');
+  if (glow) glow.classList.add('popping');
   setTimeout(function(){
     nav(screenId);
-    setTimeout(function(){ icon.style.transform = 'scale(1)'; }, 260);
-  }, 180);
+    setTimeout(function(){
+      bannerEl.classList.remove('popping');
+      icon.classList.remove('popping');
+      if (glow) glow.classList.remove('popping');
+    }, 300);
+  }, 260);
 }
 
 function nav(id){
