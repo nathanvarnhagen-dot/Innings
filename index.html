@@ -3456,7 +3456,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.97.2-fix-day-divider-contrast';
+window.INNINGS_BUILD = 'v4.98.0-unified-osl-photos';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8411,22 +8411,41 @@ function _postGroupGameActivityNotice(groupId, gamePk, gameLabel, author, uid, t
   }).catch(function(err){ console.error('Post game activity notice error:', err); });
 }
 
-// ── OUTSIDE LANDS SHARED PHOTOS ──
+// ── OUTSIDE LANDS SHARED PHOTOS ── merges the general oslPhotos album with
+// every artist's actPhotos, so a photo added on Charli XCX's page (or any
+// other act) also shows up here, not just photos added directly to this tab.
 window._oslPhotosStarted = false;
+window._oslPhotosRaw = [];
+window._actPhotosRaw = [];
 function startOslPhotos() {
   if (window._oslPhotosStarted) return;
   if (!window.db) return;
   window._oslPhotosStarted = true;
   window.db.collection('oslPhotos').orderBy('ts', 'desc').limit(120).onSnapshot(function(snap){
     var arr = [];
-    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id }, doc.data())); });
-    window._oslPhotosData = arr;
-    renderOslPhotos(arr);
+    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id, _source: 'osl' }, doc.data())); });
+    window._oslPhotosRaw = arr;
+    _mergeAndRenderOslPhotos();
   }, function(err){
     console.error('OSL photos error:', err);
     window._oslPhotosStarted = false;
     if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules');
   });
+  window.db.collection('actPhotos').orderBy('ts', 'desc').limit(200).onSnapshot(function(snap){
+    var arr = [];
+    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id, _source: 'act' }, doc.data())); });
+    window._actPhotosRaw = arr;
+    _mergeAndRenderOslPhotos();
+  }, function(err){
+    console.error('Act photos (merged into OSL Photos) error:', err);
+  });
+}
+
+function _mergeAndRenderOslPhotos() {
+  var merged = (window._oslPhotosRaw || []).concat(window._actPhotosRaw || []);
+  merged.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+  window._oslPhotosData = merged;
+  renderOslPhotos(merged);
 }
 
 function renderOslPhotos(photos) {
@@ -8611,7 +8630,8 @@ function deleteOslPhoto() {
   var photos = window._oslPhotosData || [];
   var p = photos[window._oslPhotoViewerIndex];
   if (!p || !p._id || !window.db) return;
-  window.db.collection('oslPhotos').doc(p._id).delete()
+  var collection = p._source === 'act' ? 'actPhotos' : 'oslPhotos';
+  window.db.collection(collection).doc(p._id).delete()
     .then(function(){ closeOslPhoto(); if (typeof ib_toast==='function') ib_toast('Photo deleted'); })
     .catch(function(err){ console.error('Delete photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
