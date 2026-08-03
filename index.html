@@ -1905,9 +1905,9 @@ function openStage(day, stageId) {
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:6px;padding:0 14px 14px" data-act="' + act.name + '">' +
-      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'going\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='going' ? '#0D0820' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='going' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✓ Going</button>' +
-      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'maybe\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(254,243,226,0.15)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='maybe' ? '#FEF3E2' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='maybe' ? '700' : '600') + ';cursor:pointer;font-family:inherit">? Maybe</button>' +
-      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'no\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='no' ? 'rgba(220,90,90,0.22)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='no' ? 'rgba(255,190,190,0.95)' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='no' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✕ Skip</button>' +
+      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'going\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(74,222,128,0.92)' : 'rgba(74,222,128,0.14)') + ';color:' + (rsvp==='going' ? '#052E10' : 'rgba(74,222,128,0.9)') + ';border:1px solid rgba(74,222,128,' + (rsvp==='going' ? '1' : '0.45') + ');font-size:12px;font-weight:' + (rsvp==='going' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✓ Going</button>' +
+      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'maybe\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(252,211,77,0.92)' : 'rgba(252,211,77,0.14)') + ';color:' + (rsvp==='maybe' ? '#332404' : 'rgba(252,211,77,0.9)') + ';border:1px solid rgba(252,211,77,' + (rsvp==='maybe' ? '1' : '0.45') + ');font-size:12px;font-weight:' + (rsvp==='maybe' ? '700' : '600') + ';cursor:pointer;font-family:inherit">? Maybe</button>' +
+      '<button onclick="actRsvp2(this,\'' + act.name + '\',\'no\')" style="flex:1;padding:7px 4px;border-radius:10px;background:' + (rsvp==='no' ? 'rgba(248,113,113,0.92)' : 'rgba(248,113,113,0.14)') + ';color:' + (rsvp==='no' ? '#330A0A' : 'rgba(248,113,113,0.9)') + ';border:1px solid rgba(248,113,113,' + (rsvp==='no' ? '1' : '0.45') + ');font-size:12px;font-weight:' + (rsvp==='no' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✕ Skip</button>' +
     '</div>';
     actsEl.appendChild(div);
   });
@@ -3542,7 +3542,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.108.1-flip-whosgoing-invite-to-right';
+window.INNINGS_BUILD = 'v4.109.0-rsvp-button-colors-borders';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
