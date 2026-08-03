@@ -3662,7 +3662,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.111.2-fix-whosgoing-friend-scope-bug';
+window.INNINGS_BUILD = 'v4.111.3-fix-invite-duplicate-link-and-code-text';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4859,14 +4859,16 @@ function sendInviteText() {
   var code = document.getElementById('user-code');
   var userCode = code ? code.textContent.trim() : 'YourCode2026';
   var inviteUrl = 'https://innings-zeta.vercel.app?invite=' + encodeURIComponent(userCode);
-  var message = "Hey! I want you to join me on Innings — a private space for memories with the people that matter. Use my invite code \"" + userCode + "\" to join: " + inviteUrl;
+  var message = "Hey! I want you to join me on Innings — a private space for memories with the people that matter: " + inviteUrl;
   
   // Try native SMS share
   if (navigator.share) {
+    // Only pass `text` (which already has the link in it) — also passing a
+    // separate `url` made some share targets (iMessage) append the link a
+    // second time, showing two link-preview cards for the same message
     navigator.share({
       title: 'Join me on Innings',
-      text: message,
-      url: inviteUrl
+      text: message
     }).catch(function() {});
   } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     window.open('sms:?&body=' + encodeURIComponent(message));
@@ -8203,7 +8205,9 @@ function fdShareInvite() {
 
 function _shareInviteLink(url, message, shareTitle) {
   if (navigator.share) {
-    navigator.share({ title: shareTitle, text: message, url: url }).catch(function(){});
+    // message already has the link embedded — a separate `url` field made
+    // some share targets duplicate the link preview (see sendInviteText)
+    navigator.share({ title: shareTitle, text: message }).catch(function(){});
   } else if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(message).then(function(){
       if (typeof ib_toast === 'function') ib_toast('Link copied — paste it in a text');
