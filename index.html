@@ -3662,7 +3662,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.111.3-fix-invite-duplicate-link-and-code-text';
+window.INNINGS_BUILD = 'v4.112.0-their-festival-avatars-and-jump';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9415,21 +9415,35 @@ function openTheirFestival(uid, name, actRsvps) {
   });
 
   var rows = going.map(function(n){ return { name: n, status: 'going' }; }).concat(maybe.map(function(n){ return { name: n, status: 'maybe' }; }));
+  loadOslFriendRsvps(function(){
   listEl.innerHTML = rows.map(function(row){
     var info = allActs[row.name] || {};
     var isGoing = row.status === 'going';
     var icon = isGoing
       ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
       : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
-    return '<div style="background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px">' +
+    var safeName = row.name.replace(/'/g, "\\'");
+    var safeTime = (info.time || '').replace(/'/g, "\\'");
+    var clusterHtml = _friendClusterHtml(row.name);
+    var rightHtml = clusterHtml || ('<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>');
+    return '<div onclick="_jumpToActFromTheirFestival(\'' + safeName + '\',\'' + safeTime + '\',' + (info.headliner ? 'true' : 'false') + ')" style="background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer">' +
       '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
       '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + _escapeHtml(row.name) + '</div>' +
       '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + _escapeHtml(info.stage || '') + ' · ' + _escapeHtml(info.time || 'TBD') + '</div></div>' +
-      '<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>' +
+      rightHtml +
     '</div>';
   }).join('');
+  });
 
   _navApplyScreen('their-festival');
+}
+
+// Same "jump to act" pattern as _jumpToActFromFeed — the difference is
+// their-festival is reached from a profile, not from inside the OSL screen,
+// so we have to nav there first before the act-detail overlay has anywhere to show
+function _jumpToActFromTheirFestival(actName, actTime, isHeadliner) {
+  nav('osl-group');
+  openActDetail(actName, actTime, isHeadliner);
 }
 
 function closeTheirFestival() {
