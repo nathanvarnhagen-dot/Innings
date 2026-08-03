@@ -3512,7 +3512,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.105.0-improved-banner-pop-animation';
+window.INNINGS_BUILD = 'v4.106.0-fix-link-card-delete';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7102,6 +7102,25 @@ window._reactionSheetTarget = null;
 
 // Double tap/click detection: fires openReactionSheet() on the second tap
 // within 400ms, mirroring iMessage's tapback gesture. Single taps do nothing.
+// Link-preview cards need BOTH behaviors a plain <a> can't give us at once:
+// a single tap should open the link, but a double tap (like every other
+// bubble) should open the reaction/delete sheet. A bare <a> would navigate
+// on the very first tap, so this waits briefly to see if a second tap
+// follows before deciding which one actually happened.
+function _linkCardTap(el, url, collection, msgId, isMine) {
+  var now = Date.now();
+  if (el._lastTapTs && (now - el._lastTapTs) < 400) {
+    el._lastTapTs = 0;
+    clearTimeout(el._tapTimer);
+    openReactionSheet(collection, msgId, isMine);
+  } else {
+    el._lastTapTs = now;
+    el._tapTimer = setTimeout(function(){
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }, 400);
+  }
+}
+
 function _msgDoubleTap(el, collection, msgId, isMine) {
   var now = Date.now();
   if (el._lastTapTs && (now - el._lastTapTs) < 400) {
@@ -7393,7 +7412,7 @@ function renderOslChat(msgs) {
     }
     var mine = c.uid && c.uid === myUid;
     var badges = _reactionBadgesHtml(c.reactions, false);
-    var lpHtml = c.linkPreview ? _oslPolaroidLinkPreviewHtml(c.linkPreview) : '';
+    var lpHtml = c.linkPreview ? _oslPolaroidLinkPreviewHtml(c.linkPreview, c._id, mine) : '';
     var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
     if (mine) {
       var tsLabel = _fmtTime(c.ts);
@@ -8229,14 +8248,18 @@ function _linkPreviewCardHtml(lp) {
 // OSL Feed's own take on a link preview — a slightly-rotated polaroid with
 // a handwritten-style caption, rather than the plain card every other chat
 // surface uses. Scoped to renderOslChat only.
-function _oslPolaroidLinkPreviewHtml(lp) {
+function _oslPolaroidLinkPreviewHtml(lp, msgId, isMine) {
   if (!lp || !lp.url) return '';
   var imgHtml = lp.image ? '<img src="' + _escapeHtml(lp.image) + '" style="width:100%;height:120px;object-fit:cover;display:block;border-radius:1px;background:var(--bg)" onerror="this.style.display=\'none\'">' : '';
   var caption = lp.title || lp.siteName || '';
-  return '<a href="' + _escapeHtml(lp.url) + '" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;background:white;padding:8px;box-shadow:0 6px 16px rgba(61,53,128,0.15);border-radius:2px;transform:rotate(-1.2deg);width:180px;margin-bottom:8px">' +
+  var safeUrl = _escapeHtml(lp.url).replace(/'/g, "\\'");
+  var tapHandler = msgId
+    ? '_linkCardTap(this,\'' + safeUrl + '\',\'oslChat\',\'' + msgId + '\',' + (isMine ? 'true' : 'false') + ')'
+    : '';
+  return '<div' + (tapHandler ? ' onclick="' + tapHandler + '"' : '') + ' style="display:block;cursor:pointer;background:white;padding:8px;box-shadow:0 6px 16px rgba(61,53,128,0.15);border-radius:2px;transform:rotate(-1.2deg);width:180px;margin-bottom:8px">' +
     imgHtml +
     (caption ? '<div style="margin-top:8px;font-size:14px;font-weight:600;color:var(--black);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(caption) + '</div>' : '') +
-  '</a>';
+  '</div>';
 }
 
 function renderGroupChat(msgs) {
