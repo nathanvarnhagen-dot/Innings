@@ -1178,16 +1178,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- MEMBERS STRIP -->
   <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:stretch;flex-shrink:0">
-    <div onclick="openOslAttendees()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 12px;flex-shrink:0;cursor:pointer;border-right:0.5px solid rgba(255,255,255,0.08)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.55);white-space:nowrap;letter-spacing:0.01em">Who's going</div>
-    </div>
-    <div id="osl-members" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex:1;min-width:0">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
+    <div style="display:flex;align-items:stretch;flex-shrink:0;border-right:0.5px solid rgba(255,255,255,0.08)">
+      <div onclick="openOslAttendees()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 12px;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.55);white-space:nowrap;letter-spacing:0.01em">Who's going</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 12px;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
         <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:rgba(255,255,255,0.5)">＋</div>
         <div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div>
       </div>
     </div>
+    <div id="osl-members" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex:1;min-width:0"></div>
   </div>
 
   <!-- WHO'S GOING / PENDING DETAIL OVERLAY -->
@@ -3541,7 +3542,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.107.1-fix-feed-scroll-to-today';
+window.INNINGS_BUILD = 'v4.108.0-lock-whosgoing-invite-left';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6989,10 +6990,7 @@ function renderOslState() {
           '<div class="m-av-sm av-a">' + _escapeHtml(_initials(nm)) + '</div>' +
           '<div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">' + _escapeHtml(isMe ? 'You' : nm.split(' ')[0]) + '</div></div>');
       });
-      var invite = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="if(typeof sendInviteText===\'function\')sendInviteText()">' +
-        '<div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:rgba(255,255,255,0.5)">＋</div>' +
-        '<div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div></div>';
-      membersEl.innerHTML = chips.join('') + invite;
+      membersEl.innerHTML = chips.join('');
     }).catch(function(err){
       console.error('OSL members error:', err);
     });
