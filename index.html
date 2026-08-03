@@ -2800,9 +2800,14 @@ function oslTab(tab, evt) {
     document.getElementById('osl2-myfest').style.flexDirection = 'column';
     if (typeof loadOslFriendRsvps === 'function') loadOslFriendRsvps(function(){ if (typeof updateMyFest === 'function') updateMyFest(); });
   } else if (tab === 'chat') {
-    document.getElementById('osl2-chat').style.display = 'flex';
+    var chatPanel = document.getElementById('osl2-chat');
+    chatPanel.style.display = 'flex';
     document.getElementById('osl2-chat-input').style.display = 'flex';
     if (typeof startOslChat === 'function') startOslChat();
+    // scrollHeight reads as 0 while display:none, so the scroll-to-bottom in
+    // renderOslChat has nothing to work with until the panel is actually
+    // shown — redo it now that it has real layout
+    setTimeout(function(){ chatPanel.scrollTop = chatPanel.scrollHeight; }, 0);
   } else if (tab === 'photos') {
     document.getElementById('osl2-photos').style.display = 'flex';
     if (typeof startOslPhotos === 'function') startOslPhotos();
@@ -3536,7 +3541,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.107.0-whos-going-pending-overlay';
+window.INNINGS_BUILD = 'v4.107.1-fix-feed-scroll-to-today';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
