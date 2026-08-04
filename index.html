@@ -2094,19 +2094,22 @@ function actRsvp2(btn, actName, val) {
   }
 }
 
-// Drops a small activity line into the act's chat/notification feed
-// ("Jason is going ✓") whenever someone marks Going or Maybe, so the
-// Activity tab doubles as a log of who's committed to an act — not just a
-// message thread. Skipped for "no"/skip to keep the feed from filling with
-// negative RSVPs, and only fires on an actual change (guarded by the caller).
-// Posts to the main OSL Feed, not the artist's own sub-chat — matches how
-// game activity in a group posts to the group's main Feed rather than
-// cluttering up the game-specific chat itself.
+// Drops a small activity line into the act's own activity feed ("Jason is
+// going ✓") whenever someone marks Going or Maybe, so the Activity tab
+// doubles as a log of who's committed to an act — not just a message
+// thread. Also mirrors into the main OSL Feed (same pattern chat messages
+// already use) so it surfaces there too. Skipped for "no"/skip to keep
+// both feeds from filling with negative RSVPs, and only fires on an actual
+// change (guarded by the caller).
 function _postActRsvpSystemMessage(actName, val) {
   if (val !== 'going' && val !== 'maybe') return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) return;
   var author = (window.userData && window.userData.name) || 'Someone';
+  var actId = _slugifyAct(actName);
+  var verb = val === 'going' ? 'is going ✓' : 'might go';
+  window.db.collection('actChat').add({ actId: actId, actName: actName, uid: user.uid, author: author, text: author + ' ' + verb, ts: Date.now(), system: true, systemType: 'rsvp' })
+    .catch(function(err){ console.error('Post act RSVP activity message error:', err); });
   _postOslFeedNotice({ uid: user.uid, author: author, systemType: 'rsvp', text: val === 'going' ? 'is going' : 'might go', actName: actName });
 }
 
@@ -2652,6 +2655,7 @@ function addActSong() {
   if (!user || !window.db || !window._actDetailCurrent) { if (typeof ib_toast==='function') ib_toast('Sign in to add a song'); return; }
   var name = (window.userData && window.userData.name) || 'Someone';
   var actId = window._actDetailCurrent.actId;
+  var actName = window._actDetailCurrent.name || '';
   var titleKey = title.toLowerCase();
   var cache = window._actSongsCache[actId] || [];
   var existing = cache.filter(function(s){ return (s.titleKey || (s.title || '').toLowerCase()) === titleKey; })[0];
@@ -2661,21 +2665,34 @@ function addActSong() {
     if (already) { if (typeof ib_toast==='function') ib_toast('You already added this one'); return; }
     window.db.collection('actSongs').doc(existing._id).update({
       recommenders: firebase.firestore.FieldValue.arrayUnion({ uid: user.uid, name: name })
-    }).then(function(){ if (typeof ib_toast==='function') ib_toast('Added your vote 🎵'); })
+    }).then(function(){
+      if (typeof ib_toast==='function') ib_toast('Added your vote 🎵');
+      _postActSongSystemMessage(actId, actName, name, title);
+    })
       .catch(function(err){ console.error('Vote song error:', err); if (typeof ib_toast==='function') ib_toast('Could not add — try again'); });
     return;
   }
   window.db.collection('actSongs').add({
     actId: actId,
-    actName: window._actDetailCurrent.name || '',
+    actName: actName,
     title: title,
     titleKey: titleKey,
     recommenders: [{ uid: user.uid, name: name }],
     ts: Date.now()
   }).then(function(){
     if (typeof ib_toast==='function') ib_toast('Song added 🎵');
-    _postOslFeedNotice({ uid: user.uid, author: name, systemType: 'song', text: title, actName: window._actDetailCurrent.name || '' });
+    _postActSongSystemMessage(actId, actName, name, title);
+    _postOslFeedNotice({ uid: user.uid, author: name, systemType: 'song', text: title, actName: actName });
   }).catch(function(err){ console.error('Add song error:', err); if (typeof ib_toast==='function') ib_toast('Could not add — check Firestore rules'); });
+}
+
+// Mirrors a song add/vote into the act's own activity feed, same pattern
+// as _postActRsvpSystemMessage and _postActPhotoSystemMessage.
+function _postActSongSystemMessage(actId, actName, author, title) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window.db.collection('actChat').add({ actId: actId, actName: actName, uid: user.uid, author: author, text: author + ' added "' + title + '" 🎵', ts: Date.now(), system: true, systemType: 'song' })
+    .catch(function(err){ console.error('Post act song activity message error:', err); });
 }
 
 function removeActSongVote(songId) {
@@ -3751,7 +3768,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.115.0-fix-feedback-dedup-display-polls-on-plans';
+window.INNINGS_BUILD = 'v4.116.0-fix-act-activity-feed-rsvp-songs';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
