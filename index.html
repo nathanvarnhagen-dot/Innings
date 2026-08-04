@@ -1025,7 +1025,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div>
     </div>
     <div style="display:flex;gap:10px">
-      <div class="icon-btn notif-pip" onclick="nav('notifications')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mid)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="icon-btn" id="notif-bell-btn" onclick="nav('notifications')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mid)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
     </div>
   </div>
 
@@ -3768,7 +3768,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.116.0-fix-act-activity-feed-rsvp-songs';
+window.INNINGS_BUILD = 'v4.117.0-fix-notif-bell-real-badge-login-toast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4956,6 +4956,7 @@ auth.onAuthStateChanged(function(user) {
         if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, pdata.name || '');
         if (typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
         if (typeof _archiveFeedbackIfNeeded === 'function') _archiveFeedbackIfNeeded(user, pdata);
+        if (typeof startNotifBadge === 'function') startNotifBadge(user);
         if (pdata.welcomeIntroDone) {
           playLoginSplash(function(){ nav('feed'); });
         } else {
@@ -9588,6 +9589,52 @@ function addOslPhoto(input) {
 }
 
 // ── NOTIFICATIONS ──
+
+// Live badge on the bell icon — only shows when there's an actual unread
+// notification, and updates in real time as new ones arrive or existing
+// ones get marked read (no more static dot baked into the HTML). Also
+// surfaces a one-time toast right after login summarizing what's waiting,
+// since unread notifications (friend requests especially) were easy to
+// never notice otherwise.
+window._notifBadgeUnsub = null;
+window._notifBadgeSubscribedUid = null;
+window._notifLoginToastShown = false;
+
+function startNotifBadge(user) {
+  if (!window.db || !user) return;
+  if (window._notifBadgeSubscribedUid === user.uid && window._notifBadgeUnsub) return;
+  if (window._notifBadgeUnsub) { window._notifBadgeUnsub(); window._notifBadgeUnsub = null; }
+  window._notifBadgeSubscribedUid = user.uid;
+  window._notifBadgeUnsub = window.db.collection('notifications')
+    .where('toUid', '==', user.uid)
+    .where('read', '==', false)
+    .onSnapshot(function(snap){
+      _renderNotifBadge(snap.size > 0);
+      if (!window._notifLoginToastShown) {
+        window._notifLoginToastShown = true;
+        var total = snap.size;
+        if (total > 0 && typeof ib_toast === 'function') {
+          var friendReqCount = 0;
+          snap.forEach(function(doc){ if ((doc.data() || {}).type === 'friend_request') friendReqCount++; });
+          var msg = (friendReqCount === total)
+            ? (total === 1 ? '1 friend request waiting' : total + ' friend requests waiting')
+            : (total === 1 ? '1 new notification' : total + ' new notifications');
+          // Delay past the login splash animation so the toast isn't hidden behind it
+          setTimeout(function(){ ib_toast(msg); }, 1400);
+        }
+      }
+    }, function(err){
+      console.error('Notif badge listener error:', err);
+      window._notifBadgeSubscribedUid = null;
+    });
+}
+
+function _renderNotifBadge(hasUnread) {
+  var bell = document.getElementById('notif-bell-btn');
+  if (!bell) return;
+  bell.classList.toggle('notif-pip', !!hasUnread);
+}
+
 function _fmtRelativeTime(ts) {
   if (!ts) return '';
   var diff = Date.now() - ts;
@@ -9599,6 +9646,19 @@ function _fmtRelativeTime(ts) {
   var days = Math.floor(hrs / 24);
   if (days < 7) return days + 'd ago';
   return new Date(ts).toLocaleDateString();
+}
+
+// Marks every currently-unread notification as read once the person has
+// actually viewed the list — visiting the screen clears the badge, not
+// just tapping each item individually (the live listener above then
+// clears the dot automatically once these writes land).
+function _markAllNotificationsRead(user, items) {
+  if (!window.db || !user) return;
+  var unread = items.filter(function(n){ return !n.read; });
+  if (!unread.length) return;
+  var batch = window.db.batch();
+  unread.forEach(function(n){ batch.update(window.db.collection('notifications').doc(n._id), { read: true }); });
+  batch.commit().catch(function(err){ console.error('Mark all notifications read error:', err); });
 }
 
 function loadNotifications() {
@@ -9632,6 +9692,7 @@ function loadNotifications() {
         '<div style="font-size:11px;color:var(--subtle);flex-shrink:0">' + _fmtRelativeTime(n.ts) + '</div>' +
       '</div>';
     }).join('');
+    _markAllNotificationsRead(user, items);
   }).catch(function(err){
     console.error('Load notifications error:', err);
     if (itemsEl) itemsEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load notifications — ' + (err && err.message ? err.message : 'try again') + '</div>';
