@@ -1532,26 +1532,26 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <!-- ── PHOTOS PANEL ── -->
   <!-- MORE PANEL — a small menu, so a fourth tab can hold more than one thing without crowding the tab bar itself -->
-  <div id="osl2-more" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
+  <div id="osl2-more" style="flex:1;display:none;flex-direction:column;background:#0D0820">
     <div style="padding:14px 16px 8px;flex-shrink:0">
-      <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">More</div>
+      <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px">More</div>
     </div>
     <div style="padding:8px 16px 20px;display:flex;flex-direction:column;gap:10px">
-      <div onclick="oslMoreOpenPhotos()" style="background:var(--card);border:0.5px solid var(--rule);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📸</div>
+      <div onclick="oslMoreOpenPhotos()" style="background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📸</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:1px">Everything the group's added from the weekend</div>
+          <div style="font-size:14px;font-weight:700;color:white">Photos</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px">Everything the group's added from the weekend</div>
         </div>
-        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
       </div>
-      <div onclick="oslMoreOpenMusic()" style="background:var(--card);border:0.5px solid var(--rule);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎵</div>
+      <div onclick="oslMoreOpenMusic()" style="background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎵</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:700;color:var(--black)">Our Festival Music</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:1px">Every song anyone's added, across every artist</div>
+          <div style="font-size:14px;font-weight:700;color:white">Our Festival Music</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px">Every song anyone's added, across every artist</div>
         </div>
-        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
       </div>
     </div>
   </div>
@@ -1572,31 +1572,31 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="osl-allsongs-list" style="display:none;flex:1;min-height:0;overflow-y:auto;padding:6px 16px 20px"></div>
   </div>
 
-  <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
+  <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:#0D0820">
     <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:6px">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
-        <button onclick="oslMoreBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        <button onclick="oslMoreBack()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         </button>
-        <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
+        <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px">Photos</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
-        <button id="osl-select-btn" onclick="oslPhotosEnterSelect()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Select</button>
-        <button onclick="oslPhotosSaveAll()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ All</button>
-        <button onclick="document.getElementById('osl-photo-input').click()" style="background:var(--indigo);color:white;border:none;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+        <button id="osl-select-btn" onclick="oslPhotosEnterSelect()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Select</button>
+        <button onclick="oslPhotosSaveAll()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:rgba(168,159,232,1);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ All</button>
+        <button onclick="document.getElementById('osl-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
         <input type="file" id="osl-photo-input" accept="image/*" multiple style="display:none" onchange="addOslPhoto(this)">
       </div>
     </div>
     <div id="osl-photos-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
       <div style="font-size:34px">📸</div>
-      <div style="font-size:16px;font-weight:700;color:var(--black)">No photos yet</div>
-      <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Everyone in this group can add photos from the weekend.</div>
+      <div style="font-size:16px;font-weight:700;color:white">No photos yet</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);max-width:230px;line-height:1.6">Everyone in this group can add photos from the weekend.</div>
     </div>
     <div id="osl-photos-grid" style="display:none;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 16px 20px;overflow-y:auto"></div>
-    <div id="osl-select-bar" style="display:none;padding:10px 16px 24px;gap:8px;align-items:center;border-top:0.5px solid var(--rule);background:var(--card);flex-shrink:0">
-      <button onclick="oslPhotosSelectAll()" style="flex:1;background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);border-radius:12px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Select All</button>
-      <button id="osl-download-selected-btn" onclick="oslPhotosDownloadSelected()" style="flex:1.5;background:var(--indigo);color:white;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Download (0)</button>
-      <button onclick="oslPhotosExitSelect()" style="background:none;border:none;color:var(--subtle);font-size:13px;font-weight:600;cursor:pointer;padding:11px 6px;font-family:inherit">Cancel</button>
+    <div id="osl-select-bar" style="display:none;padding:10px 16px 24px;gap:8px;align-items:center;border-top:0.5px solid rgba(255,255,255,0.1);background:#0D0820;flex-shrink:0">
+      <button onclick="oslPhotosSelectAll()" style="flex:1;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);border-radius:12px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Select All</button>
+      <button id="osl-download-selected-btn" onclick="oslPhotosDownloadSelected()" style="flex:1.5;background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Download (0)</button>
+      <button onclick="oslPhotosExitSelect()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;padding:11px 6px;font-family:inherit">Cancel</button>
     </div>
   </div>
 
@@ -3954,7 +3954,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.119.0-fix-festival-music-theme-scroll';
+window.INNINGS_BUILD = 'v4.120.0-more-photos-dark-theme';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
