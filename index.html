@@ -3235,7 +3235,7 @@ function oslDay2(day) {
   <div id="gd-polls-panel" style="display:none;flex-direction:column;flex:1;min-height:0">
     <div class="scroll-bare" id="gd-polls-list" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px"></div>
     <div style="padding:12px 16px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);background:var(--card)">
-      <button onclick="showCreatePollModal()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Create a poll</button>
+      <button onclick="showCreatePollModal('group', window._activeGroupId)" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Create a poll</button>
     </div>
   </div>
 
@@ -3530,6 +3530,9 @@ function oslDay2(day) {
   <div id="fd-composer" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="future-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
+      <button onclick="showCreatePollModal('future', window._openFutureId)" aria-label="Create a poll" style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:0.5px solid var(--rule);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
       <input id="fd-chat-field" class="msg-input" placeholder="Message the group..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFutureMomentMessage();}">
       <button class="send-btn" onclick="sendFutureMomentMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
@@ -3748,7 +3751,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.114.0-fix-feedback-dupes-hero-zoom-polls';
+window.INNINGS_BUILD = 'v4.115.0-fix-feedback-dedup-display-polls-on-plans';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5727,6 +5730,7 @@ function renderFutureView(m) {
     locationSection +
     ticketSection +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' + rsvpSection + '</div>' +
+    '<div id="future-polls-list" style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px"></div>' +
     '<div id="future-chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>' +
     '<div id="future-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">' +
       '<div style="font-size:30px">💬</div>' +
@@ -5736,6 +5740,7 @@ function renderFutureView(m) {
 
   if (m.location) _updateLocationLinks('fv', m.location);
   if (isOwner) _renderFutureGuestSummary(m);
+  startFuturePolls(m._id);
   startFutureMomentChat(m._id);
 }
 
@@ -8102,18 +8107,28 @@ function _archiveFeedbackIfNeeded(user, pdata) {
       groups.sort(function(a, b){ return (a.data.createdAt || 0) - (b.data.createdAt || 0); });
 
       if (groups.length > 1) {
-        // Duplicates from the old racy version — keep the oldest, delete the rest
+        // Duplicates from the old racy version — keep the oldest, delete the
+        // rest. Each group's cleanup catches its own errors so a permission
+        // problem on one doesn't abort the whole batch (or block this from
+        // ever completing) — the display-side dedup in renderMyGroups is
+        // the real guarantee Nathan only ever sees one, regardless of
+        // whether these deletes are actually allowed by the current rules.
         var toDelete = groups.slice(1);
+        var deletedCount = 0;
         return Promise.all(toDelete.map(function(g){
           return window.db.collection('groupChats').where('groupId', '==', g.id).get().then(function(msgSnap){
             var deletes = [];
-            msgSnap.forEach(function(doc){ deletes.push(doc.ref.delete()); });
+            msgSnap.forEach(function(doc){ deletes.push(doc.ref.delete().catch(function(e){ console.error('Delete archived chat message failed:', e); })); });
             return Promise.all(deletes);
           }).then(function(){
             return window.db.collection('groups').doc(g.id).delete();
+          }).then(function(){
+            deletedCount++;
+          }).catch(function(err){
+            console.error('Delete duplicate archive group failed (' + g.id + '):', err);
           });
         })).then(function(){
-          if (typeof ib_toast === 'function') ib_toast('Cleaned up ' + toDelete.length + ' duplicate archive group' + (toDelete.length === 1 ? '' : 's'));
+          if (deletedCount && typeof ib_toast === 'function') ib_toast('Cleaned up ' + deletedCount + ' duplicate archive group' + (deletedCount === 1 ? '' : 's'));
         });
       }
 
@@ -8198,8 +8213,25 @@ function renderMyGroups(groups) {
   var list = document.getElementById('my-groups-list');
   var empty = document.getElementById('my-groups-empty');
   if (!list) return;
-  if (empty) empty.style.display = groups.length ? 'none' : 'block';
-  list.innerHTML = groups.map(function(g){
+  // The old feedback-archive migration bug created many duplicate "Feedback
+  // (Archived)" groups before it was fixed. The fix cleans those up in
+  // Firestore going forward, but that depends on delete being permitted by
+  // the current rules — so regardless of whether that backend cleanup
+  // succeeds, collapse any group with that exact name down to the single
+  // oldest one right here at render time. This is the actual guarantee.
+  var byCreatedAsc = groups.slice().sort(function(a, b){ return (a.createdAt || 0) - (b.createdAt || 0); });
+  var seenArchive = false;
+  var deduped = [];
+  byCreatedAsc.forEach(function(g){
+    if (g.name === 'Feedback (Archived)') {
+      if (seenArchive) return;
+      seenArchive = true;
+    }
+    deduped.push(g);
+  });
+  deduped.sort(function(a, b){ return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (empty) empty.style.display = deduped.length ? 'none' : 'block';
+  list.innerHTML = deduped.map(function(g){
     var count = (g.members && g.members.length) || (g.memberUids && g.memberUids.length) || 1;
     return '<div style="background:linear-gradient(135deg,#1A1640,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openGroupById(\'' + g._id + '\')">' +
       '<div style="font-size:28px">' + _escapeHtml(g.icon || '💬') + '</div>' +
@@ -8574,26 +8606,35 @@ function addGroupFeature(key) {
   });
 }
 
-// ── GROUP POLLS — ask the group to vote on something (e.g. "Saturday or
-// Sunday before my birthday?"). Realtime via onSnapshot, one vote per
-// person stored as votes.<uid> = optionIndex so re-tapping a different
-// option just moves your vote rather than adding a second one. ──
+// ── POLLS — ask a group, or the guests on a specific plan, to vote on
+// something (e.g. "Saturday or Sunday before my birthday?"). Scope-generic:
+// one poll can belong to a group (scopeType 'group') or a single future
+// plan (scopeType 'future'), each tracked with its own realtime listener so
+// switching between screens doesn't cross-contaminate what's showing. One
+// vote per person stored as votes.<uid> = optionIndex, so re-tapping a
+// different option just moves your vote rather than adding a second one.
 window._groupPollsUnsub = null;
 window._groupPollsSubscribedId = null;
-window._groupPollsCache = {};
+window._futurePollsUnsub = null;
+window._futurePollsSubscribedId = null;
+window._pollsCache = {};
+window._pollContext = null; // { type: 'group'|'future', id }
 
 function startGroupPolls(groupId) {
   if (!window.db || !groupId) return;
   if (window._groupPollsSubscribedId === groupId && window._groupPollsUnsub) return;
   if (window._groupPollsUnsub) { window._groupPollsUnsub(); window._groupPollsUnsub = null; }
   window._groupPollsSubscribedId = groupId;
-  window._groupPollsUnsub = window.db.collection('groupPolls').where('groupId', '==', groupId).onSnapshot(function(snap){
+  window._groupPollsUnsub = window.db.collection('polls').where('scopeType', '==', 'group').where('scopeId', '==', groupId).onSnapshot(function(snap){
     var polls = [];
     snap.forEach(function(doc){ polls.push(Object.assign({ _id: doc.id }, doc.data())); });
     polls.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
-    window._groupPollsCache = {};
-    polls.forEach(function(p){ window._groupPollsCache[p._id] = p; });
-    renderGroupPolls(polls);
+    polls.forEach(function(p){ window._pollsCache[p._id] = p; });
+    renderPolls('gd-polls-list', polls, '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">' +
+      '<div style="font-size:32px">🗳️</div>' +
+      '<div style="font-size:16px;font-weight:700;color:var(--black)">No polls yet</div>' +
+      '<div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Ask the group something — like which day works best.</div>' +
+    '</div>');
   }, function(err){
     console.error('Group polls error:', err);
     window._groupPollsSubscribedId = null;
@@ -8601,16 +8642,30 @@ function startGroupPolls(groupId) {
   });
 }
 
-function renderGroupPolls(polls) {
-  var list = document.getElementById('gd-polls-list');
+function startFuturePolls(momentId) {
+  if (!window.db || !momentId) return;
+  if (window._futurePollsSubscribedId === momentId && window._futurePollsUnsub) return;
+  if (window._futurePollsUnsub) { window._futurePollsUnsub(); window._futurePollsUnsub = null; }
+  window._futurePollsSubscribedId = momentId;
+  window._futurePollsUnsub = window.db.collection('polls').where('scopeType', '==', 'future').where('scopeId', '==', momentId).onSnapshot(function(snap){
+    var polls = [];
+    snap.forEach(function(doc){ polls.push(Object.assign({ _id: doc.id }, doc.data())); });
+    polls.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    polls.forEach(function(p){ window._pollsCache[p._id] = p; });
+    renderPolls('future-polls-list', polls, ''); // blank when none — this sits inline above a conversation, not its own tab
+  }, function(err){
+    console.error('Future plan polls error:', err);
+    window._futurePollsSubscribedId = null;
+    if (typeof ib_toast==='function') ib_toast('Polls unavailable — check Firestore rules');
+  });
+}
+
+function renderPolls(containerId, polls, emptyHtml) {
+  var list = document.getElementById(containerId);
   if (!list) return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!polls.length) {
-    list.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">' +
-      '<div style="font-size:32px">🗳️</div>' +
-      '<div style="font-size:16px;font-weight:700;color:var(--black)">No polls yet</div>' +
-      '<div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Ask the group something — like which day works best.</div>' +
-    '</div>';
+    list.innerHTML = emptyHtml || '';
     return;
   }
   list.innerHTML = polls.map(function(p){
@@ -8638,8 +8693,8 @@ function renderGroupPolls(polls) {
     var footer = '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">' +
       '<div style="font-size:11px;color:var(--subtle)">' + totalVotes + ' vote' + (totalVotes === 1 ? '' : 's') + (p.closed ? ' · Closed' : '') + '</div>' +
       (isCreator ? '<div style="display:flex;gap:12px">' +
-        (p.closed ? '' : '<div onclick="closeGroupPoll(\'' + p._id + '\')" style="font-size:11px;color:var(--indigo);font-weight:600;cursor:pointer">Close poll</div>') +
-        '<div onclick="deleteGroupPoll(\'' + p._id + '\')" style="font-size:11px;color:var(--loss);font-weight:600;cursor:pointer">Delete</div>' +
+        (p.closed ? '' : '<div onclick="closePoll(\'' + p._id + '\')" style="font-size:11px;color:var(--indigo);font-weight:600;cursor:pointer">Close poll</div>') +
+        '<div onclick="deletePoll(\'' + p._id + '\')" style="font-size:11px;color:var(--loss);font-weight:600;cursor:pointer">Delete</div>' +
       '</div>' : '') +
     '</div>';
     return '<div class="card" style="padding:14px 16px">' +
@@ -8654,24 +8709,26 @@ function votePoll(pollId, optionIndex) {
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to vote'); return; }
   var update = {};
   update['votes.' + user.uid] = optionIndex;
-  window.db.collection('groupPolls').doc(pollId).update(update)
+  window.db.collection('polls').doc(pollId).update(update)
     .catch(function(err){ console.error('Vote poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not vote — try again'); });
 }
 
-function closeGroupPoll(pollId) {
+function closePoll(pollId) {
   if (!window.db) return;
-  window.db.collection('groupPolls').doc(pollId).update({ closed: true })
+  window.db.collection('polls').doc(pollId).update({ closed: true })
     .catch(function(err){ console.error('Close poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not close — try again'); });
 }
 
-function deleteGroupPoll(pollId) {
+function deletePoll(pollId) {
   if (!window.db) return;
   if (!confirm('Delete this poll? This can\'t be undone.')) return;
-  window.db.collection('groupPolls').doc(pollId).delete()
+  window.db.collection('polls').doc(pollId).delete()
     .catch(function(err){ console.error('Delete poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
-function showCreatePollModal() {
+function showCreatePollModal(scopeType, scopeId) {
+  if (!scopeId) { if (typeof ib_toast==='function') ib_toast('Could not open the poll creator — try reopening this page'); return; }
+  window._pollContext = { type: scopeType, id: scopeId };
   var qEl = document.getElementById('poll-question');
   if (qEl) qEl.value = '';
   var listEl = document.getElementById('poll-options-list');
@@ -8702,8 +8759,8 @@ function pollAddOptionField() {
 }
 
 function saveNewPoll() {
-  var g = window._activeGroup;
-  if (!g || !window.db) return;
+  var ctx = window._pollContext;
+  if (!ctx || !ctx.id || !window.db) return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user) { if (typeof ib_toast==='function') ib_toast('Sign in to create a poll'); return; }
   var qEl = document.getElementById('poll-question');
@@ -8712,8 +8769,9 @@ function saveNewPoll() {
   var options = [];
   document.querySelectorAll('#poll-options-list .poll-option-input').forEach(function(inp){ var v = inp.value.trim(); if (v) options.push(v); });
   if (options.length < 2) { if (typeof ib_toast==='function') ib_toast('Add at least 2 options'); return; }
-  window.db.collection('groupPolls').add({
-    groupId: g._id,
+  window.db.collection('polls').add({
+    scopeType: ctx.type,
+    scopeId: ctx.id,
     question: question,
     options: options,
     votes: {},
