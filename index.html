@@ -3708,7 +3708,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.113.1-add-og-image-meta-tags';
+window.INNINGS_BUILD = 'v4.113.2-fix-verify-code-stuck-button';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4774,6 +4774,17 @@ window.verifyCode = function() {
       if (window._ib_recaptcha) { try { window._ib_recaptcha.clear(); } catch(e){} window._ib_recaptcha = null; }
       var el = document.getElementById('ib-recaptcha');
       if (el) el.remove();
+      ib_toast('Verified!');
+      // The actual screen transition (name step for new users, straight to
+      // feed for returning ones) happens via the global onAuthStateChanged
+      // listener elsewhere, not here. If that hasn't visibly kicked in after
+      // a few seconds, don't leave this button stuck on "Verifying…" with
+      // zero feedback — that's what makes a successful login look broken
+      // and invites someone to resend the code, which is how you end up
+      // rate-limited over something that actually worked the first time.
+      setTimeout(function(){
+        if (btn && btn.disabled) { btn.textContent = 'Verify'; btn.disabled = false; }
+      }, 4000);
     })
     .catch(function(err) {
       console.error('Verify error:', err);
