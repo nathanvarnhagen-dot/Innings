@@ -2982,7 +2982,7 @@ function oslTab(tab, evt) {
 }
 
 function groupShowPanel(key) {
-  ['gd-blank-panel', 'gd-chat-panel', 'gd-chat-input', 'gd-members-panel', 'gd-games-panel'].forEach(function(id) {
+  ['gd-blank-panel', 'gd-chat-panel', 'gd-chat-input', 'gd-members-panel', 'gd-games-panel', 'gd-polls-panel'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -2993,6 +2993,9 @@ function groupShowPanel(key) {
   } else if (key === 'games') {
     document.getElementById('gd-games-panel').style.display = 'flex';
     if (typeof loadGroupGames === 'function') loadGroupGames(window._gdGamesDate || _todayLocal());
+  } else if (key === 'polls') {
+    document.getElementById('gd-polls-panel').style.display = 'flex';
+    if (window._activeGroupId && typeof startGroupPolls === 'function') startGroupPolls(window._activeGroupId);
   } else if (key === 'members') {
     document.getElementById('gd-members-panel').style.display = 'flex';
     if (typeof renderGroupMembers === 'function') renderGroupMembers();
@@ -3019,6 +3022,7 @@ function renderGroupTabs() {
   var tabs = [];
   if (features.indexOf('chat') !== -1) tabs.push({ key: 'chat', label: 'Feed' });
   if (features.indexOf('games') !== -1) tabs.push({ key: 'games', label: 'Games' });
+  if (features.indexOf('polls') !== -1) tabs.push({ key: 'polls', label: 'Polls' });
   tabs.push({ key: 'members', label: 'Members' });
   var defaultKey = features.length ? tabs[0].key : null;
   tabsEl.innerHTML = tabs.map(function(t) {
@@ -3227,6 +3231,34 @@ function oslDay2(day) {
     </div>
   </div>
 
+  <!-- POLLS PANEL -->
+  <div id="gd-polls-panel" style="display:none;flex-direction:column;flex:1;min-height:0">
+    <div class="scroll-bare" id="gd-polls-list" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px"></div>
+    <div style="padding:12px 16px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);background:var(--card)">
+      <button onclick="showCreatePollModal()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Create a poll</button>
+    </div>
+  </div>
+
+  <!-- CREATE POLL MODAL -->
+  <div id="create-poll-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:20px 20px 0;flex-shrink:0">
+        <div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Create a poll</div>
+      </div>
+      <div style="padding:0 20px;overflow-y:auto;flex:1;min-height:0">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Question</div>
+        <input id="poll-question" style="width:100%;font-size:15px;border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;font-family:inherit;color:var(--black);margin-bottom:16px" placeholder="e.g. Saturday or Sunday before my birthday?">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Options</div>
+        <div id="poll-options-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+        <div onclick="pollAddOptionField()" style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer;margin-bottom:20px">+ Add another option</div>
+      </div>
+      <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
+        <button onclick="hideCreatePollModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+        <button onclick="saveNewPoll()" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Create poll</button>
+      </div>
+    </div>
+  </div>
+
   <!-- EDIT GROUP MODAL -->
   <div id="edit-group-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end">
     <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
@@ -3284,6 +3316,14 @@ function oslDay2(day) {
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;color:var(--indigo)">Games</div>
             <div style="font-size:12px;color:var(--indigo);opacity:0.75">Today's MLB games, with its own chat for each one</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
+        </div>
+        <div onclick="addGroupFeature('polls')" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--indigo-light);cursor:pointer;margin-bottom:10px">
+          <div style="font-size:24px">🗳️</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--indigo)">Polls</div>
+            <div style="font-size:12px;color:var(--indigo);opacity:0.75">Ask the group to vote on something</div>
           </div>
           <div style="font-size:12px;font-weight:700;color:var(--indigo)">+ Add</div>
         </div>
@@ -3708,7 +3748,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.113.2-fix-verify-code-stuck-button';
+window.INNINGS_BUILD = 'v4.114.0-fix-feedback-dupes-hero-zoom-polls';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5439,7 +5479,7 @@ function loadFutureMoments() {
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="_heroZoomToFuture(this,\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
         '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.4px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
@@ -5504,7 +5544,7 @@ function loadFeedMoments() {
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,0.2);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
-      return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
+      return '<div onclick="_heroZoomToFuture(this,\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
           '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
           (m.public ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px">🌎 Public</div>' : '') +
@@ -5554,6 +5594,51 @@ function _findFutureMoment(id) {
     return m;
   }
   return null;
+}
+
+// ── HERO ZOOM TRANSITION ──
+// Grows the tapped card's photo (or theme gradient) to fill the screen,
+// then swaps in the future-plan detail screen underneath and fades the
+// overlay away — a quick "it's growing to meet you" flourish instead of
+// the flat screen-swap every other nav() does. Falls back to a plain
+// openFutureDetail() if anything about the source element or app shell
+// isn't available (e.g. called without a real element, or on a browser
+// without requestAnimationFrame).
+function _heroZoomToFuture(cardEl, momentId) {
+  var m = _findFutureMoment(momentId);
+  if (!m || !cardEl) { openFutureDetail(momentId); return; }
+  var appEl = document.querySelector('.app');
+  if (!appEl || !window.requestAnimationFrame) { openFutureDetail(momentId); return; }
+
+  var srcRect = cardEl.getBoundingClientRect();
+  var appRect = appEl.getBoundingClientRect();
+  var bgStyle = m.coverPhoto
+    ? 'background-image:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.6)),url(' + m.coverPhoto + ');background-size:cover;background-position:center'
+    : 'background:' + (m.theme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)');
+
+  var clone = document.createElement('div');
+  clone.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;overflow:hidden;' +
+    'top:' + srcRect.top + 'px;left:' + srcRect.left + 'px;width:' + srcRect.width + 'px;height:' + srcRect.height + 'px;' +
+    'border-radius:20px;box-shadow:0 16px 44px rgba(0,0,0,0.35);' +
+    'transition:top 0.28s cubic-bezier(.3,0,.2,1),left 0.28s cubic-bezier(.3,0,.2,1),width 0.28s cubic-bezier(.3,0,.2,1),height 0.28s cubic-bezier(.3,0,.2,1),border-radius 0.28s ease;' +
+    bgStyle;
+  document.body.appendChild(clone);
+  void clone.offsetHeight; // force reflow so the transition below actually animates
+
+  requestAnimationFrame(function(){
+    clone.style.top = appRect.top + 'px';
+    clone.style.left = appRect.left + 'px';
+    clone.style.width = appRect.width + 'px';
+    clone.style.height = appRect.height + 'px';
+    clone.style.borderRadius = '0px';
+  });
+
+  setTimeout(function(){
+    openFutureDetail(momentId);
+    clone.style.transition = 'opacity 0.2s ease';
+    clone.style.opacity = '0';
+    setTimeout(function(){ clone.remove(); }, 220);
+  }, 280);
 }
 
 function openFutureDetail(momentId) {
@@ -7989,48 +8074,103 @@ function sendFeedbackMessage() {
   .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
-// One-time migration: the first time Nathan (matched by phone, not a
-// hardcoded uid) opens the app after this update, the old single-thread
-// feedback history gets archived into a private group under his profile —
-// preserved, but out of the way of the new Pros/Cons/Bugs/Suggestions layout.
+// One-time migration (hardened): the first time Nathan (matched by phone,
+// not a hardcoded uid) opens the app after this update, the old single-
+// thread feedback history gets archived into a private group under his
+// profile — preserved, but out of the way of the new Pros/Cons/Bugs/
+// Suggestions layout. The original version checked its "already archived"
+// flag from a snapshot taken before the archive finished writing, so every
+// reload during that async window (fetch messages → create group → copy
+// messages → set flag) raced past the check and spun up another duplicate
+// group — no lock existed. This version claims the migration atomically
+// with a transaction before doing any work, cleans up whatever duplicates
+// that bug already created (keeping the oldest one), and then locks itself
+// out permanently with a second flag so it can never run again.
+window._feedbackArchiveRunning = false;
 function _archiveFeedbackIfNeeded(user, pdata) {
   if (!window.db || !user) return;
-  if (pdata && pdata.feedbackArchivedV1) return;
+  if (window._feedbackArchiveRunning) return;
   var myPhone = (user.phoneNumber || '').replace(/\D/g, '');
   if (myPhone.slice(-10) !== '4152979471') return;
-  window.db.collection('feedbackChat').orderBy('ts').get().then(function(snap){
-    var msgs = [];
-    snap.forEach(function(doc){ msgs.push(doc.data()); });
-    if (!msgs.length) return Promise.resolve();
-    var groupData = {
-      name: 'Feedback (Archived)',
-      icon: '🗄️',
-      createdBy: user.uid,
-      createdAt: Date.now(),
-      memberUids: [user.uid],
-      members: [{ uid: user.uid, name: (window.userData && window.userData.name) || 'Nathan' }],
-      features: ['chat']
-    };
-    return window.db.collection('groups').add(groupData).then(function(ref){
-      var groupId = ref.id;
-      return Promise.all(msgs.map(function(m){
-        return window.db.collection('groupChats').add({
-          groupId: groupId,
-          uid: m.uid || user.uid,
-          author: m.author || 'Unknown',
-          text: m.text || '',
-          ts: m.ts || Date.now()
+  if (pdata && pdata.feedbackArchiveCleanedV1) return;
+  window._feedbackArchiveRunning = true;
+
+  window.db.collection('groups').where('createdBy', '==', user.uid).where('name', '==', 'Feedback (Archived)').get()
+    .then(function(snap) {
+      var groups = [];
+      snap.forEach(function(doc){ groups.push({ id: doc.id, data: doc.data() }); });
+      groups.sort(function(a, b){ return (a.data.createdAt || 0) - (b.data.createdAt || 0); });
+
+      if (groups.length > 1) {
+        // Duplicates from the old racy version — keep the oldest, delete the rest
+        var toDelete = groups.slice(1);
+        return Promise.all(toDelete.map(function(g){
+          return window.db.collection('groupChats').where('groupId', '==', g.id).get().then(function(msgSnap){
+            var deletes = [];
+            msgSnap.forEach(function(doc){ deletes.push(doc.ref.delete()); });
+            return Promise.all(deletes);
+          }).then(function(){
+            return window.db.collection('groups').doc(g.id).delete();
+          });
+        })).then(function(){
+          if (typeof ib_toast === 'function') ib_toast('Cleaned up ' + toDelete.length + ' duplicate archive group' + (toDelete.length === 1 ? '' : 's'));
         });
-      }));
+      }
+
+      if (groups.length === 1) return; // already archived once, nothing to do
+
+      // No archive exists yet — claim the migration atomically, then create it
+      var userRef = window.db.collection('users').doc(user.uid);
+      return window.db.runTransaction(function(tx){
+        return tx.get(userRef).then(function(doc){
+          if (doc.exists && doc.data().feedbackArchivedV1) throw new Error('ALREADY_CLAIMED');
+          tx.set(userRef, { feedbackArchivedV1: true }, { merge: true });
+        });
+      }).then(function(){
+        return window.db.collection('feedbackChat').orderBy('ts').get();
+      }).then(function(msgSnap){
+        var msgs = [];
+        msgSnap.forEach(function(doc){ msgs.push(doc.data()); });
+        if (!msgs.length) return;
+        var groupData = {
+          name: 'Feedback (Archived)',
+          icon: '🗄️',
+          createdBy: user.uid,
+          createdAt: Date.now(),
+          memberUids: [user.uid],
+          members: [{ uid: user.uid, name: (window.userData && window.userData.name) || 'Nathan' }],
+          features: ['chat']
+        };
+        return window.db.collection('groups').add(groupData).then(function(ref){
+          var groupId = ref.id;
+          return Promise.all(msgs.map(function(m){
+            return window.db.collection('groupChats').add({
+              groupId: groupId,
+              uid: m.uid || user.uid,
+              author: m.author || 'Unknown',
+              text: m.text || '',
+              ts: m.ts || Date.now()
+            });
+          }));
+        }).then(function(){
+          if (typeof ib_toast === 'function') ib_toast('Old feedback archived to your groups');
+        });
+      }).catch(function(err){
+        if (err && err.message === 'ALREADY_CLAIMED') return; // another tab/reload already handled it
+        throw err;
+      });
+    })
+    .then(function(){
+      return window.db.collection('users').doc(user.uid).set({ feedbackArchivedV1: true, feedbackArchiveCleanedV1: true }, { merge: true });
+    })
+    .then(function(){
+      window._feedbackArchiveRunning = false;
+      if (typeof loadMyGroups === 'function') { window._myGroupsStarted = false; loadMyGroups(); }
+    })
+    .catch(function(err){
+      window._feedbackArchiveRunning = false;
+      console.error('Feedback archive error:', err);
     });
-  }).then(function(){
-    return window.db.collection('users').doc(user.uid).set({ feedbackArchivedV1: true }, { merge: true });
-  }).then(function(){
-    if (typeof ib_toast === 'function') ib_toast('Old feedback archived to your groups');
-    if (typeof loadMyGroups === 'function') { window._myGroupsStarted = false; loadMyGroups(); }
-  }).catch(function(err){
-    console.error('Feedback archive error:', err);
-  });
 }
 
 // ── USER-CREATED GROUPS ──
@@ -8427,9 +8567,166 @@ function addGroupFeature(key) {
     renderGroupTabs();
     if (typeof ib_toast==='function' && key === 'chat') ib_toast('Group Feed added 💬');
     if (typeof ib_toast==='function' && key === 'games') ib_toast('Games added ⚾');
+    if (typeof ib_toast==='function' && key === 'polls') ib_toast('Polls added 🗳️');
   }).catch(function(err){
     console.error('Add feature error:', err);
     if (typeof ib_toast==='function') ib_toast('Could not add feature — try again');
+  });
+}
+
+// ── GROUP POLLS — ask the group to vote on something (e.g. "Saturday or
+// Sunday before my birthday?"). Realtime via onSnapshot, one vote per
+// person stored as votes.<uid> = optionIndex so re-tapping a different
+// option just moves your vote rather than adding a second one. ──
+window._groupPollsUnsub = null;
+window._groupPollsSubscribedId = null;
+window._groupPollsCache = {};
+
+function startGroupPolls(groupId) {
+  if (!window.db || !groupId) return;
+  if (window._groupPollsSubscribedId === groupId && window._groupPollsUnsub) return;
+  if (window._groupPollsUnsub) { window._groupPollsUnsub(); window._groupPollsUnsub = null; }
+  window._groupPollsSubscribedId = groupId;
+  window._groupPollsUnsub = window.db.collection('groupPolls').where('groupId', '==', groupId).onSnapshot(function(snap){
+    var polls = [];
+    snap.forEach(function(doc){ polls.push(Object.assign({ _id: doc.id }, doc.data())); });
+    polls.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    window._groupPollsCache = {};
+    polls.forEach(function(p){ window._groupPollsCache[p._id] = p; });
+    renderGroupPolls(polls);
+  }, function(err){
+    console.error('Group polls error:', err);
+    window._groupPollsSubscribedId = null;
+    if (typeof ib_toast==='function') ib_toast('Polls unavailable — check Firestore rules');
+  });
+}
+
+function renderGroupPolls(polls) {
+  var list = document.getElementById('gd-polls-list');
+  if (!list) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!polls.length) {
+    list.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">' +
+      '<div style="font-size:32px">🗳️</div>' +
+      '<div style="font-size:16px;font-weight:700;color:var(--black)">No polls yet</div>' +
+      '<div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Ask the group something — like which day works best.</div>' +
+    '</div>';
+    return;
+  }
+  list.innerHTML = polls.map(function(p){
+    var votes = p.votes || {};
+    var counts = (p.options || []).map(function(){ return 0; });
+    var totalVotes = 0;
+    Object.keys(votes).forEach(function(uid){
+      var idx = votes[uid];
+      if (typeof idx === 'number' && counts[idx] !== undefined) { counts[idx]++; totalVotes++; }
+    });
+    var myVote = user ? votes[user.uid] : undefined;
+    var isCreator = !!(user && p.createdBy === user.uid);
+    var optionsHtml = (p.options || []).map(function(opt, i){
+      var pct = totalVotes ? Math.round((counts[i] / totalVotes) * 100) : 0;
+      var mine = myVote === i;
+      var disabled = !!p.closed;
+      return '<div ' + (disabled ? '' : 'onclick="votePoll(\'' + p._id + '\',' + i + ')"') + ' style="position:relative;border-radius:12px;overflow:hidden;border:1.5px solid ' + (mine ? 'var(--indigo)' : 'var(--rule)') + ';cursor:' + (disabled ? 'default' : 'pointer') + ';margin-bottom:8px;background:var(--bg)">' +
+        '<div style="position:absolute;top:0;bottom:0;left:0;width:' + pct + '%;background:' + (mine ? 'var(--indigo-light)' : 'rgba(61,53,128,0.06)') + ';transition:width 0.3s ease"></div>' +
+        '<div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:11px 14px">' +
+          '<div style="font-size:14px;font-weight:' + (mine ? '700' : '500') + ';color:' + (mine ? 'var(--indigo)' : 'var(--black)') + '">' + (mine ? '✓ ' : '') + _escapeHtml(opt) + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:var(--subtle);flex-shrink:0">' + pct + '% · ' + counts[i] + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    var footer = '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">' +
+      '<div style="font-size:11px;color:var(--subtle)">' + totalVotes + ' vote' + (totalVotes === 1 ? '' : 's') + (p.closed ? ' · Closed' : '') + '</div>' +
+      (isCreator ? '<div style="display:flex;gap:12px">' +
+        (p.closed ? '' : '<div onclick="closeGroupPoll(\'' + p._id + '\')" style="font-size:11px;color:var(--indigo);font-weight:600;cursor:pointer">Close poll</div>') +
+        '<div onclick="deleteGroupPoll(\'' + p._id + '\')" style="font-size:11px;color:var(--loss);font-weight:600;cursor:pointer">Delete</div>' +
+      '</div>' : '') +
+    '</div>';
+    return '<div class="card" style="padding:14px 16px">' +
+      '<div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:10px;line-height:1.4">' + _escapeHtml(p.question || 'Untitled poll') + '</div>' +
+      optionsHtml + footer +
+    '</div>';
+  }).join('');
+}
+
+function votePoll(pollId, optionIndex) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to vote'); return; }
+  var update = {};
+  update['votes.' + user.uid] = optionIndex;
+  window.db.collection('groupPolls').doc(pollId).update(update)
+    .catch(function(err){ console.error('Vote poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not vote — try again'); });
+}
+
+function closeGroupPoll(pollId) {
+  if (!window.db) return;
+  window.db.collection('groupPolls').doc(pollId).update({ closed: true })
+    .catch(function(err){ console.error('Close poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not close — try again'); });
+}
+
+function deleteGroupPoll(pollId) {
+  if (!window.db) return;
+  if (!confirm('Delete this poll? This can\'t be undone.')) return;
+  window.db.collection('groupPolls').doc(pollId).delete()
+    .catch(function(err){ console.error('Delete poll error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function showCreatePollModal() {
+  var qEl = document.getElementById('poll-question');
+  if (qEl) qEl.value = '';
+  var listEl = document.getElementById('poll-options-list');
+  if (listEl) {
+    listEl.innerHTML = '';
+    pollAddOptionField();
+    pollAddOptionField();
+  }
+  var m = document.getElementById('create-poll-modal');
+  if (m) m.style.display = 'flex';
+}
+
+function hideCreatePollModal() {
+  var m = document.getElementById('create-poll-modal');
+  if (m) m.style.display = 'none';
+}
+
+var POLL_MAX_OPTIONS = 6;
+function pollAddOptionField() {
+  var listEl = document.getElementById('poll-options-list');
+  if (!listEl) return;
+  if (listEl.children.length >= POLL_MAX_OPTIONS) { if (typeof ib_toast==='function') ib_toast('Up to ' + POLL_MAX_OPTIONS + ' options'); return; }
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center';
+  row.innerHTML = '<input class="poll-option-input" placeholder="Option" style="flex:1;font-size:14px;border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;outline:none;font-family:inherit;color:var(--black);background:var(--bg)">' +
+    '<div onclick="this.parentElement.remove()" style="width:28px;height:28px;border-radius:50%;background:var(--bg);border:0.5px solid var(--rule);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--subtle);cursor:pointer;flex-shrink:0">×</div>';
+  listEl.appendChild(row);
+}
+
+function saveNewPoll() {
+  var g = window._activeGroup;
+  if (!g || !window.db) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user) { if (typeof ib_toast==='function') ib_toast('Sign in to create a poll'); return; }
+  var qEl = document.getElementById('poll-question');
+  var question = qEl ? qEl.value.trim() : '';
+  if (!question) { if (typeof ib_toast==='function') ib_toast('Give your poll a question'); return; }
+  var options = [];
+  document.querySelectorAll('#poll-options-list .poll-option-input').forEach(function(inp){ var v = inp.value.trim(); if (v) options.push(v); });
+  if (options.length < 2) { if (typeof ib_toast==='function') ib_toast('Add at least 2 options'); return; }
+  window.db.collection('groupPolls').add({
+    groupId: g._id,
+    question: question,
+    options: options,
+    votes: {},
+    closed: false,
+    createdBy: user.uid,
+    createdByName: (window.userData && window.userData.name) || 'You',
+    ts: Date.now()
+  }).then(function(){
+    hideCreatePollModal();
+    if (typeof ib_toast==='function') ib_toast('Poll created 🗳️');
+  }).catch(function(err){
+    console.error('Create poll error:', err);
+    if (typeof ib_toast==='function') ib_toast('Could not create poll — ' + (err && err.message ? err.message : 'check Firestore rules'));
   });
 }
 
