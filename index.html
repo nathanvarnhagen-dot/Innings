@@ -1086,22 +1086,59 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Open to everyone · say anything</div>
       </div>
     </div>
+    <div id="feedback-tabs" style="display:flex;border-bottom:0.5px solid rgba(255,255,255,0.08);position:relative;z-index:2">
+      <div class="fb-tab" onclick="feedbackTab('pros', event)" data-category="pros" style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;cursor:pointer;border-bottom:2px solid rgba(74,222,128,0.9);color:#4ADE80"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;position:relative;top:-1px;background:#4ADE80"></span>Pros</div>
+      <div class="fb-tab" onclick="feedbackTab('cons', event)" data-category="cons" style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;color:rgba(255,255,255,0.55)"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;position:relative;top:-1px;background:#F87171"></span>Cons</div>
+      <div class="fb-tab" onclick="feedbackTab('bugs', event)" data-category="bugs" style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;color:rgba(255,255,255,0.55)"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;position:relative;top:-1px;background:#FB923C"></span>Bugs</div>
+      <div class="fb-tab" onclick="feedbackTab('suggestions', event)" data-category="suggestions" style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;color:rgba(255,255,255,0.55)"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;position:relative;top:-1px;background:#A89FE8"></span>Suggest</div>
+    </div>
   </div>
 
-  <div id="feedback-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
+  <div id="feedback-chat-pros" class="feedback-chat-panel" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
     <div style="display:flex;gap:8px">
       <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">N</div>
       <div style="max-width:82%">
         <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);margin:0 0 3px 2px">Nate</div>
-        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">Hey everyone, thank you so much for giving Innings a shot! I'd very much appreciate feedback on the good/bad/and ugly about this platform. Please help me make this better. All feedback is welcome especially the criticism. Means the world to me! -Nate</div>
+        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">Anything you're actually enjoying so far — even small stuff. It all helps.</div>
       </div>
     </div>
-    <div id="feedback-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div id="feedback-chat-msgs-pros" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
+  <div id="feedback-chat-cons" class="feedback-chat-panel" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
+    <div style="display:flex;gap:8px">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">N</div>
+      <div style="max-width:82%">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);margin:0 0 3px 2px">Nate</div>
+        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">What's not clicking for you? Doesn't have to be nice about it 😂</div>
+      </div>
+    </div>
+    <div id="feedback-chat-msgs-cons" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div id="feedback-chat-bugs" class="feedback-chat-panel" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
+    <div style="display:flex;gap:8px">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">N</div>
+      <div style="max-width:82%">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);margin:0 0 3px 2px">Nate</div>
+        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">Anything straight up broken goes here — screenshots help a ton if you've got 'em</div>
+      </div>
+    </div>
+    <div id="feedback-chat-msgs-bugs" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div id="feedback-chat-suggestions" class="feedback-chat-panel" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:var(--indigo-deep)">
+    <div style="display:flex;gap:8px">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.16);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">N</div>
+      <div style="max-width:82%">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);margin:0 0 3px 2px">Nate</div>
+        <div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-radius:4px 18px 18px 18px;padding:12px 15px;font-size:14.5px;line-height:1.55">Ideas, requests, "what if it did X instead" — throw it all here</div>
+      </div>
+    </div>
+    <div id="feedback-chat-msgs-suggestions" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+
   <div style="position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 14px 24px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
     <div id="feedback-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="feedback-chat-field" placeholder="Share your feedback..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
+      <input id="feedback-chat-field" placeholder="Share a pro..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
       <button onclick="sendFeedbackMessage()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
@@ -3662,7 +3699,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.112.2-their-festival-full-row-color';
+window.INNINGS_BUILD = 'v4.113.0-feedback-subgroups-archive-notify';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4838,6 +4875,7 @@ auth.onAuthStateChanged(function(user) {
         if (typeof renderVibePills === 'function') renderVibePills();
         if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, pdata.name || '');
         if (typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
+        if (typeof _archiveFeedbackIfNeeded === 'function') _archiveFeedbackIfNeeded(user, pdata);
         if (pdata.welcomeIntroDone) {
           playLoginSplash(function(){ nav('feed'); });
         } else {
@@ -7798,16 +7836,43 @@ function sendOslMessage() {
     .catch(function(err){ console.error('[oslChat] write FAILED:', err.code, err.message); if (typeof ib_toast==='function') ib_toast('Chat unavailable — ' + (err && err.message ? err.message : 'check Firestore rules')); });
 }
 
-// ── FEEDBACK GROUP CHAT ──
+// ── FEEDBACK GROUP CHAT (Pros / Cons / Bugs / Suggestions) ──
 window._feedbackChatStarted = false;
+window._activeFeedbackTab = 'pros';
+var FEEDBACK_TAB_PLACEHOLDERS = { pros: 'Share a pro...', cons: 'Share a con...', bugs: 'Report a bug...', suggestions: 'Share a suggestion...' };
+var FEEDBACK_TAB_COLORS = { pros: '#4ADE80', cons: '#F87171', bugs: '#FB923C', suggestions: '#A89FE8' };
+
+function feedbackTab(category, evt) {
+  evt = evt || window.event;
+  window._activeFeedbackTab = category;
+  document.querySelectorAll('#feedback-tabs .fb-tab').forEach(function(t){
+    t.style.color = 'rgba(255,255,255,0.55)';
+    t.style.borderBottom = '2px solid transparent';
+  });
+  var activeTabEl = evt && evt.target ? evt.target.closest('.fb-tab') : document.querySelector('#feedback-tabs .fb-tab[data-category="' + category + '"]');
+  if (activeTabEl) {
+    activeTabEl.style.color = FEEDBACK_TAB_COLORS[category];
+    activeTabEl.style.borderBottom = '2px solid ' + FEEDBACK_TAB_COLORS[category];
+  }
+  document.querySelectorAll('.feedback-chat-panel').forEach(function(p){ p.style.display = 'none'; });
+  var panel = document.getElementById('feedback-chat-' + category);
+  if (panel) { panel.style.display = 'flex'; panel.scrollTop = panel.scrollHeight; }
+  var field = document.getElementById('feedback-chat-field');
+  if (field) field.placeholder = FEEDBACK_TAB_PLACEHOLDERS[category] || 'Share your feedback...';
+}
+
 function startFeedbackChat() {
   if (window._feedbackChatStarted) return;
   if (!window.db) return;
   window._feedbackChatStarted = true;
-  window.db.collection('feedbackChat').orderBy('ts').limit(300).onSnapshot(function(snap){
-    var msgs = [];
-    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
-    renderFeedbackChat(msgs);
+  window.db.collection('feedbackChat').orderBy('ts').limit(600).onSnapshot(function(snap){
+    var byCategory = { pros: [], cons: [], bugs: [], suggestions: [] };
+    snap.forEach(function(doc){
+      var d = Object.assign({ _id: doc.id }, doc.data());
+      var cat = byCategory[d.category] ? d.category : null;
+      if (cat) byCategory[cat].push(d);
+    });
+    Object.keys(byCategory).forEach(function(cat){ renderFeedbackChat(cat, byCategory[cat]); });
   }, function(err){
     console.error('Feedback chat error:', err);
     window._feedbackChatStarted = false;
@@ -7815,8 +7880,8 @@ function startFeedbackChat() {
   });
 }
 
-function renderFeedbackChat(msgs) {
-  var box = document.getElementById('feedback-chat-msgs');
+function renderFeedbackChat(category, msgs) {
+  var box = document.getElementById('feedback-chat-msgs-' + category);
   if (!box) return;
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
@@ -7845,14 +7910,37 @@ function renderFeedbackChat(msgs) {
         badges +
       '</div></div>';
   }, true);
-  var panel = document.getElementById('feedback-chat');
-  if (panel) panel.scrollTop = panel.scrollHeight;
+  if (window._activeFeedbackTab === category) {
+    var panel = document.getElementById('feedback-chat-' + category);
+    if (panel) panel.scrollTop = panel.scrollHeight;
+  }
 }
 
 function deleteFeedbackMessage(msgId) {
   if (!window.db || !msgId) return;
   window.db.collection('feedbackChat').doc(msgId).delete()
     .catch(function(err){ console.error('Delete feedback message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+// Looks up Nathan by phone (not a hardcoded uid, since we only know his
+// number) and notifies him whenever someone else posts feedback. Skips
+// notifying him about his own posts.
+function _notifyNathanOfFeedback(category, authorName, authorUid) {
+  if (!window.db) return;
+  window.db.collection('users').where('phone', '==', '+14152979471').limit(1).get().then(function(snap){
+    if (snap.empty) return;
+    var nathanUid = snap.docs[0].id;
+    if (nathanUid === authorUid) return;
+    return window.db.collection('notifications').add({
+      toUid: nathanUid,
+      type: 'feedback_post',
+      fromUid: authorUid,
+      fromName: authorName,
+      category: category,
+      ts: Date.now(),
+      read: false
+    });
+  }).catch(function(err){ console.error('Feedback notification error:', err); });
 }
 
 function sendFeedbackMessage() {
@@ -7862,20 +7950,67 @@ function sendFeedbackMessage() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to send feedback'); return; }
   var author = (window.userData && window.userData.name) || 'You';
+  var category = window._activeFeedbackTab || 'pros';
   if (inp) inp.value = '';
-  var msgData = { uid: user.uid, author: author, text: text, ts: Date.now() };
+  var msgData = { uid: user.uid, author: author, text: text, ts: Date.now(), category: category };
   var replyTo = _consumeReplyForSend('feedbackChat');
   if (replyTo) msgData.replyTo = replyTo;
   var url = _extractFirstUrl(text);
   if (!url) {
     window.db.collection('feedbackChat').add(msgData)
+      .then(function(){ _notifyNathanOfFeedback(category, author, user.uid); })
       .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
     return;
   }
   _fetchLinkPreview(url).then(function(lp){
     if (lp && lp.url) msgData.linkPreview = lp;
     return window.db.collection('feedbackChat').add(msgData);
-  }).catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+  }).then(function(){ _notifyNathanOfFeedback(category, author, user.uid); })
+  .catch(function(err){ console.error('Feedback send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+}
+
+// One-time migration: the first time Nathan (matched by phone, not a
+// hardcoded uid) opens the app after this update, the old single-thread
+// feedback history gets archived into a private group under his profile —
+// preserved, but out of the way of the new Pros/Cons/Bugs/Suggestions layout.
+function _archiveFeedbackIfNeeded(user, pdata) {
+  if (!window.db || !user) return;
+  if (pdata && pdata.feedbackArchivedV1) return;
+  var myPhone = (user.phoneNumber || '').replace(/\D/g, '');
+  if (myPhone.slice(-10) !== '4152979471') return;
+  window.db.collection('feedbackChat').orderBy('ts').get().then(function(snap){
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(doc.data()); });
+    if (!msgs.length) return Promise.resolve();
+    var groupData = {
+      name: 'Feedback (Archived)',
+      icon: '🗄️',
+      createdBy: user.uid,
+      createdAt: Date.now(),
+      memberUids: [user.uid],
+      members: [{ uid: user.uid, name: (window.userData && window.userData.name) || 'Nathan' }],
+      features: ['chat']
+    };
+    return window.db.collection('groups').add(groupData).then(function(ref){
+      var groupId = ref.id;
+      return Promise.all(msgs.map(function(m){
+        return window.db.collection('groupChats').add({
+          groupId: groupId,
+          uid: m.uid || user.uid,
+          author: m.author || 'Unknown',
+          text: m.text || '',
+          ts: m.ts || Date.now()
+        });
+      }));
+    });
+  }).then(function(){
+    return window.db.collection('users').doc(user.uid).set({ feedbackArchivedV1: true }, { merge: true });
+  }).then(function(){
+    if (typeof ib_toast === 'function') ib_toast('Old feedback archived to your groups');
+    if (typeof loadMyGroups === 'function') { window._myGroupsStarted = false; loadMyGroups(); }
+  }).catch(function(err){
+    console.error('Feedback archive error:', err);
+  });
 }
 
 // ── USER-CREATED GROUPS ──
@@ -9093,8 +9228,9 @@ function loadNotifications() {
       else if (n.type === 'friend_request') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a friend request';
       else if (n.type === 'friend_accepted') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> accepted your friend request';
       else if (n.type === 'added_to_group') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> added you to a group';
+      else if (n.type === 'feedback_post') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted feedback';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
-      var subLabel = n.momentName || n.groupName || '';
+      var subLabel = n.momentName || n.groupName || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
       return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:' + (n.read ? 'var(--card)' : 'var(--indigo-light)') + ';border:0.5px solid var(--rule);cursor:pointer">' +
         '<div class="av av-a" style="width:36px;height:36px;font-size:12px;flex-shrink:0">' + _escapeHtml(_initialsFallback(n.fromName || '?')) + '</div>' +
         '<div style="flex:1;min-width:0">' +
@@ -9125,6 +9261,9 @@ function notifTap(notifId) {
     if (typeof loadMyGroups === 'function') loadMyGroups();
   } else if ((n.type === 'friend_request' || n.type === 'friend_accepted') && n.fromUid) {
     if (typeof openUserProfile === 'function') openUserProfile(n.fromUid);
+  } else if (n.type === 'feedback_post') {
+    nav('feedback-group');
+    if (n.category) { setTimeout(function(){ if (typeof feedbackTab === 'function') feedbackTab(n.category); }, 0); }
   }
 }
 
