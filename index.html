@@ -1273,7 +1273,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div class="osl-main-tab" onclick="oslTab('chat', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Feed</div>
     <div class="osl-main-tab active" onclick="oslTab('lineup', event)" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer;white-space:nowrap">Lineup</div>
     <div class="osl-main-tab" onclick="oslTab('myfest', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Your Festival</div>
-    <div class="osl-main-tab" onclick="oslTab('photos', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Photos</div>
+    <div class="osl-main-tab" onclick="oslTab('more', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">More</div>
   </div>
 
   <!-- ── LINEUP PANEL ── -->
@@ -1531,9 +1531,55 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── PHOTOS PANEL ── -->
+  <!-- MORE PANEL — a small menu, so a fourth tab can hold more than one thing without crowding the tab bar itself -->
+  <div id="osl2-more" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
+    <div style="padding:14px 16px 8px;flex-shrink:0">
+      <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">More</div>
+    </div>
+    <div style="padding:8px 16px 20px;display:flex;flex-direction:column;gap:10px">
+      <div onclick="oslMoreOpenPhotos()" style="background:var(--card);border:0.5px solid var(--rule);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📸</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--black)">Photos</div>
+          <div style="font-size:12px;color:var(--subtle);margin-top:1px">Everything the group's added from the weekend</div>
+        </div>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+      </div>
+      <div onclick="oslMoreOpenMusic()" style="background:var(--card);border:0.5px solid var(--rule);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎵</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--black)">Our Festival Music</div>
+          <div style="font-size:12px;color:var(--subtle);margin-top:1px">Every song anyone's added, across every artist</div>
+        </div>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUR FESTIVAL MUSIC — every song added across every artist, grouped by artist -->
+  <div id="osl2-allsongs" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="oslMoreBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Our Festival Music</div>
+    </div>
+    <div id="osl-allsongs-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
+      <div style="font-size:34px">🎵</div>
+      <div style="font-size:16px;font-weight:700;color:var(--black)">No songs added yet</div>
+      <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Add songs from any artist's page — they'll all show up here too.</div>
+    </div>
+    <div id="osl-allsongs-list" class="scroll-bare" style="display:none;padding:6px 16px 20px"></div>
+  </div>
+
   <div id="osl2-photos" style="flex:1;display:none;flex-direction:column;background:var(--bg)">
     <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:6px">
-      <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <button onclick="oslMoreBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        </button>
+        <div style="font-size:16px;font-weight:800;color:var(--black);letter-spacing:-0.3px">Photos</div>
+      </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button id="osl-select-btn" onclick="oslPhotosEnterSelect()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--mid);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Select</button>
         <button onclick="oslPhotosSaveAll()" style="background:var(--bg);border:0.5px solid var(--rule);color:var(--indigo);border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">⬇ All</button>
@@ -2971,7 +3017,7 @@ function oslTab(tab, evt) {
     evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
   }
 
-  ['osl2-lineup','osl2-chat','osl2-chat-input','osl2-photos','osl2-myfest'].forEach(function(id) {
+  ['osl2-lineup','osl2-chat','osl2-chat-input','osl2-photos','osl2-myfest','osl2-more','osl2-allsongs'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -2992,10 +3038,150 @@ function oslTab(tab, evt) {
     // renderOslChat has nothing to work with until the panel is actually
     // shown — redo it now that it has real layout
     setTimeout(function(){ chatPanel.scrollTop = chatPanel.scrollHeight; }, 0);
-  } else if (tab === 'photos') {
-    document.getElementById('osl2-photos').style.display = 'flex';
-    if (typeof startOslPhotos === 'function') startOslPhotos();
+  } else if (tab === 'more') {
+    document.getElementById('osl2-more').style.display = 'flex';
+    document.getElementById('osl2-more').style.flexDirection = 'column';
   }
+}
+
+// The More tab holds Photos and Our Festival Music behind a small menu
+// rather than crowding the tab bar with a fifth item. Each sub-view gets
+// its own back button (see oslMoreBack) rather than relying on re-tapping
+// the More tab, since that's not always where someone's attention is.
+function oslMoreOpenPhotos() {
+  var menu = document.getElementById('osl2-more');
+  var photos = document.getElementById('osl2-photos');
+  if (menu) menu.style.display = 'none';
+  if (photos) { photos.style.display = 'flex'; photos.style.flexDirection = 'column'; }
+  if (typeof startOslPhotos === 'function') startOslPhotos();
+}
+
+function oslMoreOpenMusic() {
+  var menu = document.getElementById('osl2-more');
+  var music = document.getElementById('osl2-allsongs');
+  if (menu) menu.style.display = 'none';
+  if (music) { music.style.display = 'flex'; music.style.flexDirection = 'column'; }
+  if (typeof startOslAllSongs === 'function') startOslAllSongs();
+}
+
+function oslMoreBack() {
+  var photos = document.getElementById('osl2-photos');
+  var music = document.getElementById('osl2-allsongs');
+  var menu = document.getElementById('osl2-more');
+  if (photos) photos.style.display = 'none';
+  if (music) music.style.display = 'none';
+  if (menu) { menu.style.display = 'flex'; menu.style.flexDirection = 'column'; }
+}
+
+// ── OUR FESTIVAL MUSIC — every song added on every artist's page, in one
+// place, grouped by artist. Reuses the same actSongs collection and Apple
+// Music lookup cache (window._actSongAppleLinks) the per-artist Songs tab
+// already relies on — a song only ever needs its Apple Music link resolved
+// once, regardless of which screen it's being shown on.
+window._oslAllSongsStarted = false;
+window._oslAllSongsCache = [];
+
+function startOslAllSongs() {
+  if (window._oslAllSongsStarted) return;
+  if (!window.db) return;
+  window._oslAllSongsStarted = true;
+  window.db.collection('actSongs').onSnapshot(function(snap){
+    var songs = [];
+    snap.forEach(function(doc){ songs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    window._oslAllSongsCache = songs;
+    renderOslAllSongs(songs);
+  }, function(err){
+    console.error('All songs error:', err);
+    window._oslAllSongsStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Songs unavailable — check Firestore rules');
+  });
+}
+
+function renderOslAllSongs(songs) {
+  var list = document.getElementById('osl-allsongs-list');
+  var empty = document.getElementById('osl-allsongs-empty');
+  if (!list) return;
+  if (!songs.length) {
+    if (empty) empty.style.display = 'flex';
+    list.style.display = 'none';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.style.display = 'block';
+
+  var byArtist = {};
+  songs.forEach(function(s){
+    var key = s.actName || 'Unknown artist';
+    (byArtist[key] = byArtist[key] || []).push(s);
+  });
+  var artistNames = Object.keys(byArtist).sort(function(a, b){ return a.localeCompare(b); });
+
+  list.innerHTML = artistNames.map(function(artist){
+    var artistSongs = byArtist[artist].slice().sort(function(a, b){
+      var ca = (a.recommenders || []).length, cb = (b.recommenders || []).length;
+      if (cb !== ca) return cb - ca;
+      return (a.ts || 0) - (b.ts || 0);
+    });
+    var songsHtml = artistSongs.map(function(s){
+      var recs = s.recommenders || [];
+      var names = recs.map(function(r){ return r.name; }).join(', ');
+      var query = encodeURIComponent(artist + ' ' + s.title);
+      var appleHref = window._actSongAppleLinks[s._id] || ('https://music.apple.com/us/search?term=' + query);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:0.5px solid var(--rule)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(s.title) + '</div>' +
+          '<div style="font-size:11px;color:var(--subtle);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (recs.length > 1 ? recs.length + ' friends · ' : '') + _escapeHtml(names) + '</div>' +
+        '</div>' +
+        '<a href="https://open.spotify.com/search/' + query + '" target="_blank" rel="noopener" style="width:28px;height:28px;border-radius:50%;background:rgba(29,185,84,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;text-decoration:none" aria-label="Search Spotify">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.48.12-1.021-.12-1.141-.6-.12-.48.12-1.02.6-1.14 4.322-1.32 9.682-.66 13.381 1.62.361.181.54.78.361 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/></svg>' +
+        '</a>' +
+        '<a id="allsong-apple-' + s._id + '" href="' + appleHref + '" target="_blank" rel="noopener" style="width:28px;height:28px;border-radius:50%;background:rgba(250,60,90,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;text-decoration:none" aria-label="Open in Apple Music">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="#FA3C5A"><path d="M23.997 6.124a9.23 9.23 0 0 0-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043C21.003.517 20.373.285 19.7.164c-.517-.093-1.038-.135-1.564-.15-.04-.001-.083-.007-.124-.01H5.988c-.152.01-.303.017-.455.028-.53.038-1.055.107-1.564.278a5.222 5.222 0 0 0-2.235 1.456A5.415 5.415 0 0 0 .606 3.71c-.24.653-.353 1.33-.394 2.02-.008.135-.012.27-.012.406v12.037c.005.19.012.38.024.57.036.53.1 1.058.264 1.567.396 1.24 1.14 2.24 2.235 2.94.65.416 1.373.65 2.13.75.42.056.842.087 1.267.09.02 0 .04.003.058.008h12.6c.11-.01.22-.017.33-.026.53-.04 1.055-.106 1.564-.278a5.147 5.147 0 0 0 2.29-1.516c.633-.72 1.017-1.55 1.19-2.49.1-.53.13-1.065.13-1.6V6.395c0-.09-.003-.18-.006-.27z"/></svg>' +
+        '</a>' +
+      '</div>';
+    }).join('');
+    return '<div style="margin-bottom:18px">' +
+      '<div onclick="_jumpToActFromAllSongs(\'' + artist.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;cursor:pointer;padding-top:6px">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em">' + _escapeHtml(artist) + '</div>' +
+        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>' +
+      '</div>' +
+      songsHtml +
+    '</div>';
+  }).join('');
+
+  artistNames.forEach(function(artist){
+    byArtist[artist].forEach(function(s){ _resolveAllSongAppleLink(s._id, artist, s.title); });
+  });
+}
+
+// Same iTunes Search lookup _resolveActSongAppleLink uses, targeting this
+// screen's element ids instead — shares the cache, so a song already
+// resolved on an artist's own Songs tab doesn't get looked up twice.
+function _resolveAllSongAppleLink(songId, actName, title) {
+  if (window._actSongAppleLinks[songId] !== undefined) {
+    if (window._actSongAppleLinks[songId]) {
+      var known = document.getElementById('allsong-apple-' + songId);
+      if (known) known.href = window._actSongAppleLinks[songId];
+    }
+    return;
+  }
+  window._actSongAppleLinks[songId] = null;
+  fetch('https://itunes.apple.com/search?entity=song&limit=1&term=' + encodeURIComponent(actName + ' ' + title))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var result = data && data.results && data.results[0];
+      if (result && result.trackViewUrl) {
+        window._actSongAppleLinks[songId] = result.trackViewUrl;
+        var el = document.getElementById('allsong-apple-' + songId);
+        if (el) el.href = result.trackViewUrl;
+      }
+    })
+    .catch(function(err){ console.error('All-songs Apple Music lookup error:', err); });
+}
+
+function _jumpToActFromAllSongs(actName) {
+  var meta = _findActMeta(actName);
+  openActDetail(actName, meta.time, meta.headliner);
 }
 
 function groupShowPanel(key) {
@@ -3768,7 +3954,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.117.0-fix-notif-bell-real-badge-login-toast';
+window.INNINGS_BUILD = 'v4.118.0-osl-more-tab-festival-music';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7921,13 +8107,15 @@ function _jumpToActFromFeed(actName) {
 }
 
 // You're always already on the OSL screen when you'd see this notice (the
-// Feed only ever renders there), so this just needs to flip the tab —
-// same work oslTab('photos', evt) does, without needing a fake event.
+// Feed only ever renders there), so this just needs to flip to the More
+// tab and open Photos directly — Photos no longer has its own top-level
+// tab now that it lives behind the More menu.
 function _jumpToOslPhotosFromFeed() {
   var tabs = document.querySelectorAll('.osl-main-tab');
-  var photosTab = null;
-  tabs.forEach(function(t){ if (t.textContent.trim() === 'Photos') photosTab = t; });
-  oslTab('photos', photosTab ? { target: photosTab } : null);
+  var moreTab = null;
+  tabs.forEach(function(t){ if (t.textContent.trim() === 'More') moreTab = t; });
+  oslTab('more', moreTab ? { target: moreTab } : null);
+  oslMoreOpenPhotos();
 }
 
 function sendOslMessage() {
