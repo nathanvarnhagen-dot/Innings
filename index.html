@@ -1601,6 +1601,56 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
         <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
       </div>
+      <div onclick="oslMoreOpenExport()" style="background:rgba(168,159,232,0.1);border:0.5px solid rgba(168,159,232,0.35);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(168,159,232,0.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📤</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:white;display:flex;align-items:center;gap:6px">Export Your Festival <span style="font-size:9px;font-weight:800;color:#0D0820;background:rgba(168,159,232,0.95);padding:2px 6px;border-radius:6px;letter-spacing:0.02em">NEW</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px">Save an offline schedule for when service is spotty</div>
+        </div>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT YOUR FESTIVAL — a downloadable image (via html2canvas) summarizing
+       everyone's Going/Maybe picks in chronological order, for when service is
+       spotty. Reuses the same friend pool as Compare Your Festival. -->
+  <div id="osl2-export" style="flex:1;min-height:0;display:none;flex-direction:column;background:#0D0820">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="oslMoreBack()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px">Export Your Festival</div>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto">
+      <div style="display:flex;gap:8px;padding:10px 16px">
+        <div class="export-day-tab" data-day="fri" onclick="setExportDay('fri',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(168,159,232,0.9);color:#0D0820;border:0.5px solid transparent">Fri 8/7</div>
+        <div class="export-day-tab" data-day="sat" onclick="setExportDay('sat',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)">Sat 8/8</div>
+        <div class="export-day-tab" data-day="sun" onclick="setExportDay('sun',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)">Sun 8/9</div>
+      </div>
+      <div id="export-friends-line" style="padding:0 16px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4)"></div>
+
+      <div style="padding:0 16px 16px">
+        <div id="export-poster" style="border-radius:20px;overflow:hidden;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 55%,#150A30 100%)">
+          <div style="padding:24px 20px 16px">
+            <div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.7);text-transform:uppercase;letter-spacing:0.18em">Outside Lands 2026</div>
+            <div id="export-poster-day" style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-top:4px">Friday, August 7</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">Your group's picks, in order</div>
+            <div style="display:flex;gap:16px;margin-top:14px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:rgba(168,159,232,0.95)"></div>Going</div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:#FEDF9A"></div>Maybe</div>
+            </div>
+          </div>
+          <div id="export-poster-list" style="padding:4px 20px 22px"></div>
+          <div style="padding:14px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.08);text-align:center">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.02em">Made with <b style="color:rgba(168,159,232,0.9)">Innings</b> · every moment deserves a home</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 16px 24px;flex-shrink:0">
+      <button onclick="exportFestivalToPhotos()" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">⬇ Save to Photos</button>
+      <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.5">Saves as an image — no signal needed to look at it later.</div>
     </div>
   </div>
 
@@ -3293,13 +3343,172 @@ function oslMoreOpenMusic() {
   if (typeof startOslAllSongs === 'function') startOslAllSongs();
 }
 
+function oslMoreOpenExport() {
+  var menu = document.getElementById('osl2-more');
+  var exportPanel = document.getElementById('osl2-export');
+  if (menu) menu.style.display = 'none';
+  if (exportPanel) { exportPanel.style.display = 'flex'; exportPanel.style.flexDirection = 'column'; }
+  if (typeof loadCompareFriends === 'function') {
+    loadCompareFriends(function(){
+      window._exportDay = window._exportDay || 'fri';
+      renderExportFriendsLine();
+      renderExportPoster(window._exportDay);
+    });
+  }
+}
+
 function oslMoreBack() {
   var photos = document.getElementById('osl2-photos');
   var music = document.getElementById('osl2-allsongs');
+  var exportPanel = document.getElementById('osl2-export');
   var menu = document.getElementById('osl2-more');
   if (photos) photos.style.display = 'none';
   if (music) music.style.display = 'none';
+  if (exportPanel) exportPanel.style.display = 'none';
   if (menu) { menu.style.display = 'flex'; menu.style.flexDirection = 'column'; }
+}
+
+// ── EXPORT YOUR FESTIVAL — a downloadable image summarizing everyone's
+// Going/Maybe picks in chronological order, for when service is spotty at
+// the festival itself. Pulls from the same friend pool Compare Your
+// Festival already established (accepted Innings friends who are also
+// going/maybe), so "everyone" here means people you actually know, not
+// every stranger who RSVP'd.
+window._exportDay = 'fri';
+
+// Parses "6:55–8:25 PM" into minutes-since-midnight for the START time —
+// unlike Your Festival's own list (sorted by end time, so a late-ending
+// headliner sorts last), a schedule export reads naturally by start time:
+// "what's happening at 5pm" is how people actually scan a lineup.
+function _actStartMinutes(timeStr) {
+  if (!timeStr) return 0;
+  var parts = timeStr.split('–');
+  var startPart = parts[0].trim();
+  var suffixMatch = timeStr.match(/(AM|PM)/i);
+  var suffix = suffixMatch ? suffixMatch[1].toUpperCase() : '';
+  var startSuffixMatch = startPart.match(/(AM|PM)/i);
+  if (startSuffixMatch) suffix = startSuffixMatch[1].toUpperCase();
+  var timeOnly = startPart.replace(/(AM|PM)/i, '').trim();
+  var bits = timeOnly.split(':');
+  var hour = parseInt(bits[0], 10) || 0;
+  var min = parseInt(bits[1], 10) || 0;
+  if (suffix === 'PM' && hour !== 12) hour += 12;
+  if (suffix === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + min;
+}
+
+function renderExportFriendsLine() {
+  var el = document.getElementById('export-friends-line');
+  if (!el) return;
+  var friends = (window._compareFriendsCache || []).filter(function(f){ return f.oslRsvp === 'going' || f.oslRsvp === 'maybe'; });
+  if (!friends.length) {
+    el.innerHTML = 'Just your own picks for now — friends who RSVP show up here too.';
+    return;
+  }
+  var shown = friends.slice(0, 4);
+  var extra = friends.length - shown.length;
+  var avsHtml = shown.map(function(f, i){
+    var colors = ['#5B3E8A','#2C4E7A','#2D5A3F','#7A4F10'];
+    return '<div style="width:22px;height:22px;border-radius:50%;background:' + colors[i % colors.length] + ';border:2px solid #0D0820;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:white;margin-left:' + (i === 0 ? '0' : '-6px') + '">' + _escapeHtml(_initialsFallback(f.name)) + '</div>';
+  }).join('');
+  el.innerHTML = '<div style="display:flex">' + avsHtml + '</div>' +
+    '<div>' + friends.length + ' friend' + (friends.length === 1 ? '' : 's') + ' going or maybe' + (extra > 0 ? ' · +' + extra + ' more' : '') + '</div>';
+}
+
+function setExportDay(day, el) {
+  window._exportDay = day;
+  document.querySelectorAll('.export-day-tab').forEach(function(t){
+    var active = t === el;
+    t.style.background = active ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.06)';
+    t.style.color = active ? '#0D0820' : 'rgba(255,255,255,0.5)';
+    t.style.borderColor = active ? 'transparent' : 'rgba(255,255,255,0.1)';
+  });
+  renderExportPoster(day);
+}
+
+function renderExportPoster(dayKey) {
+  var dayLabels = { fri: 'Friday, August 7', sat: 'Saturday, August 8', sun: 'Sunday, August 9' };
+  var titleEl = document.getElementById('export-poster-day');
+  var listEl = document.getElementById('export-poster-list');
+  if (!listEl) return;
+  if (titleEl) titleEl.textContent = dayLabels[dayKey] || '';
+
+  var friends = (window._compareFriendsCache || []).filter(function(f){ return f.oslRsvp === 'going' || f.oslRsvp === 'maybe'; });
+  var friendColors = ['#5B3E8A','#2C4E7A','#2D5A3F','#7A4F10','#7A2E4F','#2E5A7A','#3D3580'];
+
+  // Union of every act where you or any included friend marked going/maybe —
+  // this is what makes the export a whole-group cheat sheet, not just yours.
+  var actsInDay = stageData[dayKey] || {};
+  var rows = [];
+  Object.keys(actsInDay).forEach(function(stageKey){
+    var stage = actsInDay[stageKey];
+    stage.acts.forEach(function(act){
+      var people = [];
+      var myStatus = myRsvps[act.name];
+      if (myStatus === 'going' || myStatus === 'maybe') people.push({ initial: 'You', color: '#3D3580', status: myStatus });
+      friends.forEach(function(f, i){
+        var st = (f.actRsvps || {})[act.name];
+        if (st === 'going' || st === 'maybe') people.push({ initial: _initialsFallback(f.name), color: friendColors[i % friendColors.length], status: st });
+      });
+      if (people.length) rows.push({ name: act.name, time: act.time, stage: stage.name, people: people });
+    });
+  });
+  rows.sort(function(a, b){ return _actStartMinutes(a.time) - _actStartMinutes(b.time); });
+
+  if (!rows.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:30px 10px;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6">No picks marked for this day yet — mark some acts Going or Maybe in Lineup first.</div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map(function(r){
+    var shown = r.people.slice(0, 4);
+    var extra = r.people.length - shown.length;
+    var avsHtml = shown.map(function(p, i){
+      var ring = p.status === 'going' ? 'rgba(168,159,232,0.95)' : '#FEDF9A';
+      return '<div style="width:22px;height:22px;border-radius:50%;background:' + p.color + ';border:2px solid ' + ring + ';display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:white;margin-left:' + (i === 0 ? '0' : '-6px') + '">' + _escapeHtml(p.initial.charAt(0).toUpperCase()) + '</div>';
+    }).join('');
+    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)">' +
+      '<div style="width:64px;flex-shrink:0;font-size:12px;font-weight:700;color:rgba(168,159,232,0.85)">' + _escapeHtml(r.time) + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:14.5px;font-weight:700;color:white">' + _escapeHtml(r.name) + '</div>' +
+        '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">' + _escapeHtml(r.stage) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;flex-shrink:0">' +
+        '<div style="display:flex">' + avsHtml + '</div>' +
+        (extra > 0 ? '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-left:6px">+' + extra + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function exportFestivalToPhotos() {
+  if (typeof html2canvas !== 'function') { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try reloading'); return; }
+  var posterEl = document.getElementById('export-poster');
+  if (!posterEl) return;
+  if (typeof ib_toast === 'function') ib_toast('Preparing image…');
+  html2canvas(posterEl, { backgroundColor: '#0D0820', scale: 2, useCORS: true }).then(function(canvas){
+    canvas.toBlob(function(blob){
+      if (!blob) { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again'); return; }
+      var fname = 'innings-outside-lands-' + (window._exportDay || 'fri') + '.png';
+      var file = new File([blob], fname, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file] }).catch(function(){});
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+        if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
+      }
+    }, 'image/png');
+  }).catch(function(err){
+    console.error('Export festival image error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again');
+  });
 }
 
 // ── OUR FESTIVAL MUSIC — every song added on every artist's page, in one
@@ -4183,7 +4392,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.122.2-fix-osl-composer-bg';
+window.INNINGS_BUILD = 'v4.123.0-export-your-festival-timeline';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5089,6 +5298,8 @@ function addPerson() {
   if (typeof sendInviteText === 'function') sendInviteText();
 }
 </script>
+<!-- HTML2CANVAS — renders the Export Your Festival poster div to a real image for saving -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <!-- FIREBASE AUTH -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
