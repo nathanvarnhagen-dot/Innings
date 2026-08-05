@@ -4392,7 +4392,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.123.0-export-your-festival-timeline';
+window.INNINGS_BUILD = 'v4.123.1-fix-osl-lineup-scroll-lock';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -4425,7 +4425,11 @@ function _nudgeScrollers(screenEl){
   if (!screenEl) return;
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
-      var scrollers = screenEl.querySelectorAll('.scroll, .scroll-bare');
+      // .scroll/.scroll-bare cover most screens, but several panels (all of
+      // OSL's tab content among them) set overflow-y:auto directly as an
+      // inline style instead of via those classes, so they were silently
+      // never covered by this nudge at all — this catches those too.
+      var scrollers = screenEl.querySelectorAll('.scroll, .scroll-bare, [style*="overflow-y:auto"], [style*="overflow-y: auto"], [style*="overflow-y:scroll"]');
       scrollers.forEach(function(s){
         var st = s.scrollTop;
         s.scrollTop = st + 1;
@@ -7790,6 +7794,15 @@ function oslSetRsvp(val) {
     }
   }
   if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're going 🎉" : val === 'maybe' ? 'Marked as maybe' : 'Marked as not going');
+  // Dismissing this overlay reveals the Lineup tab underneath, but that
+  // reveal happens outside the normal nav() screen transition — the only
+  // place scroll containers otherwise get nudged back into working order
+  // on iOS. Without this, whoever just RSVP'd (going, maybe, or not going
+  // alike) could end up with a Lineup that renders fine but never actually
+  // scrolls until a full reload.
+  if (typeof _nudgeScrollers === 'function') {
+    _nudgeScrollers(document.getElementById('screen-osl-group'));
+  }
 }
 
 // ── WHO'S GOING / PENDING — reuses the same friend-fetch pattern as
