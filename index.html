@@ -1570,7 +1570,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div id="osl-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
-  <div id="osl2-chat-input" style="display:none;position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
+  <div id="osl2-chat-input" style="display:none;position:relative;background:#150F30;border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
       <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
@@ -4183,7 +4183,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.122.1-fix-dark-input-appearance';
+window.INNINGS_BUILD = 'v4.122.2-fix-osl-composer-bg';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
