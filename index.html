@@ -1505,12 +1505,60 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.4px;margin-bottom:4px">Your Festival</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.35)">Acts you've marked as Going</div>
     </div>
+
+    <!-- Entry point, shown when not comparing -->
+    <div id="myfest-compare-cta" onclick="openComparePicker()" style="margin:0 16px 14px;background:rgba(168,159,232,0.12);border:1px solid rgba(168,159,232,0.35);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:38px;height:38px;border-radius:11px;background:rgba(168,159,232,0.18);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🔀</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:white">Compare with a friend</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px">See what overlaps with someone else's picks</div>
+      </div>
+      <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+    </div>
+
+    <!-- Shown once a friend is selected -->
+    <div id="myfest-compare-bar" style="display:none;margin:0 16px 14px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--indigo-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0">You</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">vs</div>
+        <div id="cmp-friend-av" style="width:34px;height:34px;border-radius:50%;background:#5B3E8A;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0">?</div>
+        <div id="cmp-friend-names" style="flex:1;min-width:0;font-size:14px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">You &amp; Friend</div>
+        <div onclick="openComparePicker()" style="font-size:12px;font-weight:700;color:rgba(168,159,232,1);cursor:pointer;flex-shrink:0">Change</div>
+        <div onclick="exitCompare()" style="font-size:15px;color:rgba(255,255,255,0.35);cursor:pointer;flex-shrink:0;padding-left:6px">✕</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <div class="cmp-stat-chip" data-filter="shared" onclick="setCompareFilter('shared')" style="flex:1;border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:1px solid transparent">
+          <div id="cmp-stat-shared-n" style="font-size:18px;font-weight:900;color:rgba(168,159,232,0.95);letter-spacing:-0.5px;line-height:1">0</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:4px;color:rgba(255,255,255,0.4)">Shared</div>
+        </div>
+        <div class="cmp-stat-chip" data-filter="you" onclick="setCompareFilter('you')" style="flex:1;border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:1px solid transparent">
+          <div id="cmp-stat-you-n" style="font-size:18px;font-weight:900;color:white;letter-spacing:-0.5px;line-height:1">0</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:4px;color:rgba(255,255,255,0.4)">Only you</div>
+        </div>
+        <div class="cmp-stat-chip" data-filter="them" onclick="setCompareFilter('them')" style="flex:1;border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:1px solid transparent">
+          <div id="cmp-stat-them-n" style="font-size:18px;font-weight:900;color:white;letter-spacing:-0.5px;line-height:1">0</div>
+          <div id="cmp-stat-them-label" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:4px;color:rgba(255,255,255,0.4)">Only them</div>
+        </div>
+      </div>
+    </div>
+
     <div id="myfest-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px">
       <div style="font-size:32px;margin-bottom:4px">🎪</div>
       <div style="font-size:16px;font-weight:700;color:white">No plans yet</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.35);max-width:240px;line-height:1.6">Go to Lineup, mark an act Going or Maybe — it'll show up here.</div>
     </div>
     <div id="myfest-list" style="padding:12px 16px;display:none;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- COMPARE FRIEND PICKER -->
+  <div id="compare-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:flex-end" onclick="if(event.target===this)hideComparePicker()">
+    <div style="background:#0D0820;border-radius:24px 24px 0 0;width:100%;max-height:70vh;display:flex;flex-direction:column;border-top:0.5px solid rgba(255,255,255,0.1)">
+      <div style="padding:20px 20px 4px;flex-shrink:0">
+        <div style="font-size:16px;font-weight:700;color:white">Compare with</div>
+        <div style="font-size:12.5px;color:rgba(255,255,255,0.45);margin-top:4px;line-height:1.5">Pick a friend going to Outside Lands to see how your picks overlap.</div>
+      </div>
+      <div id="compare-friend-list" style="padding:12px 12px 20px;overflow-y:auto"></div>
+    </div>
   </div>
 
   <!-- ── CHAT PANEL ── -->
@@ -2230,19 +2278,12 @@ function _friendClusterHtml(actName) {
 }
 
 function updateMyFest() {
-  var going = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'going'; });
-  var maybe = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'maybe'; });
   var listEl = document.getElementById('myfest-list');
   var emptyEl = document.getElementById('myfest-empty');
-  if (going.length === 0 && maybe.length === 0) {
-    listEl.style.display = 'none';
-    emptyEl.style.display = 'flex';
-    return;
-  }
-  emptyEl.style.display = 'none';
-  listEl.style.display = 'flex';
-  listEl.innerHTML = '';
-  // Find time/stage/headliner/day for each act
+  var ctaEl = document.getElementById('myfest-compare-cta');
+  var barEl = document.getElementById('myfest-compare-bar');
+
+  // Find time/stage/headliner/day for each act — shared by both modes
   var allActs = {};
   Object.keys(stageData).forEach(function(day) {
     Object.keys(stageData[day]).forEach(function(stage) {
@@ -2251,42 +2292,6 @@ function updateMyFest() {
       });
     });
   });
-  var rows = going.map(function(n){ return {name: n, status: 'going'}; }).concat(maybe.map(function(n){ return {name: n, status: 'maybe'}; }));
-
-  // Group into Friday/Saturday/Sunday sections rather than one mixed list —
-  // acts with no day info on file (shouldn't normally happen) fall into
-  // their own trailing section instead of being silently dropped.
-  var dayOrder = ['fri', 'sat', 'sun'];
-  var groups = {};
-  var otherRows = [];
-  rows.forEach(function(row){
-    var info = allActs[row.name] || {};
-    if (info.dayKey) {
-      groups[info.dayKey] = groups[info.dayKey] || [];
-      groups[info.dayKey].push(row);
-    } else {
-      otherRows.push(row);
-    }
-  });
-
-  function renderFestRow(row) {
-    var actName = row.name;
-    var info = allActs[actName] || {};
-    var isGoing = row.status === 'going';
-    var div = document.createElement('div');
-    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px';
-    div.onclick = function(){ openActDetail(actName, info.time, info.headliner); };
-    var icon = isGoing
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-      : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
-    var clusterHtml = _friendClusterHtml(actName);
-    var rightHtml = clusterHtml || ('<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>');
-    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
-      '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + actName + '</div>' +
-      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + (info.stage || '') + ' · ' + (info.time || 'TBD') + '</div></div>' +
-      rightHtml;
-    return div;
-  }
 
   // Parses "6:55–8:25 PM" style ranges into minutes-since-midnight for the
   // END time — end time is the sort determinant (not start), so a headliner
@@ -2312,22 +2317,246 @@ function updateMyFest() {
       return _actEndMinutes((allActs[a.name]||{}).time) - _actEndMinutes((allActs[b.name]||{}).time);
     });
   }
-  Object.keys(groups).forEach(function(dayKey){ _sortRowsByTime(groups[dayKey]); });
-  _sortRowsByTime(otherRows);
+  // Groups rows into Friday/Saturday/Sunday sections rather than one mixed
+  // list — acts with no day info on file (shouldn't normally happen) fall
+  // into their own trailing section instead of being silently dropped.
+  // Shared by both normal and compare mode so day-grouping/sorting only
+  // exists in one place.
+  function _renderDayGroups(rows, rowRenderer) {
+    var dayOrder = ['fri', 'sat', 'sun'];
+    var groups = {};
+    var otherRows = [];
+    rows.forEach(function(row){
+      var info = allActs[row.name] || {};
+      if (info.dayKey) {
+        groups[info.dayKey] = groups[info.dayKey] || [];
+        groups[info.dayKey].push(row);
+      } else {
+        otherRows.push(row);
+      }
+    });
+    Object.keys(groups).forEach(function(dayKey){ _sortRowsByTime(groups[dayKey]); });
+    _sortRowsByTime(otherRows);
+    dayOrder.forEach(function(dayKey){
+      var dayRows = groups[dayKey];
+      if (!dayRows || !dayRows.length) return;
+      var firstStageKey = Object.keys(stageData[dayKey])[0];
+      var label = stageData[dayKey][firstStageKey].day;
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px';
+      hdr.textContent = label;
+      listEl.appendChild(hdr);
+      dayRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
+    });
+    otherRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
+  }
 
-  dayOrder.forEach(function(dayKey){
-    var dayRows = groups[dayKey];
-    if (!dayRows || !dayRows.length) return;
-    var firstStageKey = Object.keys(stageData[dayKey])[0];
-    var label = stageData[dayKey][firstStageKey].day;
-    var hdr = document.createElement('div');
-    hdr.style.cssText = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px';
-    hdr.textContent = label;
-    listEl.appendChild(hdr);
-    dayRows.forEach(function(row){ listEl.appendChild(renderFestRow(row)); });
+  var friend = window._compareFriendId ? (window._compareFriendsCache || []).filter(function(f){ return f.uid === window._compareFriendId; })[0] : null;
+  if (ctaEl) ctaEl.style.display = friend ? 'none' : 'flex';
+  if (barEl) barEl.style.display = friend ? 'block' : 'none';
+
+  if (friend) {
+    // ── COMPARE MODE — union of your going/maybe acts and theirs ──
+    var allNames = {};
+    Object.keys(myRsvps).forEach(function(n){ if (myRsvps[n] === 'going' || myRsvps[n] === 'maybe') allNames[n] = true; });
+    Object.keys(friend.actRsvps).forEach(function(n){ if (friend.actRsvps[n] === 'going' || friend.actRsvps[n] === 'maybe') allNames[n] = true; });
+    var allRows = Object.keys(allNames).map(function(n){ return { name: n, you: myRsvps[n] || null, them: friend.actRsvps[n] || null }; });
+
+    var sharedCount = 0, onlyYouCount = 0, onlyThemCount = 0;
+    allRows.forEach(function(r){
+      if (r.you && r.them) sharedCount++;
+      else if (r.you && !r.them) onlyYouCount++;
+      else if (!r.you && r.them) onlyThemCount++;
+    });
+    var sEl = document.getElementById('cmp-stat-shared-n');
+    var yEl = document.getElementById('cmp-stat-you-n');
+    var tEl = document.getElementById('cmp-stat-them-n');
+    if (sEl) sEl.textContent = sharedCount;
+    if (yEl) yEl.textContent = onlyYouCount;
+    if (tEl) tEl.textContent = onlyThemCount;
+
+    var filter = window._compareFilter || 'all';
+    var filteredRows = allRows.filter(function(r){
+      var bucket = (r.you && r.them) ? 'shared' : (r.you && !r.them) ? 'you' : (!r.you && r.them) ? 'them' : 'neither';
+      return filter === 'all' || bucket === filter;
+    });
+
+    if (!filteredRows.length) {
+      emptyEl.style.display = 'none';
+      listEl.style.display = 'flex';
+      listEl.innerHTML = '<div style="text-align:center;padding:40px 24px;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6">Nothing in this category — tap the filter again to see everything.</div>';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    listEl.style.display = 'flex';
+    listEl.innerHTML = '';
+
+    function _cmpColor(status) {
+      if (status === 'going') return 'rgba(168,159,232,0.95)';
+      if (status === 'maybe') return '#FEDF9A';
+      return 'rgba(255,255,255,0.15)';
+    }
+    function renderCompareRow(row) {
+      var info = allActs[row.name] || {};
+      var div = document.createElement('div');
+      div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:13px 14px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px';
+      div.onclick = function(){ openActDetail(row.name, info.time, info.headliner); };
+      var friendInitial = (friend.name || '?').charAt(0).toUpperCase();
+      div.innerHTML = '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14px;font-weight:700;color:white">' + _escapeHtml(row.name) + '</div>' +
+          '<div style="font-size:11.5px;color:rgba(255,255,255,0.4);margin-top:2px">' + _escapeHtml((info.stage || '') + ' · ' + (info.time || 'TBD')) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">' +
+          '<div style="display:flex;flex-direction:column;align-items:center">' +
+            '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px solid ' + _cmpColor(row.you) + ';display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:white">' + (row.you ? 'Y' : '–') + '</div>' +
+            '<div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.3);margin-top:3px;text-transform:uppercase;letter-spacing:0.02em">You</div>' +
+          '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:center">' +
+            '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px solid ' + _cmpColor(row.them) + ';display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:white">' + (row.them ? _escapeHtml(friendInitial) : '–') + '</div>' +
+            '<div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.3);margin-top:3px;text-transform:uppercase;letter-spacing:0.02em;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((friend.name || '').split(' ')[0]) + '</div>' +
+          '</div>' +
+        '</div>';
+      return div;
+    }
+    _renderDayGroups(filteredRows, renderCompareRow);
+    return;
+  }
+
+  // ── NORMAL MODE — your own going/maybe picks, unchanged from before ──
+  var going = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'going'; });
+  var maybe = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'maybe'; });
+  if (going.length === 0 && maybe.length === 0) {
+    listEl.style.display = 'none';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  listEl.style.display = 'flex';
+  listEl.innerHTML = '';
+  var rows = going.map(function(n){ return {name: n, status: 'going'}; }).concat(maybe.map(function(n){ return {name: n, status: 'maybe'}; }));
+
+  function renderFestRow(row) {
+    var actName = row.name;
+    var info = allActs[actName] || {};
+    var isGoing = row.status === 'going';
+    var div = document.createElement('div');
+    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px';
+    div.onclick = function(){ openActDetail(actName, info.time, info.headliner); };
+    var icon = isGoing
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
+    var clusterHtml = _friendClusterHtml(actName);
+    var rightHtml = clusterHtml || ('<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>');
+    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + actName + '</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + (info.stage || '') + ' · ' + (info.time || 'TBD') + '</div></div>' +
+      rightHtml;
+    return div;
+  }
+
+  _renderDayGroups(rows, renderFestRow);
+}
+
+// ── COMPARE YOUR FESTIVAL — pick an accepted Innings friend who's also
+// going/maybe to OSL and see your picks side by side. Friend pool is
+// cached once per session, same lazy-load-once pattern as
+// loadOslFriendRsvps just below.
+window._compareFriendsCache = null;
+window._compareFriendId = null;
+window._compareFilter = 'all';
+
+function loadCompareFriends(cb) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { window._compareFriendsCache = []; if (cb) cb(); return; }
+  if (window._compareFriendsCache) { if (cb) cb(); return; }
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { window._compareFriendsCache = []; if (cb) cb(); return; }
+    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      var friends = [];
+      docs.forEach(function(doc){
+        var d = doc.data() || {};
+        if (d.oslRsvp === 'going' || d.oslRsvp === 'maybe') {
+          friends.push({ uid: doc.id, name: d.name || 'Friend', oslRsvp: d.oslRsvp, actRsvps: d.oslActRsvps || {} });
+        }
+      });
+      window._compareFriendsCache = friends;
+      if (cb) cb();
+    });
+  }).catch(function(err){
+    console.error('Load compare friends error:', err);
+    window._compareFriendsCache = [];
+    if (cb) cb();
   });
+}
 
-  otherRows.forEach(function(row){ listEl.appendChild(renderFestRow(row)); });
+function openComparePicker() {
+  loadCompareFriends(function(){
+    var listEl = document.getElementById('compare-friend-list');
+    var friends = window._compareFriendsCache || [];
+    if (!listEl) return;
+    if (!friends.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;color:rgba(255,255,255,0.4);font-size:13px;line-height:1.6">None of your Innings friends are marked going or maybe to Outside Lands yet.</div>';
+    } else {
+      listEl.innerHTML = friends.map(function(f){
+        var goingCount = Object.keys(f.actRsvps || {}).filter(function(n){ return f.actRsvps[n] === 'going'; }).length;
+        return '<div onclick="selectCompareFriend(\'' + f.uid + '\')" style="display:flex;align-items:center;gap:12px;padding:11px 8px;border-radius:14px;cursor:pointer">' +
+          '<div class="av av-a" style="width:38px;height:38px;font-size:13px;flex-shrink:0">' + _escapeHtml(_initialsFallback(f.name)) + '</div>' +
+          '<div style="flex:1;font-size:14px;font-weight:600;color:white">' + _escapeHtml(f.name) + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.35);flex-shrink:0">' + goingCount + ' going</div>' +
+        '</div>';
+      }).join('');
+    }
+    var m = document.getElementById('compare-picker-modal');
+    if (m) m.style.display = 'flex';
+  });
+}
+
+function hideComparePicker() {
+  var m = document.getElementById('compare-picker-modal');
+  if (m) m.style.display = 'none';
+}
+
+function selectCompareFriend(uid) {
+  window._compareFriendId = uid;
+  window._compareFilter = 'all';
+  hideComparePicker();
+  var friend = (window._compareFriendsCache || []).filter(function(f){ return f.uid === uid; })[0];
+  if (friend) {
+    var avEl = document.getElementById('cmp-friend-av');
+    var namesEl = document.getElementById('cmp-friend-names');
+    var themLabelEl = document.getElementById('cmp-stat-them-label');
+    if (avEl) avEl.textContent = (friend.name || '?').charAt(0).toUpperCase();
+    if (namesEl) namesEl.textContent = 'You & ' + friend.name;
+    if (themLabelEl) themLabelEl.textContent = 'Only ' + (friend.name || '').split(' ')[0];
+  }
+  document.querySelectorAll('.cmp-stat-chip').forEach(function(el){
+    el.style.background = 'transparent';
+    el.style.borderColor = 'transparent';
+  });
+  updateMyFest();
+}
+
+function exitCompare() {
+  window._compareFriendId = null;
+  window._compareFilter = 'all';
+  updateMyFest();
+}
+
+function setCompareFilter(f) {
+  window._compareFilter = (window._compareFilter === f) ? 'all' : f;
+  document.querySelectorAll('.cmp-stat-chip').forEach(function(el){
+    var active = el.getAttribute('data-filter') === window._compareFilter;
+    el.style.background = active ? 'rgba(168,159,232,0.14)' : 'transparent';
+    el.style.borderColor = active ? 'rgba(168,159,232,0.4)' : 'transparent';
+  });
+  updateMyFest();
 }
 
 // ── ARTIST DETAIL: who's going, Spotify/Apple Music search links, per-artist chat ──
@@ -3954,7 +4183,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.120.0-more-photos-dark-theme';
+window.INNINGS_BUILD = 'v4.121.0-compare-your-festival';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
