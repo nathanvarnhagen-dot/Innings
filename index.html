@@ -3553,9 +3553,38 @@ function renderOslAllSongs(songs) {
     var key = s.actName || 'Unknown artist';
     (byArtist[key] = byArtist[key] || []).push(s);
   });
-  var artistNames = Object.keys(byArtist).sort(function(a, b){ return a.localeCompare(b); });
 
-  list.innerHTML = artistNames.map(function(artist){
+  // Look up which day (and set time) each act actually plays, so this reads
+  // as a day-by-day prep playlist — Friday's acts in the order you'll see
+  // them, then Saturday, then Sunday — rather than one alphabetical list
+  // mixing every day together.
+  var dayOrder = ['fri', 'sat', 'sun'];
+  var actMeta = {};
+  dayOrder.forEach(function(dayKey){
+    var stages = stageData[dayKey] || {};
+    Object.keys(stages).forEach(function(stageKey){
+      stages[stageKey].acts.forEach(function(act){
+        actMeta[act.name] = { dayKey: dayKey, dayLabel: stages[stageKey].day, time: act.time };
+      });
+    });
+  });
+
+  var byDay = {};
+  var otherArtists = [];
+  Object.keys(byArtist).forEach(function(artist){
+    var meta = actMeta[artist];
+    if (meta) { (byDay[meta.dayKey] = byDay[meta.dayKey] || []).push(artist); }
+    else otherArtists.push(artist);
+  });
+  function byStartTime(a, b) {
+    var ta = actMeta[a] ? _actStartMinutes(actMeta[a].time) : 0;
+    var tb = actMeta[b] ? _actStartMinutes(actMeta[b].time) : 0;
+    return ta - tb;
+  }
+  dayOrder.forEach(function(dayKey){ if (byDay[dayKey]) byDay[dayKey].sort(byStartTime); });
+  otherArtists.sort(function(a, b){ return a.localeCompare(b); });
+
+  function renderArtistBlock(artist) {
     var artistSongs = byArtist[artist].slice().sort(function(a, b){
       var ca = (a.recommenders || []).length, cb = (b.recommenders || []).length;
       if (cb !== ca) return cb - ca;
@@ -3579,16 +3608,33 @@ function renderOslAllSongs(songs) {
         '</a>' +
       '</div>';
     }).join('');
+    var timeLabel = actMeta[artist] ? actMeta[artist].time : '';
     return '<div style="margin-bottom:18px">' +
       '<div onclick="_jumpToActFromAllSongs(\'' + artist.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;padding-top:6px">' +
-        '<div style="font-size:13px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.06em">' + _escapeHtml(artist) + '</div>' +
-        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>' +
+        '<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.06em">' + _escapeHtml(artist) + '</div>' +
+        (timeLabel ? '<div style="font-size:10.5px;color:rgba(255,255,255,0.35);margin-top:1px">' + _escapeHtml(timeLabel) + '</div>' : '') + '</div>' +
+        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' +
       '</div>' +
       songsHtml +
     '</div>';
-  }).join('');
+  }
 
-  artistNames.forEach(function(artist){
+  var html = '';
+  dayOrder.forEach(function(dayKey){
+    var artists = byDay[dayKey];
+    if (!artists || !artists.length) return;
+    var firstStageKey = Object.keys(stageData[dayKey])[0];
+    var dayLabel = stageData[dayKey][firstStageKey].day;
+    html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:18px 0 10px">' + _escapeHtml(dayLabel) + '</div>';
+    artists.forEach(function(artist){ html += renderArtistBlock(artist); });
+  });
+  if (otherArtists.length) {
+    html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:18px 0 10px">Other</div>';
+    otherArtists.forEach(function(artist){ html += renderArtistBlock(artist); });
+  }
+  list.innerHTML = html;
+
+  Object.keys(byArtist).forEach(function(artist){
     byArtist[artist].forEach(function(s){ _resolveAllSongAppleLink(s._id, artist, s.title); });
   });
 }
@@ -4404,7 +4450,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.125.0-osl-feed-clickable-profiles-join-all-rsvp';
+window.INNINGS_BUILD = 'v4.126.0-festival-music-by-day';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
