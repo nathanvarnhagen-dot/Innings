@@ -1147,7 +1147,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 14px 24px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
     <div id="feedback-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="feedback-chat-field" placeholder="Share a pro..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
+      <input id="feedback-chat-field" placeholder="Share a pro..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
       <button onclick="sendFeedbackMessage()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
@@ -1573,7 +1573,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div id="osl2-chat-input" style="display:none;position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
+      <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
       <button class="send-btn" onclick="sendOslMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -3929,7 +3929,7 @@ function oslDay2(day) {
   <div class="scroll" id="md-scroll" style="position:relative;z-index:2;padding:14px 16px 18px;background:transparent"></div>
 
   <div id="md-composer" style="position:relative;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0">
-    <input id="md-comment" placeholder="What's today's story?" onkeydown="if(event.key==='Enter'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
+    <input id="md-comment" placeholder="What's today's story?" onkeydown="if(event.key==='Enter'){event.preventDefault();momentAddComment();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
     <button onclick="momentAddComment()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
     </button>
@@ -4183,7 +4183,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.122.0-osl-feed-dark-theme';
+window.INNINGS_BUILD = 'v4.122.1-fix-dark-input-appearance';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
