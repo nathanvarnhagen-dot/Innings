@@ -161,6 +161,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .live-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:12px}
 .live-pip{width:6px;height:6px;border-radius:50%;background:var(--indigo);animation:blink 1.4s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes add-friends-spin{to{transform:rotate(360deg)}}
 .live-eyebrow span{font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:1px}
 .live-title{font-size:16px;font-weight:700;color:var(--black);margin-bottom:2px}
 .live-sub{font-size:12px;color:var(--subtle);margin-bottom:14px}
@@ -4272,10 +4273,13 @@ function oslDay2(day) {
       </div>
     </div>
         <!-- FRIENDS -->
-    <div class="sec-title">Friends</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="sec-title" style="margin-bottom:0">Friends</div>
+      <div onclick="showAddFriendsSheet()" style="font-size:12px;font-weight:600;color:var(--indigo);cursor:pointer">+ Add</div>
+    </div>
     <div id="my-friends-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px"></div>
     <div id="my-friends-empty" class="card" style="padding:14px 16px;text-align:center;margin-bottom:14px">
-      <div style="font-size:13px;color:var(--subtle)">No friends yet — add friends from inside a group</div>
+      <div style="font-size:13px;color:var(--subtle)">No friends yet — tap + Add above, or add from inside a group</div>
     </div>
         <!-- MY GROUPS -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -4286,6 +4290,14 @@ function oslDay2(day) {
     <div id="my-groups-empty" class="card" style="padding:16px;text-align:center;margin-bottom:14px">
       <div style="font-size:13px;color:var(--subtle);margin-bottom:8px">You're not in any groups yet</div>
       <button onclick="showNewGroupModal()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Create a group</button>
+    </div>
+
+    <!-- ADD FRIENDS SHEET -->
+    <div id="add-friends-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end" onclick="if(event.target===this)hideAddFriendsSheet()">
+      <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:82vh;display:flex;flex-direction:column">
+        <div id="add-friends-sheet-body" style="padding:20px;overflow-y:auto"></div>
+        <div id="add-friends-sheet-footer" style="display:none;padding:14px 20px 24px;border-top:1px solid var(--rule);flex-shrink:0"></div>
+      </div>
     </div>
 
     <!-- NEW GROUP MODAL -->
@@ -4392,7 +4404,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.123.1-fix-osl-lineup-scroll-lock';
+window.INNINGS_BUILD = 'v4.124.0-add-friends-invite-contacts';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10852,6 +10864,269 @@ function loadMyFriendsList() {
     _renderFriendChips(listEl, uids);
   }).catch(function(err){
     console.error('Load my friends error:', err);
+  });
+}
+
+// ── ADD FRIENDS SHEET — invite by link (reuses the existing native-share
+// pattern), or find friends already on Innings from the phone's contacts.
+// The contacts path uses the Contact Picker API (navigator.contacts.select),
+// which lets the person choose specific contacts to share without ever
+// exposing their whole address book — but browser support is narrow and
+// inconsistent (notably unreliable on iOS Safari), so there's an explicit
+// fallback to the invite-link path when it isn't available, rather than a
+// silent failure.
+window._addFriendsMatches = [];
+window._addFriendsSelected = {};
+window._addFriendsTotalContacts = 0;
+
+function showAddFriendsSheet() {
+  var m = document.getElementById('add-friends-sheet');
+  if (m) m.style.display = 'flex';
+  showAddFriendsMenuStep();
+}
+function hideAddFriendsSheet() {
+  var m = document.getElementById('add-friends-sheet');
+  if (m) m.style.display = 'none';
+}
+
+function showAddFriendsMenuStep() {
+  var body = document.getElementById('add-friends-sheet-body');
+  var footer = document.getElementById('add-friends-sheet-footer');
+  if (footer) footer.style.display = 'none';
+  if (!body) return;
+  body.innerHTML =
+    '<div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add friends</div>' +
+    '<div style="font-size:13px;color:var(--subtle);margin-bottom:18px;line-height:1.5">Bring people into Innings, or find ones already here.</div>' +
+    '<div onclick="addFriendsShareInviteLink()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--bg);border:1px solid var(--rule);cursor:pointer;margin-bottom:10px">' +
+      '<div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">🔗</div>' +
+      '<div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--black)">Invite by link</div><div style="font-size:12.5px;color:var(--subtle);margin-top:2px;line-height:1.4">Share a link — they show up here once they join</div></div>' +
+    '</div>' +
+    '<div onclick="showAddFriendsPrimingStep()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--bg);border:1px solid var(--rule);cursor:pointer">' +
+      '<div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">📇</div>' +
+      '<div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--black)">Find from contacts</div><div style="font-size:12.5px;color:var(--subtle);margin-top:2px;line-height:1.4">See which of your contacts already use Innings</div></div>' +
+    '</div>';
+}
+
+function addFriendsShareInviteLink() {
+  hideAddFriendsSheet();
+  if (typeof sendInviteText === 'function') sendInviteText();
+}
+
+// A short explanation before the OS permission prompt — better opt-in than
+// surprising someone with a system dialog cold, and sets the expectation
+// that they choose which contacts to share, not their whole address book.
+function showAddFriendsPrimingStep() {
+  var body = document.getElementById('add-friends-sheet-body');
+  var footer = document.getElementById('add-friends-sheet-footer');
+  if (!body) return;
+  body.innerHTML =
+    '<div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin:4px auto 16px">📇</div>' +
+    '<div style="font-size:17px;font-weight:800;color:var(--black);text-align:center;letter-spacing:-0.3px">Find friends from your contacts</div>' +
+    '<div style="font-size:13.5px;color:var(--mid);text-align:center;line-height:1.6;margin-top:10px;padding:0 8px">Your phone will ask which contacts to share. Innings only checks their phone numbers against people already using the app — nothing else is read, sent, or stored.</div>' +
+    '<div style="display:flex;align-items:flex-start;gap:8px;background:var(--bg);border-radius:14px;padding:12px 14px;margin-top:16px">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8EA8" stroke-width="1.8" style="flex-shrink:0;margin-top:1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
+      '<div style="font-size:12px;color:var(--subtle);line-height:1.5">You pick which contacts to share — Innings never sees your full address book.</div>' +
+    '</div>';
+  if (footer) {
+    footer.style.display = 'block';
+    footer.innerHTML = '<button onclick="addFriendsRequestContacts()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Allow Access</button>' +
+      '<div onclick="showAddFriendsMenuStep()" style="text-align:center;font-size:13px;font-weight:600;color:var(--subtle);margin-top:12px;cursor:pointer">Not now</div>';
+  }
+}
+
+function showAddFriendsLoadingStep() {
+  var body = document.getElementById('add-friends-sheet-body');
+  var footer = document.getElementById('add-friends-sheet-footer');
+  if (footer) footer.style.display = 'none';
+  if (body) body.innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px">' +
+      '<div style="width:36px;height:36px;border-radius:50%;border:3px solid var(--indigo-light);border-top-color:var(--indigo);animation:add-friends-spin 0.8s linear infinite;margin-bottom:16px"></div>' +
+      '<div style="font-size:14px;font-weight:600;color:var(--mid)">Checking your contacts…</div>' +
+    '</div>';
+}
+
+function addFriendsRequestContacts() {
+  if (!navigator.contacts || typeof navigator.contacts.select !== 'function') {
+    var body = document.getElementById('add-friends-sheet-body');
+    var footer = document.getElementById('add-friends-sheet-footer');
+    if (footer) footer.style.display = 'none';
+    if (body) body.innerHTML =
+      '<div style="text-align:center;padding:20px 8px">' +
+        '<div style="font-size:32px;margin-bottom:10px">🚫</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--black)">Not available on this browser</div>' +
+        '<div style="font-size:13px;color:var(--subtle);margin-top:6px;line-height:1.5">This device can\'t share contacts directly. Invite people by link instead — they\'ll show up here once they join.</div>' +
+      '</div>' +
+      '<button onclick="addFriendsShareInviteLink()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px">Invite by link</button>';
+    return;
+  }
+  showAddFriendsLoadingStep();
+  navigator.contacts.select(['name', 'tel'], { multiple: true }).then(function(contacts){
+    if (!contacts || !contacts.length) { showAddFriendsMenuStep(); return; }
+    _matchContactsAgainstUsers(contacts);
+  }).catch(function(err){
+    console.error('Contact picker error:', err);
+    showAddFriendsMenuStep();
+  });
+}
+
+// Normalizes any raw contact phone string to the +1XXXXXXXXXX (E.164, US)
+// format phone auth stores in Firestore — matches the same "prepend +1,
+// use the last 10 digits" assumption the onboarding flow already makes.
+function _normalizePhoneToE164(raw) {
+  var digits = (raw || '').replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  return '+1' + digits.slice(-10);
+}
+
+function _matchContactsAgainstUsers(contacts) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { showAddFriendsResultsStep([], contacts.length); return; }
+
+  var candidateMap = {}; // e164 -> contact display name, first one wins on duplicates
+  contacts.forEach(function(c){
+    (c.tel || []).forEach(function(t){
+      var e164 = _normalizePhoneToE164(t);
+      if (e164 && !candidateMap[e164]) candidateMap[e164] = (c.name && c.name[0]) || 'Contact';
+    });
+  });
+  var candidates = Object.keys(candidateMap);
+  if (!candidates.length) { showAddFriendsResultsStep([], contacts.length); return; }
+
+  // Firestore's 'in' operator caps at 10 values per query — chunk and merge
+  var chunks = [];
+  for (var i = 0; i < candidates.length; i += 10) chunks.push(candidates.slice(i, i + 10));
+
+  Promise.all(chunks.map(function(chunk){
+    return window.db.collection('users').where('phone', 'in', chunk).get();
+  })).then(function(snaps){
+    var matchedUsers = [];
+    snaps.forEach(function(snap){
+      snap.forEach(function(doc){
+        if (doc.id === user.uid) return; // never match yourself
+        var d = doc.data() || {};
+        matchedUsers.push({ uid: doc.id, name: d.name || candidateMap[d.phone] || 'Innings user' });
+      });
+    });
+    if (!matchedUsers.length) { showAddFriendsResultsStep([], contacts.length); return; }
+
+    // Cross-reference existing relationships so already-friends or
+    // already-pending contacts show their real status instead of a
+    // duplicate "add" checkbox that would just create a second request.
+    Promise.all([
+      window.db.collection('friendRequests').where('fromUid','==',user.uid).get(),
+      window.db.collection('friendRequests').where('toUid','==',user.uid).get()
+    ]).then(function(relResults){
+      var relMap = {};
+      relResults[0].forEach(function(d){ var data = d.data(); relMap[data.toUid] = data.status === 'accepted' ? 'already' : 'pending'; });
+      relResults[1].forEach(function(d){ var data = d.data(); relMap[data.fromUid] = data.status === 'accepted' ? 'already' : 'pending'; });
+      matchedUsers.forEach(function(m){ m.status = relMap[m.uid] || 'new'; });
+      showAddFriendsResultsStep(matchedUsers, contacts.length);
+    }).catch(function(err){
+      console.error('Load friend relationships error:', err);
+      matchedUsers.forEach(function(m){ m.status = 'new'; });
+      showAddFriendsResultsStep(matchedUsers, contacts.length);
+    });
+  }).catch(function(err){
+    console.error('Match contacts error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not check contacts — try again');
+    showAddFriendsMenuStep();
+  });
+}
+
+function showAddFriendsResultsStep(matches, totalContacts) {
+  window._addFriendsMatches = matches;
+  window._addFriendsTotalContacts = totalContacts;
+  window._addFriendsSelected = {};
+  matches.forEach(function(m, i){ if (m.status === 'new') window._addFriendsSelected[i] = true; });
+  renderAddFriendsResults();
+}
+
+function renderAddFriendsResults() {
+  var matches = window._addFriendsMatches || [];
+  var totalContacts = window._addFriendsTotalContacts || 0;
+  var body = document.getElementById('add-friends-sheet-body');
+  var footer = document.getElementById('add-friends-sheet-footer');
+  if (!body) return;
+
+  if (!matches.length) {
+    if (footer) footer.style.display = 'none';
+    body.innerHTML = '<div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:8px">Add from contacts</div>' +
+      '<div style="text-align:center;padding:20px 8px">' +
+        '<div style="font-size:32px;margin-bottom:10px">📭</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--black)">No matches yet</div>' +
+        '<div style="font-size:13px;color:var(--subtle);margin-top:6px;line-height:1.5">None of the contacts you shared are on Innings yet.</div>' +
+      '</div>' +
+      '<button onclick="addFriendsShareInviteLink()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">Invite by link instead</button>';
+    return;
+  }
+
+  function statusLabel(s) { return s === 'already' ? 'Already friends' : s === 'pending' ? 'Request pending' : 'On Innings'; }
+
+  var newCount = matches.filter(function(m){ return m.status === 'new'; }).length;
+  var unmatchedCount = Math.max(0, totalContacts - matches.length);
+  var allSel = matches.every(function(m, i){ return m.status !== 'new' || window._addFriendsSelected[i]; });
+
+  var rowsHtml = matches.map(function(m, i){
+    var locked = m.status !== 'new';
+    var checked = !!window._addFriendsSelected[i];
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--rule);' + (locked ? 'opacity:0.55' : '') + '">' +
+      '<div style="width:42px;height:42px;border-radius:50%;background:var(--indigo-light);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">' + _escapeHtml(_initialsFallback(m.name)) + '</div>' +
+      '<div style="flex:1"><div style="font-size:14.5px;font-weight:600;color:var(--black)">' + _escapeHtml(m.name) + '</div><div style="font-size:11.5px;color:var(--subtle);margin-top:1px">' + statusLabel(m.status) + '</div></div>' +
+      (locked
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8EA8" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<div onclick="toggleAddFriendMatch(' + i + ')" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + (checked ? 'var(--indigo)' : 'var(--rule)') + ';background:' + (checked ? 'var(--indigo)' : 'transparent') + ';flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer">' + (checked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>') +
+    '</div>';
+  }).join('');
+
+  body.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<div><div style="font-size:16px;font-weight:700;color:var(--black)">Add from contacts</div>' +
+      '<div style="font-size:13px;color:var(--mid);margin-top:2px">' + newCount + ' of ' + totalContacts + ' contacts already use Innings</div></div>' +
+      (matches.some(function(m){ return m.status === 'new'; }) ? '<div onclick="toggleAddFriendsSelectAll()" style="font-size:12px;font-weight:700;color:var(--indigo);cursor:pointer;flex-shrink:0">' + (allSel ? 'Deselect all' : 'Select all') + '</div>' : '') +
+    '</div>' +
+    rowsHtml +
+    (unmatchedCount > 0 ? '<div style="background:var(--bg);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:12.5px;color:var(--subtle);line-height:1.6">' + unmatchedCount + ' other contact' + (unmatchedCount === 1 ? '' : 's') + " aren't on Innings yet — <b onclick=\"addFriendsShareInviteLink()\" style=\"color:var(--indigo);cursor:pointer;font-weight:700\">invite them by link instead</b>.</div>" : '');
+
+  var selCount = Object.keys(window._addFriendsSelected).filter(function(k){ return window._addFriendsSelected[k]; }).length;
+  if (footer) {
+    footer.style.display = 'block';
+    footer.innerHTML = '<button onclick="sendAddFriendsRequests()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;font-family:inherit' + (selCount === 0 ? ';opacity:0.5" disabled' : ';cursor:pointer"') + '>Send friend requests (' + selCount + ')</button>';
+  }
+}
+
+function toggleAddFriendMatch(i) {
+  window._addFriendsSelected[i] = !window._addFriendsSelected[i];
+  renderAddFriendsResults();
+}
+function toggleAddFriendsSelectAll() {
+  var matches = window._addFriendsMatches || [];
+  var allSel = matches.every(function(m, i){ return m.status !== 'new' || window._addFriendsSelected[i]; });
+  matches.forEach(function(m, i){ if (m.status === 'new') window._addFriendsSelected[i] = !allSel; });
+  renderAddFriendsResults();
+}
+
+// Sends requests in bulk with one summary toast at the end, rather than
+// looping sendFriendRequest() (built for a single profile's + button) and
+// firing a separate "Friend request sent" toast per contact.
+function sendAddFriendsRequests() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  var matches = window._addFriendsMatches || [];
+  var toSend = matches.filter(function(m, i){ return m.status === 'new' && window._addFriendsSelected[i]; });
+  if (!toSend.length) return;
+  var myName = (window.userData && window.userData.name) || 'Someone';
+  Promise.all(toSend.map(function(m){
+    return window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: m.uid, status: 'pending', ts: Date.now() })
+      .then(function(){
+        return window.db.collection('notifications').add({
+          toUid: m.uid, type: 'friend_request', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false
+        });
+      });
+  })).then(function(){
+    hideAddFriendsSheet();
+    if (typeof ib_toast === 'function') ib_toast('Sent ' + toSend.length + ' friend request' + (toSend.length === 1 ? '' : 's'));
+  }).catch(function(err){
+    console.error('Send bulk friend requests error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not send all requests — try again');
   });
 }
 
