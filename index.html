@@ -1562,18 +1562,18 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 
   <!-- ── CHAT PANEL ── -->
-  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:#F5F2FA">
+  <div id="osl2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:#0D0820">
     <div id="osl-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
       <div style="font-size:34px">💬</div>
-      <div style="font-size:16px;font-weight:700;color:var(--black)">No messages yet</div>
-      <div style="font-size:13px;color:var(--subtle);max-width:230px;line-height:1.6">Start the conversation with everyone going to Outside Lands.</div>
+      <div style="font-size:16px;font-weight:700;color:white">No messages yet</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);max-width:230px;line-height:1.6">Start the conversation with everyone going to Outside Lands.</div>
     </div>
     <div id="osl-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
-  <div id="osl2-chat-input" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
-    <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
+  <div id="osl2-chat-input" style="display:none;position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
+    <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="osl-chat-field" class="msg-input" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}">
+      <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18)">
       <button class="send-btn" onclick="sendOslMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -4183,7 +4183,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.121.0-compare-your-festival';
+window.INNINGS_BUILD = 'v4.122.0-osl-feed-dark-theme';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8306,13 +8306,13 @@ function _oslFeedNoticeHtml(c) {
   } else {
     return '';
   }
-  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:white;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(61,53,128,0.1);margin-bottom:2px">' +
-    '<div style="width:38px;height:38px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">' + icon + '</div>' +
+  return '<div' + (onclick ? ' onclick="' + onclick + '" style="cursor:pointer' : ' style="') + ';background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:2px">' +
+    '<div style="width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">' + icon + '</div>' +
     '<div style="flex:1;min-width:0">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
-      (detail ? '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
+      '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,1);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headline + '</div>' +
+      (detail ? '<div style="font-size:13px;color:white;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detail + '</div>' : '') +
     '</div>' +
-    (onclick ? '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' : '') +
+    (onclick ? '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' : '') +
   '</div>';
 }
 
