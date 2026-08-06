@@ -1269,6 +1269,22 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
   </div>
 
+  <!-- DAY REVEAL — a quick recap of your Going picks, shown the first time
+       you open a day that matches today's actual date; a faster "what's
+       still ahead" version on later reopens the same day. Also triggered
+       manually (all three days back to back) from the Calendar screen's
+       Preview button, for testing ahead of the actual festival dates. -->
+  <div id="osl-day-reveal" style="display:none;position:absolute;inset:0;z-index:25;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 60%,#150A30 100%);flex-direction:column;opacity:0;transition:opacity 0.3s ease">
+    <div style="flex-shrink:0;padding:54px 20px 4px;text-align:center">
+      <div id="osl-reveal-eyebrow" style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.75);text-transform:uppercase;letter-spacing:0.2em;opacity:0;transform:translateY(8px);transition:opacity 0.3s ease,transform 0.3s ease">Your Plans</div>
+      <div id="osl-reveal-title" style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.6px;margin-top:6px;opacity:0;transform:translateY(8px);transition:opacity 0.3s ease,transform 0.3s ease">Friday, Aug 7</div>
+    </div>
+    <div id="osl-reveal-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px 8px">
+      <div id="osl-reveal-wrap"></div>
+      <div id="osl-reveal-summary" style="text-align:center;font-size:12.5px;color:rgba(255,255,255,0.4);opacity:0;transition:opacity 0.3s ease;padding:6px 0 16px"></div>
+    </div>
+  </div>
+
   <!-- TABS — Feed first -->
   <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;padding:0 16px;flex-shrink:0" id="osl-tabs">
     <div class="osl-main-tab" onclick="oslTab('chat', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap">Feed</div>
@@ -3425,11 +3441,31 @@ function _actResetTabsToActivity() {
 // Every time the OSL group screen opens, land on Lineup — Feed stays first
 // in the tab bar, but Lineup is what actually shows first (Jason's call:
 // it "prompts exploration" better than Feed does as a first impression).
+// Maps the synthetic day keys used throughout Lineup/Your Festival/Export
+// to the real calendar dates they correspond to — the single source of
+// truth for "is today actually one of the festival days."
+var OSL_DAY_DATES = { fri: '2026-08-07', sat: '2026-08-08', sun: '2026-08-09' };
+var OSL_DAY_LABELS = { fri: 'Friday, Aug 7', sat: 'Saturday, Aug 8', sun: 'Sunday, Aug 9' };
+
 function _oslLandOnLineup(){
   var tabs = document.querySelectorAll('.osl-main-tab');
   var lineupTab = null;
   tabs.forEach(function(t){ if (t.textContent.trim() === 'Lineup') lineupTab = t; });
   oslTab('lineup', lineupTab ? { target: lineupTab } : null);
+
+  // If today is actually one of the festival days, default to that day's
+  // lineup instead of always Friday, and check whether the day-reveal
+  // should play — first open today gets the full recap, a later reopen
+  // gets a quick "what's still ahead" version, and if there's nothing
+  // Going that day (or nothing left today) nothing plays at all.
+  var todayKey = null;
+  Object.keys(OSL_DAY_DATES).forEach(function(k){ if (OSL_DAY_DATES[k] === _todayLocal()) todayKey = k; });
+  if (todayKey) {
+    oslDay2(todayKey);
+    if (typeof loadOslFriendRsvps === 'function') {
+      loadOslFriendRsvps(function(){ if (typeof _maybeShowOslDayReveal === 'function') _maybeShowOslDayReveal(todayKey); });
+    }
+  }
 }
 
 function oslTab(tab, evt) {
@@ -3445,7 +3481,7 @@ function oslTab(tab, evt) {
     evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
   }
 
-  ['osl2-lineup','osl2-chat','osl2-chat-input','osl2-photos','osl2-myfest','osl2-more','osl2-allsongs'].forEach(function(id) {
+  ['osl2-lineup','osl2-chat','osl2-chat-input','osl2-photos','osl2-myfest','osl2-more','osl2-allsongs','osl2-export'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -3884,6 +3920,181 @@ function oslDay2(day) {
     activeBtn.style.background = 'rgba(168,159,232,0.9)';
     activeBtn.style.color = '#0D0820';
   }
+}
+
+// ── DAY REVEAL — see #osl-day-reveal in the markup for the rationale.
+function _oslGoingActsForDay(dayKey) {
+  var acts = [];
+  var stages = stageData[dayKey] || {};
+  Object.keys(stages).forEach(function(stageKey){
+    stages[stageKey].acts.forEach(function(act){
+      if (myRsvps[act.name] === 'going') {
+        acts.push({ name: act.name, stage: stages[stageKey].name, time: act.time, startMinutes: _actStartMinutes(act.time) });
+      }
+    });
+  });
+  acts.sort(function(a, b){ return a.startMinutes - b.startMinutes; });
+  return acts;
+}
+
+// Real trigger: only fires when the day being viewed actually matches
+// today's calendar date — this is a "start of day" recap, not a general
+// day-browsing feature, so looking at Saturday's lineup while it's still
+// Friday should never play anything.
+function _maybeShowOslDayReveal(dayKey) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user) return;
+  if (OSL_DAY_DATES[dayKey] !== _todayLocal()) return;
+
+  var goingActs = _oslGoingActsForDay(dayKey);
+  if (!goingActs.length) return;
+
+  var shownMap = (window.userData && window.userData.oslRevealShown) || {};
+  var alreadyShownToday = shownMap[dayKey] === _todayLocal();
+
+  if (!alreadyShownToday) {
+    _playOslDayReveal(dayKey, 'whole', goingActs);
+    shownMap[dayKey] = _todayLocal();
+    window.userData = window.userData || {};
+    window.userData.oslRevealShown = shownMap;
+    if (window.db) {
+      window.db.collection('users').doc(user.uid).set({ oslRevealShown: shownMap }, { merge: true }).catch(function(err){ console.error('Save reveal-shown state error:', err); });
+    }
+  } else {
+    var nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+    var upcoming = goingActs.filter(function(a){ return a.startMinutes > nowMinutes; });
+    if (!upcoming.length) return;
+    _playOslDayReveal(dayKey, 'comingup', upcoming);
+  }
+}
+
+window._oslRevealTimers = [];
+function _clearOslRevealTimers() { window._oslRevealTimers.forEach(clearTimeout); window._oslRevealTimers = []; }
+function _oslRevealAfter(ms, fn) { window._oslRevealTimers.push(setTimeout(fn, ms)); }
+
+// Fits as many friend avatars as the card actually has room for, measured
+// against its real rendered width, rather than a fixed cap.
+function _oslRevealFitAvatarCount(containerWidth, totalFriends) {
+  var avatarW = 24, step = 18, reserve = 36;
+  var maxFit = Math.max(1, Math.floor((containerWidth - avatarW - reserve) / step) + 1);
+  return Math.min(totalFriends, maxFit);
+}
+function _oslRevealAvatarsHtml(friends, maxFit) {
+  var shown = friends.slice(0, maxFit);
+  var extra = friends.length - shown.length;
+  var avatars = shown.map(function(f, i){
+    var colorClass = _OSL_CLUSTER_COLORS[i % _OSL_CLUSTER_COLORS.length];
+    return '<div class="av ' + colorClass + '" style="width:24px;height:24px;font-size:9px;border:2px solid rgba(13,8,32,0.6);' + (i === 0 ? 'margin-left:0' : 'margin-left:-6px') + '">' + _escapeHtml(_initialsFallback(f.name)) + '</div>';
+  }).join('');
+  var extraHtml = extra > 0 ? '<span style="font-size:10.5px;color:rgba(255,255,255,0.45);margin-left:6px;font-weight:700">+' + extra + '</span>' : '';
+  return avatars + extraHtml;
+}
+
+// mode: 'whole' (first open of the day — full recap, slower pacing so
+// every card actually gets read) or 'comingup' (reopening later — only
+// what's still ahead, quick). onDone (optional) fires once the overlay
+// has fully faded back out — used to chain days together for the
+// Calendar's manual Preview button.
+function _playOslDayReveal(dayKey, mode, acts, onDone) {
+  var overlay = document.getElementById('osl-day-reveal');
+  var eyebrow = document.getElementById('osl-reveal-eyebrow');
+  var title = document.getElementById('osl-reveal-title');
+  var scrollEl = document.getElementById('osl-reveal-scroll');
+  var wrap = document.getElementById('osl-reveal-wrap');
+  var summary = document.getElementById('osl-reveal-summary');
+  if (!overlay || !acts || !acts.length) { if (typeof onDone === 'function') onDone(); return; }
+
+  _clearOslRevealTimers();
+  wrap.innerHTML = '';
+  summary.style.opacity = '0';
+  summary.textContent = '';
+  scrollEl.scrollTop = 0;
+  eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
+  title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '0';
+
+  var whole = mode === 'whole';
+  eyebrow.textContent = whole ? 'Your Plans' : 'Coming Up';
+  title.textContent = whole ? (OSL_DAY_LABELS[dayKey] || '') : 'Later Today';
+  var stagger = whole ? 380 : 150;
+  var startDelay = whole ? 300 : 180;
+
+  requestAnimationFrame(function(){
+    overlay.style.opacity = '1';
+    eyebrow.style.opacity = '1'; eyebrow.style.transform = 'translateY(0)';
+    _oslRevealAfter(50, function(){ title.style.opacity = '1'; title.style.transform = 'translateY(0)'; });
+  });
+
+  acts.forEach(function(act, i) {
+    _oslRevealAfter(startDelay + i * stagger, function(){
+      var card = document.createElement('div');
+      card.style.cssText = 'width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:16px;margin-bottom:10px;opacity:0;transform:translateY(16px);transition:opacity 0.32s cubic-bezier(.2,.8,.3,1),transform 0.32s cubic-bezier(.2,.8,.3,1)';
+      var whoId = 'osl-reveal-who-' + i + '-' + Date.now();
+      card.innerHTML = '<div style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml(act.name) + '</div>' +
+        '<div style="font-size:12.5px;color:rgba(255,255,255,0.45);margin-top:3px">' + _escapeHtml(act.stage + ' · ' + act.time) + '</div>' +
+        '<div id="' + whoId + '" style="margin-top:9px;display:flex;align-items:center;min-height:24px"></div>';
+      wrap.appendChild(card);
+
+      var friends = (window._oslFriendRsvps || {})[act.name] || [];
+      if (friends.length) {
+        var whoEl = document.getElementById(whoId);
+        var maxFit = _oslRevealFitAvatarCount(whoEl.clientWidth || 300, friends.length);
+        whoEl.innerHTML = _oslRevealAvatarsHtml(friends, maxFit);
+      }
+
+      requestAnimationFrame(function(){
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+        scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+      });
+    });
+  });
+
+  var lastAt = startDelay + (acts.length - 1) * stagger;
+  _oslRevealAfter(lastAt + (whole ? 500 : 300), function(){
+    summary.textContent = whole ? (acts.length + ' act' + (acts.length === 1 ? '' : 's') + ' today') : (acts.length + ' more today');
+    summary.style.opacity = '1';
+    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+  });
+  _oslRevealAfter(lastAt + (whole ? 1300 : 750), function(){
+    overlay.style.opacity = '0';
+    _oslRevealAfter(320, function(){
+      overlay.style.display = 'none';
+      if (typeof onDone === 'function') onDone();
+    });
+  });
+}
+
+// ── PREVIEW (Calendar screen) — plays the whole-day recap for Friday,
+// Saturday, and Sunday back to back, regardless of what today's actual
+// date is. This is a manual test tool, not the real trigger — it doesn't
+// touch oslRevealShown, so it never interferes with the genuine
+// first-open/reopen bookkeeping above.
+function previewOslDayReveal(evt) {
+  if (evt) evt.stopPropagation();
+  nav('osl-group');
+  setTimeout(function(){
+    if (typeof loadOslFriendRsvps === 'function') {
+      loadOslFriendRsvps(function(){ _runOslPreviewSequence(); });
+    } else {
+      _runOslPreviewSequence();
+    }
+  }, 260);
+}
+function _runOslPreviewSequence() {
+  var order = ['fri', 'sat', 'sun'];
+  var idx = 0;
+  function playNext() {
+    if (idx >= order.length) return;
+    var dayKey = order[idx];
+    idx++;
+    var goingActs = _oslGoingActsForDay(dayKey);
+    if (!goingActs.length) { playNext(); return; }
+    oslDay2(dayKey);
+    _playOslDayReveal(dayKey, 'whole', goingActs, playNext);
+  }
+  playNext();
 }
 </script>
 
@@ -4598,7 +4809,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.127.1-conflict-cards-friend-avatars';
+window.INNINGS_BUILD = 'v4.128.0-day-reveal-and-calendar-preview';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8151,9 +8362,7 @@ function renderCalendar() {
 
   // Upcoming events (Outside Lands if RSVP'd going/maybe)
   if (rsvp === 'going' || rsvp === 'maybe') {
-    var badge = rsvp === 'going'
-      ? '<span style="background:var(--win-bg);color:var(--win);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">GOING</span>'
-      : '<span style="background:#FEF3E2;color:#7A4F10;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">MAYBE</span>';
+    var badge = '<span onclick="previewOslDayReveal(event)" style="background:rgba(168,159,232,0.95);color:#0D0820;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;cursor:pointer">PREVIEW</span>';
     html += '<div class="sec-title">Upcoming</div>' +
       '<div onclick="nav(\'osl-group\')" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:18px">' +
         '<div style="width:52px;flex-shrink:0;text-align:center">' +
