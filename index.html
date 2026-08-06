@@ -4967,7 +4967,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.130.1-friends-zone-teal-reframe';
+window.INNINGS_BUILD = 'v4.131.0-notif-bubble-fly-to-bell';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10830,25 +10830,60 @@ function startNotifBadge(user) {
       if (!window._notifLoginToastShown) {
         window._notifLoginToastShown = true;
         var total = snap.size;
-        if (typeof ib_toast === 'function') {
-          var msg;
-          if (total === 0) {
-            msg = 'No new notifications';
-          } else {
-            var friendReqCount = 0;
-            snap.forEach(function(doc){ if ((doc.data() || {}).type === 'friend_request') friendReqCount++; });
-            msg = (friendReqCount === total)
-              ? (total === 1 ? '1 friend request waiting' : total + ' friend requests waiting')
-              : (total === 1 ? '1 new notification' : total + ' new notifications');
-          }
-          // Delay past the login splash animation so the toast isn't hidden behind it
-          setTimeout(function(){ ib_toast(msg); }, 1400);
+        var msg;
+        if (total === 0) {
+          msg = 'No new notifications';
+        } else {
+          var friendReqCount = 0;
+          snap.forEach(function(doc){ if ((doc.data() || {}).type === 'friend_request') friendReqCount++; });
+          msg = (friendReqCount === total)
+            ? (total === 1 ? '1 friend request waiting' : total + ' friend requests waiting')
+            : (total === 1 ? '1 new notification' : total + ' new notifications');
         }
+        // Delay past the login splash animation so this isn't hidden behind it
+        setTimeout(function(){ _showNotifBubbleAnimation(msg); }, 1400);
       }
     }, function(err){
       console.error('Notif badge listener error:', err);
       window._notifBadgeSubscribedUid = null;
     });
+}
+
+// Shows the login notification count as a bubble that reads for a beat,
+// then flies up and shrinks into the bell icon — makes it obvious where
+// notifications live without a separate onboarding callout. Falls back to
+// the plain shared toast if the bell isn't part of the currently active
+// screen (e.g. a brand-new user still on Welcome Intro), since flying
+// toward an invisible target would be confusing rather than helpful.
+function _showNotifBubbleAnimation(msg) {
+  var bell = document.getElementById('notif-bell-btn');
+  var bellScreen = bell ? bell.closest('.screen') : null;
+  var bellVisible = bellScreen && bellScreen.classList.contains('active');
+  if (!bell || !bellVisible) { if (typeof ib_toast === 'function') ib_toast(msg); return; }
+
+  var bubble = document.createElement('div');
+  bubble.textContent = msg;
+  bubble.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translate(-50%,0) scale(1);background:#0A0A0F;color:white;padding:10px 20px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;opacity:1;transition:transform 0.55s cubic-bezier(.4,0,.2,1),opacity 0.45s ease 0.2s;pointer-events:none';
+  document.body.appendChild(bubble);
+
+  // Give it a beat to actually be read before it flies off
+  setTimeout(function(){
+    if (!document.body.contains(bell)) { bubble.remove(); return; }
+    var bubbleRect = bubble.getBoundingClientRect();
+    var bellRect = bell.getBoundingClientRect();
+    var dx = (bellRect.left + bellRect.width / 2) - (bubbleRect.left + bubbleRect.width / 2);
+    var dy = (bellRect.top + bellRect.height / 2) - (bubbleRect.top + bubbleRect.height / 2);
+    bubble.style.transform = 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px) scale(0.15)';
+    bubble.style.opacity = '0';
+
+    setTimeout(function(){
+      bubble.remove();
+      // A quick landing pulse on the bell marks where it arrived
+      bell.style.transition = 'transform 0.2s ease';
+      bell.style.transform = 'scale(1.3)';
+      setTimeout(function(){ bell.style.transform = 'scale(1)'; }, 220);
+    }, 650);
+  }, 1300);
 }
 
 function _renderNotifBadge(hasUnread) {
