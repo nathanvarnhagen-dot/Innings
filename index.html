@@ -1281,7 +1281,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div id="osl-reveal-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px 8px">
       <div id="osl-reveal-wrap"></div>
-      <div id="osl-reveal-summary" style="text-align:center;font-size:12.5px;color:rgba(255,255,255,0.4);opacity:0;transition:opacity 0.3s ease;padding:6px 0 16px"></div>
+      <div id="osl-reveal-summary" style="text-align:center;font-size:12.5px;color:rgba(255,255,255,0.4);opacity:0;transition:opacity 0.3s ease;padding:6px 0 0"></div>
+      <div id="osl-reveal-also" style="text-align:center;font-size:11.5px;color:rgba(168,159,232,0.75);opacity:0;transition:opacity 0.3s ease;padding:0 24px 18px;line-height:1.5"></div>
     </div>
   </div>
 
@@ -3937,6 +3938,46 @@ function _oslGoingActsForDay(dayKey) {
   return acts;
 }
 
+// "Also here today" — who else (going OR maybe to at least one act that
+// day) is around, regardless of whether they're an accepted Innings
+// friend. Matches the same reasoning loadOslAttendees already settled on
+// for "Who's going": in a single invite-only OSL group, everyone in it is
+// already trusted context, so there's no reason to narrow this to the
+// formal friend graph for an MVP.
+window._oslDayAttendeesCache = {};
+function _oslActNamesForDay(dayKey) {
+  var names = {};
+  var stages = stageData[dayKey] || {};
+  Object.keys(stages).forEach(function(stageKey){
+    stages[stageKey].acts.forEach(function(act){ names[act.name] = true; });
+  });
+  return names;
+}
+function _loadOslDayAttendees(dayKey, cb) {
+  if (window._oslDayAttendeesCache[dayKey]) { cb(window._oslDayAttendeesCache[dayKey]); return; }
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { cb([]); return; }
+  window.db.collection('users').where('oslRsvp', 'in', ['going', 'maybe']).get().then(function(snap){
+    var dayActNames = _oslActNamesForDay(dayKey);
+    var names = [];
+    snap.forEach(function(doc){
+      if (doc.id === user.uid) return;
+      var d = doc.data() || {};
+      var rsvps = d.oslActRsvps || {};
+      var attendingToday = Object.keys(rsvps).some(function(actName){
+        var status = rsvps[actName];
+        return dayActNames[actName] && (status === 'going' || status === 'maybe');
+      });
+      if (attendingToday) names.push(d.name || 'Friend');
+    });
+    window._oslDayAttendeesCache[dayKey] = names;
+    cb(names);
+  }).catch(function(err){
+    console.error('Load day attendees error:', err);
+    cb([]);
+  });
+}
+
 // Real trigger: only fires when the day being viewed actually matches
 // today's calendar date — this is a "start of day" recap, not a general
 // day-browsing feature, so looking at Saturday's lineup while it's still
@@ -4003,12 +4044,15 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
   var scrollEl = document.getElementById('osl-reveal-scroll');
   var wrap = document.getElementById('osl-reveal-wrap');
   var summary = document.getElementById('osl-reveal-summary');
+  var alsoLine = document.getElementById('osl-reveal-also');
   if (!overlay || !acts || !acts.length) { if (typeof onDone === 'function') onDone(); return; }
 
   _clearOslRevealTimers();
   wrap.innerHTML = '';
   summary.style.opacity = '0';
   summary.textContent = '';
+  alsoLine.style.opacity = '0';
+  alsoLine.textContent = '';
   scrollEl.scrollTop = 0;
   eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
   title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
@@ -4020,6 +4064,23 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
   title.textContent = whole ? (OSL_DAY_LABELS[dayKey] || '') : 'Later Today';
   var stagger = whole ? 380 : 150;
   var startDelay = whole ? 300 : 180;
+
+  // Kicked off in parallel with the card animations — shown once both the
+  // summary moment has arrived AND the data is actually back, whichever
+  // comes later, so a slow connection delays this line rather than
+  // skipping it.
+  var alsoDataReady = false, alsoNames = [], summaryMomentReached = false;
+  _loadOslDayAttendees(dayKey, function(names){
+    alsoNames = names; alsoDataReady = true;
+    if (summaryMomentReached) _showAlsoLine();
+  });
+  function _showAlsoLine() {
+    if (!alsoDataReady || !alsoNames.length) return;
+    var shown = alsoNames.slice(0, 4);
+    var extra = alsoNames.length - shown.length;
+    alsoLine.textContent = 'Also here today: ' + shown.join(', ') + (extra > 0 ? ' & ' + extra + ' more' : '');
+    alsoLine.style.opacity = '1';
+  }
 
   requestAnimationFrame(function(){
     overlay.style.opacity = '1';
@@ -4056,6 +4117,8 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
   _oslRevealAfter(lastAt + (whole ? 500 : 300), function(){
     summary.textContent = whole ? (acts.length + ' act' + (acts.length === 1 ? '' : 's') + ' today') : (acts.length + ' more today');
     summary.style.opacity = '1';
+    summaryMomentReached = true;
+    _showAlsoLine();
     scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
   });
   _oslRevealAfter(lastAt + (whole ? 1300 : 750), function(){
@@ -4811,7 +4874,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.128.1-fix-preview-race-condition';
+window.INNINGS_BUILD = 'v4.129.0-day-reveal-also-here-today';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
