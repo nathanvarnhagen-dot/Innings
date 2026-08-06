@@ -2549,10 +2549,12 @@ function updateMyFest() {
     function sideHtml(act, other) {
       var info = allActs[act.name] || {};
       var isGoing = act.status === 'going';
+      var clusterHtml = _friendClusterHtml(act.name);
       return '<div onclick="chooseFestivalAct(\'' + dayKey + '\',\'' + act.name.replace(/'/g,"\\'") + '\',\'' + other.name.replace(/'/g,"\\'") + '\')" style="flex:1;min-width:0;cursor:pointer;border-radius:12px;padding:10px;background:rgba(255,255,255,0.05)">' +
         '<div style="font-size:14px;font-weight:800;color:white;letter-spacing:-0.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(act.name) + '</div>' +
         '<div style="font-size:10.5px;color:rgba(255,255,255,0.4);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((info.stage || '') + ' · ' + (info.time || '')) + '</div>' +
         '<div style="display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;padding:2px 7px;border-radius:6px;margin-top:6px;' + (isGoing ? 'background:rgba(168,159,232,0.2);color:rgba(168,159,232,0.95)' : 'background:rgba(254,223,154,0.18);color:#FEDF9A') + '">' + (isGoing ? 'Going' : 'Maybe') + '</div>' +
+        (clusterHtml ? '<div style="margin-top:7px">' + clusterHtml + '</div>' : '') +
       '</div>';
     }
     return conflicts.map(function(c){
@@ -4596,7 +4598,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.127.0-your-festival-time-conflicts';
+window.INNINGS_BUILD = 'v4.127.1-conflict-cards-friend-avatars';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
