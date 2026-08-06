@@ -1282,7 +1282,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="osl-reveal-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px 8px">
       <div id="osl-reveal-wrap"></div>
       <div id="osl-reveal-summary" style="text-align:center;font-size:12.5px;color:rgba(255,255,255,0.4);opacity:0;transition:opacity 0.3s ease;padding:6px 0 0"></div>
-      <div id="osl-reveal-also" style="text-align:center;font-size:11.5px;color:rgba(168,159,232,0.75);opacity:0;transition:opacity 0.3s ease;padding:0 24px 18px;line-height:1.5"></div>
+      <div id="osl-reveal-also-wrap" style="opacity:0;transition:opacity 0.3s ease;padding:4px 16px 20px">
+        <div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.6);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;text-align:center">Who's Seeing What</div>
+        <div id="osl-reveal-also-list"></div>
+      </div>
     </div>
   </div>
 
@@ -3959,19 +3962,20 @@ function _loadOslDayAttendees(dayKey, cb) {
   if (!user || !window.db) { cb([]); return; }
   window.db.collection('users').where('oslRsvp', 'in', ['going', 'maybe']).get().then(function(snap){
     var dayActNames = _oslActNamesForDay(dayKey);
-    var names = [];
+    var people = [];
     snap.forEach(function(doc){
       if (doc.id === user.uid) return;
       var d = doc.data() || {};
       var rsvps = d.oslActRsvps || {};
-      var attendingToday = Object.keys(rsvps).some(function(actName){
+      var actsToday = Object.keys(rsvps).filter(function(actName){
         var status = rsvps[actName];
         return dayActNames[actName] && (status === 'going' || status === 'maybe');
       });
-      if (attendingToday) names.push(d.name || 'Friend');
+      if (actsToday.length) people.push({ name: d.name || 'Friend', acts: actsToday });
     });
-    window._oslDayAttendeesCache[dayKey] = names;
-    cb(names);
+    people.sort(function(a, b){ return b.acts.length - a.acts.length || a.name.localeCompare(b.name); });
+    window._oslDayAttendeesCache[dayKey] = people;
+    cb(people);
   }).catch(function(err){
     console.error('Load day attendees error:', err);
     cb([]);
@@ -4044,15 +4048,16 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
   var scrollEl = document.getElementById('osl-reveal-scroll');
   var wrap = document.getElementById('osl-reveal-wrap');
   var summary = document.getElementById('osl-reveal-summary');
-  var alsoLine = document.getElementById('osl-reveal-also');
+  var alsoWrap = document.getElementById('osl-reveal-also-wrap');
+  var alsoList = document.getElementById('osl-reveal-also-list');
   if (!overlay || !acts || !acts.length) { if (typeof onDone === 'function') onDone(); return; }
 
   _clearOslRevealTimers();
   wrap.innerHTML = '';
   summary.style.opacity = '0';
   summary.textContent = '';
-  alsoLine.style.opacity = '0';
-  alsoLine.textContent = '';
+  alsoWrap.style.opacity = '0';
+  alsoList.innerHTML = '';
   scrollEl.scrollTop = 0;
   eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
   title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
@@ -4067,19 +4072,27 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
 
   // Kicked off in parallel with the card animations — shown once both the
   // summary moment has arrived AND the data is actually back, whichever
-  // comes later, so a slow connection delays this line rather than
+  // comes later, so a slow connection delays this section rather than
   // skipping it.
-  var alsoDataReady = false, alsoNames = [], summaryMomentReached = false;
-  _loadOslDayAttendees(dayKey, function(names){
-    alsoNames = names; alsoDataReady = true;
-    if (summaryMomentReached) _showAlsoLine();
+  var alsoDataReady = false, alsoPeople = [], summaryMomentReached = false;
+  _loadOslDayAttendees(dayKey, function(people){
+    alsoPeople = people; alsoDataReady = true;
+    if (summaryMomentReached) _showAlsoSection();
   });
-  function _showAlsoLine() {
-    if (!alsoDataReady || !alsoNames.length) return;
-    var shown = alsoNames.slice(0, 4);
-    var extra = alsoNames.length - shown.length;
-    alsoLine.textContent = 'Also here today: ' + shown.join(', ') + (extra > 0 ? ' & ' + extra + ' more' : '');
-    alsoLine.style.opacity = '1';
+  function _showAlsoSection() {
+    if (!alsoDataReady || !alsoPeople.length) return;
+    var shownPeople = alsoPeople.slice(0, 5);
+    var extraPeople = alsoPeople.length - shownPeople.length;
+    alsoList.innerHTML = shownPeople.map(function(p){
+      var shownActs = p.acts.slice(0, 3);
+      var extraActs = p.acts.length - shownActs.length;
+      var actsText = shownActs.join(', ') + (extraActs > 0 ? ' & ' + extraActs + ' more' : '');
+      return '<div style="display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">' +
+        '<div style="font-size:12.5px;font-weight:700;color:white;flex-shrink:0">' + _escapeHtml(p.name) + '</div>' +
+        '<div style="font-size:11.5px;color:rgba(255,255,255,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(actsText) + '</div>' +
+      '</div>';
+    }).join('') + (extraPeople > 0 ? '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);padding-top:8px">+' + extraPeople + ' more people</div>' : '');
+    alsoWrap.style.opacity = '1';
   }
 
   requestAnimationFrame(function(){
@@ -4118,7 +4131,7 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
     summary.textContent = whole ? (acts.length + ' act' + (acts.length === 1 ? '' : 's') + ' today') : (acts.length + ' more today');
     summary.style.opacity = '1';
     summaryMomentReached = true;
-    _showAlsoLine();
+    _showAlsoSection();
     scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
   });
   _oslRevealAfter(lastAt + (whole ? 1300 : 750), function(){
@@ -4874,7 +4887,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.129.0-day-reveal-also-here-today';
+window.INNINGS_BUILD = 'v4.129.1-day-reveal-per-person-artists';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
