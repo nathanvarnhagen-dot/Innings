@@ -2393,7 +2393,7 @@ function updateMyFest() {
   // into their own trailing section instead of being silently dropped.
   // Shared by both normal and compare mode so day-grouping/sorting only
   // exists in one place.
-  function _renderDayGroups(rows, rowRenderer, dayExtraRenderer) {
+  function _renderDayGroups(rows, rowRenderer, dayExtraRenderer, betweenRenderer) {
     var dayOrder = ['fri', 'sat', 'sun'];
     var groups = {};
     var otherRows = [];
@@ -2425,7 +2425,17 @@ function updateMyFest() {
           while (extraWrap.firstChild) listEl.appendChild(extraWrap.firstChild);
         }
       }
-      dayRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
+      dayRows.forEach(function(row, i){
+        if (i > 0 && betweenRenderer) {
+          var betweenHtml = betweenRenderer(dayRows[i - 1], row);
+          if (betweenHtml) {
+            var bWrap = document.createElement('div');
+            bWrap.innerHTML = betweenHtml;
+            while (bWrap.firstChild) listEl.appendChild(bWrap.firstChild);
+          }
+        }
+        listEl.appendChild(rowRenderer(row));
+      });
     });
     otherRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
   }
@@ -2614,7 +2624,43 @@ function updateMyFest() {
     return div;
   }
 
-  _renderDayGroups(rows, renderFestRow, function(dayKey){ return renderConflictCards(dayKey); });
+  // A thin connector between consecutive Going acts on different stages —
+  // Maybe acts are skipped entirely, since this is about the sets you've
+  // actually committed to, not ones you might attend. Silently renders
+  // nothing if either act is missing lineup data, or the stage pair isn't
+  // in OSL_WALK_MINUTES, rather than guessing at a number.
+  function renderWalkConnector(prevRow, nextRow) {
+    if (prevRow.status !== 'going' || nextRow.status !== 'going') return '';
+    var prevInfo = allActs[prevRow.name] || {};
+    var nextInfo = allActs[nextRow.name] || {};
+    if (!prevInfo.time || !nextInfo.time || !prevInfo.stage || !nextInfo.stage) return '';
+
+    if (prevInfo.stage === nextInfo.stage) {
+      return '<div style="position:relative;display:flex;align-items:center;height:30px;margin-left:34px">' +
+        '<div style="position:absolute;left:0;top:-6px;bottom:-6px;width:2px;background:rgba(255,255,255,0.1)"></div>' +
+        '<div style="margin-left:18px;font-size:11px;color:rgba(255,255,255,0.3)">No walk needed — same stage</div>' +
+      '</div>';
+    }
+
+    var walk = _oslWalkMinutes(prevInfo.stage, nextInfo.stage);
+    if (walk === null) return '';
+
+    var gapMinutes = _actStartMinutes(nextInfo.time) - _actEndMinutes(prevInfo.time);
+    var buffer = gapMinutes - walk;
+    var color = buffer >= 15 ? 'rgba(126,217,168,0.95)' : buffer >= 0 ? '#FEDF9A' : '#FF6B6B';
+    var verdict = buffer >= 0 ? (_fmtWalkDuration(buffer) + ' to spare') : (_fmtWalkDuration(buffer) + ' short');
+
+    return '<div style="position:relative;display:flex;align-items:center;height:34px;margin-left:34px">' +
+      '<div style="position:absolute;left:0;top:-8px;bottom:-8px;width:2px;background:rgba(255,255,255,0.12)"></div>' +
+      '<div style="margin-left:18px;display:flex;align-items:center;gap:7px;font-size:12px">' +
+        '<span style="color:rgba(255,255,255,0.45);font-weight:600">🚶 ~' + _fmtWalkDuration(walk) + '</span>' +
+        '<span style="color:rgba(255,255,255,0.25)">·</span>' +
+        '<span style="color:' + color + ';font-weight:700">' + verdict + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  _renderDayGroups(rows, renderFestRow, function(dayKey){ return renderConflictCards(dayKey); }, renderWalkConnector);
 }
 
 // Tapping a side of a conflict card resolves it: that act becomes Going,
@@ -3584,6 +3630,36 @@ function _actStartMinutes(timeStr) {
   if (suffix === 'PM' && hour !== 12) hour += 12;
   if (suffix === 'AM' && hour === 12) hour = 0;
   return hour * 60 + min;
+}
+
+// ── WALKING-TIME CONNECTOR (Your Festival only, not Compare) ──
+// PLACEHOLDER estimates, NOT measured distances — these came from general
+// knowledge of Golden Gate Park, not a verified walk of the actual 2026
+// stage layout. Update with real timings (walk it yourself day one, or a
+// scaled site map) before trusting this for real logistics. Keying this
+// off the exact stage names in stageData ('Lands End', 'SOMA', 'Twin
+// Peaks', 'Sutro', 'Panhandle') so a lookup miss fails safely (renders
+// nothing) rather than guessing.
+var OSL_WALK_MINUTES = {
+  'Lands End|SOMA': 12, 'Lands End|Twin Peaks': 15, 'Lands End|Sutro': 18, 'Lands End|Panhandle': 22,
+  'SOMA|Twin Peaks': 8, 'SOMA|Sutro': 14, 'SOMA|Panhandle': 16,
+  'Twin Peaks|Sutro': 10, 'Twin Peaks|Panhandle': 12,
+  'Sutro|Panhandle': 9
+};
+function _oslWalkMinutes(a, b) {
+  if (a === b) return 0;
+  var key1 = a + '|' + b, key2 = b + '|' + a;
+  if (OSL_WALK_MINUTES[key1] !== undefined) return OSL_WALK_MINUTES[key1];
+  if (OSL_WALK_MINUTES[key2] !== undefined) return OSL_WALK_MINUTES[key2];
+  return null;
+}
+// Plain minutes under an hour, H:MM once it crosses 60 — "1:15 to spare"
+// reads faster than "75 minutes to spare".
+function _fmtWalkDuration(mins) {
+  var abs = Math.abs(mins);
+  if (abs < 60) return abs + ' min';
+  var h = Math.floor(abs / 60), m = abs % 60;
+  return h + ':' + (m < 10 ? '0' : '') + m;
 }
 
 function renderExportFriendsLine() {
@@ -4887,7 +4963,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.129.1-day-reveal-per-person-artists';
+window.INNINGS_BUILD = 'v4.130.0-walking-time-connectors';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
