@@ -3944,6 +3944,7 @@ function _oslGoingActsForDay(dayKey) {
 function _maybeShowOslDayReveal(dayKey) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user) return;
+  if (window._oslPreviewActive) return;
   if (OSL_DAY_DATES[dayKey] !== _todayLocal()) return;
 
   var goingActs = _oslGoingActsForDay(dayKey);
@@ -4073,6 +4074,7 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
 // first-open/reopen bookkeeping above.
 function previewOslDayReveal(evt) {
   if (evt) evt.stopPropagation();
+  window._oslPreviewActive = true;
   nav('osl-group');
   setTimeout(function(){
     if (typeof loadOslFriendRsvps === 'function') {
@@ -4086,7 +4088,7 @@ function _runOslPreviewSequence() {
   var order = ['fri', 'sat', 'sun'];
   var idx = 0;
   function playNext() {
-    if (idx >= order.length) return;
+    if (idx >= order.length) { window._oslPreviewActive = false; return; }
     var dayKey = order[idx];
     idx++;
     var goingActs = _oslGoingActsForDay(dayKey);
@@ -4809,7 +4811,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.128.0-day-reveal-and-calendar-preview';
+window.INNINGS_BUILD = 'v4.128.1-fix-preview-race-condition';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
