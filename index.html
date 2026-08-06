@@ -2373,7 +2373,7 @@ function updateMyFest() {
   // into their own trailing section instead of being silently dropped.
   // Shared by both normal and compare mode so day-grouping/sorting only
   // exists in one place.
-  function _renderDayGroups(rows, rowRenderer) {
+  function _renderDayGroups(rows, rowRenderer, dayExtraRenderer) {
     var dayOrder = ['fri', 'sat', 'sun'];
     var groups = {};
     var otherRows = [];
@@ -2397,6 +2397,14 @@ function updateMyFest() {
       hdr.style.cssText = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px';
       hdr.textContent = label;
       listEl.appendChild(hdr);
+      if (dayExtraRenderer) {
+        var extraHtml = dayExtraRenderer(dayKey, dayRows);
+        if (extraHtml) {
+          var extraWrap = document.createElement('div');
+          extraWrap.innerHTML = extraHtml;
+          while (extraWrap.firstChild) listEl.appendChild(extraWrap.firstChild);
+        }
+      }
       dayRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
     });
     otherRows.forEach(function(row){ listEl.appendChild(rowRenderer(row)); });
@@ -2473,7 +2481,7 @@ function updateMyFest() {
     return;
   }
 
-  // ── NORMAL MODE — your own going/maybe picks, unchanged from before ──
+  // ── NORMAL MODE — your own going/maybe picks ──
   var going = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'going'; });
   var maybe = Object.keys(myRsvps).filter(function(k){ return myRsvps[k] === 'maybe'; });
   if (going.length === 0 && maybe.length === 0) {
@@ -2486,26 +2494,164 @@ function updateMyFest() {
   listEl.innerHTML = '';
   var rows = going.map(function(n){ return {name: n, status: 'going'}; }).concat(maybe.map(function(n){ return {name: n, status: 'maybe'}; }));
 
+  // ── TIME CONFLICTS — any two Going/Maybe acts whose sets overlap.
+  // Checked per day (acts on different days can never conflict) once,
+  // up front, so both the VS cards and the row warning badges below can
+  // share the same pass instead of recomputing it twice.
+  function _fmtMinutesLabel(m) {
+    var h = Math.floor(m / 60), min = m % 60;
+    var suf = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + (min ? ':' + (min < 10 ? '0' : '') + min : '') + ' ' + suf;
+  }
+  function findFestivalConflicts(dayRows) {
+    var found = [];
+    for (var i = 0; i < dayRows.length; i++) {
+      for (var j = i + 1; j < dayRows.length; j++) {
+        var a = dayRows[i], b = dayRows[j];
+        var ia = allActs[a.name] || {}, ib = allActs[b.name] || {};
+        if (!ia.time || !ib.time) continue;
+        var aStart = _actStartMinutes(ia.time), aEnd = _actEndMinutes(ia.time);
+        var bStart = _actStartMinutes(ib.time), bEnd = _actEndMinutes(ib.time);
+        if (aStart < bEnd && bStart < aEnd) {
+          found.push({
+            a: a, b: b,
+            severity: (a.status === 'going' && b.status === 'going') ? 'hard' : 'soft',
+            overlapStart: Math.max(aStart, bStart),
+            overlapEnd: Math.min(aEnd, bEnd)
+          });
+        }
+      }
+    }
+    return found;
+  }
+  var conflictsByDay = {};
+  var conflictSeverityByName = {};
+  (function precomputeConflicts(){
+    var byDay = {};
+    rows.forEach(function(row){
+      var info = allActs[row.name] || {};
+      if (info.dayKey) { (byDay[info.dayKey] = byDay[info.dayKey] || []).push(row); }
+    });
+    Object.keys(byDay).forEach(function(dayKey){
+      var found = findFestivalConflicts(byDay[dayKey]);
+      if (found.length) conflictsByDay[dayKey] = found;
+      found.forEach(function(c){
+        if (!conflictSeverityByName[c.a.name] || c.severity === 'hard') conflictSeverityByName[c.a.name] = c.severity;
+        if (!conflictSeverityByName[c.b.name] || c.severity === 'hard') conflictSeverityByName[c.b.name] = c.severity;
+      });
+    });
+  })();
+
+  function renderConflictCards(dayKey) {
+    var conflicts = conflictsByDay[dayKey];
+    if (!conflicts || !conflicts.length) return '';
+    function sideHtml(act, other) {
+      var info = allActs[act.name] || {};
+      var isGoing = act.status === 'going';
+      return '<div onclick="chooseFestivalAct(\'' + dayKey + '\',\'' + act.name.replace(/'/g,"\\'") + '\',\'' + other.name.replace(/'/g,"\\'") + '\')" style="flex:1;min-width:0;cursor:pointer;border-radius:12px;padding:10px;background:rgba(255,255,255,0.05)">' +
+        '<div style="font-size:14px;font-weight:800;color:white;letter-spacing:-0.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(act.name) + '</div>' +
+        '<div style="font-size:10.5px;color:rgba(255,255,255,0.4);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((info.stage || '') + ' · ' + (info.time || '')) + '</div>' +
+        '<div style="display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;padding:2px 7px;border-radius:6px;margin-top:6px;' + (isGoing ? 'background:rgba(168,159,232,0.2);color:rgba(168,159,232,0.95)' : 'background:rgba(254,223,154,0.18);color:#FEDF9A') + '">' + (isGoing ? 'Going' : 'Maybe') + '</div>' +
+      '</div>';
+    }
+    return conflicts.map(function(c){
+      var sev = c.severity;
+      var flagText = sev === 'hard' ? "⚠ You're marked Going to both" : '💡 Overlaps if this Maybe happens';
+      return '<div style="border-radius:16px;padding:14px;margin-bottom:10px;' + (sev === 'hard' ? 'background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.35)' : 'background:rgba(254,223,154,0.08);border:1px solid rgba(254,223,154,0.28)') + '">' +
+        '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;margin-bottom:2px;color:' + (sev === 'hard' ? '#FF6B6B' : '#FEDF9A') + '">' + flagText + '</div>' +
+        '<div style="font-size:10.5px;color:rgba(255,255,255,0.35);margin-bottom:10px">Tap the one you\'re going with</div>' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          sideHtml(c.a, c.b) +
+          '<div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:900;flex-shrink:0;' + (sev === 'hard' ? 'background:#FF6B6B;color:white' : 'background:#FEDF9A;color:#0D0820') + '">VS</div>' +
+          sideHtml(c.b, c.a) +
+        '</div>' +
+        '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.4);margin-top:10px">Overlapping <b style="color:rgba(255,255,255,0.7);font-weight:700">' + _fmtMinutesLabel(c.overlapStart) + '–' + _fmtMinutesLabel(c.overlapEnd) + '</b></div>' +
+      '</div>';
+    }).join('');
+  }
+
   function renderFestRow(row) {
     var actName = row.name;
     var info = allActs[actName] || {};
     var isGoing = row.status === 'going';
+    var sev = conflictSeverityByName[actName];
     var div = document.createElement('div');
-    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px';
+    div.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;border:0.5px solid ' + (sev === 'hard' ? 'rgba(255,107,107,0.4)' : sev === 'soft' ? 'rgba(254,223,154,0.35)' : 'rgba(255,255,255,0.1)') + ';display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px';
     div.onclick = function(){ openActDetail(actName, info.time, info.headliner); };
     var icon = isGoing
       ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
       : '<span style="font-size:15px;font-weight:800;color:rgba(254,213,133,0.9)">?</span>';
     var clusterHtml = _friendClusterHtml(actName);
     var rightHtml = clusterHtml || ('<div style="font-size:10px;font-weight:700;color:' + (isGoing ? 'rgba(168,159,232,0.9)' : 'rgba(254,213,133,0.9)') + ';text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0">' + (isGoing ? 'Going' : 'Maybe') + '</div>');
-    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' + icon + '</div>' +
+    var flagHtml = sev ? '<div style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #0D0820;' + (sev === 'hard' ? 'background:#FF6B6B' : 'background:#FEDF9A;color:#0D0820') + '">' + (sev === 'hard' ? '!' : '?') + '</div>' : '';
+    div.innerHTML = '<div style="width:40px;height:40px;border-radius:10px;background:' + (isGoing ? 'rgba(168,159,232,0.2)' : 'rgba(254,213,133,0.15)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">' + icon + flagHtml + '</div>' +
       '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:white">' + actName + '</div>' +
       '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">' + (info.stage || '') + ' · ' + (info.time || 'TBD') + '</div></div>' +
       rightHtml;
     return div;
   }
 
-  _renderDayGroups(rows, renderFestRow);
+  _renderDayGroups(rows, renderFestRow, function(dayKey){ return renderConflictCards(dayKey); });
+}
+
+// Tapping a side of a conflict card resolves it: that act becomes Going,
+// the other becomes Skip — the same outcome regardless of whether it was
+// a hard conflict (both already Going) or a soft one (one was only a
+// Maybe), so the behavior stays simple and predictable either way.
+window._festivalLastAction = null;
+
+function chooseFestivalAct(dayKey, chosenName, otherName) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window._festivalLastAction = { chosenName: chosenName, prevChosen: myRsvps[chosenName], otherName: otherName, prevOther: myRsvps[otherName] };
+  myRsvps[chosenName] = 'going';
+  myRsvps[otherName] = 'no';
+  window.userData = window.userData || {};
+  window.userData.oslActRsvps = myRsvps;
+  window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true }).catch(function(err){ console.error('Choose festival act error:', err); });
+  if (window._festivalLastAction.prevChosen !== 'going' && typeof _postActRsvpSystemMessage === 'function') {
+    _postActRsvpSystemMessage(chosenName, 'going');
+  }
+  updateMyFest();
+  _showFestivalUndoToast('Going to ' + chosenName + ' · Skipped ' + otherName);
+}
+
+function undoFestivalChoice() {
+  var act = window._festivalLastAction;
+  if (!act) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  myRsvps[act.chosenName] = act.prevChosen;
+  myRsvps[act.otherName] = act.prevOther;
+  window.userData = window.userData || {};
+  window.userData.oslActRsvps = myRsvps;
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ oslActRsvps: myRsvps }, { merge: true }).catch(function(err){ console.error('Undo festival choice error:', err); });
+  }
+  window._festivalLastAction = null;
+  _hideFestivalUndoToast();
+  updateMyFest();
+}
+
+// A small dedicated toast with an inline Undo action — kept separate from
+// the shared ib_toast (used all over the app with plain text only) rather
+// than teaching that one to render HTML for just this one feature.
+function _showFestivalUndoToast(msg) {
+  var t = document.getElementById('festival-undo-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'festival-undo-toast';
+    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:11px 16px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;display:none;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = '<span>' + _escapeHtml(msg) + '</span><b onclick="undoFestivalChoice()" style="cursor:pointer;color:rgba(168,159,232,1);font-weight:800">Undo</b>';
+  t.style.display = 'flex';
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.style.display = 'none'; window._festivalLastAction = null; }, 5000);
+}
+function _hideFestivalUndoToast() {
+  var t = document.getElementById('festival-undo-toast');
+  if (t) t.style.display = 'none';
 }
 
 // ── COMPARE YOUR FESTIVAL — pick an accepted Innings friend who's also
@@ -4450,7 +4596,7 @@ function oslDay2(day) {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.126.0-festival-music-by-day';
+window.INNINGS_BUILD = 'v4.127.0-your-festival-time-conflicts';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
