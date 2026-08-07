@@ -1207,13 +1207,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <!-- HEADER -->
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
-    <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;position:relative">
       <button class="back-btn" onclick="navBack()">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
       </button>
-      <button id="osl-notif-bell-btn" onclick="nav('notifications')" style="position:relative;background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <button id="osl-notif-bell-btn" onclick="nav('notifications')" style="position:relative;background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
     </div>
     <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:center;gap:12px">
@@ -5582,7 +5582,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.141.0-reveal-once-per-day-bell-padding-fix';
+window.INNINGS_BUILD = 'v4.142.0-bell-smaller-autoheight-row';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
