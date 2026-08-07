@@ -125,7 +125,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 #screen-feed .topbar-light{padding-top:0}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
 .icon-btn i{font-size:18px;color:var(--mid)}
-.notif-pip::after{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--indigo);border-radius:50%;border:1.5px solid var(--card)}
+.notif-count-badge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;padding:0 4px;line-height:1;box-sizing:border-box}
 
 /* TABS */
 .tabs-light{background:var(--card);border-bottom:1px solid var(--rule);display:flex;padding:0 20px;flex-shrink:0}
@@ -1212,7 +1212,9 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
       </button>
-      
+      <button id="osl-notif-bell-btn" onclick="nav('notifications')" style="position:relative;background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
     </div>
     <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:center;gap:12px">
       <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎪</div>
@@ -5302,7 +5304,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.136.0-lineup-search-export-part-labels';
+window.INNINGS_BUILD = 'v4.137.0-osl-bell-numeric-badges';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11183,7 +11185,7 @@ function startNotifBadge(user) {
     .where('toUid', '==', user.uid)
     .where('read', '==', false)
     .onSnapshot(function(snap){
-      _renderNotifBadge(snap.size > 0);
+      _renderNotifBadge(snap.size);
       if (!window._notifLoginToastShown) {
         window._notifLoginToastShown = true;
         var total = snap.size;
@@ -11243,10 +11245,32 @@ function _showNotifBubbleAnimation(msg) {
   }, 1300);
 }
 
-function _renderNotifBadge(hasUnread) {
-  var bell = document.getElementById('notif-bell-btn');
+// Updates every known bell location with the real unread count, not just
+// a dot — each styled for its own header (Feed's is light, OSL's is dark,
+// see isDark below) rather than sharing one hardcoded color.
+function _updateBellBadge(bellId, count, isDark) {
+  var bell = document.getElementById(bellId);
   if (!bell) return;
-  bell.classList.toggle('notif-pip', !!hasUnread);
+  var badge = bell.querySelector('.notif-count-badge');
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'notif-count-badge';
+      badge.style.background = isDark ? 'rgba(168,159,232,0.95)' : 'var(--indigo)';
+      badge.style.color = isDark ? '#0D0820' : 'white';
+      badge.style.border = '1.5px solid ' + (isDark ? '#1A0A2E' : 'var(--card)');
+      bell.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.style.display = 'flex';
+  } else if (badge) {
+    badge.style.display = 'none';
+  }
+}
+
+function _renderNotifBadge(count) {
+  _updateBellBadge('notif-bell-btn', count, false);
+  _updateBellBadge('osl-notif-bell-btn', count, true);
 }
 
 function _fmtRelativeTime(ts) {
