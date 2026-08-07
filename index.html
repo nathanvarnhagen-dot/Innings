@@ -1207,7 +1207,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <!-- HEADER -->
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
-    <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
+    <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px;position:relative">
       <button class="back-btn" onclick="navBack()">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
@@ -1720,6 +1720,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         </div>
         <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
       </div>
+      <div onclick="oslMoreOpenFriendsFest()" style="background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎫</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:white;display:flex;align-items:center;gap:6px">Friends' Festivals <span style="font-size:9px;font-weight:800;color:#0D0820;background:rgba(168,159,232,0.95);padding:2px 6px;border-radius:6px;letter-spacing:0.02em">NEW</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px">See anyone going's picks, no profile-hunting</div>
+        </div>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>
+      </div>
     </div>
   </div>
 
@@ -1747,6 +1755,42 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <button onclick="exportFestivalToPhotos()" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">⬇ Save to Photos</button>
       <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.5" id="export-save-hint">Saves as an image — no signal needed to look at it later.</div>
     </div>
+  </div>
+
+  <!-- FRIENDS' FESTIVALS — picker: everyone going/maybe, tap one to see their
+       picks. Temporary MVP surface (per Nathan) so this doesn't require
+       building a whole friend-festival browsing pattern into profiles yet. -->
+  <div id="osl2-friends-fest-list" style="flex:1;min-height:0;display:none;flex-direction:column;background:#0D0820">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="oslMoreBack()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px">Friends' Festivals</div>
+    </div>
+    <div style="padding:0 16px 4px;font-size:12.5px;color:rgba(255,255,255,0.4)">Anyone going or maybe — tap to see their picks</div>
+    <div id="friends-fest-picker-list" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 24px"></div>
+  </div>
+
+  <!-- FRIEND FESTIVAL DETAIL — read-only mirror of Your Festival, sourced
+       from someone else's actRsvps instead of the viewer's own myRsvps.
+       No editing, no conflict cards, no walking connectors — MVP scope is
+       just "see what they picked" per day. -->
+  <div id="osl2-friend-fest-detail" style="flex:1;min-height:0;display:none;flex-direction:column;background:#0D0820">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="closeFriendFestivalDetail()" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div style="min-width:0">
+        <div id="friend-fest-name" style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Friend</div>
+        <div style="font-size:11.5px;color:rgba(255,255,255,0.4)">Their picks — view only</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:10px 16px">
+      <div class="friend-fest-day-tab" data-day="fri" onclick="setFriendFestDay('fri',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(168,159,232,0.9);color:#0D0820;border:0.5px solid transparent">Fri 8/7</div>
+      <div class="friend-fest-day-tab" data-day="sat" onclick="setFriendFestDay('sat',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)">Sat 8/8</div>
+      <div class="friend-fest-day-tab" data-day="sun" onclick="setFriendFestDay('sun',this)" style="flex:1;text-align:center;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)">Sun 8/9</div>
+    </div>
+    <div id="friend-fest-list" style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 24px"></div>
   </div>
 
   <!-- OUR FESTIVAL MUSIC — every song added across every artist, grouped by artist -->
@@ -3756,11 +3800,141 @@ function oslMoreBack() {
   var photos = document.getElementById('osl2-photos');
   var music = document.getElementById('osl2-allsongs');
   var exportPanel = document.getElementById('osl2-export');
+  var friendsFestList = document.getElementById('osl2-friends-fest-list');
   var menu = document.getElementById('osl2-more');
   if (photos) photos.style.display = 'none';
   if (music) music.style.display = 'none';
   if (exportPanel) exportPanel.style.display = 'none';
+  if (friendsFestList) friendsFestList.style.display = 'none';
   if (menu) { menu.style.display = 'flex'; menu.style.flexDirection = 'column'; }
+}
+
+// ── FRIENDS' FESTIVALS — temporary MVP surface so seeing what anyone
+// going has picked doesn't require finding their profile first. Picker
+// scope matches Who's Going (anyone going/maybe, not just accepted
+// friends) since that's the useful scope during the event itself.
+function oslMoreOpenFriendsFest() {
+  var menu = document.getElementById('osl2-more');
+  var picker = document.getElementById('osl2-friends-fest-list');
+  if (menu) menu.style.display = 'none';
+  if (picker) { picker.style.display = 'flex'; picker.style.flexDirection = 'column'; }
+  loadFriendsFestivalPickerList();
+}
+
+function loadFriendsFestivalPickerList() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var listEl = document.getElementById('friends-fest-picker-list');
+  if (!user || !window.db || !listEl) return;
+  listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Loading…</div>';
+  window.db.collection('users').get().then(function(snap){
+    var people = [];
+    snap.forEach(function(doc){
+      if (doc.id === user.uid) return;
+      var d = doc.data() || {};
+      if (d.oslRsvp === 'going' || d.oslRsvp === 'maybe') {
+        people.push({ uid: doc.id, name: d.name || 'Friend', status: d.oslRsvp });
+      }
+    });
+    people.sort(function(a, b){ return a.name.localeCompare(b.name); });
+    if (!people.length) {
+      listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">No one else has RSVP\'d yet.</div>';
+      return;
+    }
+    listEl.innerHTML = people.map(function(p){
+      var ring = p.status === 'going' ? 'rgba(168,159,232,0.95)' : '#FEDF9A';
+      var label = p.status === 'going' ? 'Going' : 'Maybe';
+      var labelColor = p.status === 'going' ? 'rgba(168,159,232,0.9)' : '#FEDF9A';
+      return '<div onclick="openFriendFestival(\'' + p.uid + '\',\'' + p.name.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);cursor:pointer">' +
+        '<div class="av av-a" style="width:38px;height:38px;font-size:13px;flex-shrink:0;border:2px solid ' + ring + '">' + _escapeHtml(_initials(p.name)) + '</div>' +
+        '<div style="flex:1;font-size:14px;font-weight:600;color:white">' + _escapeHtml(p.name) + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:' + labelColor + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + label + '</div>' +
+        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>' +
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    console.error('Load friends festival picker error:', err);
+    listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Could not load — check Firestore rules</div>';
+  });
+}
+
+function openFriendFestival(uid, name) {
+  window._viewingFriendUid = uid;
+  window._viewingFriendName = name;
+  var picker = document.getElementById('osl2-friends-fest-list');
+  var detail = document.getElementById('osl2-friend-fest-detail');
+  if (picker) picker.style.display = 'none';
+  if (detail) { detail.style.display = 'flex'; detail.style.flexDirection = 'column'; }
+  var nameEl = document.getElementById('friend-fest-name');
+  if (nameEl) nameEl.textContent = name + "'s Festival";
+  document.querySelectorAll('.friend-fest-day-tab').forEach(function(t){
+    var isDay = t.getAttribute('data-day') === 'fri';
+    t.style.background = isDay ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.06)';
+    t.style.color = isDay ? '#0D0820' : 'rgba(255,255,255,0.5)';
+  });
+  renderFriendFestivalDay('fri');
+}
+
+function closeFriendFestivalDetail() {
+  var picker = document.getElementById('osl2-friends-fest-list');
+  var detail = document.getElementById('osl2-friend-fest-detail');
+  if (detail) detail.style.display = 'none';
+  if (picker) { picker.style.display = 'flex'; picker.style.flexDirection = 'column'; }
+}
+
+function setFriendFestDay(day, el) {
+  document.querySelectorAll('.friend-fest-day-tab').forEach(function(t){
+    t.style.background = 'rgba(255,255,255,0.06)';
+    t.style.color = 'rgba(255,255,255,0.5)';
+  });
+  if (el) {
+    el.style.background = 'rgba(168,159,232,0.9)';
+    el.style.color = '#0D0820';
+  }
+  renderFriendFestivalDay(day);
+}
+
+// Read-only mirror of Your Festival, sourced from someone else's actRsvps
+// field on their own user doc (same field Compare/Export already read for
+// friends) rather than the viewer's own myRsvps. No conflict cards, no
+// walking connectors, no editing — MVP scope is just "see their picks."
+function renderFriendFestivalDay(dayKey) {
+  var listEl = document.getElementById('friend-fest-list');
+  var uid = window._viewingFriendUid;
+  if (!listEl || !uid || !window.db) return;
+  listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Loading…</div>';
+  window.db.collection('users').doc(uid).get().then(function(doc){
+    var d = doc.exists ? (doc.data() || {}) : {};
+    var actRsvps = d.actRsvps || {};
+    var actsInDay = stageData[dayKey] || {};
+    var rows = [];
+    Object.keys(actsInDay).forEach(function(stageKey){
+      var stage = actsInDay[stageKey];
+      stage.acts.forEach(function(act){
+        var st = actRsvps[act.name];
+        if (st === 'going' || st === 'maybe') rows.push({ name: act.name, time: act.time, stage: stage.name, status: st });
+      });
+    });
+    rows.sort(function(a, b){ return _actStartMinutes(a.time) - _actStartMinutes(b.time); });
+    if (!rows.length) {
+      listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6">No picks marked for this day yet.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(r){
+      var ring = r.status === 'going' ? 'rgba(168,159,232,0.95)' : '#FEDF9A';
+      var label = r.status === 'going' ? 'Going' : 'Maybe';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">' +
+        '<div style="width:64px;flex-shrink:0;font-size:12px;font-weight:700;color:rgba(168,159,232,0.85)">' + _escapeHtml(r.time) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14.5px;font-weight:700;color:white">' + _escapeHtml(r.name) + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">' + _escapeHtml(r.stage) + '</div>' +
+        '</div>' +
+        '<div style="width:8px;height:8px;border-radius:50%;background:' + ring + ';flex-shrink:0" title="' + label + '"></div>' +
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    console.error('Load friend festival error:', err);
+    listEl.innerHTML = '<div style="padding:40px 24px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px">Could not load their picks.</div>';
+  });
 }
 
 // ── EXPORT YOUR FESTIVAL — a downloadable image summarizing everyone's
@@ -5304,7 +5478,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.137.0-osl-bell-numeric-badges';
+window.INNINGS_BUILD = 'v4.138.0-bell-align-fix-friends-festivals';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
