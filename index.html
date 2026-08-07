@@ -1318,7 +1318,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.6);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:4px">Golden Gate Park · San Francisco</div>
         <div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:2px">Outside Lands 2026</div>
         <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:14px">August 7 · 8 · 9</div>
-        <div style="display:flex;gap:6px;justify-content:center">
+        <div id="lineup-day-btn-row" style="display:flex;gap:6px;justify-content:center">
           <button id="day-btn-fri" onclick="oslDay2('fri')" style="padding:7px 16px;border-radius:20px;background:rgba(168,159,232,0.9);color:#0D0820;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Fri 8/7</button>
           <button id="day-btn-sat" onclick="oslDay2('sat')" style="padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.15);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Sat 8/8</button>
           <button id="day-btn-sun" onclick="oslDay2('sun')" style="padding:7px 16px;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.15);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Sun 8/9</button>
@@ -1326,7 +1326,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- STAGE OVERVIEW — default view -->
+    <!-- ARTIST SEARCH — spans the whole weekend, not just the selected day,
+         since the acts worth searching for are exactly the ones split
+         across days or stages (see openLineupSearch). -->
+    <div style="padding:0 16px 12px;position:relative;flex-shrink:0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:29px;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="lineup-search-input" type="text" placeholder="Search artists…" oninput="onLineupSearch(this.value)" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:12px 40px;font-size:14px;color:white;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none">
+      <div id="lineup-search-clear" onclick="clearLineupSearch()" style="display:none;position:absolute;right:29px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.15);align-items:center;justify-content:center;cursor:pointer">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+    <div id="lineup-search-results" style="display:none;padding:0 16px 16px"></div>
     <div id="osl2-fri" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
       <div onclick="openStage('fri','lands-end')" style="background:rgba(255,255,255,0.06);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1)">
         <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#3D1A6B,#1A0A2E);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎪</div>
@@ -1962,7 +1972,7 @@ var stageData = {
       acts: [
         {name:'Vertigo', time:'12:00–12:55 PM', headliner:false},
         {name:'Luke Alessi', time:'12:55–2:25 PM', headliner:false},
-        {name:'Tobiahs', time:'2:25–3:55 PM', headliner:false},
+        {name:'tobiahs', time:'2:25–3:55 PM', headliner:false},
         {name:'MPH', time:'3:55–5:25 PM', headliner:false},
         {name:'KI/KI', time:'5:25–6:55 PM', headliner:false},
         {name:'Yousuke Yukimatsu', time:'6:55–8:25 PM', headliner:false},
@@ -1972,9 +1982,9 @@ var stageData = {
     'twin-peaks': {
       name: 'Twin Peaks', emoji: '🏔️', day: 'Friday Aug 7',
       acts: [
-        {name:'Nezza', time:'12:35–1:20 PM', headliner:false},
+        {name:'NEZZA', time:'12:35–1:20 PM', headliner:false},
         {name:'Kerala Dust', time:'2:05–2:50 PM', headliner:false},
-        {name:'Alleycvt', time:'3:35–4:25 PM', headliner:false},
+        {name:'ALLEYCVT', time:'3:35–4:25 PM', headliner:false},
         {name:'Tinashe', time:'5:10–6:00 PM', headliner:false},
         {name:'Clipse', time:'6:45–7:35 PM', headliner:false},
         {name:'GRiZTRONICS', time:'8:25–9:55 PM', headliner:true},
@@ -2057,7 +2067,7 @@ var stageData = {
     'soma': {
       name: 'SOMA', emoji: '🎧', day: 'Saturday Aug 8',
       acts: [
-        {name:'Bad Juuju', time:'12:35–1:55 PM', headliner:false},
+        {name:'bad juuju', time:'12:35–1:55 PM', headliner:false},
         {name:'1-800 Girls', time:'1:55–3:25 PM', headliner:false},
         {name:'Camoufly', time:'3:25–4:55 PM', headliner:false},
         {name:'Sultan + Shepard', time:'4:55–6:25 PM', headliner:false},
@@ -3946,13 +3956,16 @@ function renderExportPoster(dayKey) {
       '</div>';
     }).join('');
 
-    var pageLabel = pages.length > 1 ? ' · Page ' + (pageIndex + 1) + ' of ' + pages.length : '';
+    var partBadge = pages.length > 1
+      ? '<div style="display:inline-block;margin-top:9px;font-size:13px;font-weight:800;color:#0D0820;background:rgba(168,159,232,0.95);padding:5px 13px;border-radius:10px;letter-spacing:0.02em">PART ' + (pageIndex + 1) + ' OF ' + pages.length + '</div>'
+      : '';
 
     return '<div class="export-poster-page" style="border-radius:20px;overflow:hidden;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 55%,#150A30 100%);margin-bottom:' + (pageIndex < pages.length - 1 ? '16px' : '0') + '">' +
       '<div style="padding:24px 20px 16px">' +
-        '<div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.7);text-transform:uppercase;letter-spacing:0.18em">Outside Lands 2026' + pageLabel + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.7);text-transform:uppercase;letter-spacing:0.18em">Outside Lands 2026</div>' +
         '<div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-top:4px">' + (dayLabels[dayKey] || '') + '</div>' +
-        '<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">Your group\'s picks, in order</div>' +
+        partBadge +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:' + (pages.length > 1 ? '10px' : '2px') + '">Your group\'s picks, in order</div>' +
         '<div style="display:flex;gap:16px;margin-top:14px">' +
           '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:rgba(168,159,232,0.95)"></div>Going</div>' +
           '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:#FEDF9A"></div>Maybe</div>' +
@@ -3990,7 +4003,7 @@ function exportFestivalToPhotos() {
   }).then(function(blobs){
     if (blobs.some(function(b){ return !b; })) { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again'); return; }
     var files = blobs.map(function(blob, i){
-      var suffix = blobs.length > 1 ? '-page' + (i + 1) : '';
+      var suffix = blobs.length > 1 ? '-part' + (i + 1) : '';
       return new File([blob], 'innings-outside-lands-' + dayKey + suffix + '.png', { type: 'image/png' });
     });
     if (navigator.canShare && navigator.canShare({ files: files })) {
@@ -4224,6 +4237,7 @@ function renderGroupTabs() {
 }
 
 function oslDay2(day) {
+  window._lineupLastDay = day;
   ['fri','sat','sun'].forEach(function(d) {
     var panel = document.getElementById('osl2-' + d);
     var btn = document.getElementById('day-btn-' + d);
@@ -4240,6 +4254,90 @@ function oslDay2(day) {
     activeBtn.style.background = 'rgba(168,159,232,0.9)';
     activeBtn.style.color = '#0D0820';
   }
+}
+
+// ── ARTIST SEARCH — every occurrence, across all 3 days, grouped by exact
+// act name (matches how real duplicate bookings already share identical
+// spelling in stageData, e.g. NEZZA appearing on both Twin Peaks and
+// Duboce Triangle Friday). Built once and cached — stageData itself never
+// changes at runtime, so there's no reason to rebuild this on every
+// keystroke.
+window._lineupSearchIndex = null;
+function _buildLineupSearchIndex() {
+  if (window._lineupSearchIndex) return window._lineupSearchIndex;
+  var dayShort = { fri: 'FRI', sat: 'SAT', sun: 'SUN' };
+  var dayDate = { fri: '8/7', sat: '8/8', sun: '8/9' };
+  var byName = {};
+  ['fri', 'sat', 'sun'].forEach(function(dayKey){
+    var stages = stageData[dayKey] || {};
+    Object.keys(stages).forEach(function(stageKey){
+      var stage = stages[stageKey];
+      stage.acts.forEach(function(act){
+        if (!byName[act.name]) byName[act.name] = { name: act.name, occ: [] };
+        byName[act.name].occ.push({
+          dayKey: dayKey, day: dayShort[dayKey], date: dayDate[dayKey],
+          stageKey: stageKey, stage: stage.name,
+          time: act.time + (act.headliner ? ' (Headliner)' : '')
+        });
+      });
+    });
+  });
+  window._lineupSearchIndex = Object.keys(byName).sort().map(function(k){ return byName[k]; });
+  return window._lineupSearchIndex;
+}
+
+function onLineupSearch(query) {
+  var q = (query || '').trim().toLowerCase();
+  var clearBtn = document.getElementById('lineup-search-clear');
+  var dayBtnRow = document.getElementById('lineup-day-btn-row');
+  var resultsView = document.getElementById('lineup-search-results');
+  if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+  if (!resultsView) return;
+
+  if (!q) {
+    resultsView.style.display = 'none';
+    if (dayBtnRow) dayBtnRow.style.display = 'flex';
+    if (typeof oslDay2 === 'function') oslDay2(window._lineupLastDay || 'fri');
+    return;
+  }
+
+  ['osl2-fri', 'osl2-sat', 'osl2-sun'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  if (dayBtnRow) dayBtnRow.style.display = 'none';
+  resultsView.style.display = 'block';
+
+  var matches = _buildLineupSearchIndex().filter(function(a){ return a.name.toLowerCase().indexOf(q) !== -1; });
+  if (!matches.length) {
+    resultsView.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6">No artists match "' + _escapeHtml(query) + '"</div>';
+    return;
+  }
+  resultsView.innerHTML = matches.map(function(a){
+    var occHtml = a.occ.map(function(o){
+      return '<div onclick="_lineupSearchJump(\'' + o.dayKey + '\',\'' + o.stageKey.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.08);cursor:pointer">' +
+        '<div style="width:38px;flex-shrink:0;text-align:center"><div style="font-size:9.5px;font-weight:700;color:rgba(168,159,232,0.8);text-transform:uppercase">' + o.day + '</div><div style="font-size:13px;font-weight:800;color:white;line-height:1.1">' + o.date + '</div></div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:white">' + _escapeHtml(o.stage) + '</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">' + _escapeHtml(o.time) + '</div></div>' +
+        '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 6 6 1 11"/></svg>' +
+      '</div>';
+    }).join('');
+    return '<div style="background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 16px;margin-bottom:10px">' +
+      '<div style="font-size:15px;font-weight:800;color:white;letter-spacing:-0.2px;display:flex;align-items:center;gap:8px">' + _escapeHtml(a.name) + (a.occ.length > 1 ? '<span style="font-size:9px;font-weight:800;color:#0D0820;background:rgba(168,159,232,0.9);padding:2px 7px;border-radius:6px">' + a.occ.length + ' sets</span>' : '') + '</div>' +
+      occHtml +
+    '</div>';
+  }).join('');
+}
+
+function _lineupSearchJump(dayKey, stageKey) {
+  clearLineupSearch();
+  if (typeof oslDay2 === 'function') oslDay2(dayKey);
+  if (typeof openStage === 'function') openStage(dayKey, stageKey);
+}
+
+function clearLineupSearch() {
+  var input = document.getElementById('lineup-search-input');
+  if (input) input.value = '';
+  onLineupSearch('');
 }
 
 // ── DAY REVEAL — see #osl-day-reveal in the markup for the rationale.
@@ -5204,7 +5302,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.135.0-export-walk-connectors-pagination';
+window.INNINGS_BUILD = 'v4.136.0-lineup-search-export-part-labels';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
