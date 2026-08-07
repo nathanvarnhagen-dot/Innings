@@ -1207,7 +1207,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <!-- HEADER -->
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
-    <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px;position:relative">
+    <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:relative">
       <button class="back-btn" onclick="navBack()">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
@@ -4690,23 +4690,22 @@ function _maybeShowOslDayReveal(dayKey) {
   var goingActs = _oslGoingActsForDay(dayKey);
   if (!goingActs.length) return;
 
+  // Shows at most once per day, period. This used to gate only the initial
+  // "whole day" reveal, then fall through to a lighter "comingup" version
+  // on every single reopen after that — which got old fast at a live
+  // event people check constantly. Now the first qualifying visit each
+  // day is the only one that plays anything at all.
   var shownMap = (window.userData && window.userData.oslRevealShown) || {};
-  var alreadyShownToday = shownMap[dayKey] === _todayLocal();
+  if (shownMap[dayKey] === _todayLocal()) return;
 
-  if (!alreadyShownToday) {
-    _playOslDayReveal(dayKey, 'whole', goingActs);
-    shownMap[dayKey] = _todayLocal();
-    window.userData = window.userData || {};
-    window.userData.oslRevealShown = shownMap;
-    if (window.db) {
-      window.db.collection('users').doc(user.uid).set({ oslRevealShown: shownMap }, { merge: true }).catch(function(err){ console.error('Save reveal-shown state error:', err); });
-    }
-  } else {
-    var nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-    var upcoming = goingActs.filter(function(a){ return a.startMinutes > nowMinutes; });
-    if (!upcoming.length) return;
-    _playOslDayReveal(dayKey, 'comingup', upcoming);
+  shownMap[dayKey] = _todayLocal();
+  window.userData = window.userData || {};
+  window.userData.oslRevealShown = shownMap;
+  if (window.db) {
+    window.db.collection('users').doc(user.uid).set({ oslRevealShown: shownMap }, { merge: true }).catch(function(err){ console.error('Save reveal-shown state error:', err); });
   }
+
+  _playOslDayReveal(dayKey, 'whole', goingActs);
 }
 
 window._oslRevealTimers = [];
@@ -5583,7 +5582,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.140.0-add-friends-prompt-show-once';
+window.INNINGS_BUILD = 'v4.141.0-reveal-once-per-day-bell-padding-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
