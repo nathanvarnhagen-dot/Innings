@@ -1729,27 +1729,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
       <div id="export-friends-line" style="padding:0 16px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4)"></div>
 
-      <div style="padding:0 16px 16px">
-        <div id="export-poster" style="border-radius:20px;overflow:hidden;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 55%,#150A30 100%)">
-          <div style="padding:24px 20px 16px">
-            <div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.7);text-transform:uppercase;letter-spacing:0.18em">Outside Lands 2026</div>
-            <div id="export-poster-day" style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-top:4px">Friday, August 7</div>
-            <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">Your group's picks, in order</div>
-            <div style="display:flex;gap:16px;margin-top:14px">
-              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:rgba(168,159,232,0.95)"></div>Going</div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:#FEDF9A"></div>Maybe</div>
-            </div>
-          </div>
-          <div id="export-poster-list" style="padding:4px 20px 22px"></div>
-          <div style="padding:14px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.08);text-align:center">
-            <div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.02em">Made with <b style="color:rgba(168,159,232,0.9)">Innings</b> · every moment deserves a home</div>
-          </div>
-        </div>
-      </div>
+      <div style="padding:0 16px 16px" id="export-posters-container"></div>
     </div>
     <div style="padding:14px 16px 24px;flex-shrink:0">
       <button onclick="exportFestivalToPhotos()" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">⬇ Save to Photos</button>
-      <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.5">Saves as an image — no signal needed to look at it later.</div>
+      <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.5" id="export-save-hint">Saves as an image — no signal needed to look at it later.</div>
     </div>
   </div>
 
@@ -2545,25 +2529,8 @@ function updateMyFest() {
     });
   });
 
-  // Parses "6:55–8:25 PM" style ranges into minutes-since-midnight for the
-  // END time — end time is the sort determinant (not start), so a headliner
-  // whose set runs later ends up last even if another act started earlier
-  function _actEndMinutes(timeStr) {
-    if (!timeStr) return 0;
-    var parts = timeStr.split('–');
-    var endPart = (parts[1] || parts[0]).trim();
-    var suffixMatch = timeStr.match(/(AM|PM)/i);
-    var suffix = suffixMatch ? suffixMatch[1].toUpperCase() : '';
-    var endSuffixMatch = endPart.match(/(AM|PM)/i);
-    if (endSuffixMatch) suffix = endSuffixMatch[1].toUpperCase();
-    var timeOnly = endPart.replace(/(AM|PM)/i, '').trim();
-    var bits = timeOnly.split(':');
-    var hour = parseInt(bits[0], 10) || 0;
-    var min = parseInt(bits[1], 10) || 0;
-    if (suffix === 'PM' && hour !== 12) hour += 12;
-    if (suffix === 'AM' && hour === 12) hour = 0;
-    return hour * 60 + min;
-  }
+  // Sorts by end time (not start) so a headliner whose set runs later ends
+  // up last even if another act started earlier — _actEndMinutes is global.
   function _sortRowsByTime(rowsToSort){
     rowsToSort.sort(function(a, b){
       return _actEndMinutes((allActs[a.name]||{}).time) - _actEndMinutes((allActs[b.name]||{}).time);
@@ -3813,6 +3780,26 @@ function _actStartMinutes(timeStr) {
   return hour * 60 + min;
 }
 
+// Same idea as _actStartMinutes but for the END of the range — used both
+// for end-time sorting (Your Festival) and for computing the gap between
+// two acts (walking-time connectors, here and in Export).
+function _actEndMinutes(timeStr) {
+  if (!timeStr) return 0;
+  var parts = timeStr.split('–');
+  var endPart = (parts[1] || parts[0]).trim();
+  var suffixMatch = timeStr.match(/(AM|PM)/i);
+  var suffix = suffixMatch ? suffixMatch[1].toUpperCase() : '';
+  var endSuffixMatch = endPart.match(/(AM|PM)/i);
+  if (endSuffixMatch) suffix = endSuffixMatch[1].toUpperCase();
+  var timeOnly = endPart.replace(/(AM|PM)/i, '').trim();
+  var bits = timeOnly.split(':');
+  var hour = parseInt(bits[0], 10) || 0;
+  var min = parseInt(bits[1], 10) || 0;
+  if (suffix === 'PM' && hour !== 12) hour += 12;
+  if (suffix === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + min;
+}
+
 // ── WALKING-TIME CONNECTOR (Your Festival only, not Compare) ──
 // PLACEHOLDER estimates, NOT measured distances — these came from general
 // knowledge of Golden Gate Park, not a verified walk of the actual 2026
@@ -3872,12 +3859,37 @@ function setExportDay(day, el) {
   renderExportPoster(day);
 }
 
+// Same visual language as Your Festival's connector (thin line implied by
+// spacing, walk time + net buffer, no stage names spelled out) — but every
+// consecutive pair gets one here, not just consecutive Going acts, since
+// Export is a whole-group cheat sheet rather than one person's own plan.
+function _exportWalkConnectorHtml(prevRow, nextRow) {
+  if (prevRow.stage === nextRow.stage) {
+    return '<div style="display:flex;align-items:center;gap:7px;padding:6px 0 6px 2px;font-size:10.5px;color:rgba(255,255,255,0.3)">📍 No walk needed — same stage</div>';
+  }
+  var walk = _oslWalkMinutes(prevRow.stage, nextRow.stage);
+  if (walk === null) return '';
+  var gapMinutes = _actStartMinutes(nextRow.time) - _actEndMinutes(prevRow.time);
+  var buffer = gapMinutes - walk;
+  var color = buffer >= 15 ? 'rgba(126,217,168,0.95)' : buffer >= 0 ? '#FEDF9A' : '#FF6B6B';
+  var verdict = buffer >= 0 ? (_fmtWalkDuration(buffer) + ' to spare') : (_fmtWalkDuration(buffer) + ' short');
+  return '<div style="display:flex;align-items:center;gap:7px;padding:6px 0 6px 2px;font-size:11px">' +
+    '<span style="color:rgba(255,255,255,0.45);font-weight:600">🚶 ~' + _fmtWalkDuration(walk) + '</span>' +
+    '<span style="color:rgba(255,255,255,0.25)">·</span>' +
+    '<span style="color:' + color + ';font-weight:700">' + verdict + '</span>' +
+  '</div>';
+}
+
+// Fixed acts-per-page rather than shrinking the font to cram a busy day
+// onto one image — a 10-act day becomes two comfortably-sized, equally
+// readable images instead of one cramped one.
+var EXPORT_MAX_ACTS_PER_PAGE = 6;
+
 function renderExportPoster(dayKey) {
   var dayLabels = { fri: 'Friday, August 7', sat: 'Saturday, August 8', sun: 'Sunday, August 9' };
-  var titleEl = document.getElementById('export-poster-day');
-  var listEl = document.getElementById('export-poster-list');
-  if (!listEl) return;
-  if (titleEl) titleEl.textContent = dayLabels[dayKey] || '';
+  var container = document.getElementById('export-posters-container');
+  var hint = document.getElementById('export-save-hint');
+  if (!container) return;
 
   var friends = (window._compareFriendsCache || []).filter(function(f){ return f.oslRsvp === 'going' || f.oslRsvp === 'maybe'; });
   var friendColors = ['#5B3E8A','#2C4E7A','#2D5A3F','#7A4F10','#7A2E4F','#2E5A7A','#3D3580'];
@@ -3902,55 +3914,102 @@ function renderExportPoster(dayKey) {
   rows.sort(function(a, b){ return _actStartMinutes(a.time) - _actStartMinutes(b.time); });
 
   if (!rows.length) {
-    listEl.innerHTML = '<div style="text-align:center;padding:30px 10px;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6">No picks marked for this day yet — mark some acts Going or Maybe in Lineup first.</div>';
+    container.innerHTML = '<div style="border-radius:20px;padding:30px 20px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 55%,#150A30 100%)">No picks marked for this day yet — mark some acts Going or Maybe in Lineup first.</div>';
+    if (hint) hint.textContent = 'Saves as an image — no signal needed to look at it later.';
     return;
   }
 
-  listEl.innerHTML = rows.map(function(r){
-    var shown = r.people.slice(0, 4);
-    var extra = r.people.length - shown.length;
-    var avsHtml = shown.map(function(p, i){
-      var ring = p.status === 'going' ? 'rgba(168,159,232,0.95)' : '#FEDF9A';
-      return '<div style="width:22px;height:22px;border-radius:50%;background:' + p.color + ';border:2px solid ' + ring + ';display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:white;margin-left:' + (i === 0 ? '0' : '-6px') + '">' + _escapeHtml(p.initial.charAt(0).toUpperCase()) + '</div>';
+  var pages = [];
+  for (var i = 0; i < rows.length; i += EXPORT_MAX_ACTS_PER_PAGE) {
+    pages.push(rows.slice(i, i + EXPORT_MAX_ACTS_PER_PAGE));
+  }
+
+  container.innerHTML = pages.map(function(pageRows, pageIndex){
+    var rowsHtml = pageRows.map(function(r, i){
+      var connectorHtml = i > 0 ? _exportWalkConnectorHtml(pageRows[i - 1], r) : '';
+      var shown = r.people.slice(0, 4);
+      var extra = r.people.length - shown.length;
+      var avsHtml = shown.map(function(p, pi){
+        var ring = p.status === 'going' ? 'rgba(168,159,232,0.95)' : '#FEDF9A';
+        return '<div style="width:22px;height:22px;border-radius:50%;background:' + p.color + ';border:2px solid ' + ring + ';display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:white;margin-left:' + (pi === 0 ? '0' : '-6px') + '">' + _escapeHtml(p.initial.charAt(0).toUpperCase()) + '</div>';
+      }).join('');
+      return connectorHtml + '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)">' +
+        '<div style="width:64px;flex-shrink:0;font-size:12px;font-weight:700;color:rgba(168,159,232,0.85)">' + _escapeHtml(r.time) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14.5px;font-weight:700;color:white">' + _escapeHtml(r.name) + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">' + _escapeHtml(r.stage) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;flex-shrink:0">' +
+          '<div style="display:flex">' + avsHtml + '</div>' +
+          (extra > 0 ? '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-left:6px">+' + extra + '</div>' : '') +
+        '</div>' +
+      '</div>';
     }).join('');
-    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:0.5px solid rgba(255,255,255,0.08)">' +
-      '<div style="width:64px;flex-shrink:0;font-size:12px;font-weight:700;color:rgba(168,159,232,0.85)">' + _escapeHtml(r.time) + '</div>' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:14.5px;font-weight:700;color:white">' + _escapeHtml(r.name) + '</div>' +
-        '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">' + _escapeHtml(r.stage) + '</div>' +
+
+    var pageLabel = pages.length > 1 ? ' · Page ' + (pageIndex + 1) + ' of ' + pages.length : '';
+
+    return '<div class="export-poster-page" style="border-radius:20px;overflow:hidden;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 55%,#150A30 100%);margin-bottom:' + (pageIndex < pages.length - 1 ? '16px' : '0') + '">' +
+      '<div style="padding:24px 20px 16px">' +
+        '<div style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.7);text-transform:uppercase;letter-spacing:0.18em">Outside Lands 2026' + pageLabel + '</div>' +
+        '<div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-top:4px">' + (dayLabels[dayKey] || '') + '</div>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">Your group\'s picks, in order</div>' +
+        '<div style="display:flex;gap:16px;margin-top:14px">' +
+          '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:rgba(168,159,232,0.95)"></div>Going</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.5)"><div style="width:9px;height:9px;border-radius:50%;background:#FEDF9A"></div>Maybe</div>' +
+        '</div>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;flex-shrink:0">' +
-        '<div style="display:flex">' + avsHtml + '</div>' +
-        (extra > 0 ? '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-left:6px">+' + extra + '</div>' : '') +
+      '<div style="padding:4px 20px 22px">' + rowsHtml + '</div>' +
+      '<div style="padding:14px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.08);text-align:center">' +
+        '<div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.02em">Made with <b style="color:rgba(168,159,232,0.9)">Innings</b> · every moment deserves a home</div>' +
       '</div>' +
     '</div>';
   }).join('');
+
+  if (hint) {
+    hint.textContent = pages.length > 1
+      ? 'Saves as ' + pages.length + ' images — no signal needed to look at them later.'
+      : 'Saves as an image — no signal needed to look at it later.';
+  }
 }
 
 function exportFestivalToPhotos() {
   if (typeof html2canvas !== 'function') { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try reloading'); return; }
-  var posterEl = document.getElementById('export-poster');
-  if (!posterEl) return;
-  if (typeof ib_toast === 'function') ib_toast('Preparing image…');
-  html2canvas(posterEl, { backgroundColor: '#0D0820', scale: 2, useCORS: true }).then(function(canvas){
-    canvas.toBlob(function(blob){
-      if (!blob) { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again'); return; }
-      var fname = 'innings-outside-lands-' + (window._exportDay || 'fri') + '.png';
-      var file = new File([blob], fname, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file] }).catch(function(){});
-      } else {
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
-        if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
-      }
-    }, 'image/png');
+  var pageEls = document.querySelectorAll('#export-posters-container .export-poster-page');
+  if (!pageEls.length) return;
+  if (typeof ib_toast === 'function') ib_toast(pageEls.length > 1 ? 'Preparing images…' : 'Preparing image…');
+
+  var dayKey = window._exportDay || 'fri';
+  var captures = Array.prototype.map.call(pageEls, function(el){
+    return html2canvas(el, { backgroundColor: '#0D0820', scale: 2, useCORS: true });
+  });
+
+  Promise.all(captures).then(function(canvases){
+    return Promise.all(canvases.map(function(canvas){
+      return new Promise(function(resolve){ canvas.toBlob(function(blob){ resolve(blob); }, 'image/png'); });
+    }));
+  }).then(function(blobs){
+    if (blobs.some(function(b){ return !b; })) { if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again'); return; }
+    var files = blobs.map(function(blob, i){
+      var suffix = blobs.length > 1 ? '-page' + (i + 1) : '';
+      return new File([blob], 'innings-outside-lands-' + dayKey + suffix + '.png', { type: 'image/png' });
+    });
+    if (navigator.canShare && navigator.canShare({ files: files })) {
+      navigator.share({ files: files }).catch(function(){});
+    } else {
+      files.forEach(function(file, i){
+        setTimeout(function(){
+          var url = URL.createObjectURL(file);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+        }, i * 300);
+      });
+      if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
+    }
   }).catch(function(err){
     console.error('Export festival image error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not generate image — try again');
@@ -5145,7 +5204,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.134.0-accept-friend-request-everywhere';
+window.INNINGS_BUILD = 'v4.135.0-export-walk-connectors-pagination';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
