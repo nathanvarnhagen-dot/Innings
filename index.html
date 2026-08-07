@@ -4448,7 +4448,7 @@ function _runOslPreviewSequence() {
     <div class="profile-info">
       <div>
         <div class="p-av" id="vp-av">?</div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div class="p-name" id="vp-name" style="color:white">Name</div>
           <div id="vp-friend-badge" style="display:none;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0"></div>
         </div>
@@ -5145,7 +5145,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.133.0-attendees-remove-pending-add-friend';
+window.INNINGS_BUILD = 'v4.134.0-accept-friend-request-everywhere';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8589,12 +8589,24 @@ function _oslAttendeeAddFriend(evt, uid) {
   }
 }
 
+// Accepts right from this list — no need to open their profile first.
+function _oslAttendeeAcceptFriend(evt, reqId) {
+  if (evt) evt.stopPropagation();
+  if (typeof acceptFriendRequest === 'function') acceptFriendRequest(reqId);
+  var btn = evt && evt.currentTarget;
+  if (btn) {
+    btn.outerHTML = '<div style="font-size:9.5px;font-weight:700;color:rgba(126,217,168,0.9);text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;margin-left:10px">Friends</div>';
+  }
+}
+
 function _attendeeRowHtml(entry, label, color) {
   var rightExtra = '';
   if (!entry.isMe) {
     if (entry.friendStatus === 'none') {
       rightExtra = '<div onclick="_oslAttendeeAddFriend(event,\'' + entry.uid + '\')" style="width:26px;height:26px;border-radius:50%;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:10px" aria-label="Add friend"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(168,159,232,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>';
-    } else if (entry.friendStatus === 'pending') {
+    } else if (entry.friendStatus === 'received') {
+      rightExtra = '<div onclick="_oslAttendeeAcceptFriend(event,\'' + entry.friendReqId + '\')" style="font-size:10px;font-weight:800;color:#0D0820;background:#D4A24C;padding:6px 12px;border-radius:10px;cursor:pointer;flex-shrink:0;margin-left:10px;white-space:nowrap">Accept</div>';
+    } else if (entry.friendStatus === 'sent') {
       rightExtra = '<div style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;margin-left:10px">Pending</div>';
     }
   }
@@ -8615,7 +8627,9 @@ function loadOslAttendees() {
   // friend-graph version only showed people who happened to be friends
   // with whoever opened the screen, hiding confirmed attendees who weren't.
   // Also pulls the viewer's existing friendRequests once, so each row can
-  // show the right add-friend affordance without a query per person.
+  // show the right friend-status affordance without a query per person —
+  // 'sent' (waiting on them), 'received' (waiting on you — show Accept),
+  // 'already', or 'none'.
   Promise.all([
     window.db.collection('users').get(),
     window.db.collection('friendRequests').where('fromUid', '==', user.uid).get(),
@@ -8623,14 +8637,15 @@ function loadOslAttendees() {
   ]).then(function(results){
     var usersSnap = results[0];
     var relMap = {};
-    results[1].forEach(function(d){ var data = d.data(); relMap[data.toUid] = data.status === 'accepted' ? 'already' : 'pending'; });
-    results[2].forEach(function(d){ var data = d.data(); relMap[data.fromUid] = data.status === 'accepted' ? 'already' : 'pending'; });
+    results[1].forEach(function(d){ var data = d.data(); relMap[data.toUid] = { status: data.status === 'accepted' ? 'already' : 'sent', reqId: d.id }; });
+    results[2].forEach(function(d){ var data = d.data(); relMap[data.fromUid] = { status: data.status === 'accepted' ? 'already' : 'received', reqId: d.id }; });
 
     var going = [], maybe = [];
     usersSnap.forEach(function(doc){
       var d = doc.data() || {};
       var isMe = doc.id === user.uid;
-      var entry = { uid: doc.id, name: isMe ? 'You' : (d.name || 'Friend'), isMe: isMe, friendStatus: relMap[doc.id] || 'none' };
+      var rel = relMap[doc.id] || { status: 'none', reqId: null };
+      var entry = { uid: doc.id, name: isMe ? 'You' : (d.name || 'Friend'), isMe: isMe, friendStatus: rel.status, friendReqId: rel.reqId };
       if (d.oslRsvp === 'going') going.push(entry);
       else if (d.oslRsvp === 'maybe') maybe.push(entry);
     });
@@ -11125,13 +11140,17 @@ function loadNotifications() {
       else if (n.type === 'feedback_post') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted feedback';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
       var subLabel = n.momentName || n.groupName || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
+      var acceptBtn = n.type === 'friend_request'
+        ? '<div onclick="notifAcceptFriend(event,\'' + n._id + '\')" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:800;color:#0D0820;background:#D4A24C;padding:6px 14px;border-radius:10px;cursor:pointer">Accept friend request</div>'
+        : '';
       return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:' + (n.read ? 'var(--card)' : 'var(--indigo-light)') + ';border:0.5px solid var(--rule);cursor:pointer">' +
         '<div class="av av-a" style="width:36px;height:36px;font-size:12px;flex-shrink:0">' + _escapeHtml(_initialsFallback(n.fromName || '?')) + '</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:13.5px;color:var(--black);line-height:1.4">' + label + '</div>' +
           (subLabel ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(subLabel) + '</div>' : '') +
+          acceptBtn +
         '</div>' +
-        '<div style="font-size:11px;color:var(--subtle);flex-shrink:0">' + _fmtRelativeTime(n.ts) + '</div>' +
+        '<div style="font-size:11px;color:var(--subtle);flex-shrink:0;align-self:flex-start">' + _fmtRelativeTime(n.ts) + '</div>' +
       '</div>';
     }).join('');
     _markAllNotificationsRead(user, items);
@@ -11159,6 +11178,29 @@ function notifTap(notifId) {
   } else if (n.type === 'feedback_post') {
     nav('feedback-group');
     if (n.category) { setTimeout(function(){ if (typeof feedbackTab === 'function') feedbackTab(n.category); }, 0); }
+  }
+}
+
+// Accepts right from the notification row, no need to open their profile
+// first. Newer notifications carry requestId directly; older ones (sent
+// before that field existed) fall back to a live lookup by uid pair.
+function notifAcceptFriend(evt, notifId) {
+  if (evt) evt.stopPropagation();
+  var n = (window._notificationsCache || {})[notifId];
+  if (!n) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var btn = evt && evt.currentTarget;
+  function finish(reqId) {
+    if (!reqId) { if (typeof ib_toast === 'function') ib_toast('Could not find that request — try their profile instead'); return; }
+    acceptFriendRequest(reqId);
+    if (btn) btn.outerHTML = '<div style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:rgba(126,217,168,0.9)">Friends now 🎉</div>';
+  }
+  if (n.requestId) {
+    finish(n.requestId);
+  } else if (user && window.db && n.fromUid) {
+    window.db.collection('friendRequests').where('fromUid','==',n.fromUid).where('toUid','==',user.uid).where('status','==','pending').limit(1).get()
+      .then(function(snap){ finish(snap.empty ? null : snap.docs[0].id); })
+      .catch(function(err){ console.error('Find friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not accept — try again'); });
   }
 }
 
@@ -11504,6 +11546,15 @@ function _renderVpFriendBadge(theirUid) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!badgeEl || !user || !window.db) return;
   badgeEl.style.display = 'none';
+  // Reset to the default small circle before applying any state-specific
+  // shape override — otherwise an "Accept friend request" pill from a
+  // previous render could stick around on a later, different state.
+  badgeEl.style.width = '24px';
+  badgeEl.style.height = '24px';
+  badgeEl.style.borderRadius = '50%';
+  badgeEl.style.padding = '0';
+  badgeEl.style.fontSize = '12px';
+  badgeEl.style.whiteSpace = 'normal';
   Promise.all([
     window.db.collection('friendRequests').where('fromUid','==',user.uid).where('toUid','==',theirUid).get(),
     window.db.collection('friendRequests').where('fromUid','==',theirUid).where('toUid','==',user.uid).get()
@@ -11519,9 +11570,17 @@ function _renderVpFriendBadge(theirUid) {
       _ensureFriendListed(theirUid);
       _renderMutualFriendsList(theirUid);
     } else if (received && received.data.status === 'pending') {
+      // This is the case that used to be an unlabeled yellow checkmark —
+      // easy to miss and unclear what tapping it would even do.
       badgeEl.style.background = '#D4A24C';
       badgeEl.style.cursor = 'pointer';
-      badgeEl.textContent = '✓';
+      badgeEl.style.width = 'auto';
+      badgeEl.style.height = '28px';
+      badgeEl.style.borderRadius = '14px';
+      badgeEl.style.padding = '0 12px';
+      badgeEl.style.fontSize = '11px';
+      badgeEl.style.whiteSpace = 'nowrap';
+      badgeEl.textContent = 'Accept friend request';
       badgeEl.onclick = function(){ acceptFriendRequest(received.id); };
     } else if (sent && sent.data.status === 'pending') {
       badgeEl.style.background = 'rgba(255,255,255,0.25)';
@@ -11545,7 +11604,7 @@ function sendFriendRequest(theirUid) {
   if (!user || !window.db) return;
   var myName = (window.userData && window.userData.name) || 'Someone';
   window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: theirUid, status: 'pending', ts: Date.now() })
-    .then(function(){
+    .then(function(docRef){
       if (typeof ib_toast==='function') ib_toast('Friend request sent');
       _renderVpFriendBadge(theirUid);
       window.db.collection('notifications').add({
@@ -11554,7 +11613,8 @@ function sendFriendRequest(theirUid) {
         fromUid: user.uid,
         fromName: myName,
         ts: Date.now(),
-        read: false
+        read: false,
+        requestId: docRef.id
       }).catch(function(err){ console.error('Friend request notification error:', err); });
     })
     .catch(function(err){ console.error('Send friend request error:', err); if (typeof ib_toast==='function') ib_toast('Could not send request — ' + (err && err.message ? err.message : 'try again')); });
@@ -11905,9 +11965,9 @@ function sendAddFriendsRequests() {
   var myName = (window.userData && window.userData.name) || 'Someone';
   Promise.all(toSend.map(function(m){
     return window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: m.uid, status: 'pending', ts: Date.now() })
-      .then(function(){
+      .then(function(docRef){
         return window.db.collection('notifications').add({
-          toUid: m.uid, type: 'friend_request', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false
+          toUid: m.uid, type: 'friend_request', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false, requestId: docRef.id
         });
       });
   })).then(function(){
