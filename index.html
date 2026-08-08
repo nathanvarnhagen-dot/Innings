@@ -2630,6 +2630,29 @@ function _friendClusterHtml(actName) {
   return '<div style="display:flex;align-items:center;flex-shrink:0;padding:2px 3px 2px 2px">' + avatars + extraHtml + '</div>';
 }
 
+// Your Festival renders all three days in one continuous scroll (Fri,
+// then Sat, then Sun) rather than day tabs like Lineup — which meant it
+// always opened at the top (Friday) regardless of what day it actually
+// was. This jumps the scroll position to today's section right after
+// updateMyFest renders it, using getBoundingClientRect deltas rather than
+// offsetTop so it's correct regardless of any intermediate positioned
+// ancestors. Leaves scroll position untouched if today isn't a festival
+// day, or if today's section has no picks (and so was never rendered).
+function _scrollMyFestToToday() {
+  var todayKey = null;
+  Object.keys(OSL_DAY_DATES).forEach(function(k){ if (OSL_DAY_DATES[k] === _todayLocal()) todayKey = k; });
+  if (!todayKey) return;
+  var container = document.getElementById('osl2-myfest');
+  var hdr = document.querySelector('#myfest-list [data-day-key="' + todayKey + '"]');
+  if (!container || !hdr) return;
+  requestAnimationFrame(function(){
+    var containerRect = container.getBoundingClientRect();
+    var hdrRect = hdr.getBoundingClientRect();
+    var delta = hdrRect.top - containerRect.top;
+    container.scrollTop = container.scrollTop + delta - 12;
+  });
+}
+
 function updateMyFest() {
   var listEl = document.getElementById('myfest-list');
   var emptyEl = document.getElementById('myfest-empty');
@@ -2679,6 +2702,7 @@ function updateMyFest() {
       var firstStageKey = Object.keys(stageData[dayKey])[0];
       var label = stageData[dayKey][firstStageKey].day;
       var hdr = document.createElement('div');
+      hdr.setAttribute('data-day-key', dayKey);
       hdr.style.cssText = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px';
       hdr.textContent = label;
       listEl.appendChild(hdr);
@@ -3845,7 +3869,10 @@ function oslTab(tab, evt) {
   } else if (tab === 'myfest') {
     document.getElementById('osl2-myfest').style.display = 'flex';
     document.getElementById('osl2-myfest').style.flexDirection = 'column';
-    if (typeof loadOslFriendRsvps === 'function') loadOslFriendRsvps(function(){ if (typeof updateMyFest === 'function') updateMyFest(); });
+    if (typeof loadOslFriendRsvps === 'function') loadOslFriendRsvps(function(){
+      if (typeof updateMyFest === 'function') updateMyFest();
+      if (typeof _scrollMyFestToToday === 'function') _scrollMyFestToToday();
+    });
   } else if (tab === 'chat') {
     var chatPanel = document.getElementById('osl2-chat');
     chatPanel.style.display = 'flex';
@@ -5589,7 +5616,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.143.0-bell-matches-home-pattern';
+window.INNINGS_BUILD = 'v4.144.0-myfest-scroll-to-today';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
