@@ -86,6 +86,20 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .osl-tent-drift-center{animation:osl-tent-bob-center 7.5s ease-in-out infinite}
 @keyframes osl-tent-bob-center{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-4px)}}
 
+/* MULTI-STOP EVENTS — a handful of small ambient animations a plan's
+   stops can pick from. Shared between the editor's 48px swatch previews
+   and the live detail view's full-width stage backdrop — each instance
+   sets its own size/position inline, so one set of classes covers both. */
+.stop-twinkle-dot{position:absolute;border-radius:50%;background:#A89FE8;opacity:0;box-shadow:0 0 6px 1px rgba(168,159,232,0.85);animation:stop-twinkle 3.2s ease-in-out infinite}
+@keyframes stop-twinkle{0%,100%{opacity:0;transform:scale(0.6)}50%{opacity:0.95;transform:scale(1.3)}}
+.stop-confetti-piece{position:absolute;top:-14%;border-radius:2px;animation:stop-confetti-fall 3.6s linear infinite}
+@keyframes stop-confetti-fall{0%{transform:translateY(-10%) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translateY(230%) rotate(340deg);opacity:0}}
+.stop-glow-orb{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);animation:stop-glow-pulse 3.4s ease-in-out infinite}
+@keyframes stop-glow-pulse{0%,100%{opacity:0.4;transform:scale(0.85)}50%{opacity:0.85;transform:scale(1.2)}}
+.stop-anim-gradient-fill{position:absolute;inset:0;background:linear-gradient(120deg,#3D3580,#845EF7,#3D3580);background-size:200% 200%;animation:stop-gradient-shift 5s ease-in-out infinite}
+@keyframes stop-gradient-shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.stop-anim-swatch{width:48px;height:48px;border-radius:50%;overflow:hidden;position:relative;cursor:pointer;border:2px solid transparent;flex-shrink:0;background:linear-gradient(160deg,#1A0A2E,#0D0820)}
+
 /* ONBOARDING — dark top for brand, white bottom for form */
 .ob-screen{background:var(--card)}
 .ob-wrap{flex:1;display:flex;flex-direction:column}
@@ -949,17 +963,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>
         <input id="future-location" placeholder="Add a location" oninput="_updateLocationLinks('future', this.value)" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">
-        <div id="future-location-preview" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">
-          <div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">
-            <div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>
-          </div>
-          <div style="padding:10px 14px">
-            <div id="future-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>
-            <div style="display:flex;gap:8px">
-              <a id="future-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>
-              <a id="future-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>
-              <a id="future-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>
-            </div>
+        <div id="future-location-preview" style="display:none;margin-top:12px;border-radius:14px;border:0.5px solid var(--rule);padding:12px 14px;background:var(--bg)">
+          <div id="future-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px">
+            <a id="future-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>
+            <a id="future-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>
+            <a id="future-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>
           </div>
         </div>
       </div>
@@ -977,6 +986,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>
         <input id="future-ticket-link" placeholder="Paste a ticket link (SeatGeek, Ticketmaster, etc.)" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">
         <div id="future-ticket-hint" style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Optional — everyone invited will see a "Get Tickets" button that opens this link.</div>
+      </div>
+
+      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
+        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Stops</div>
+        <div id="stops-editor-create"></div>
       </div>
 
       <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
@@ -5616,7 +5630,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.144.0-myfest-scroll-to-today';
+window.INNINGS_BUILD = 'v4.146.0-multi-stop-events';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5837,6 +5851,7 @@ function goToFutureStep(n) {
   if (s1) s1.style.display = n === 1 ? 'flex' : 'none';
   if (s2) s2.style.display = n === 2 ? 'flex' : 'none';
   if (n === 1 && typeof renderFutureVibePills === 'function') renderFutureVibePills();
+  if (n === 1) { window._stopsEditorContainerId = 'stops-editor-create'; if (typeof renderStopsEditor === 'function') renderStopsEditor(); }
   if (n === 2 && typeof loadFutureFriendPicker === 'function') loadFutureFriendPicker();
   var container = document.getElementById('screen-create-group');
   if (container) {
@@ -5971,6 +5986,193 @@ function _persistCustomVibeIfNewFromFuture(vibeStr) {
   _persistCustomVibeIfNew(vibeStr);
 }
 
+// ── MULTI-STOP EVENTS ──
+// An optional "stops" array on any future plan — pregame, the main event,
+// afters, or anything custom — each with its own place, photo, and ambient
+// animation. One shared editor operates on _stopsEditorList regardless of
+// whether it's mounted in the create flow or the edit flow; the caller
+// just points _stopsEditorContainerId at whichever container is on screen
+// before calling renderStopsEditor(). The live (read-only) detail view is
+// separate — see _renderFutureStopsHtml and selectFutureViewStop below,
+// which read straight from the saved moment instead of this editor state.
+var STOP_TYPE_PRESETS = [
+  { type: 'pregame', emoji: '🍻', label: 'Pregame' },
+  { type: 'game', emoji: '⚾', label: 'Game' },
+  { type: 'afters', emoji: '🎉', label: 'Afters' },
+  { type: 'custom', emoji: '🏷️', label: 'Custom' }
+];
+var STOP_ANIM_OPTIONS = ['twinkle', 'glow', 'confetti', 'gradient', 'none'];
+var STOP_ANIM_LABELS = { twinkle: 'Twinkle', glow: 'Glow', confetti: 'Confetti', gradient: 'Gradient', none: 'None' };
+
+window._stopsEditorList = window._stopsEditorList || [];
+window._stopsEditorContainerId = window._stopsEditorContainerId || 'stops-editor-create';
+
+function _newStopId() {
+  return 'stop_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function _defaultStop(type) {
+  var preset = STOP_TYPE_PRESETS.filter(function(p){ return p.type === type; })[0] || STOP_TYPE_PRESETS[3];
+  return { id: _newStopId(), type: preset.type, emoji: preset.emoji, name: preset.type === 'custom' ? '' : preset.label, time: '', location: '', coverPhoto: '', anim: 'twinkle' };
+}
+
+function addStopToEditor(type) {
+  window._stopsEditorList = window._stopsEditorList || [];
+  window._stopsEditorList.push(_defaultStop(type));
+  renderStopsEditor();
+}
+
+function removeStopFromEditor(id) {
+  window._stopsEditorList = (window._stopsEditorList || []).filter(function(s){ return s.id !== id; });
+  renderStopsEditor();
+}
+
+function moveStopInEditor(id, dir) {
+  var list = window._stopsEditorList || [];
+  var idx = -1;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === id) { idx = i; break; } }
+  if (idx === -1) return;
+  var newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= list.length) return;
+  var tmp = list[idx]; list[idx] = list[newIdx]; list[newIdx] = tmp;
+  renderStopsEditor();
+}
+
+// Only re-fills name/emoji when the name still matches a preset's default
+// (or is blank) — so switching a chip never clobbers something the person
+// already typed themselves.
+function selectStopType(id, type) {
+  var list = window._stopsEditorList || [];
+  var s = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === id) { s = list[i]; break; } }
+  if (!s) return;
+  var preset = STOP_TYPE_PRESETS.filter(function(p){ return p.type === type; })[0] || STOP_TYPE_PRESETS[3];
+  var wasDefaultName = !s.name || STOP_TYPE_PRESETS.some(function(p){ return p.label === s.name; });
+  s.type = preset.type;
+  s.emoji = preset.emoji;
+  if (wasDefaultName) s.name = preset.type === 'custom' ? '' : preset.label;
+  renderStopsEditor();
+}
+
+// Text fields update the array in place without re-rendering — a full
+// re-render on every keystroke would drop focus/cursor position mid-type.
+function updateStopField(id, field, value) {
+  var list = window._stopsEditorList || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id) { list[i][field] = value; return; }
+  }
+}
+
+function selectStopAnim(id, anim) {
+  var list = window._stopsEditorList || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id) { list[i].anim = anim; break; }
+  }
+  renderStopsEditor();
+}
+
+// Smaller downscale target than the main event cover photo (800 vs 1200)
+// since a plan can carry several of these on one doc, well under
+// Firestore's 1MB cap.
+function previewStopPhoto(id, input) {
+  if (!input.files || !input.files[0]) return;
+  var list = window._stopsEditorList || [];
+  var s = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === id) { s = list[i]; break; } }
+  if (!s) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _downscaleImage(e.target.result, 800, function(small) {
+      s.coverPhoto = small;
+      renderStopsEditor();
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removeStopPhoto(id) {
+  var list = window._stopsEditorList || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id) { list[i].coverPhoto = ''; break; }
+  }
+  renderStopsEditor();
+}
+
+// Decorative inner markup for one animation preset — shared by the small
+// editor swatches and (at larger, inline-overridden sizes) the live stage
+// backdrop in _renderFutureStopsHtml.
+function _stopAnimSwatchInnerHtml(anim) {
+  if (anim === 'twinkle') {
+    return '<span class="stop-twinkle-dot" style="width:2.5px;height:2.5px;left:18%;top:28%"></span>' +
+      '<span class="stop-twinkle-dot" style="width:2.5px;height:2.5px;left:58%;top:55%;animation-delay:.6s"></span>' +
+      '<span class="stop-twinkle-dot" style="width:2.5px;height:2.5px;left:75%;top:18%;animation-delay:1.2s"></span>' +
+      '<span class="stop-twinkle-dot" style="width:2.5px;height:2.5px;left:35%;top:65%;animation-delay:1.9s"></span>';
+  }
+  if (anim === 'glow') {
+    return '<span class="stop-glow-orb" style="width:40px;height:40px;left:6%;top:6%"></span>';
+  }
+  if (anim === 'confetti') {
+    return '<span class="stop-confetti-piece" style="left:12%;width:5px;height:8px;background:#F87171"></span>' +
+      '<span class="stop-confetti-piece" style="left:42%;width:5px;height:8px;background:#FBBF24;animation-delay:.9s"></span>' +
+      '<span class="stop-confetti-piece" style="left:70%;width:5px;height:8px;background:#4ADE80;animation-delay:1.8s"></span>';
+  }
+  if (anim === 'gradient') {
+    return '<div class="stop-anim-gradient-fill"></div>';
+  }
+  return '';
+}
+
+function renderStopsEditor() {
+  var container = document.getElementById(window._stopsEditorContainerId);
+  if (!container) return;
+  var list = window._stopsEditorList || [];
+  var cardsHtml = list.map(function(s, i){
+    var chipsHtml = STOP_TYPE_PRESETS.map(function(p){
+      var active = s.type === p.type;
+      return '<div onclick="selectStopType(\'' + s.id + '\',\'' + p.type + '\')" style="padding:7px 12px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:11.5px;font-weight:600;color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + p.emoji + ' ' + p.label + '</div>';
+    }).join('');
+    var animSwatches = STOP_ANIM_OPTIONS.map(function(a){
+      var sel = s.anim === a;
+      return '<div onclick="selectStopAnim(\'' + s.id + '\',\'' + a + '\')" class="stop-anim-swatch" style="border-color:' + (sel ? 'var(--indigo)' : 'transparent') + '">' + _stopAnimSwatchInnerHtml(a) + '</div>';
+    }).join('');
+    var animLabelsHtml = STOP_ANIM_OPTIONS.map(function(a){ return '<span style="width:48px;text-align:center;font-size:8.5px;color:var(--subtle);font-weight:600">' + STOP_ANIM_LABELS[a] + '</span>'; }).join('');
+    var photoHtml = s.coverPhoto
+      ? '<div style="position:relative"><div style="width:100%;height:90px;border-radius:14px;background-size:cover;background-position:center;background-image:url(' + s.coverPhoto + ')"></div><button onclick="removeStopPhoto(\'' + s.id + '\')" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(10,10,15,0.6);border:none;color:white;font-size:12px;cursor:pointer;font-family:inherit">✕</button></div>'
+      : '<div onclick="document.getElementById(\'stop-photo-input-' + s.id + '\').click()" style="background:var(--bg);border:1.5px dashed var(--rule);border-radius:14px;padding:16px;text-align:center;font-size:12px;color:var(--subtle);font-weight:500;cursor:pointer">+ Add a photo</div>';
+    var moveUp = i > 0 ? '<div onclick="moveStopInEditor(\'' + s.id + '\',-1)" style="width:26px;height:26px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--subtle)">↑</div>' : '';
+    var moveDown = i < list.length - 1 ? '<div onclick="moveStopInEditor(\'' + s.id + '\',1)" style="width:26px;height:26px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--subtle)">↓</div>' : '';
+    return '<div style="background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px;border:1px solid var(--rule)">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + chipsHtml + '</div>' +
+        '<div style="display:flex;gap:2px;flex-shrink:0">' + moveUp + moveDown + '</div>' +
+      '</div>' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin:13px 0 6px">Name</div>' +
+      '<input value="' + _escapeHtml(s.name) + '" oninput="updateStopField(\'' + s.id + '\',\'name\',this.value)" placeholder="Name this stop" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--black);outline:none;font-family:inherit">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin:13px 0 6px">Time</div>' +
+      '<input type="time" value="' + _escapeHtml(s.time) + '" oninput="updateStopField(\'' + s.id + '\',\'time\',this.value)" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--black);outline:none;font-family:inherit">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin:13px 0 6px">Where</div>' +
+      '<input value="' + _escapeHtml(s.location) + '" oninput="updateStopField(\'' + s.id + '\',\'location\',this.value)" placeholder="Add a location" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--black);outline:none;font-family:inherit">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin:13px 0 6px">Cover photo</div>' +
+      '<input type="file" id="stop-photo-input-' + s.id + '" accept="image/*" style="display:none" onchange="previewStopPhoto(\'' + s.id + '\',this)">' +
+      photoHtml +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin:13px 0 6px">Animation</div>' +
+      '<div style="display:flex;gap:9px;margin:2px 0 4px">' + animSwatches + '</div>' +
+      '<div style="display:flex;gap:9px;margin-bottom:2px">' + animLabelsHtml + '</div>' +
+      '<div onclick="removeStopFromEditor(\'' + s.id + '\')" style="margin-top:12px;font-size:11.5px;color:var(--subtle);font-weight:600;cursor:pointer">Remove this stop</div>' +
+    '</div>';
+  }).join('');
+
+  var addRowHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    STOP_TYPE_PRESETS.map(function(p){
+      return '<div onclick="addStopToEditor(\'' + p.type + '\')" style="flex:1;min-width:72px;text-align:center;background:var(--indigo-light);color:var(--indigo);font-size:12px;font-weight:700;padding:11px 4px;border-radius:14px;cursor:pointer">+ ' + p.emoji + ' ' + p.label + '</div>';
+    }).join('') +
+  '</div>';
+
+  container.innerHTML =
+    '<div style="font-size:12px;color:var(--subtle);line-height:1.5;margin-bottom:12px">Add stops if your day needs more than one place — pregame, the main event, afters. Optional — skip this and your plan works exactly like it does today.</div>' +
+    cardsHtml + addRowHtml;
+}
+
 // ── LOCATION PREVIEW + MAP LINKS ──
 // No API key gets you a live embedded map anymore — Google retired the
 // old keyless embed trick, and the free alternative (OpenStreetMap) needs
@@ -6067,6 +6269,7 @@ function saveFutureMoment() {
   var coverPhoto = window._futureCoverPhoto || '';
   var invitees = (window._futureInvitees || []).slice();
   var ownerName = (window.userData && window.userData.name) || 'You';
+  var stops = _sanitizeForFirestore((window._stopsEditorList || []).slice()) || [];
 
   _savingFuture = true;
   if (typeof ib_toast === 'function') ib_toast('Sending invite…');
@@ -6084,6 +6287,7 @@ function saveFutureMoment() {
     taggedUids: invitees,
     public: !!window._futurePublic,
     rsvps: {},
+    stops: stops,
     ts: Date.now()
   }).then(function(){
     _savingFuture = false;
@@ -6116,6 +6320,9 @@ function resetFutureForm() {
   window._futureVibeMode = 'fixed';
   window._futureInvitees = [];
   window._futurePublic = false;
+  window._stopsEditorList = [];
+  window._stopsEditorContainerId = 'stops-editor-create';
+  if (typeof renderStopsEditor === 'function') renderStopsEditor();
   var track = document.getElementById('future-public-toggle');
   var knob = document.getElementById('future-public-knob');
   if (track) track.style.background = 'var(--rule)';
@@ -6809,6 +7016,7 @@ auth.onAuthStateChanged(function(user) {
         if (typeof renderVibePills === 'function') renderVibePills();
         if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, pdata.name || '');
         if (typeof _convertPastFuturePlans === 'function') _convertPastFuturePlans(user);
+        if (typeof _convertOslToMemoryIfNeeded === 'function') _convertOslToMemoryIfNeeded(user, pdata);
         if (typeof _archiveFeedbackIfNeeded === 'function') _archiveFeedbackIfNeeded(user, pdata);
         if (typeof startNotifBadge === 'function') startNotifBadge(user);
         if (pdata.welcomeIntroDone) {
@@ -7292,6 +7500,7 @@ function _convertFutureMomentToMemory(m, user) {
       people: names,
       taggedUids: uids,
       boxScore: _sanitizeForFirestore(boxScore),
+      stops: _sanitizeForFirestore(m.stops || []),
       comments: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -7299,6 +7508,102 @@ function _convertFutureMomentToMemory(m, user) {
     return window.db.collection('futureMoments').doc(m._id).delete();
   }).catch(function(err){
     console.error('Convert future plan to memory error:', m._id, err);
+  });
+}
+
+// ── OUTSIDE LANDS → MEMORY ──
+// OSL isn't a futureMoments doc — it's tracked entirely via oslRsvp /
+// oslActRsvps on each user's own doc, plus a handful of global chat/photo
+// collections. Once the festival's actual last day has passed, this turns
+// each Going/Maybe attendee's own weekend into a real memory in their own
+// Memories — pulling in the acts they picked, any photos they personally
+// contributed (from oslPhotos and every artist's actPhotos), and which of
+// their accepted friends also went. Runs once per person, the next time
+// they open the app, claimed the same way _archiveFeedbackIfNeeded claims
+// its migration so a reload mid-fetch can't create it twice. The live OSL
+// screens, chat, and photos stay exactly as they are — nothing here hides
+// or replaces them, it just also makes the weekend show up in Memories.
+var OSL_LAST_DAY = '2026-08-09';
+function _oslHasConcluded() {
+  return _todayLocal() > OSL_LAST_DAY;
+}
+
+window._oslMemoryConversionRunning = false;
+function _convertOslToMemoryIfNeeded(user, pdata) {
+  if (!user || !window.db) return;
+  if (!_oslHasConcluded()) return;
+  var rsvp = pdata && pdata.oslRsvp;
+  if (rsvp !== 'going' && rsvp !== 'maybe') return;
+  if (pdata && pdata.oslConvertedToMemory) return;
+  if (window._oslMemoryConversionRunning) return;
+  window._oslMemoryConversionRunning = true;
+
+  var userRef = window.db.collection('users').doc(user.uid);
+  window.db.runTransaction(function(tx){
+    return tx.get(userRef).then(function(doc){
+      if (doc.exists && doc.data().oslConvertedToMemory) throw new Error('ALREADY_CLAIMED');
+      tx.set(userRef, { oslConvertedToMemory: true }, { merge: true });
+    });
+  }).then(function(){
+    return Promise.all([
+      window.db.collection('oslPhotos').where('uid', '==', user.uid).get(),
+      window.db.collection('actPhotos').where('uid', '==', user.uid).get(),
+      window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
+      window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
+    ]);
+  }).then(function(results){
+    var photos = [];
+    results[0].forEach(function(doc){ var p = doc.data().photo; if (p) photos.push(p); });
+    results[1].forEach(function(doc){ var p = doc.data().photo; if (p) photos.push(p); });
+    photos = photos.slice(0, 5);
+
+    var friendUids = [];
+    results[2].forEach(function(d){ friendUids.push(d.data().toUid); });
+    results[3].forEach(function(d){ friendUids.push(d.data().fromUid); });
+    friendUids = friendUids.filter(function(v, i){ return friendUids.indexOf(v) === i; });
+
+    var friendLookup = friendUids.length
+      ? Promise.all(friendUids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }))
+      : Promise.resolve([]);
+
+    return friendLookup.then(function(docs){
+      var peopleNames = [], taggedUids = [];
+      docs.forEach(function(doc){
+        var d = doc.data() || {};
+        if (d.oslRsvp === 'going' || d.oslRsvp === 'maybe') {
+          peopleNames.push(d.name || 'A friend');
+          taggedUids.push(doc.id);
+        }
+      });
+      return { photos: photos, peopleNames: peopleNames, taggedUids: taggedUids };
+    });
+  }).then(function(bundle){
+    var goingActs = Object.keys((pdata && pdata.oslActRsvps) || {}).filter(function(k){ return pdata.oslActRsvps[k] === 'going'; });
+    var highlight = goingActs.length
+      ? goingActs.slice(0, 3).join(', ') + (goingActs.length > 3 ? ' + ' + (goingActs.length - 3) + ' more' : '')
+      : 'Three days at Golden Gate Park';
+    return window.db.collection('users').doc(user.uid).collection('moments').add({
+      name: 'Outside Lands 2026',
+      date: '2026-08-07',
+      vibe: '🎪 Festival',
+      highlight: highlight,
+      dedication: '',
+      photo: bundle.photos[0] || '',
+      photos: bundle.photos.slice(1),
+      people: bundle.peopleNames,
+      taggedUids: bundle.taggedUids,
+      boxScore: null,
+      comments: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(function(){
+    window._oslMemoryConversionRunning = false;
+    if (typeof loadMoments === 'function') loadMoments();
+    if (typeof ib_toast === 'function') ib_toast('Outside Lands is now saved to your Memories 🎪');
+  }).catch(function(err){
+    window._oslMemoryConversionRunning = false;
+    if (err && err.message === 'ALREADY_CLAIMED') return;
+    console.error('Convert OSL to memory error:', err);
   });
 }
 
@@ -7560,60 +7865,172 @@ function renderFutureView(m) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   var isOwner = !!(user && m.ownerUid === user.uid);
   var myRsvp = user ? ((m.rsvps || {})[user.uid] || '') : '';
+  // Stops replace the plain single-location card entirely, and pull the
+  // whole rest of the screen into the same OSL-dark look their tabs and
+  // stage already use — the alternative (a dark stops block sitting in an
+  // otherwise light screen) read as broken rather than intentional.
+  var hasStops = !!(m.stops && m.stops.length);
+  box.style.background = hasStops ? '#0D0820' : '';
 
   var rsvpSection = isOwner
     ? '<div id="fd-guest-summary"></div>'
     : '<div style="display:flex;gap:8px">' +
-        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='going'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='going'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
-        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='maybe'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='maybe'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
-        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='no'?'var(--indigo)':'var(--bg)') + ';color:' + (myRsvp==='no'?'#fff':'var(--mid)') + ';border:0.5px solid var(--rule);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='going'?'var(--indigo)':(hasStops?'rgba(255,255,255,0.07)':'var(--bg)')) + ';color:' + (myRsvp==='going'?'#fff':(hasStops?'rgba(255,255,255,0.6)':'var(--mid)')) + ';border:0.5px solid ' + (hasStops?'rgba(255,255,255,0.12)':'var(--rule)') + ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='maybe'?'var(--indigo)':(hasStops?'rgba(255,255,255,0.07)':'var(--bg)')) + ';color:' + (myRsvp==='maybe'?'#fff':(hasStops?'rgba(255,255,255,0.6)':'var(--mid)')) + ';border:0.5px solid ' + (hasStops?'rgba(255,255,255,0.12)':'var(--rule)') + ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+        '<button onclick="futureDetailRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:11px 4px;border-radius:12px;background:' + (myRsvp==='no'?'var(--indigo)':(hasStops?'rgba(255,255,255,0.07)':'var(--bg)')) + ';color:' + (myRsvp==='no'?'#fff':(hasStops?'rgba(255,255,255,0.6)':'var(--mid)')) + ';border:0.5px solid ' + (hasStops?'rgba(255,255,255,0.12)':'var(--rule)') + ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
       '</div>';
 
   var ticketSection = m.ticketLink
-    ? '<div style="background:var(--card);padding:14px 20px;border-bottom:0.5px solid var(--rule)">' +
+    ? '<div style="background:' + (hasStops?'transparent':'var(--card)') + ';padding:14px 20px;border-bottom:0.5px solid ' + (hasStops?'rgba(255,255,255,0.1)':'var(--rule)') + '">' +
         '<a href="' + _escapeHtml(m.ticketLink) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--indigo);color:white;border-radius:14px;padding:13px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit">🎟️ Get Tickets</a>' +
       '</div>'
     : '';
 
-  var locationSection = m.location
+  // No fake map here — past experience is it never actually renders a real
+  // map with a pin, just a static placeholder, so it's just the address
+  // and three deep links straight to Google Maps, Apple Maps, and Waze.
+  var locationSection = (!hasStops && m.location)
     ? '<div style="background:var(--card);padding:14px 20px;border-bottom:0.5px solid var(--rule)">' +
-        '<div id="fv-location-preview" style="border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">' +
-          '<div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">' +
-            '<div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>' +
-          '</div>' +
-          '<div style="padding:10px 14px">' +
-            '<div id="fv-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>' +
-            '<div style="display:flex;gap:8px">' +
-              '<a id="fv-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
-              '<a id="fv-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
-              '<a id="fv-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
-            '</div>' +
+        '<div id="fv-location-preview" style="border-radius:14px;border:0.5px solid var(--rule);padding:12px 14px;background:var(--bg)">' +
+          '<div id="fv-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px"></div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<a id="fv-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
+            '<a id="fv-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
+            '<a id="fv-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
           '</div>' +
         '</div>' +
       '</div>'
     : '';
 
+  var stopsSection = hasStops ? _renderFutureStopsHtml(m) : '';
+  var emptyChatTextColor = hasStops ? 'rgba(255,255,255,0.9)' : 'var(--black)';
+  var emptyChatSubColor = hasStops ? 'rgba(255,255,255,0.4)' : 'var(--subtle)';
+
   box.innerHTML =
     '<div style="' + _futureBgStyle(m) + ';padding:26px 20px">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + (m.public ? '  ·  🌎 Public' : '') + '</div>' +
       '<div style="font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;margin-top:4px">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
-      '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (m.location ? ' · ' + _escapeHtml(m.location) : '') + '</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px">' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + (m.time ? ' · ' + m.time : '') + (hasStops ? (' · ' + m.stops.length + ' stop' + (m.stops.length === 1 ? '' : 's')) : (m.location ? ' · ' + _escapeHtml(m.location) : '')) + '</div>' +
     '</div>' +
+    stopsSection +
     locationSection +
     ticketSection +
-    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' + rsvpSection + '</div>' +
+    '<div style="background:' + (hasStops?'transparent':'var(--card)') + ';padding:16px 20px;border-bottom:0.5px solid ' + (hasStops?'rgba(255,255,255,0.1)':'var(--rule)') + '">' + rsvpSection + '</div>' +
     '<div id="future-polls-list" style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px"></div>' +
     '<div id="future-chat-msgs" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>' +
     '<div id="future-chat-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">' +
       '<div style="font-size:30px">💬</div>' +
-      '<div style="font-size:14px;font-weight:700;color:var(--black)">No messages yet</div>' +
-      '<div style="font-size:12px;color:var(--subtle);max-width:220px;line-height:1.5">Coordinate with everyone here.</div>' +
+      '<div style="font-size:14px;font-weight:700;color:' + emptyChatTextColor + '">No messages yet</div>' +
+      '<div style="font-size:12px;color:' + emptyChatSubColor + ';max-width:220px;line-height:1.5">Coordinate with everyone here.</div>' +
     '</div>';
 
-  if (m.location) _updateLocationLinks('fv', m.location);
-  if (isOwner) _renderFutureGuestSummary(m);
+  if (hasStops) selectFutureViewStop(m._id, 0);
+  if (!hasStops && m.location) _updateLocationLinks('fv', m.location);
+  if (isOwner) _renderFutureGuestSummary(m, hasStops);
   startFuturePolls(m._id);
   startFutureMomentChat(m._id);
+}
+
+// Tab bar + animated stage + (fixed, no-fake-map) location card for a
+// plan's stops. Builds every stop's stage/layer markup up front, all but
+// the active one hidden, so switching tabs is a plain display toggle in
+// selectFutureViewStop rather than a re-render — keeps it snappy and
+// means the animations don't restart on every tap.
+function _renderFutureStopsHtml(m) {
+  var stops = m.stops || [];
+  if (!stops.length) return '';
+  var tabsHtml = stops.map(function(s, i){
+    return '<div class="future-stop-tab" onclick="selectFutureViewStop(\'' + m._id + '\',' + i + ')" style="flex:1;text-align:center;font-size:12px;font-weight:600;padding:12px 4px;color:rgba(255,255,255,0.5);border-bottom:2px solid transparent;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((s.emoji ? s.emoji + ' ' : '') + (s.name || 'Stop ' + (i + 1))) + '</div>';
+  }).join('');
+  return '<div style="background:#0D0820">' +
+    '<div style="display:flex;padding:0 8px;border-bottom:0.5px solid rgba(255,255,255,0.08)">' + tabsHtml + '</div>' +
+    '<div style="padding:16px">' +
+      '<div id="future-stage" style="position:relative;height:168px;border-radius:20px;overflow:hidden;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 60%,#150A30 100%);margin-bottom:14px">' +
+        '<div id="future-stage-layer-twinkle" style="display:none;position:absolute;inset:0">' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:12%;top:20%"></span>' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:78%;top:14%;animation-delay:.9s"></span>' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:32%;top:10%;animation-delay:1.6s"></span>' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:60%;top:28%;animation-delay:.4s"></span>' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:88%;top:32%;animation-delay:2.1s"></span>' +
+          '<span class="stop-twinkle-dot" style="width:4px;height:4px;left:6%;top:34%;animation-delay:1.2s"></span>' +
+        '</div>' +
+        '<div id="future-stage-layer-confetti" style="display:none;position:absolute;inset:0;overflow:hidden">' +
+          '<span class="stop-confetti-piece" style="left:8%;width:7px;height:11px;background:#F87171"></span>' +
+          '<span class="stop-confetti-piece" style="left:24%;width:7px;height:11px;background:#FBBF24;animation-delay:.6s"></span>' +
+          '<span class="stop-confetti-piece" style="left:40%;width:7px;height:11px;background:#4ADE80;animation-delay:1.2s"></span>' +
+          '<span class="stop-confetti-piece" style="left:56%;width:7px;height:11px;background:#60A5FA;animation-delay:1.8s"></span>' +
+          '<span class="stop-confetti-piece" style="left:72%;width:7px;height:11px;background:#F472B6;animation-delay:.3s"></span>' +
+          '<span class="stop-confetti-piece" style="left:88%;width:7px;height:11px;background:#A78BFA;animation-delay:2.4s"></span>' +
+        '</div>' +
+        '<div id="future-stage-layer-glow" style="display:none;position:absolute;inset:0">' +
+          '<span class="stop-glow-orb" style="width:140px;height:140px;left:15%;top:5%"></span>' +
+          '<span class="stop-glow-orb" style="width:90px;height:90px;left:60%;top:25%;animation-delay:1.2s"></span>' +
+        '</div>' +
+        '<div id="future-stage-layer-gradient" style="display:none;position:absolute;inset:0">' +
+          '<div class="stop-anim-gradient-fill"></div>' +
+        '</div>' +
+        '<div style="position:absolute;left:16px;bottom:14px;right:16px">' +
+          '<div id="future-stage-name" style="font-size:17px;font-weight:800;color:#fff"></div>' +
+          '<div id="future-stage-time" style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="future-stop-loc" style="display:none;border-radius:14px;border:0.5px solid rgba(255,255,255,0.12);padding:12px 14px;background:rgba(255,255,255,0.04)">' +
+        '<div id="future-stop-loc-text" style="font-size:12.5px;font-weight:600;color:#fff;margin-bottom:10px"></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<a id="future-stop-loc-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Google Maps</a>' +
+          '<a id="future-stop-loc-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Apple Maps</a>' +
+          '<a id="future-stop-loc-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Waze</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function selectFutureViewStop(momentId, idx) {
+  var m = (window._futureMomentsCache || {})[momentId];
+  if (!m || !m.stops || !m.stops[idx]) return;
+  var s = m.stops[idx];
+  document.querySelectorAll('.future-stop-tab').forEach(function(t, i){
+    var active = i === idx;
+    t.style.color = active ? 'rgba(168,159,232,1)' : 'rgba(255,255,255,0.5)';
+    t.style.fontWeight = active ? '700' : '600';
+    t.style.borderBottomColor = active ? 'rgba(168,159,232,0.9)' : 'transparent';
+  });
+  var stageEl = document.getElementById('future-stage');
+  if (stageEl) {
+    if (s.coverPhoto) {
+      stageEl.style.backgroundImage = 'linear-gradient(180deg,rgba(10,8,20,0.2),rgba(10,8,20,0.7)),url(' + s.coverPhoto + ')';
+      stageEl.style.backgroundSize = 'cover';
+      stageEl.style.backgroundPosition = 'center';
+    } else {
+      stageEl.style.backgroundImage = '';
+    }
+  }
+  ['twinkle','confetti','glow','gradient'].forEach(function(a){
+    var el = document.getElementById('future-stage-layer-' + a);
+    if (el) el.style.display = (a === s.anim) ? 'block' : 'none';
+  });
+  var nameEl = document.getElementById('future-stage-name');
+  var timeEl = document.getElementById('future-stage-time');
+  if (nameEl) nameEl.textContent = (s.emoji ? s.emoji + ' ' : '') + (s.name || 'Untitled stop');
+  if (timeEl) timeEl.textContent = s.time || '';
+  var locWrap = document.getElementById('future-stop-loc');
+  if (locWrap) {
+    if (s.location) {
+      locWrap.style.display = 'block';
+      var textEl = document.getElementById('future-stop-loc-text');
+      var gEl = document.getElementById('future-stop-loc-google');
+      var aEl = document.getElementById('future-stop-loc-apple');
+      var wEl = document.getElementById('future-stop-loc-waze');
+      if (textEl) textEl.textContent = s.location;
+      var encoded = encodeURIComponent(s.location);
+      if (gEl) gEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+      if (aEl) aEl.href = 'https://maps.apple.com/?q=' + encoded;
+      if (wEl) wEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
+    } else {
+      locWrap.style.display = 'none';
+    }
+  }
 }
 
 function futureDetailRsvp(momentId, val) {
@@ -7631,28 +8048,30 @@ function futureDetailRsvp(momentId, val) {
     .catch(function(err){ console.error('Future RSVP error:', err); if (typeof ib_toast === 'function') ib_toast('Could not RSVP — try again'); });
 }
 
-function _renderFutureGuestSummary(m) {
+function _renderFutureGuestSummary(m, dark) {
   var box = document.getElementById('fd-guest-summary');
   if (!box || !window.db) return;
   var uids = m.taggedUids || [];
   var goingCount = Object.keys(m.rsvps || {}).filter(function(k){ return m.rsvps[k] === 'going'; }).length;
+  var headerColor = dark ? 'rgba(255,255,255,0.5)' : 'var(--subtle)';
+  var nameColor = dark ? '#fff' : 'var(--black)';
   if (!uids.length) {
-    box.innerHTML = '<div style="font-size:13px;color:var(--subtle)">' + goingCount + ' going · no one tagged yet</div>';
+    box.innerHTML = '<div style="font-size:13px;color:' + headerColor + '">' + goingCount + ' going · no one tagged yet</div>';
     return;
   }
-  box.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">' + goingCount + ' going</div>';
+  box.innerHTML = '<div style="font-size:13px;color:' + headerColor + ';margin-bottom:10px">' + goingCount + ' going</div>';
   Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
     var rsvps = m.rsvps || {};
-    box.innerHTML = '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">' + goingCount + ' going</div>' +
+    box.innerHTML = '<div style="font-size:13px;color:' + headerColor + ';margin-bottom:10px">' + goingCount + ' going</div>' +
       docs.map(function(doc){
         var d = doc.data() || {};
         var nm = d.name || 'Friend';
         var status = rsvps[doc.id] || 'pending';
         var label = status === 'going' ? 'Going' : status === 'maybe' ? 'Maybe' : status === 'no' ? "Can't go" : 'Pending';
-        var color = status === 'going' ? 'var(--win)' : status === 'no' ? 'var(--loss)' : 'var(--subtle)';
+        var color = status === 'going' ? 'var(--win)' : status === 'no' ? 'var(--loss)' : headerColor;
         return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0">' +
           '<div style="width:28px;height:28px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
-          '<div style="flex:1;font-size:13px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:' + nameColor + '">' + _escapeHtml(nm) + '</div>' +
           '<div style="font-size:11px;font-weight:700;color:' + color + '">' + label + '</div>' +
         '</div>';
       }).join('');
@@ -7819,17 +8238,12 @@ function renderFutureEdit(m) {
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>' +
       '<input id="fd-location" value="' + _escapeHtml(m.location || '') + '" placeholder="Add a location" oninput="_updateLocationLinks(\'fd\', this.value)" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">' +
-      '<div id="fd-location-preview" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;border:0.5px solid var(--rule)">' +
-        '<div style="height:80px;position:relative;background:linear-gradient(135deg,#E8EEF0,#DCE6E3);background-image:repeating-linear-gradient(0deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),repeating-linear-gradient(90deg,transparent,transparent 17px,rgba(255,255,255,0.6) 17px,rgba(255,255,255,0.6) 19px),linear-gradient(135deg,#E8EEF0,#DCE6E3);display:flex;align-items:center;justify-content:center">' +
-          '<div style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18))">📍</div>' +
-        '</div>' +
-        '<div style="padding:10px 14px">' +
-          '<div id="fd-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px"></div>' +
-          '<div style="display:flex;gap:8px">' +
-            '<a id="fd-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
-            '<a id="fd-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
-            '<a id="fd-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--bg);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
-          '</div>' +
+      '<div id="fd-location-preview" style="display:none;margin-top:12px;border-radius:14px;border:0.5px solid var(--rule);padding:12px 14px;background:var(--bg)">' +
+        '<div id="fd-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px"></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<a id="fd-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>' +
+          '<a id="fd-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>' +
+          '<a id="fd-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -7849,6 +8263,10 @@ function renderFutureEdit(m) {
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>' +
       '<input id="fd-ticket-link" value="' + _escapeHtml(m.ticketLink || '') + '" placeholder="Paste a ticket link (SeatGeek, Ticketmaster, etc.)" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">' +
       (m.ticketLink ? '<div onclick="document.getElementById(\'fd-ticket-link\').value=\'\'" style="font-size:11px;color:var(--subtle);font-weight:600;cursor:pointer;margin-top:6px">Clear link</div>' : '<div style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Optional — everyone invited will see a "Get Tickets" button that opens this link.</div>') +
+    '</div>' +
+    '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Stops</div>' +
+      '<div id="fd-stops-editor"></div>' +
     '</div>' +
     '<div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">' +
       '<div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Who\'s invited</div>' +
@@ -7878,8 +8296,11 @@ function renderFutureEdit(m) {
   window._fdTheme = theme;
   window._fdInvitees = (m.taggedUids || []).slice();
   window._fdPublic = !!m.public;
+  window._stopsEditorContainerId = 'fd-stops-editor';
+  window._stopsEditorList = (m.stops || []).map(function(s){ return Object.assign({}, s); });
   renderFdGuestList(m);
   renderFdVibePills();
+  renderStopsEditor();
   _updateLocationLinks('fd', m.location);
 }
 
@@ -8103,6 +8524,7 @@ function futureDetailSave() {
   var tl = document.getElementById('fd-ticket-link');
   var ticketLink = tl && tl.value.trim() ? tl.value.trim() : '';
   var coverPhoto = window._fdCoverPhoto || '';
+  var stops = _sanitizeForFirestore((window._stopsEditorList || []).slice()) || [];
   window.db.collection('futureMoments').doc(id).update({
     title: t && t.value.trim() ? t.value.trim() : 'Untitled plan',
     date: d ? d.value : '',
@@ -8113,7 +8535,8 @@ function futureDetailSave() {
     ticketLink: ticketLink,
     coverPhoto: coverPhoto,
     taggedUids: window._fdInvitees || [],
-    public: !!window._fdPublic
+    public: !!window._fdPublic,
+    stops: stops
   }).then(function(){
     if (typeof ib_toast === 'function') ib_toast('Plan updated');
     _persistCustomVibeIfNewFromFuture(window._fdVibe || '⚾ Game');
@@ -8131,6 +8554,7 @@ function futureDetailSave() {
       m.coverPhoto = coverPhoto;
       m.taggedUids = window._fdInvitees || [];
       m.public = !!window._fdPublic;
+      m.stops = stops;
     }
     exitFutureEdit();
   }).catch(function(err){
@@ -8994,7 +9418,7 @@ function oslCheckRsvp() {
     myRsvps = window.userData.oslActRsvps;
     if (typeof updateMyFest === 'function') updateMyFest();
   }
-  if (!rsvp) {
+  if (!rsvp && !_oslHasConcluded()) {
     if (overlay) overlay.style.display = 'flex';
   } else {
     if (overlay) overlay.style.display = 'none';
