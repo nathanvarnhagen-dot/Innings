@@ -3743,7 +3743,15 @@ function _postBirthdayFeedNotice(text) {
 function setBdayStopDetailBg(url) {
   var bg = document.getElementById('bday-stop-bg');
   if (!bg) return;
-  bg.style.backgroundImage = url ? 'url(' + url + ')' : '';
+  // A CSS gradient IS a background-image value, not a background-color —
+  // clearing backgroundImage to '' when there's no photo doesn't fall back
+  // to any color, it just leaves the element fully transparent, exposing
+  // whatever's behind it. OSL's own act-detail has this same code, but it
+  // reads fine there because everything behind it is already dark; the
+  // birthday screen sits on the app's light background, so the same bug
+  // showed up as a plain white panel. Explicitly restoring the gradient
+  // (instead of clearing to nothing) fixes it either way.
+  bg.style.backgroundImage = url ? 'url(' + url + ')' : 'linear-gradient(135deg,#3D3580,#1A1640)';
   bg.style.backgroundSize = 'cover';
   bg.style.backgroundPosition = 'center';
   var overlay = document.getElementById('bday-stop-overlay');
@@ -3800,6 +3808,7 @@ function selectBdayStop(stopId) {
   }
 
   _bdayStopResetSubTabsToActivity();
+  renderBdayStopPhotos(window._bdayStopPhotosData[stopId] || []); // syncs the backdrop to THIS stop right away — mirrors openActDetail's own explicit renderActPhotos(...) call, which selectBdayStop was missing
   startBdayStopChat(stopId);
   startBdayStopPhotos(stopId);
   startBdayStopPrimaryPhoto(stopId);
@@ -4416,10 +4425,30 @@ function _playBirthdayReveal(onDone) {
     _bdayRevealAfter(startDelay + i * stagger, function(){
       var card = document.createElement('div');
       card.style.cssText = 'width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:16px;margin-bottom:10px;opacity:0;transform:translateY(16px);transition:opacity 0.32s cubic-bezier(.2,.8,.3,1),transform 0.32s cubic-bezier(.2,.8,.3,1)';
-      var metaText = [s.time, s.location].filter(Boolean).join(' · ');
-      card.innerHTML = '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.85);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Stop ' + (i + 1) + '</div>' +
-        '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml((s.emoji ? s.emoji + ' ' : '') + s.name) + '</div>' +
-        (metaText ? '<div style="font-size:12.5px;color:rgba(255,255,255,0.45);margin-top:5px">' + _escapeHtml(metaText) + '</div>' : '');
+      // The Game stop gets a matchup-style card once a real game is
+      // attached (box score system, same one used on memories and future
+      // plans) — away @ home, a status pill, venue/time below. Falls back
+      // to the plain name/time/location treatment everywhere else,
+      // including Game itself before a game's been picked.
+      var box = s.boxScore;
+      if (s.id === 'game' && box && box.home) {
+        card.innerHTML =
+          '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.85);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;text-align:center">Stop ' + (i + 1) + '</div>' +
+          '<div style="display:flex;align-items:baseline;justify-content:center;gap:10px">' +
+            '<div style="flex:1;text-align:right;font-size:16px;font-weight:800;color:#fff">' + _escapeHtml(box.away || '') + '</div>' +
+            '<div style="flex-shrink:0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.4)">@</div>' +
+            '<div style="flex:1;text-align:left;font-size:16px;font-weight:800;color:#fff">' + _escapeHtml(box.home || '') + '</div>' +
+          '</div>' +
+          '<div style="text-align:center;margin-top:10px">' +
+            '<span style="font-size:10px;font-weight:700;color:rgba(168,159,232,0.9);background:rgba(168,159,232,0.16);padding:4px 11px;border-radius:10px;text-transform:uppercase;letter-spacing:0.05em">' + _escapeHtml(box.status || 'Scheduled') + '</span>' +
+          '</div>' +
+          ([box.venue, s.time].filter(Boolean).length ? '<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.45);margin-top:9px">' + _escapeHtml([box.venue, s.time].filter(Boolean).join(' · ')) + '</div>' : '');
+      } else {
+        var metaText = [s.time, s.location].filter(Boolean).join(' · ');
+        card.innerHTML = '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.85);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Stop ' + (i + 1) + '</div>' +
+          '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml((s.emoji ? s.emoji + ' ' : '') + s.name) + '</div>' +
+          (metaText ? '<div style="font-size:12.5px;color:rgba(255,255,255,0.45);margin-top:5px">' + _escapeHtml(metaText) + '</div>' : '');
+      }
       wrap.appendChild(card);
       requestAnimationFrame(function(){
         card.style.opacity = '1';
@@ -6948,7 +6977,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.150.0-birthday-firestore-rules-fix';
+window.INNINGS_BUILD = 'v4.151.0-birthday-bg-fix-reveal-matchup';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
