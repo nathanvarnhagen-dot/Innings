@@ -3728,10 +3728,14 @@ function sendBirthdayMessage() {
 // Drops a plain system line into the whole-event Feed whenever a stop
 // gets RSVP/photo activity — same idea as OSL's _postOslFeedNotice, kept
 // to a plain text bubble instead of OSL's routed, icon-per-type cards
-// since 3 stops don't need that much navigation scaffolding.
+// since 3 stops don't need that much navigation scaffolding. Needs uid
+// set (same as every other chat write in this file) — the rules require
+// request.resource.data.uid == request.auth.uid on create; this was
+// silently missing it and would have failed even with correct rules.
 function _postBirthdayFeedNotice(text) {
-  if (!window.db) return;
-  window.db.collection('birthdayChat').add({ text: text, ts: Date.now(), system: true })
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window.db.collection('birthdayChat').add({ uid: user.uid, text: text, ts: Date.now(), system: true })
     .catch(function(err){ console.error('Post birthday feed notice error:', err); });
 }
 
@@ -3848,6 +3852,9 @@ function renderBdayStopBoxScore(stopId) {
 // the saved gamePk — mirrors how _convertFutureMomentToMemory refreshes a
 // future plan's score. Called every time the Game stop is opened, so the
 // card naturally moves from preview → live → final as the day plays out.
+// The Firestore write-back only happens for the owner (birthdayEvent
+// updates are rules-restricted to Nate) — everyone else still gets a
+// freshly-fetched score locally, it just isn't persisted by them.
 function _refreshBdayGameBoxScore(stopId) {
   var s = _bdayStopById(stopId);
   if (!s || !s.boxScore || !s.boxScore.gamePk) return;
@@ -3857,7 +3864,7 @@ function _refreshBdayGameBoxScore(stopId) {
       if (window._bdayCurrentStop !== stopId) return; // navigated away already
       s.boxScore = _sanitizeForFirestore(box);
       renderBdayStopBoxScore(stopId);
-      if (window.db && window._bdayEventData) {
+      if (window.db && window._bdayEventData && _bdayIsOwner()) {
         window.db.collection('birthdayEvent').doc('main').set({ stops: _sanitizeForFirestore(window._bdayEventData.stops) }, { merge: true }).catch(function(err){ console.error('Refresh birthday game score save error:', err); });
       }
     })
@@ -6941,7 +6948,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.149.0-birthday-single-rsvp-game-message';
+window.INNINGS_BUILD = 'v4.150.0-birthday-firestore-rules-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
