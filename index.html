@@ -3517,7 +3517,6 @@ function _bdayApplyEditVisibility() {
   if (stopBtn) stopBtn.style.display = isOwner ? 'flex' : 'none';
 }
 
-var myBdayStopRsvps = {}; // stopId -> 'going'|'maybe'|'no', mirrors OSL's myRsvps
 window._bdayCurrentStop = null;
 window._bdayStopChatStarted = {};
 window._bdayStopPhotosStarted = {};
@@ -3527,13 +3526,13 @@ window._bdayStopPrimaryPhotoId = {};
 window._bdayStopPhotoViewerIndex = 0;
 window._bdayStopPhotoViewerSrc = null;
 
-// ── TOP-LEVEL RSVP ("are you coming at all") — mirrors oslCheckRsvp/oslSetRsvp ──
+// ── TOP-LEVEL RSVP ("are you coming at all") — the only RSVP now; a
+// per-stop version used to sit alongside this but added a whole second
+// system for what's really one decision, so it's gone. Mirrors
+// oslCheckRsvp/oslSetRsvp. ──
 function bdayCheckRsvp() {
   var rsvp = window.userData && window.userData.birthdayRsvp;
   var overlay = document.getElementById('bday-rsvp-overlay');
-  if (window.userData && window.userData.birthdayStopRsvps) {
-    myBdayStopRsvps = window.userData.birthdayStopRsvps;
-  }
   if (!rsvp) {
     if (overlay) overlay.style.display = 'flex';
   } else {
@@ -3775,123 +3774,106 @@ function selectBdayStop(stopId) {
     if (el) el.style.display = (a === s.anim) ? 'block' : 'none';
   });
 
-  // No fake map here either — same reasoning as everywhere else in the
-  // app: address text plus the three deep links, nothing decorative.
+  // One tap opens a small Google/Apple/Waze picker (openBdayLocationSheet)
+  // instead of a permanent 3-button card — the sheet reads location fresh
+  // from _bdayStopById itself, so there's nothing to prewire here.
   var locWrap = document.getElementById('bday-stop-loc');
   if (locWrap) {
-    if (s.location) {
-      locWrap.style.display = 'block';
-      var textEl = document.getElementById('bday-stop-loc-text');
-      var gEl = document.getElementById('bday-stop-loc-google');
-      var aEl = document.getElementById('bday-stop-loc-apple');
-      var wEl = document.getElementById('bday-stop-loc-waze');
-      if (textEl) textEl.textContent = s.location;
-      var encoded = encodeURIComponent(s.location);
-      if (gEl) gEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
-      if (aEl) aEl.href = 'https://maps.apple.com/?q=' + encoded;
-      if (wEl) wEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
-    } else {
-      locWrap.style.display = 'none';
-    }
+    locWrap.style.display = s.location ? 'flex' : 'none';
+    var textEl = document.getElementById('bday-stop-loc-text');
+    if (textEl) textEl.textContent = s.location || '';
+  }
+
+  // Game preview / box score — only the Game stop shows this section.
+  var isGame = stopId === 'game';
+  var bsSection = document.getElementById('bday-stop-boxscore-section');
+  if (bsSection) bsSection.style.display = isGame ? 'block' : 'none';
+  if (isGame) {
+    renderBdayStopBoxScore(stopId);
+    var attachEl = document.getElementById('bday-stop-attach-game');
+    if (attachEl) attachEl.style.display = (_bdayIsOwner() && !s.boxScore) ? 'flex' : 'none';
+    if (s.boxScore && s.boxScore.gamePk) _refreshBdayGameBoxScore(stopId);
   }
 
   _bdayStopResetSubTabsToActivity();
-  renderBdayStopRsvpButtons(stopId);
-  loadBdayStopGoing(stopId);
   startBdayStopChat(stopId);
   startBdayStopPhotos(stopId);
   startBdayStopPrimaryPhoto(stopId);
 }
 
 // ── PER-STOP RSVP — mirrors renderActRsvpButtons/actDetailRsvp ──
-function renderBdayStopRsvpButtons(stopId) {
-  var box = document.getElementById('bday-stop-rsvp');
+// ── LOCATION SHEET (per stop) — one tap on the address opens this instead
+// of a permanent 3-button card. Reads location fresh from the current stop
+// each time it opens, so there's nothing to keep in sync elsewhere.
+function openBdayLocationSheet() {
+  var s = _bdayStopById(window._bdayCurrentStop);
+  if (!s || !s.location) return;
+  var titleEl = document.getElementById('bday-loc-sheet-title');
+  if (titleEl) titleEl.textContent = s.location;
+  var encoded = encodeURIComponent(s.location);
+  var gEl = document.getElementById('bday-loc-sheet-google');
+  var aEl = document.getElementById('bday-loc-sheet-apple');
+  var wEl = document.getElementById('bday-loc-sheet-waze');
+  if (gEl) gEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+  if (aEl) aEl.href = 'https://maps.apple.com/?q=' + encoded;
+  if (wEl) wEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
+  var sheet = document.getElementById('bday-location-sheet');
+  if (sheet) sheet.style.display = 'flex';
+}
+
+function closeBdayLocationSheet() {
+  var sheet = document.getElementById('bday-location-sheet');
+  if (sheet) sheet.style.display = 'none';
+}
+
+// ── GAME PREVIEW / BOX SCORE — reuses the existing MLB box score system
+// wholesale (openBoxScoreModal / bsModalSearch / bsModalSelectGame already
+// live earlier in this file); only _applyBoxScoreToContext needed a new
+// branch (search "ctx.type === 'bdayGame'") to know where to save it. ──
+function renderBdayStopBoxScore(stopId) {
+  var box = document.getElementById('bday-stop-boxscore');
   if (!box) return;
-  var rsvp = myBdayStopRsvps[stopId] || '';
-  box.innerHTML =
-    '<button onclick="bdayStopRsvp(\'going\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='going' ? '#0D0820' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Going</button>' +
-    '<button onclick="bdayStopRsvp(\'maybe\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(254,243,226,0.15)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='maybe' ? '#FEF3E2' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">? Maybe</button>' +
-    '<button onclick="bdayStopRsvp(\'no\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='no' ? 'rgba(220,90,90,0.22)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='no' ? 'rgba(255,190,190,0.95)' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='no' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✕ Skip</button>';
-}
-
-function bdayStopRsvp(val) {
-  var stopId = window._bdayCurrentStop;
-  if (!stopId) return;
   var s = _bdayStopById(stopId);
-  var _prevRsvp = myBdayStopRsvps[stopId];
-  myBdayStopRsvps[stopId] = val;
-  window.userData = window.userData || {};
-  window.userData.birthdayStopRsvps = myBdayStopRsvps;
-  var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (user && window.db) {
-    window.db.collection('users').doc(user.uid).set({ birthdayStopRsvps: myBdayStopRsvps }, { merge: true })
-      .then(function(){
-        loadBdayStopGoing(stopId);
-        if (_prevRsvp !== val && (val === 'going' || val === 'maybe')) _postBdayStopRsvpSystemMessage(stopId, val);
-      })
-      .catch(function(err){ console.error('Birthday stop RSVP save error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  if (s && s.boxScore) {
+    var removeLink = _bdayIsOwner() ? '<div onclick="removeBdayGameBoxScore()" style="text-align:center;font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;margin-top:8px;cursor:pointer">Remove game</div>' : '';
+    box.style.display = 'block';
+    box.innerHTML = _boxScoreCardHtml(s.boxScore, true) + removeLink;
+  } else {
+    box.style.display = 'none';
+    box.innerHTML = '';
   }
-  renderBdayStopRsvpButtons(stopId);
 }
 
-function _postBdayStopRsvpSystemMessage(stopId, val) {
-  var user = window.currentUser || (window.auth && window.auth.currentUser);
+// Re-fetches from the same MLB endpoint the attach flow used, keyed off
+// the saved gamePk — mirrors how _convertFutureMomentToMemory refreshes a
+// future plan's score. Called every time the Game stop is opened, so the
+// card naturally moves from preview → live → final as the day plays out.
+function _refreshBdayGameBoxScore(stopId) {
   var s = _bdayStopById(stopId);
-  if (!user || !window.db || !s) return;
-  var author = (window.userData && window.userData.name) || 'Someone';
-  var verb = val === 'going' ? 'is going ✓' : 'might go';
-  var text = author + ' ' + verb + ' to ' + s.emoji + ' ' + s.name;
-  window.db.collection('birthdayStopChat').add({ stopId: stopId, uid: user.uid, author: author, text: text, ts: Date.now(), system: true })
-    .catch(function(err){ console.error('Post birthday stop RSVP message error:', err); });
-  _postBirthdayFeedNotice(text);
+  if (!s || !s.boxScore || !s.boxScore.gamePk) return;
+  fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(s.boxScore.gamePk))
+    .then(function(r){ return r.json(); })
+    .then(function(box){
+      if (window._bdayCurrentStop !== stopId) return; // navigated away already
+      s.boxScore = _sanitizeForFirestore(box);
+      renderBdayStopBoxScore(stopId);
+      if (window.db && window._bdayEventData) {
+        window.db.collection('birthdayEvent').doc('main').set({ stops: _sanitizeForFirestore(window._bdayEventData.stops) }, { merge: true }).catch(function(err){ console.error('Refresh birthday game score save error:', err); });
+      }
+    })
+    .catch(function(err){ console.error('Refresh birthday game score error:', err); });
 }
 
-// ── WHO'S GOING (per stop) — mirrors loadActGoing/_drawActGoingPanel ──
-function loadBdayStopGoing(stopId) {
-  var box = document.getElementById('bday-stop-going');
-  if (!box || !window.db) return;
-  box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Loading who\'s going…</div>';
-  window.db.collection('users').where(new firebase.firestore.FieldPath('birthdayStopRsvps', stopId), 'in', ['going', 'maybe', 'no']).limit(80).get().then(function(snap){
-    if (window._bdayCurrentStop !== stopId) return;
-    if (snap.empty) {
-      box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Nobody\'s marked anything yet — be the first.</div>';
-      return;
-    }
-    var going = [], maybe = [], skip = [];
-    snap.forEach(function(doc){
-      var d = doc.data() || {};
-      var status = (d.birthdayStopRsvps || {})[stopId];
-      var entry = { uid: doc.id, name: d.name || 'Innings User' };
-      if (status === 'going') going.push(entry);
-      else if (status === 'maybe') maybe.push(entry);
-      else if (status === 'no') skip.push(entry);
-    });
-    _drawBdayGoingPanel(box, going, maybe, skip);
-  }).catch(function(err){
-    console.error('Load birthday stop going error:', err);
-    box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Could not load — check Firestore rules</div>';
-  });
-}
-
-function _drawBdayGoingPanel(box, going, maybe, skip) {
-  function personChip(entry, ringColor) {
-    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="openUserProfile(\'' + entry.uid + '\')">' +
-      '<div class="av av-a" style="width:32px;height:32px;font-size:11px;outline:2px solid ' + ringColor + ';outline-offset:2px">' + _escapeHtml(_initialsFallback(entry.name)) + '</div>' +
-      '<div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">' + _escapeHtml(entry.name.split(' ')[0]) + '</div>' +
-    '</div>';
+function removeBdayGameBoxScore() {
+  var s = _bdayStopById('game');
+  if (!s || !window._bdayEventData) return;
+  s.boxScore = null;
+  if (window.db) {
+    window.db.collection('birthdayEvent').doc('main').set({ stops: _sanitizeForFirestore(window._bdayEventData.stops) }, { merge: true })
+      .then(function(){ if (typeof ib_toast === 'function') ib_toast('Game removed'); })
+      .catch(function(err){ console.error('Remove birthday game error:', err); if (typeof ib_toast === 'function') ib_toast('Could not remove — try again'); });
   }
-  var countParts = [];
-  if (going.length) countParts.push(going.length + ' going');
-  if (maybe.length) countParts.push(maybe.length + ' maybe');
-  if (skip.length) countParts.push(skip.length + ' skipped');
-  var html = '<div style="display:flex;flex-direction:column;gap:8px;width:100%">';
-  html += '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em">' + countParts.join(' · ') + '</div>';
-  html += '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:2px">';
-  going.forEach(function(entry){ html += personChip(entry, 'rgba(168,159,232,0.95)'); });
-  maybe.forEach(function(entry){ html += personChip(entry, '#FEDF9A'); });
-  skip.forEach(function(entry){ html += personChip(entry, 'rgba(220,90,90,0.85)'); });
-  html += '</div></div>';
-  box.innerHTML = html;
+  if (window._bdayCurrentStop === 'game') selectBdayStop('game');
 }
 
 // ── ACTIVITY / PHOTOS SUB-TABS — mirrors actTab/_actResetTabsToActivity ──
@@ -4270,7 +4252,10 @@ function openBdayStopEdit(stopId) {
   if (body) {
     var animSwatches = STOP_ANIM_OPTIONS.map(function(a){
       var sel = s.anim === a;
-      return '<div onclick="_bdaySelectEditAnim(\'' + a + '\')" data-anim="' + a + '" class="stop-anim-swatch bday-edit-anim-swatch" style="border-color:' + (sel ? 'var(--indigo)' : 'transparent') + '">' + _stopAnimSwatchInnerHtml(a) + '</div>';
+      return '<div onclick="_bdaySelectEditAnim(\'' + a + '\')" data-anim="' + a + '" class="stop-anim-swatch bday-edit-anim-swatch" style="border-color:' + (sel ? 'var(--indigo)' : 'transparent') + '">' +
+        _stopAnimSwatchInnerHtml(a) +
+        '<div class="bday-edit-anim-check" style="display:' + (sel ? 'flex' : 'none') + ';position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(10,8,20,0.4)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+      '</div>';
     }).join('');
     var animLabelsHtml = STOP_ANIM_OPTIONS.map(function(a){ return '<span style="width:48px;text-align:center;font-size:8.5px;color:var(--subtle);font-weight:600">' + STOP_ANIM_LABELS[a] + '</span>'; }).join('');
     body.innerHTML =
@@ -4293,7 +4278,10 @@ function openBdayStopEdit(stopId) {
 function _bdaySelectEditAnim(anim) {
   window._bdayEditAnim = anim;
   document.querySelectorAll('.bday-edit-anim-swatch').forEach(function(el){
-    el.style.borderColor = (el.getAttribute('data-anim') === anim) ? 'var(--indigo)' : 'transparent';
+    var isSel = el.getAttribute('data-anim') === anim;
+    el.style.borderColor = isSel ? 'var(--indigo)' : 'transparent';
+    var check = el.querySelector('.bday-edit-anim-check');
+    if (check) check.style.display = isSel ? 'flex' : 'none';
   });
 }
 
@@ -4322,6 +4310,61 @@ function closeBdayEditModal() {
   var modal = document.getElementById('bday-edit-modal');
   if (modal) modal.style.display = 'none';
   window._bdayEditContext = null;
+}
+
+// ── MESSAGE TO EVERYONE — a short note from Nate, shown as soon as the
+// screen opens (regardless of tab). Same edit modal, a third context. ──
+function renderBdayMessage() {
+  var data = window._bdayEventData || {};
+  var wrap = document.getElementById('bday-message-wrap');
+  var textEl = document.getElementById('bday-message-text');
+  var editBtn = document.getElementById('bday-edit-message-btn');
+  var isOwner = _bdayIsOwner();
+  if (editBtn) editBtn.style.display = isOwner ? 'flex' : 'none';
+  if (!wrap || !textEl) return;
+  if (data.message) {
+    textEl.textContent = '💜 ' + data.message;
+    textEl.style.opacity = '1';
+    wrap.style.display = 'block';
+  } else if (isOwner) {
+    textEl.textContent = '+ Add a message to everyone';
+    textEl.style.opacity = '0.55';
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function openBdayMessageEdit() {
+  if (!_bdayIsOwner()) return;
+  window._bdayEditContext = 'message';
+  var data = window._bdayEventData || {};
+  var titleEl = document.getElementById('bday-edit-title');
+  if (titleEl) titleEl.textContent = 'Message to everyone';
+  var body = document.getElementById('bday-edit-body');
+  if (body) {
+    body.innerHTML =
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Message</div>' +
+      '<textarea id="bday-edit-message-input" placeholder="Say something to everyone coming..." style="width:100%;min-height:110px;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;resize:none;margin-bottom:16px">' + _escapeHtml(data.message || '') + '</textarea>';
+  }
+  var saveBtn = document.getElementById('bday-edit-save-btn');
+  if (saveBtn) saveBtn.onclick = saveBdayMessageEdit;
+  var modal = document.getElementById('bday-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function saveBdayMessageEdit() {
+  var input = document.getElementById('bday-edit-message-input');
+  var message = input ? input.value.trim() : '';
+  window._bdayEventData = window._bdayEventData || {};
+  window._bdayEventData.message = message;
+  if (window.db) {
+    window.db.collection('birthdayEvent').doc('main').set({ message: message }, { merge: true })
+      .then(function(){ if (typeof ib_toast === 'function') ib_toast('Updated'); })
+      .catch(function(err){ console.error('Save birthday message error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+  renderBdayMessage();
+  closeBdayEditModal();
 }
 
 // ── ENTRY REVEAL — mirrors _playOslDayReveal, simplified: no per-stop
@@ -5924,19 +5967,25 @@ function _runOslPreviewSequence() {
      Hardcoded the same way OSL's own stageData is hardcoded — not routed
      through the generic Stops editor on futureMoments docs (that stays in
      the app, untouched, for whenever self-serve creation is worth building).
-     Each stop (Pregame/Game/Afters) gets the full OSL act-detail treatment:
-     its own backdrop, who's-going, RSVP, chat, and photos — mirroring
-     openActDetail/actChat/actPhotos as closely as the birthday context
-     allows. Dropped from the OSL pattern as not applicable here: Spotify/
-     Apple Music artist links, the Songs tab, the full Pending/Going
-     attendees sub-screen (kept as the always-visible avatar row only), and
-     the standalone photo-album overlay (the Photos sub-tab already covers
-     that). PLACEHOLDER CONTENT: pregame location, afters location, and all
-     three times are marked TBD below in BIRTHDAY_STOPS_DEFAULT — but the
-     real way to fix that now is the in-app ✎ edit buttons (owner-only,
-     gated to Nate's phone), which write to the birthdayEvent/main Firestore
-     doc; that doc is the actual source of truth once it exists, the
-     DEFAULT array only seeds it once and serves as an offline fallback. -->
+     Each stop (Pregame/Game/Afters) gets its own backdrop, chat, and
+     photos — mirroring openActDetail/actChat/actPhotos as closely as the
+     birthday context allows. RSVP is event-level only (one Going/Maybe/
+     Can't-make-it for the whole day, via the entry overlay) — an earlier
+     version also had a separate RSVP + who's-going per stop, which turned
+     out to be a second whole system for what's really one decision, so
+     it's gone. Also dropped from the OSL pattern as not applicable here:
+     Spotify/Apple Music artist links, the Songs tab, and the standalone
+     photo-album overlay (the Photos sub-tab already covers that). The Game
+     stop additionally carries a real MLB box score (openBoxScoreModal,
+     same system used for memories and future plans) that doubles as a
+     pregame preview and a final score depending on the game's actual
+     status. PLACEHOLDER CONTENT: pregame location, afters location, and
+     all three times are marked TBD in BIRTHDAY_STOPS_DEFAULT below — but
+     the real way to fix that now is the in-app ✎ edit buttons (owner-only,
+     gated to Nate's phone), which write to the birthdayEvent/main
+     Firestore doc; that doc is the actual source of truth once it exists,
+     the DEFAULT array only seeds it once and serves as an offline
+     fallback. -->
 <div class="screen" id="screen-birthday-group">
 
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
@@ -5973,6 +6022,14 @@ function _runOslPreviewSequence() {
         <div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div>
       </div>
     </div>
+  </div>
+
+  <!-- MESSAGE TO EVERYONE — owner-only to write, visible to all once set.
+       "Opening screen" chrome, same as the members strip above it, so it's
+       there regardless of which tab (Feed/Stops) is active. -->
+  <div id="bday-message-wrap" onclick="if(typeof openBdayMessageEdit==='function')openBdayMessageEdit()" style="display:none;padding:14px 20px;background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);position:relative;flex-shrink:0">
+    <div id="bday-message-text" style="font-size:13.5px;color:rgba(255,255,255,0.85);line-height:1.6;font-style:italic;padding-right:26px"></div>
+    <div id="bday-edit-message-btn" style="display:none;position:absolute;top:12px;right:16px;align-items:center;justify-content:center;font-size:11px;color:white;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.12)">✎</div>
   </div>
 
   <!-- FIRST-VISIT RSVP OVERLAY -->
@@ -6028,7 +6085,7 @@ function _runOslPreviewSequence() {
   <!-- STOPS PANEL — backdrop + animation behind everything (z-index 0),
        gradient overlay for legibility (z-index 1), all real content on
        top (z-index 2+), exactly mirroring OSL's own act-detail layering. -->
-  <div id="bday2-stops" style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden">
+  <div id="bday2-stops" style="flex:1;display:flex;flex-direction:column;position:relative">
     <div id="bday-stop-bg" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
     <div id="bday-stop-anim-twinkle" style="display:none;position:absolute;inset:0">
       <span class="stop-twinkle-dot" style="width:4px;height:4px;left:10%;top:14%"></span>
@@ -6072,16 +6129,24 @@ function _runOslPreviewSequence() {
       <div id="bday-edit-stop-btn" onclick="openBdayStopEdit(window._bdayCurrentStop)" style="display:none;cursor:pointer;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.14);align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0">✎</div>
     </div>
 
-    <div id="bday-stop-going" style="position:relative;z-index:2;padding:8px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
+    <!-- Tap the address for a small Google/Apple/Waze picker instead of a
+         permanent 3-button card — same one line for every stop. -->
+    <div id="bday-stop-loc" onclick="if(typeof openBdayLocationSheet==='function')openBdayLocationSheet()" style="position:relative;z-index:2;display:none;align-items:center;gap:6px;margin:2px 16px 10px;flex-shrink:0;cursor:pointer">
+      <span style="font-size:12px;flex-shrink:0">📍</span>
+      <span id="bday-stop-loc-text" style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:underline;text-decoration-color:rgba(255,255,255,0.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    </div>
 
-    <div id="bday-stop-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:0 16px 14px;flex-shrink:0"></div>
-
-    <div id="bday-stop-loc" style="position:relative;z-index:2;display:none;margin:0 16px 14px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.14);padding:12px 14px;background:rgba(255,255,255,0.06);flex-shrink:0">
-      <div id="bday-stop-loc-text" style="font-size:12.5px;font-weight:600;color:#fff;margin-bottom:10px"></div>
-      <div style="display:flex;gap:8px">
-        <a id="bday-stop-loc-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Google Maps</a>
-        <a id="bday-stop-loc-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Apple Maps</a>
-        <a id="bday-stop-loc-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Waze</a>
+    <!-- GAME PREVIEW / BOX SCORE — game stop only. Reuses the exact same
+         MLB box score system already used for memories and future plans
+         (openBoxScoreModal / _boxScoreCardHtml); _boxScoreCardHtml already
+         renders sensibly whether the game is scheduled, live, or final, so
+         this one card naturally becomes the "preview" before first pitch
+         and the real box score after — no separate preview UI needed. -->
+    <div id="bday-stop-boxscore-section" style="position:relative;z-index:2;display:none;margin:0 16px 12px;flex-shrink:0">
+      <div id="bday-stop-boxscore" style="display:none"></div>
+      <div id="bday-stop-attach-game" onclick="if(typeof _bdayIsOwner==='function'&&_bdayIsOwner())openBoxScoreModal({type:'bdayGame'},(window._bdayEventData&&window._bdayEventData.date)||undefined)" style="display:none;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);cursor:pointer">
+        <div style="font-size:20px">⚾</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">Attach the game</div><div style="font-size:11px;color:rgba(255,255,255,0.5)">Shows a preview before first pitch, the box score after</div></div>
       </div>
     </div>
 
@@ -6133,11 +6198,25 @@ function _runOslPreviewSequence() {
     </div>
   </div>
 
+  <!-- LOCATION SHEET — one tap on any stop's address opens this: three
+       deep links, nothing decorative. Shared across all three stops. -->
+  <div id="bday-location-sheet" onclick="if(event.target===this)closeBdayLocationSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:180;align-items:flex-end">
+    <div style="background:#1A1640;border-radius:24px 24px 0 0;width:100%;padding:20px 20px 28px">
+      <div id="bday-loc-sheet-title" style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a id="bday-loc-sheet-google" target="_blank" rel="noopener" style="display:block;text-align:center;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.18);border-radius:14px;padding:13px;font-size:14px;font-weight:700;color:#fff;text-decoration:none">Google Maps</a>
+        <a id="bday-loc-sheet-apple" target="_blank" rel="noopener" style="display:block;text-align:center;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.18);border-radius:14px;padding:13px;font-size:14px;font-weight:700;color:#fff;text-decoration:none">Apple Maps</a>
+        <a id="bday-loc-sheet-waze" target="_blank" rel="noopener" style="display:block;text-align:center;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.18);border-radius:14px;padding:13px;font-size:14px;font-weight:700;color:#fff;text-decoration:none">Waze</a>
+        <div onclick="closeBdayLocationSheet()" style="text-align:center;padding:12px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.5);cursor:pointer">Cancel</div>
+      </div>
+    </div>
+  </div>
+
   <!-- OWNER-ONLY EDIT MODAL — shared body, populated per context by
-       openBdayHeroEdit / openBdayStopEdit. Only shows for Nate (checked by
-       phone, same pattern as the feedback-archive gate elsewhere in this
-       file) since this is premade content with one real owner, not a
-       generic per-user editor. -->
+       openBdayHeroEdit / openBdayStopEdit / openBdayMessageEdit. Only
+       shows for Nate (checked by phone, same pattern as the
+       feedback-archive gate elsewhere in this file) since this is
+       premade content with one real owner, not a generic per-user editor. -->
   <div id="bday-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end">
     <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
       <div style="padding:20px 20px 0;flex-shrink:0">
@@ -6862,7 +6941,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.148.0-birthday-edit-reveal-osl-archive';
+window.INNINGS_BUILD = 'v4.149.0-birthday-single-rsvp-game-message';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6881,7 +6960,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -7812,6 +7891,16 @@ function _applyBoxScoreToContext(box) {
       console.error('Attach box score threw synchronously:', err);
       if (typeof ib_toast === 'function') ib_toast('Could not attach — ' + (err && err.message ? err.message : 'try again'));
     }
+  } else if (ctx.type === 'bdayGame') {
+    var gs = _bdayStopById('game');
+    if (!gs || !window._bdayEventData) return;
+    gs.boxScore = box;
+    if (window.db) {
+      window.db.collection('birthdayEvent').doc('main').set({ stops: _sanitizeForFirestore(window._bdayEventData.stops) }, { merge: true })
+        .then(function(){ if (typeof ib_toast === 'function') ib_toast('Game attached'); })
+        .catch(function(err){ console.error('Attach birthday game error:', err); if (typeof ib_toast === 'function') ib_toast('Could not attach — try again'); });
+    }
+    if (window._bdayCurrentStop === 'game') selectBdayStop('game');
   }
 }
 function futureRemoveBoxScore(id) {
