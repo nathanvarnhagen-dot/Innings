@@ -1058,6 +1058,18 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
+    <!-- BIRTHDAY BANNER -->
+    <div class="banner-pop-card" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'birthday-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
+        <div class="banner-pop-icon" style="position:relative;font-size:28px">🎂</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:white">Nate's Birthday</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Pregame · Game · Afters · Tap to open →</div>
+      </div>
+    </div>
+
     <!-- FEEDBACK BANNER -->
     <div class="banner-pop-card" style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'feedback-group')">
       <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -3416,6 +3428,716 @@ function closeActDetail() {
   window._actDetailCurrent = null;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// NATE'S BIRTHDAY — premade, hardcoded like OSL's own stageData. Every
+// function below mirrors its OSL act-detail counterpart one for one
+// (openActDetail → selectBdayStop, actChat → birthdayStopChat, etc.) —
+// duplicated rather than generalized on purpose, so nothing here risks
+// touching OSL's own already-live, already-relied-on functions.
+// ══════════════════════════════════════════════════════════════════════
+
+// PLACEHOLDER CONTENT — search this array and fill in the real plan
+// (pregame spot, kickoff time, afters spot) before actually sending invites.
+var BIRTHDAY_STOPS = [
+  { id: 'pregame', emoji: '🍻', name: 'Pregame — add your spot', time: 'TBD', location: '', anim: 'glow' },
+  { id: 'game', emoji: '⚾', name: 'Giants Game — Oracle Park', time: 'TBD', location: '24 Willie Mays Plaza, San Francisco, CA 94107', anim: 'twinkle' },
+  { id: 'afters', emoji: '🎉', name: 'Afters — add your spot', time: 'Late', location: '', anim: 'confetti' }
+];
+function _bdayStopById(id) {
+  for (var i = 0; i < BIRTHDAY_STOPS.length; i++) { if (BIRTHDAY_STOPS[i].id === id) return BIRTHDAY_STOPS[i]; }
+  return null;
+}
+
+var myBdayStopRsvps = {}; // stopId -> 'going'|'maybe'|'no', mirrors OSL's myRsvps
+window._bdayCurrentStop = null;
+window._bdayStopChatStarted = {};
+window._bdayStopPhotosStarted = {};
+window._bdayStopPhotosData = {};
+window._bdayStopPrimaryStarted = {};
+window._bdayStopPrimaryPhotoId = {};
+window._bdayStopPhotoViewerIndex = 0;
+window._bdayStopPhotoViewerSrc = null;
+
+// ── TOP-LEVEL RSVP ("are you coming at all") — mirrors oslCheckRsvp/oslSetRsvp ──
+function bdayCheckRsvp() {
+  var rsvp = window.userData && window.userData.birthdayRsvp;
+  var overlay = document.getElementById('bday-rsvp-overlay');
+  if (window.userData && window.userData.birthdayStopRsvps) {
+    myBdayStopRsvps = window.userData.birthdayStopRsvps;
+  }
+  if (!rsvp) {
+    if (overlay) overlay.style.display = 'flex';
+  } else {
+    if (overlay) overlay.style.display = 'none';
+    renderBdayState();
+  }
+}
+
+function bdaySetRsvp(val) {
+  var overlay = document.getElementById('bday-rsvp-overlay');
+  if (overlay) overlay.style.display = 'none';
+  window.userData = window.userData || {};
+  window.userData.birthdayRsvp = val;
+  renderBdayState();
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ birthdayRsvp: val }, { merge: true }).catch(function(err){ console.error('Birthday rsvp error:', err); });
+  }
+  if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're in 🎉" : val === 'maybe' ? 'Marked as maybe' : "Marked as not coming");
+  // Same iOS scroll-freeze workaround OSL's own RSVP dismiss uses — the
+  // overlay hiding reveals scroll containers that otherwise never
+  // re-engage the drag gesture until a full reload.
+  if (typeof _nudgeScrollers === 'function') _nudgeScrollers(document.getElementById('screen-birthday-group'));
+}
+
+function renderBdayState() {
+  var rsvp = (window.userData && window.userData.birthdayRsvp) || '';
+  var status = document.getElementById('bday-going-status');
+  if (status) {
+    var prefix = rsvp === 'going' ? "You're in · " : rsvp === 'maybe' ? 'Maybe · ' : '';
+    status.textContent = prefix + 'Add your date · 3 stops';
+  }
+  var membersEl = document.getElementById('bday-members');
+  if (membersEl && window.db) {
+    window.db.collection('users').where('birthdayRsvp', 'in', ['going', 'maybe']).get().then(function(snap){
+      var user = window.currentUser || (window.auth && window.auth.currentUser);
+      var chips = [];
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var nm = d.name || 'Friend';
+        var isMe = user && doc.id === user.uid;
+        chips.push('<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0' + (isMe ? '' : ';cursor:pointer') + '"' + (isMe ? '' : ' onclick="openUserProfile(\'' + doc.id + '\')"') + '>' +
+          '<div class="m-av-sm av-a">' + _escapeHtml(_initials(nm)) + '</div>' +
+          '<div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">' + _escapeHtml(isMe ? 'You' : nm.split(' ')[0]) + '</div></div>');
+      });
+      membersEl.innerHTML = chips.join('');
+    }).catch(function(err){ console.error('Birthday members error:', err); });
+  }
+}
+
+// ── FEED / STOPS TAB SWITCH — mirrors oslTab ──
+function bdayTab(tab, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('.bday-main-tab').forEach(function(t) {
+    t.style.color = 'rgba(255,255,255,0.55)';
+    t.style.fontWeight = '600';
+    t.style.borderBottom = '2px solid transparent';
+  });
+  if (evt && evt.target) {
+    evt.target.style.color = 'rgba(168,159,232,1)';
+    evt.target.style.fontWeight = '700';
+    evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  }
+  ['bday2-chat', 'bday2-chat-input', 'bday2-stops'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  if (tab === 'chat') {
+    var chatPanel = document.getElementById('bday2-chat');
+    chatPanel.style.display = 'flex';
+    document.getElementById('bday2-chat-input').style.display = 'flex';
+    if (typeof startBirthdayChat === 'function') startBirthdayChat();
+    setTimeout(function(){ chatPanel.scrollTop = chatPanel.scrollHeight; }, 0);
+  } else if (tab === 'stops') {
+    var stopsPanel = document.getElementById('bday2-stops');
+    stopsPanel.style.display = 'flex';
+    stopsPanel.style.flexDirection = 'column';
+  }
+}
+
+// Lands on Stops by default (matches _oslLandOnLineup's own reasoning —
+// the immersive content is the better first impression, Feed stays one
+// tap away), and re-selects whatever stop was last open, or Pregame first.
+function _bdayLandOnStops() {
+  var tabs = document.querySelectorAll('.bday-main-tab');
+  var stopsTab = null;
+  tabs.forEach(function(t){ if (t.textContent.trim() === 'Stops') stopsTab = t; });
+  bdayTab('stops', stopsTab ? { target: stopsTab } : null);
+  selectBdayStop(window._bdayCurrentStop || 'pregame');
+}
+
+// ── FEED CHAT (whole event) — mirrors startOslChat/renderOslChat/sendOslMessage ──
+window._birthdayChatStarted = false;
+function startBirthdayChat() {
+  if (window._birthdayChatStarted) return;
+  if (!window.db) return;
+  window._birthdayChatStarted = true;
+  window.db.collection('birthdayChat').orderBy('ts').limit(300).onSnapshot(function(snap){
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    renderBirthdayChat(msgs);
+  }, function(err){
+    console.error('Birthday chat error:', err);
+    window._birthdayChatStarted = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderBirthdayChat(msgs) {
+  var box = document.getElementById('bday-chat-msgs');
+  var empty = document.getElementById('bday-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
+    if (c.system) {
+      return '<div style="text-align:center;padding:2px 0 4px"><span style="font-size:11.5px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.07);padding:5px 12px;border-radius:12px;display:inline-block">' + _escapeHtml(c.text) + '</span></div>';
+    }
+    var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
+    if (mine) {
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+            badges +
+          '</div></div>';
+      }
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+          badges +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        badges +
+      '</div></div>';
+  });
+  var panel = document.getElementById('bday2-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function deleteBirthdayMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('birthdayChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete birthday message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function sendBirthdayMessage() {
+  var inp = document.getElementById('bday-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  var msgData = { uid: user.uid, author: author, text: text, ts: Date.now() };
+  var replyTo = _consumeReplyForSend('birthdayChat');
+  if (replyTo) msgData.replyTo = replyTo;
+  var url = _extractFirstUrl(text);
+  var sendPromise = url
+    ? _fetchLinkPreview(url).then(function(lp){
+        if (lp && lp.url) msgData.linkPreview = lp;
+        return window.db.collection('birthdayChat').add(msgData);
+      })
+    : window.db.collection('birthdayChat').add(msgData);
+  sendPromise.catch(function(err){ console.error('Birthday chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+}
+
+// Drops a plain system line into the whole-event Feed whenever a stop
+// gets RSVP/photo activity — same idea as OSL's _postOslFeedNotice, kept
+// to a plain text bubble instead of OSL's routed, icon-per-type cards
+// since 3 stops don't need that much navigation scaffolding.
+function _postBirthdayFeedNotice(text) {
+  if (!window.db) return;
+  window.db.collection('birthdayChat').add({ text: text, ts: Date.now(), system: true })
+    .catch(function(err){ console.error('Post birthday feed notice error:', err); });
+}
+
+// ── STOP BACKDROP — mirrors setActDetailBg ──
+function setBdayStopDetailBg(url) {
+  var bg = document.getElementById('bday-stop-bg');
+  if (!bg) return;
+  bg.style.backgroundImage = url ? 'url(' + url + ')' : '';
+  bg.style.backgroundSize = 'cover';
+  bg.style.backgroundPosition = 'center';
+  var overlay = document.getElementById('bday-stop-overlay');
+  if (overlay) {
+    overlay.style.background = url
+      ? 'linear-gradient(180deg,rgba(10,6,20,0.72) 0%,rgba(10,6,20,0.6) 35%,rgba(10,6,20,0.68) 65%,rgba(10,6,20,0.96) 100%)'
+      : 'linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)';
+  }
+}
+
+// ── SELECT A STOP — mirrors openActDetail, minus the Spotify/Apple Music
+// links and Songs tab (not applicable here) ──
+function selectBdayStop(stopId) {
+  var s = _bdayStopById(stopId);
+  if (!s) return;
+  window._bdayCurrentStop = stopId;
+
+  document.querySelectorAll('.bday-stop-tab').forEach(function(t){
+    var active = t.getAttribute('data-stop') === stopId;
+    t.style.color = active ? 'rgba(168,159,232,1)' : 'rgba(255,255,255,0.5)';
+    t.style.fontWeight = active ? '700' : '600';
+    t.style.borderBottomColor = active ? 'rgba(168,159,232,0.9)' : 'transparent';
+  });
+
+  var nameEl = document.getElementById('bday-stop-name');
+  var timeEl = document.getElementById('bday-stop-time');
+  if (nameEl) nameEl.textContent = (s.emoji ? s.emoji + ' ' : '') + s.name;
+  if (timeEl) timeEl.textContent = s.time || '';
+
+  ['twinkle', 'confetti', 'glow', 'gradient'].forEach(function(a){
+    var el = document.getElementById('bday-stop-anim-' + a);
+    if (el) el.style.display = (a === s.anim) ? 'block' : 'none';
+  });
+
+  // No fake map here either — same reasoning as everywhere else in the
+  // app: address text plus the three deep links, nothing decorative.
+  var locWrap = document.getElementById('bday-stop-loc');
+  if (locWrap) {
+    if (s.location) {
+      locWrap.style.display = 'block';
+      var textEl = document.getElementById('bday-stop-loc-text');
+      var gEl = document.getElementById('bday-stop-loc-google');
+      var aEl = document.getElementById('bday-stop-loc-apple');
+      var wEl = document.getElementById('bday-stop-loc-waze');
+      if (textEl) textEl.textContent = s.location;
+      var encoded = encodeURIComponent(s.location);
+      if (gEl) gEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+      if (aEl) aEl.href = 'https://maps.apple.com/?q=' + encoded;
+      if (wEl) wEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
+    } else {
+      locWrap.style.display = 'none';
+    }
+  }
+
+  _bdayStopResetSubTabsToActivity();
+  renderBdayStopRsvpButtons(stopId);
+  loadBdayStopGoing(stopId);
+  startBdayStopChat(stopId);
+  startBdayStopPhotos(stopId);
+  startBdayStopPrimaryPhoto(stopId);
+}
+
+// ── PER-STOP RSVP — mirrors renderActRsvpButtons/actDetailRsvp ──
+function renderBdayStopRsvpButtons(stopId) {
+  var box = document.getElementById('bday-stop-rsvp');
+  if (!box) return;
+  var rsvp = myBdayStopRsvps[stopId] || '';
+  box.innerHTML =
+    '<button onclick="bdayStopRsvp(\'going\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='going' ? 'rgba(168,159,232,0.9)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='going' ? '#0D0820' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Going</button>' +
+    '<button onclick="bdayStopRsvp(\'maybe\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='maybe' ? 'rgba(254,243,226,0.15)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='maybe' ? '#FEF3E2' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">? Maybe</button>' +
+    '<button onclick="bdayStopRsvp(\'no\')" style="flex:1;padding:10px 4px;border-radius:10px;background:' + (rsvp==='no' ? 'rgba(220,90,90,0.22)' : 'rgba(255,255,255,0.07)') + ';color:' + (rsvp==='no' ? 'rgba(255,190,190,0.95)' : 'rgba(255,255,255,0.4)') + ';border:0.5px solid rgba(255,255,255,0.1);font-size:12px;font-weight:' + (rsvp==='no' ? '700' : '600') + ';cursor:pointer;font-family:inherit">✕ Skip</button>';
+}
+
+function bdayStopRsvp(val) {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var s = _bdayStopById(stopId);
+  var _prevRsvp = myBdayStopRsvps[stopId];
+  myBdayStopRsvps[stopId] = val;
+  window.userData = window.userData || {};
+  window.userData.birthdayStopRsvps = myBdayStopRsvps;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (user && window.db) {
+    window.db.collection('users').doc(user.uid).set({ birthdayStopRsvps: myBdayStopRsvps }, { merge: true })
+      .then(function(){
+        loadBdayStopGoing(stopId);
+        if (_prevRsvp !== val && (val === 'going' || val === 'maybe')) _postBdayStopRsvpSystemMessage(stopId, val);
+      })
+      .catch(function(err){ console.error('Birthday stop RSVP save error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+  renderBdayStopRsvpButtons(stopId);
+}
+
+function _postBdayStopRsvpSystemMessage(stopId, val) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var s = _bdayStopById(stopId);
+  if (!user || !window.db || !s) return;
+  var author = (window.userData && window.userData.name) || 'Someone';
+  var verb = val === 'going' ? 'is going ✓' : 'might go';
+  var text = author + ' ' + verb + ' to ' + s.emoji + ' ' + s.name;
+  window.db.collection('birthdayStopChat').add({ stopId: stopId, uid: user.uid, author: author, text: text, ts: Date.now(), system: true })
+    .catch(function(err){ console.error('Post birthday stop RSVP message error:', err); });
+  _postBirthdayFeedNotice(text);
+}
+
+// ── WHO'S GOING (per stop) — mirrors loadActGoing/_drawActGoingPanel ──
+function loadBdayStopGoing(stopId) {
+  var box = document.getElementById('bday-stop-going');
+  if (!box || !window.db) return;
+  box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Loading who\'s going…</div>';
+  window.db.collection('users').where(new firebase.firestore.FieldPath('birthdayStopRsvps', stopId), 'in', ['going', 'maybe', 'no']).limit(80).get().then(function(snap){
+    if (window._bdayCurrentStop !== stopId) return;
+    if (snap.empty) {
+      box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Nobody\'s marked anything yet — be the first.</div>';
+      return;
+    }
+    var going = [], maybe = [], skip = [];
+    snap.forEach(function(doc){
+      var d = doc.data() || {};
+      var status = (d.birthdayStopRsvps || {})[stopId];
+      var entry = { uid: doc.id, name: d.name || 'Innings User' };
+      if (status === 'going') going.push(entry);
+      else if (status === 'maybe') maybe.push(entry);
+      else if (status === 'no') skip.push(entry);
+    });
+    _drawBdayGoingPanel(box, going, maybe, skip);
+  }).catch(function(err){
+    console.error('Load birthday stop going error:', err);
+    box.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35)">Could not load — check Firestore rules</div>';
+  });
+}
+
+function _drawBdayGoingPanel(box, going, maybe, skip) {
+  function personChip(entry, ringColor) {
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer" onclick="openUserProfile(\'' + entry.uid + '\')">' +
+      '<div class="av av-a" style="width:32px;height:32px;font-size:11px;outline:2px solid ' + ringColor + ';outline-offset:2px">' + _escapeHtml(_initialsFallback(entry.name)) + '</div>' +
+      '<div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">' + _escapeHtml(entry.name.split(' ')[0]) + '</div>' +
+    '</div>';
+  }
+  var countParts = [];
+  if (going.length) countParts.push(going.length + ' going');
+  if (maybe.length) countParts.push(maybe.length + ' maybe');
+  if (skip.length) countParts.push(skip.length + ' skipped');
+  var html = '<div style="display:flex;flex-direction:column;gap:8px;width:100%">';
+  html += '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em">' + countParts.join(' · ') + '</div>';
+  html += '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:2px">';
+  going.forEach(function(entry){ html += personChip(entry, 'rgba(168,159,232,0.95)'); });
+  maybe.forEach(function(entry){ html += personChip(entry, '#FEDF9A'); });
+  skip.forEach(function(entry){ html += personChip(entry, 'rgba(220,90,90,0.85)'); });
+  html += '</div></div>';
+  box.innerHTML = html;
+}
+
+// ── ACTIVITY / PHOTOS SUB-TABS — mirrors actTab/_actResetTabsToActivity ──
+function bdayStopSubTab(tab, evt) {
+  evt = evt || window.event;
+  document.querySelectorAll('.bday-stop-subtab').forEach(function(t) {
+    t.style.color = 'rgba(255,255,255,0.85)';
+    t.style.fontWeight = '700';
+    t.style.borderBottom = '2px solid transparent';
+  });
+  if (evt && evt.target) {
+    evt.target.style.color = 'rgba(168,159,232,1)';
+    evt.target.style.fontWeight = '700';
+    evt.target.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+  }
+  ['bday-stop-tab-activity', 'bday-stop-tab-photos'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var composer = document.getElementById('bday-stop-composer');
+  if (tab === 'activity') {
+    document.getElementById('bday-stop-tab-activity').style.display = 'flex';
+    if (composer) composer.style.display = 'flex';
+  } else if (tab === 'photos') {
+    document.getElementById('bday-stop-tab-photos').style.display = 'flex';
+    if (composer) composer.style.display = 'none';
+  }
+}
+
+function _bdayStopResetSubTabsToActivity() {
+  document.querySelectorAll('.bday-stop-subtab').forEach(function(t, i) {
+    if (i === 0) {
+      t.style.color = 'rgba(168,159,232,1)';
+      t.style.fontWeight = '700';
+      t.style.borderBottom = '2px solid rgba(168,159,232,0.9)';
+    } else {
+      t.style.color = 'rgba(255,255,255,0.85)';
+      t.style.fontWeight = '700';
+      t.style.borderBottom = '2px solid transparent';
+    }
+  });
+  var activity = document.getElementById('bday-stop-tab-activity');
+  var photos = document.getElementById('bday-stop-tab-photos');
+  var composer = document.getElementById('bday-stop-composer');
+  if (activity) activity.style.display = 'flex';
+  if (photos) photos.style.display = 'none';
+  if (composer) composer.style.display = 'flex';
+}
+
+// ── PER-STOP CHAT — mirrors startActChat/renderActChat/sendActMessage ──
+function startBdayStopChat(stopId) {
+  if (window._bdayStopChatStarted[stopId]) return;
+  if (!window.db) return;
+  window._bdayStopChatStarted[stopId] = true;
+  window.db.collection('birthdayStopChat').where('stopId','==',stopId).limit(200).onSnapshot(function(snap){
+    if (window._bdayCurrentStop !== stopId) return;
+    var msgs = [];
+    snap.forEach(function(doc){ msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    msgs.sort(function(a,b){ return (a.ts || 0) - (b.ts || 0); });
+    renderBdayStopChat(msgs);
+  }, function(err){
+    console.error('Birthday stop chat error:', err);
+    window._bdayStopChatStarted[stopId] = false;
+    if (typeof ib_toast==='function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderBdayStopChat(msgs) {
+  var box = document.getElementById('bday-stop-chat-msgs');
+  var empty = document.getElementById('bday-stop-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = _chatHtmlWithDayDividers(msgs, function(c){
+    if (c.system) {
+      return '<div style="text-align:center;padding:2px 0 4px"><span style="font-size:11.5px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.07);padding:5px 12px;border-radius:12px;display:inline-block">' + _escapeHtml(c.text) + '</span></div>';
+    }
+    var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, false);
+    var lpHtml = c.linkPreview ? _linkPreviewCardHtml(c.linkPreview) : '';
+    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
+    if (mine) {
+      if (linkOnly) {
+        return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+            lpHtml +
+            '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+            badges +
+          '</div></div>';
+      }
+      return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+          lpHtml +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          badges +
+        '</div></div>';
+    }
+    if (linkOnly) {
+      return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+          '<div class="b-who" style="margin-bottom:2px">' + _escapeHtml(c.author) + '</div>' +
+          lpHtml +
+          '<div style="font-size:10px;color:var(--subtle);padding:0 2px">' + _fmtTime(c.ts) + '</div>' +
+          badges +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+        lpHtml +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        badges +
+      '</div></div>';
+  }, true);
+  var panel = document.getElementById('bday-stop-chat');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function deleteBdayStopMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('birthdayStopChat').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete birthday stop message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function sendBdayStopMessage() {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var inp = document.getElementById('bday-stop-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  if (inp) inp.value = '';
+  var msgData = { stopId: stopId, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var replyTo = _consumeReplyForSend('birthdayStopChat');
+  if (replyTo) msgData.replyTo = replyTo;
+  var url = _extractFirstUrl(text);
+  var sendPromise = url
+    ? _fetchLinkPreview(url).then(function(lp){
+        if (lp && lp.url) msgData.linkPreview = lp;
+        return window.db.collection('birthdayStopChat').add(msgData);
+      })
+    : window.db.collection('birthdayStopChat').add(msgData);
+  sendPromise.catch(function(err){ console.error('Birthday stop chat send error:', err); if (typeof ib_toast==='function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules')); });
+}
+
+// ── PER-STOP PHOTOS — mirrors startActPhotos/renderActPhotos/addActPhoto/
+// setActPrimaryPhoto/openActPhoto etc. ──
+function renderBdayStopPhotos(photos) {
+  var stopId = window._bdayCurrentStop;
+  var primaryId = stopId ? window._bdayStopPrimaryPhotoId[stopId] : null;
+  var grid = document.getElementById('bday-stop-photos-grid');
+  if (grid) {
+    grid.innerHTML = photos.length
+      ? photos.map(function(p, i){
+          var isPrimary = !!(primaryId && p._id === primaryId);
+          var star = isPrimary ? '<div style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(168,159,232,0.95);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0D0820">★</div>' : '';
+          return '<div onclick="openBdayStopPhoto(' + i + ')" style="position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer' + (isPrimary ? ';outline:2px solid rgba(168,159,232,0.95);outline-offset:2px' : '') + '">' + star + '</div>';
+        }).join('')
+      : '<div style="grid-column:1/-1;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);padding:40px 0">No photos yet — be the first to add one</div>';
+  }
+  var primaryMatch = primaryId ? photos.filter(function(p){ return p._id === primaryId; })[0] : null;
+  var bgPhoto = primaryMatch ? primaryMatch.photo : (photos.length ? photos[0].photo : null);
+  setBdayStopDetailBg(bgPhoto);
+}
+
+function startBdayStopPhotos(stopId) {
+  if (window._bdayStopPhotosStarted[stopId]) return;
+  if (!window.db) return;
+  window._bdayStopPhotosStarted[stopId] = true;
+  window.db.collection('birthdayStopPhotos').where('stopId','==',stopId).limit(80).onSnapshot(function(snap){
+    var arr = [];
+    snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id }, doc.data())); });
+    arr.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    window._bdayStopPhotosData[stopId] = arr;
+    if (window._bdayCurrentStop === stopId) renderBdayStopPhotos(arr);
+  }, function(err){
+    console.error('Birthday stop photos error:', err);
+    window._bdayStopPhotosStarted[stopId] = false;
+    if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules');
+  });
+}
+
+function startBdayStopPrimaryPhoto(stopId) {
+  if (window._bdayStopPrimaryStarted[stopId]) return;
+  if (!window.db) return;
+  window._bdayStopPrimaryStarted[stopId] = true;
+  window.db.collection('birthdayStopPrimaryPhoto').doc(stopId).onSnapshot(function(doc){
+    window._bdayStopPrimaryPhotoId[stopId] = doc.exists ? doc.data().photoId : null;
+    if (window._bdayCurrentStop === stopId) renderBdayStopPhotos(window._bdayStopPhotosData[stopId] || []);
+  }, function(err){
+    console.error('Birthday stop primary photo error:', err);
+    window._bdayStopPrimaryStarted[stopId] = false;
+  });
+}
+
+function setBdayStopPrimaryPhoto(photoId) {
+  var stopId = window._bdayCurrentStop;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!stopId || !user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to do that'); return; }
+  window.db.collection('birthdayStopPrimaryPhoto').doc(stopId).set({ photoId: photoId, setByUid: user.uid, ts: Date.now() })
+    .then(function(){ if (typeof ib_toast==='function') ib_toast('Set as background'); })
+    .catch(function(err){ console.error('Set birthday stop primary photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not set — check Firestore rules'); });
+}
+
+function setBdayStopPrimaryPhotoFromViewer() {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var photos = window._bdayStopPhotosData[stopId] || [];
+  var p = photos[window._bdayStopPhotoViewerIndex];
+  if (!p || !p._id) return;
+  setBdayStopPrimaryPhoto(p._id);
+}
+
+function addBdayStopPhoto(input) {
+  if (!input.files || !input.files.length) return;
+  var stopId = window._bdayCurrentStop;
+  var s = _bdayStopById(stopId);
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!stopId || !s || !user || !window.db) { if (typeof ib_toast==='function') ib_toast('Sign in to add photos'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var files = Array.from(input.files);
+  if (typeof ib_toast==='function') ib_toast('Uploading…');
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      _downscaleImage(e.target.result, 1000, function(small){
+        window.db.collection('birthdayStopPhotos').add({ stopId: stopId, uid: user.uid, author: author, photo: small, ts: Date.now() })
+          .then(function(){ _postBdayStopPhotoSystemMessage(stopId, author); })
+          .catch(function(err){ console.error('Add birthday stop photo error:', err); if (typeof ib_toast==='function') ib_toast('Photos unavailable — check Firestore rules'); });
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function _postBdayStopPhotoSystemMessage(stopId, author) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var s = _bdayStopById(stopId);
+  if (!user || !window.db || !s) return;
+  var text = (author || 'Someone') + ' added a photo 📷 to ' + s.emoji + ' ' + s.name;
+  window.db.collection('birthdayStopChat').add({ stopId: stopId, uid: user.uid, author: author || 'Someone', text: text, ts: Date.now(), system: true })
+    .catch(function(err){ console.error('Post birthday stop photo message error:', err); });
+  _postBirthdayFeedNotice(text);
+}
+
+function openBdayStopPhoto(i) {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var photos = window._bdayStopPhotosData[stopId] || [];
+  var p = photos[i];
+  if (!p) return;
+  window._bdayStopPhotoViewerIndex = i;
+  window._bdayStopPhotoViewerSrc = p.photo;
+  var img = document.getElementById('bday-stop-photo-viewer-img');
+  var del = document.getElementById('bday-stop-photo-viewer-delete');
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (img) img.src = p.photo;
+  if (del) del.style.display = (user && p.uid === user.uid) ? 'block' : 'none';
+  var viewer = document.getElementById('bday-stop-photo-viewer');
+  if (viewer) viewer.style.display = 'flex';
+}
+
+function closeBdayStopPhoto() {
+  var viewer = document.getElementById('bday-stop-photo-viewer');
+  if (viewer) viewer.style.display = 'none';
+}
+
+function bdayStopPhotoNav(delta) {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var photos = window._bdayStopPhotosData[stopId] || [];
+  var newIndex = (window._bdayStopPhotoViewerIndex || 0) + delta;
+  if (newIndex < 0 || newIndex >= photos.length) return;
+  openBdayStopPhoto(newIndex);
+}
+
+var _bdayStopPhotoSwipeStartX = null;
+function bdayStopPhotoSwipeStart(e) { if (e.touches && e.touches.length === 1) _bdayStopPhotoSwipeStartX = e.touches[0].clientX; }
+function bdayStopPhotoSwipeEnd(e) {
+  if (_bdayStopPhotoSwipeStartX === null) return;
+  var endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : _bdayStopPhotoSwipeStartX;
+  var delta = endX - _bdayStopPhotoSwipeStartX;
+  _bdayStopPhotoSwipeStartX = null;
+  if (Math.abs(delta) < 40) return;
+  bdayStopPhotoNav(delta < 0 ? 1 : -1);
+}
+
+function bdayStopPhotoDownload() {
+  var src = window._bdayStopPhotoViewerSrc;
+  if (!src) return;
+  fetch(src).then(function(res){ return res.blob(); }).then(function(blob){
+    var file = new File([blob], 'innings-birthday-photo.jpg', { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] }).catch(function(){});
+    } else {
+      var a = document.createElement('a');
+      a.href = src;
+      a.download = 'innings-birthday-photo.jpg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      if (typeof ib_toast === 'function') ib_toast('Downloaded — check your Files or Downloads');
+    }
+  }).catch(function(err){
+    console.error('Birthday photo download error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not download — try pressing and holding the photo instead');
+  });
+}
+
+function deleteBdayStopPhoto() {
+  var stopId = window._bdayCurrentStop;
+  if (!stopId) return;
+  var photos = window._bdayStopPhotosData[stopId] || [];
+  var p = photos[window._bdayStopPhotoViewerIndex];
+  if (!p || !p._id || !window.db) return;
+  window.db.collection('birthdayStopPhotos').doc(p._id).delete()
+    .then(function(){ closeBdayStopPhoto(); if (typeof ib_toast==='function') ib_toast('Photo deleted'); })
+    .catch(function(err){ console.error('Delete birthday stop photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
 // ── FAVORITE SONGS (per artist, crowdsourced by everyone in the OSL group) ──
 // Adding a title someone else already added just adds your name to it
 // instead of creating a duplicate row, so the list naturally surfaces the
@@ -4920,6 +5642,195 @@ function _runOslPreviewSequence() {
 </script>
 
 <!-- ═══ VIEW PROFILE (someone else's) ═══ -->
+
+<!-- ═══ NATE'S BIRTHDAY — premade, OSL-style event ═══
+     Hardcoded the same way OSL's own stageData is hardcoded — not routed
+     through the generic Stops editor on futureMoments docs (that stays in
+     the app, untouched, for whenever self-serve creation is worth building).
+     Each stop (Pregame/Game/Afters) gets the full OSL act-detail treatment:
+     its own backdrop, who's-going, RSVP, chat, and photos — mirroring
+     openActDetail/actChat/actPhotos as closely as the birthday context
+     allows. Dropped from the OSL pattern as not applicable here: Spotify/
+     Apple Music artist links, the Songs tab, the full Pending/Going
+     attendees sub-screen (kept as the always-visible avatar row only), and
+     the standalone photo-album overlay (the Photos sub-tab already covers
+     that). PLACEHOLDER CONTENT: pregame location, afters location, and all
+     three times are marked TBD below — search BIRTHDAY_STOPS and fill in
+     the real plan before actually sending invites. -->
+<div class="screen" id="screen-birthday-group">
+
+  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
+    <div style="padding:10px 20px 0;position:relative">
+      <button class="back-btn" onclick="navBack()">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
+      </button>
+    </div>
+    <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">
+        <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎂</div>
+        <div style="min-width:0">
+          <div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px">Nate's Birthday</div>
+          <div id="bday-going-status" style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Add your date · 3 stops</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMBERS STRIP -->
+  <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:stretch;flex-shrink:0">
+    <div id="bday-members" style="padding:10px 16px;display:flex;gap:12px;overflow-x:auto;flex:1;min-width:0"></div>
+    <div style="display:flex;align-items:stretch;flex-shrink:0;border-left:0.5px solid rgba(255,255,255,0.08)">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 12px;cursor:pointer" onclick="if(typeof sendInviteText==='function')sendInviteText()">
+        <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:rgba(255,255,255,0.5)">＋</div>
+        <div class="m-nm-sm" style="color:rgba(255,255,255,0.5)">Invite</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIRST-VISIT RSVP OVERLAY -->
+  <div id="bday-rsvp-overlay" style="display:none;position:absolute;inset:0;z-index:60;background:rgba(13,8,32,0.92);flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center;gap:8px">
+    <div style="font-size:34px;margin-bottom:6px">🎂</div>
+    <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px">Nate's Birthday</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:22px">Pregame · Game · Afters</div>
+    <div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px">Are you coming?</div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px">
+      <button onclick="bdaySetRsvp('going')" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">I'm in ✓</button>
+      <button onclick="bdaySetRsvp('maybe')" style="width:100%;background:rgba(255,255,255,0.1);color:white;border:0.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Maybe</button>
+      <button onclick="bdaySetRsvp('no')" style="width:100%;background:transparent;color:rgba(255,255,255,0.45);border:none;padding:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Can't make it</button>
+    </div>
+  </div>
+
+  <!-- TABS: Feed | Stops -->
+  <div style="background:#0D0820;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;padding:0 16px;flex-shrink:0" id="bday-tabs">
+    <div class="bday-main-tab" onclick="bdayTab('chat', event)" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 0;color:rgba(255,255,255,0.55);border-bottom:2px solid transparent;cursor:pointer">Feed</div>
+    <div class="bday-main-tab active" onclick="bdayTab('stops', event)" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">Stops</div>
+  </div>
+
+  <!-- FEED PANEL -->
+  <div id="bday2-chat" style="flex:1;overflow-y:auto;display:none;flex-direction:column;gap:10px;padding:14px 16px;background:#0D0820">
+    <div id="bday-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:40px 24px">
+      <div style="font-size:34px">💬</div>
+      <div style="font-size:16px;font-weight:700;color:white">No messages yet</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);max-width:230px;line-height:1.6">Start the conversation with everyone coming.</div>
+    </div>
+    <div id="bday-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div id="bday2-chat-input" style="display:none;position:relative;background:#150F30;border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
+    <div id="bday-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input id="bday-chat-field" placeholder="Message everyone..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendBirthdayMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
+      <button class="send-btn" onclick="sendBirthdayMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
+  </div>
+
+  <!-- STOPS PANEL — backdrop + animation behind everything (z-index 0),
+       gradient overlay for legibility (z-index 1), all real content on
+       top (z-index 2+), exactly mirroring OSL's own act-detail layering. -->
+  <div id="bday2-stops" style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden">
+    <div id="bday-stop-bg" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
+    <div id="bday-stop-anim-twinkle" style="display:none;position:absolute;inset:0">
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:10%;top:14%"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:82%;top:10%;animation-delay:.9s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:28%;top:8%;animation-delay:1.6s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:60%;top:18%;animation-delay:.4s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:90%;top:24%;animation-delay:2.1s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:4%;top:26%;animation-delay:1.2s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:46%;top:12%;animation-delay:2.6s"></span>
+      <span class="stop-twinkle-dot" style="width:4px;height:4px;left:70%;top:30%;animation-delay:1.9s"></span>
+    </div>
+    <div id="bday-stop-anim-confetti" style="display:none;position:absolute;inset:0;overflow:hidden">
+      <span class="stop-confetti-piece" style="left:6%;width:7px;height:11px;background:#F87171"></span>
+      <span class="stop-confetti-piece" style="left:18%;width:7px;height:11px;background:#FBBF24;animation-delay:.5s"></span>
+      <span class="stop-confetti-piece" style="left:30%;width:7px;height:11px;background:#4ADE80;animation-delay:1s"></span>
+      <span class="stop-confetti-piece" style="left:42%;width:7px;height:11px;background:#60A5FA;animation-delay:1.5s"></span>
+      <span class="stop-confetti-piece" style="left:54%;width:7px;height:11px;background:#F472B6;animation-delay:.2s"></span>
+      <span class="stop-confetti-piece" style="left:66%;width:7px;height:11px;background:#A78BFA;animation-delay:2s"></span>
+      <span class="stop-confetti-piece" style="left:78%;width:7px;height:11px;background:#FBBF24;animation-delay:1.3s"></span>
+      <span class="stop-confetti-piece" style="left:90%;width:7px;height:11px;background:#F87171;animation-delay:.8s"></span>
+    </div>
+    <div id="bday-stop-anim-glow" style="display:none;position:absolute;inset:0">
+      <span class="stop-glow-orb" style="width:160px;height:160px;left:10%;top:0%"></span>
+      <span class="stop-glow-orb" style="width:110px;height:110px;left:60%;top:10%;animation-delay:1.2s"></span>
+      <span class="stop-glow-orb" style="width:90px;height:90px;left:35%;top:20%;animation-delay:2.1s"></span>
+    </div>
+    <div id="bday-stop-anim-gradient" style="display:none;position:absolute;inset:0"><div class="stop-anim-gradient-fill"></div></div>
+    <div id="bday-stop-overlay" style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(13,8,32,0.5) 0%,rgba(13,8,32,0.35) 35%,rgba(13,8,32,0.55) 65%,rgba(13,8,32,0.95) 100%)"></div>
+
+    <div style="position:relative;z-index:2;display:flex;background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0 8px;border-bottom:0.5px solid rgba(255,255,255,0.1);flex-shrink:0">
+      <div class="bday-stop-tab" data-stop="pregame" onclick="selectBdayStop('pregame')" style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:11px 4px;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">🍻 Pregame</div>
+      <div class="bday-stop-tab" data-stop="game" onclick="selectBdayStop('game')" style="flex:1;text-align:center;font-size:12px;font-weight:600;padding:11px 4px;color:rgba(255,255,255,0.5);border-bottom:2px solid transparent;cursor:pointer">⚾ Game</div>
+      <div class="bday-stop-tab" data-stop="afters" onclick="selectBdayStop('afters')" style="flex:1;text-align:center;font-size:12px;font-weight:600;padding:11px 4px;color:rgba(255,255,255,0.5);border-bottom:2px solid transparent;cursor:pointer">🎉 Afters</div>
+    </div>
+
+    <div style="position:relative;z-index:2;padding:14px 16px 4px;flex-shrink:0">
+      <div id="bday-stop-name" style="font-size:18px;font-weight:800;color:#fff"></div>
+      <div id="bday-stop-time" style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px"></div>
+    </div>
+
+    <div id="bday-stop-going" style="position:relative;z-index:2;padding:8px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
+
+    <div id="bday-stop-rsvp" style="position:relative;z-index:2;display:flex;gap:6px;padding:0 16px 14px;flex-shrink:0"></div>
+
+    <div id="bday-stop-loc" style="position:relative;z-index:2;display:none;margin:0 16px 14px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.14);padding:12px 14px;background:rgba(255,255,255,0.06);flex-shrink:0">
+      <div id="bday-stop-loc-text" style="font-size:12.5px;font-weight:600;color:#fff;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <a id="bday-stop-loc-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Google Maps</a>
+        <a id="bday-stop-loc-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Apple Maps</a>
+        <a id="bday-stop-loc-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.14);border-radius:10px;padding:7px 4px;font-size:10.5px;font-weight:700;color:rgba(168,159,232,0.95);text-decoration:none">Waze</a>
+      </div>
+    </div>
+
+    <div style="position:relative;z-index:2;display:flex;padding:0 16px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
+      <div class="bday-stop-subtab active" onclick="bdayStopSubTab('activity',event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:11px 0;color:rgba(168,159,232,1);border-bottom:2px solid rgba(168,159,232,0.9);cursor:pointer">Activity</div>
+      <div class="bday-stop-subtab" onclick="bdayStopSubTab('photos',event)" style="flex:1;text-align:center;font-size:13px;font-weight:700;padding:11px 0;color:rgba(255,255,255,0.85);border-bottom:2px solid transparent;cursor:pointer">Photos</div>
+    </div>
+
+    <!-- ACTIVITY SUB-TAB -->
+    <div id="bday-stop-tab-activity" style="position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column">
+      <div id="bday-stop-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px">
+        <div id="bday-stop-chat-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
+          <div style="font-size:30px">🎉</div>
+          <div style="font-size:14px;font-weight:700;color:white">No activity yet</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);max-width:220px;line-height:1.5">RSVPs, photos, and messages will show up here.</div>
+        </div>
+        <div id="bday-stop-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+    </div>
+
+    <!-- PHOTOS SUB-TAB -->
+    <div id="bday-stop-tab-photos" style="position:relative;z-index:2;flex:1;min-height:0;display:none;flex-direction:column">
+      <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em">Photos</div>
+        <button onclick="document.getElementById('bday-stop-photo-input').click()" style="background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">＋ Add</button>
+        <input type="file" id="bday-stop-photo-input" accept="image/*" multiple style="display:none" onchange="addBdayStopPhoto(this)">
+      </div>
+      <div id="bday-stop-photos-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 16px;align-content:start"></div>
+    </div>
+
+    <div id="bday-stop-composer" style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
+      <div id="bday-stop-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="bday-stop-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendBdayStopMessage();}">
+        <button class="send-btn" onclick="sendBdayStopMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+      </div>
+    </div>
+
+    <!-- PHOTO VIEWER -->
+    <div id="bday-stop-photo-viewer" style="display:none;position:absolute;inset:0;z-index:100;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;padding:20px" ontouchstart="bdayStopPhotoSwipeStart(event)" ontouchend="bdayStopPhotoSwipeEnd(event)">
+      <button onclick="closeBdayStopPhoto()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:18px;cursor:pointer;z-index:2">✕</button>
+      <button onclick="bdayStopPhotoNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">‹</button>
+      <button onclick="bdayStopPhotoNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;z-index:2">›</button>
+      <img id="bday-stop-photo-viewer-img" src="" style="max-width:100%;max-height:75%;border-radius:8px;object-fit:contain">
+      <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:14px;text-align:center">Press and hold the photo to save it</div>
+      <button onclick="setBdayStopPrimaryPhotoFromViewer()" style="margin-top:14px;background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">★ Set as Background</button>
+      <button onclick="bdayStopPhotoDownload()" style="margin-top:12px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
+      <button id="bday-stop-photo-viewer-delete" onclick="deleteBdayStopPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+    </div>
+  </div>
+
+</div>
 <div class="screen" id="screen-view-profile" style="background:var(--bg)">
   <div class="photo-hdr">
     <div id="vp-photo-slides"><div class="photo-slide slide-1 active"></div></div>
@@ -5630,7 +6541,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.146.0-multi-stop-events';
+window.INNINGS_BUILD = 'v4.147.0-birthday-premade-osl-style';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -5649,7 +6560,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(id==='birthday-group'&&typeof startBirthdayChat==='function')startBirthdayChat();if(id==='birthday-group'&&typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -9884,6 +10795,8 @@ function _reactionSheetDelete() {
   else if (target.collection === 'futureMomentChat') deleteFutureMomentMessage(target.msgId);
   else if (target.collection === 'groupChats') deleteGroupMessage(target.msgId);
   else if (target.collection === 'groupGameChat') deleteGroupGameMessage(target.msgId);
+  else if (target.collection === 'birthdayChat') deleteBirthdayMessage(target.msgId);
+  else if (target.collection === 'birthdayStopChat') deleteBdayStopMessage(target.msgId);
 }
 
 // ── EDIT MESSAGE — reuses the same {collection, msgId} the reaction sheet
@@ -9928,7 +10841,9 @@ var REPLY_PREVIEW_MAP = {
   actChat: { chip: 'act-reply-preview', field: 'act-detail-chat-field' },
   futureMomentChat: { chip: 'future-reply-preview', field: 'fd-chat-field' },
   groupChats: { chip: 'group-reply-preview', field: 'group-chat-field' },
-  groupGameChat: { chip: 'group-game-reply-preview', field: 'gd-game-chat-field' }
+  groupGameChat: { chip: 'group-game-reply-preview', field: 'gd-game-chat-field' },
+  birthdayChat: { chip: 'bday-reply-preview', field: 'bday-chat-field' },
+  birthdayStopChat: { chip: 'bday-stop-reply-preview', field: 'bday-stop-chat-field' }
 };
 
 function _reactionSheetReply() {
