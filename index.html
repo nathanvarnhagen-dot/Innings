@@ -1047,7 +1047,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div class="scroll">
 
     <!-- OSL BANNER -->
-    <div class="banner-pop-card" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'osl-group')">
+    <div class="banner-pop-card" id="osl-feed-banner" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'osl-group')">
       <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
         <div class="banner-pop-icon" style="position:relative;font-size:28px">🎪</div>
@@ -3436,16 +3436,85 @@ function closeActDetail() {
 // touching OSL's own already-live, already-relied-on functions.
 // ══════════════════════════════════════════════════════════════════════
 
-// PLACEHOLDER CONTENT — search this array and fill in the real plan
-// (pregame spot, kickoff time, afters spot) before actually sending invites.
-var BIRTHDAY_STOPS = [
+// PLACEHOLDER CONTENT — seeds birthdayEvent/main the first time anyone
+// opens the screen. After that, Firestore is the source of truth and
+// these defaults are only a fallback (e.g. if the doc read fails).
+// Editing happens in-app now (the ✎ buttons, owner-gated) rather than by
+// touching this array directly — see loadBirthdayEventData below.
+var BIRTHDAY_STOPS_DEFAULT = [
   { id: 'pregame', emoji: '🍻', name: 'Pregame — add your spot', time: 'TBD', location: '', anim: 'glow' },
   { id: 'game', emoji: '⚾', name: 'Giants Game — Oracle Park', time: 'TBD', location: '24 Willie Mays Plaza, San Francisco, CA 94107', anim: 'twinkle' },
   { id: 'afters', emoji: '🎉', name: 'Afters — add your spot', time: 'Late', location: '', anim: 'confetti' }
 ];
+window._bdayEventData = null;
+window._bdayEventDataLoading = false;
+
+// Loads (or seeds, on the very first visit ever) the one shared birthdayEvent/
+// main doc. cb fires once window._bdayEventData is populated — every other
+// birthday function reads from that live object, never from the DEFAULT
+// array directly, so edits saved by one person show up for everyone.
+function loadBirthdayEventData(cb) {
+  if (window._bdayEventData) { if (cb) cb(); return; }
+  if (!window.db) { window._bdayEventData = { title: "Nate's Birthday", date: '', stops: BIRTHDAY_STOPS_DEFAULT.slice() }; if (cb) cb(); return; }
+  if (window._bdayEventDataLoading) {
+    var check = setInterval(function(){
+      if (window._bdayEventData) { clearInterval(check); if (cb) cb(); }
+    }, 150);
+    return;
+  }
+  window._bdayEventDataLoading = true;
+  window.db.collection('birthdayEvent').doc('main').get().then(function(doc){
+    if (doc.exists) {
+      var d = doc.data() || {};
+      window._bdayEventData = {
+        title: d.title || "Nate's Birthday",
+        date: d.date || '',
+        stops: (d.stops && d.stops.length) ? d.stops : BIRTHDAY_STOPS_DEFAULT.slice()
+      };
+      window._bdayEventDataLoading = false;
+      if (cb) cb();
+    } else {
+      var seed = { title: "Nate's Birthday", date: '', stops: BIRTHDAY_STOPS_DEFAULT.slice() };
+      window.db.collection('birthdayEvent').doc('main').set(seed).then(function(){
+        window._bdayEventData = seed;
+        window._bdayEventDataLoading = false;
+        if (cb) cb();
+      }).catch(function(err){
+        console.error('Seed birthday event data error:', err);
+        window._bdayEventData = seed; // still usable locally even if the write failed
+        window._bdayEventDataLoading = false;
+        if (cb) cb();
+      });
+    }
+  }).catch(function(err){
+    console.error('Load birthday event data error:', err);
+    window._bdayEventData = { title: "Nate's Birthday", date: '', stops: BIRTHDAY_STOPS_DEFAULT.slice() };
+    window._bdayEventDataLoading = false;
+    if (cb) cb();
+  });
+}
+
 function _bdayStopById(id) {
-  for (var i = 0; i < BIRTHDAY_STOPS.length; i++) { if (BIRTHDAY_STOPS[i].id === id) return BIRTHDAY_STOPS[i]; }
+  var stops = (window._bdayEventData && window._bdayEventData.stops) || BIRTHDAY_STOPS_DEFAULT;
+  for (var i = 0; i < stops.length; i++) { if (stops[i].id === id) return stops[i]; }
   return null;
+}
+
+// Owner check by phone (same pattern as the feedback-archive gate later in
+// this file) — this is premade content with one real owner, not a
+// generic per-user editor, so the edit buttons only show for Nate.
+function _bdayIsOwner() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var myPhone = ((user && user.phoneNumber) || '').replace(/\D/g, '');
+  return myPhone.slice(-10) === '4152979471';
+}
+
+function _bdayApplyEditVisibility() {
+  var isOwner = _bdayIsOwner();
+  var heroBtn = document.getElementById('bday-edit-hero-btn');
+  var stopBtn = document.getElementById('bday-edit-stop-btn');
+  if (heroBtn) heroBtn.style.display = isOwner ? 'flex' : 'none';
+  if (stopBtn) stopBtn.style.display = isOwner ? 'flex' : 'none';
 }
 
 var myBdayStopRsvps = {}; // stopId -> 'going'|'maybe'|'no', mirrors OSL's myRsvps
@@ -3470,6 +3539,7 @@ function bdayCheckRsvp() {
   } else {
     if (overlay) overlay.style.display = 'none';
     renderBdayState();
+    if (typeof _bdayMaybeShowReveal === 'function') _bdayMaybeShowReveal();
   }
 }
 
@@ -3488,14 +3558,20 @@ function bdaySetRsvp(val) {
   // overlay hiding reveals scroll containers that otherwise never
   // re-engage the drag gesture until a full reload.
   if (typeof _nudgeScrollers === 'function') _nudgeScrollers(document.getElementById('screen-birthday-group'));
+  if (typeof _bdayMaybeShowReveal === 'function') _bdayMaybeShowReveal();
 }
 
 function renderBdayState() {
   var rsvp = (window.userData && window.userData.birthdayRsvp) || '';
+  var data = window._bdayEventData || {};
+  var titleEl = document.getElementById('bday-title-text');
+  if (titleEl) titleEl.textContent = data.title || "Nate's Birthday";
   var status = document.getElementById('bday-going-status');
   if (status) {
     var prefix = rsvp === 'going' ? "You're in · " : rsvp === 'maybe' ? 'Maybe · ' : '';
-    status.textContent = prefix + 'Add your date · 3 stops';
+    var dateLabel = data.date ? _formatMomentDate(data.date) : 'Add your date';
+    var stopCount = (data.stops || BIRTHDAY_STOPS_DEFAULT).length;
+    status.textContent = prefix + dateLabel + ' · ' + stopCount + ' stop' + (stopCount === 1 ? '' : 's');
   }
   var membersEl = document.getElementById('bday-members');
   if (membersEl && window.db) {
@@ -4136,6 +4212,207 @@ function deleteBdayStopPhoto() {
   window.db.collection('birthdayStopPhotos').doc(p._id).delete()
     .then(function(){ closeBdayStopPhoto(); if (typeof ib_toast==='function') ib_toast('Photo deleted'); })
     .catch(function(err){ console.error('Delete birthday stop photo error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+// ── OWNER-ONLY EDITING — one shared modal, populated per context. Writes
+// the whole birthdayEvent/main doc back each time (simpler and safer than
+// trying to update one array element in place), so every field always
+// reflects exactly what's in window._bdayEventData. ──
+window._bdayEditContext = null;
+window._bdayEditAnim = null;
+
+function openBdayHeroEdit() {
+  if (!_bdayIsOwner()) return;
+  window._bdayEditContext = 'hero';
+  var data = window._bdayEventData || {};
+  var titleEl = document.getElementById('bday-edit-title');
+  if (titleEl) titleEl.textContent = 'Edit event';
+  var body = document.getElementById('bday-edit-body');
+  if (body) {
+    body.innerHTML =
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Title</div>' +
+      '<input id="bday-edit-title-input" value="' + _escapeHtml(data.title || "Nate's Birthday") + '" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;margin-bottom:16px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Date</div>' +
+      '<input type="date" id="bday-edit-date-input" value="' + _escapeHtml(data.date || '') + '" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;margin-bottom:16px">';
+  }
+  var saveBtn = document.getElementById('bday-edit-save-btn');
+  if (saveBtn) saveBtn.onclick = saveBdayHeroEdit;
+  var modal = document.getElementById('bday-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function saveBdayHeroEdit() {
+  var titleInput = document.getElementById('bday-edit-title-input');
+  var dateInput = document.getElementById('bday-edit-date-input');
+  var title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : "Nate's Birthday";
+  var date = dateInput ? dateInput.value : '';
+  window._bdayEventData = window._bdayEventData || {};
+  window._bdayEventData.title = title;
+  window._bdayEventData.date = date;
+  if (window.db) {
+    window.db.collection('birthdayEvent').doc('main').set({ title: title, date: date }, { merge: true })
+      .then(function(){ if (typeof ib_toast === 'function') ib_toast('Updated'); })
+      .catch(function(err){ console.error('Save birthday hero edit error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+  renderBdayState();
+  closeBdayEditModal();
+}
+
+function openBdayStopEdit(stopId) {
+  if (!_bdayIsOwner() || !stopId) return;
+  var s = _bdayStopById(stopId);
+  if (!s) return;
+  window._bdayEditContext = { type: 'stop', stopId: stopId };
+  window._bdayEditAnim = s.anim;
+  var titleEl = document.getElementById('bday-edit-title');
+  if (titleEl) titleEl.textContent = 'Edit ' + (s.emoji || '') + ' ' + (s.name || 'stop');
+  var body = document.getElementById('bday-edit-body');
+  if (body) {
+    var animSwatches = STOP_ANIM_OPTIONS.map(function(a){
+      var sel = s.anim === a;
+      return '<div onclick="_bdaySelectEditAnim(\'' + a + '\')" data-anim="' + a + '" class="stop-anim-swatch bday-edit-anim-swatch" style="border-color:' + (sel ? 'var(--indigo)' : 'transparent') + '">' + _stopAnimSwatchInnerHtml(a) + '</div>';
+    }).join('');
+    var animLabelsHtml = STOP_ANIM_OPTIONS.map(function(a){ return '<span style="width:48px;text-align:center;font-size:8.5px;color:var(--subtle);font-weight:600">' + STOP_ANIM_LABELS[a] + '</span>'; }).join('');
+    body.innerHTML =
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Name</div>' +
+      '<input id="bday-edit-stop-name" value="' + _escapeHtml(s.name) + '" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;margin-bottom:16px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Time</div>' +
+      '<input id="bday-edit-stop-time" value="' + _escapeHtml(s.time) + '" placeholder="e.g. 4:00 PM" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;margin-bottom:16px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Where</div>' +
+      '<input id="bday-edit-stop-location" value="' + _escapeHtml(s.location) + '" placeholder="Add a location" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;font-size:14px;color:var(--black);outline:none;font-family:inherit;margin-bottom:16px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Animation</div>' +
+      '<div style="display:flex;gap:9px;margin:2px 0 4px">' + animSwatches + '</div>' +
+      '<div style="display:flex;gap:9px;margin-bottom:16px">' + animLabelsHtml + '</div>';
+  }
+  var saveBtn = document.getElementById('bday-edit-save-btn');
+  if (saveBtn) saveBtn.onclick = saveBdayStopEdit;
+  var modal = document.getElementById('bday-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function _bdaySelectEditAnim(anim) {
+  window._bdayEditAnim = anim;
+  document.querySelectorAll('.bday-edit-anim-swatch').forEach(function(el){
+    el.style.borderColor = (el.getAttribute('data-anim') === anim) ? 'var(--indigo)' : 'transparent';
+  });
+}
+
+function saveBdayStopEdit() {
+  var ctx = window._bdayEditContext;
+  if (!ctx || ctx.type !== 'stop') return;
+  var s = _bdayStopById(ctx.stopId);
+  if (!s) return;
+  var nameInput = document.getElementById('bday-edit-stop-name');
+  var timeInput = document.getElementById('bday-edit-stop-time');
+  var locInput = document.getElementById('bday-edit-stop-location');
+  s.name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : s.name;
+  s.time = timeInput ? timeInput.value.trim() : s.time;
+  s.location = locInput ? locInput.value.trim() : s.location;
+  s.anim = window._bdayEditAnim || s.anim;
+  if (window.db) {
+    window.db.collection('birthdayEvent').doc('main').set({ stops: _sanitizeForFirestore((window._bdayEventData && window._bdayEventData.stops) || []) }, { merge: true })
+      .then(function(){ if (typeof ib_toast === 'function') ib_toast('Stop updated'); })
+      .catch(function(err){ console.error('Save birthday stop edit error:', err); if (typeof ib_toast === 'function') ib_toast('Could not save — try again'); });
+  }
+  selectBdayStop(ctx.stopId); // re-render this stop's backdrop/name/time/location with the new data
+  closeBdayEditModal();
+}
+
+function closeBdayEditModal() {
+  var modal = document.getElementById('bday-edit-modal');
+  if (modal) modal.style.display = 'none';
+  window._bdayEditContext = null;
+}
+
+// ── ENTRY REVEAL — mirrors _playOslDayReveal, simplified: no per-stop
+// who's-going clusters (a 3-stop birthday doesn't need that density), just
+// the stops themselves staggering in one at a time. ──
+window._bdayRevealTimers = [];
+function _clearBdayRevealTimers() { window._bdayRevealTimers.forEach(clearTimeout); window._bdayRevealTimers = []; }
+function _bdayRevealAfter(ms, fn) { window._bdayRevealTimers.push(setTimeout(fn, ms)); }
+
+function _playBirthdayReveal(onDone) {
+  var overlay = document.getElementById('bday-reveal');
+  var eyebrow = document.getElementById('bday-reveal-eyebrow');
+  var title = document.getElementById('bday-reveal-title');
+  var scrollEl = document.getElementById('bday-reveal-scroll');
+  var wrap = document.getElementById('bday-reveal-wrap');
+  var summary = document.getElementById('bday-reveal-summary');
+  var stops = (window._bdayEventData && window._bdayEventData.stops) || BIRTHDAY_STOPS_DEFAULT;
+  if (!overlay || !stops.length) { if (typeof onDone === 'function') onDone(); return; }
+
+  _clearBdayRevealTimers();
+  wrap.innerHTML = '';
+  summary.style.opacity = '0';
+  summary.textContent = '';
+  scrollEl.scrollTop = 0;
+  eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
+  title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '0';
+
+  eyebrow.textContent = 'The Plan';
+  title.textContent = (window._bdayEventData && window._bdayEventData.title) || "Nate's Birthday";
+  var stagger = 420;
+  var startDelay = 300;
+
+  requestAnimationFrame(function(){
+    overlay.style.opacity = '1';
+    eyebrow.style.opacity = '1'; eyebrow.style.transform = 'translateY(0)';
+    _bdayRevealAfter(50, function(){ title.style.opacity = '1'; title.style.transform = 'translateY(0)'; });
+  });
+
+  stops.forEach(function(s, i) {
+    _bdayRevealAfter(startDelay + i * stagger, function(){
+      var card = document.createElement('div');
+      card.style.cssText = 'width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:16px;margin-bottom:10px;opacity:0;transform:translateY(16px);transition:opacity 0.32s cubic-bezier(.2,.8,.3,1),transform 0.32s cubic-bezier(.2,.8,.3,1)';
+      var metaText = [s.time, s.location].filter(Boolean).join(' · ');
+      card.innerHTML = '<div style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.85);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Stop ' + (i + 1) + '</div>' +
+        '<div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml((s.emoji ? s.emoji + ' ' : '') + s.name) + '</div>' +
+        (metaText ? '<div style="font-size:12.5px;color:rgba(255,255,255,0.45);margin-top:5px">' + _escapeHtml(metaText) + '</div>' : '');
+      wrap.appendChild(card);
+      requestAnimationFrame(function(){
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+        scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+      });
+    });
+  });
+
+  var lastAt = startDelay + (stops.length - 1) * stagger;
+  _bdayRevealAfter(lastAt + 600, function(){
+    summary.textContent = stops.length + ' stop' + (stops.length === 1 ? '' : 's') + ' — see you there 🎉';
+    summary.style.opacity = '1';
+    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+  });
+  _bdayRevealAfter(lastAt + 2200, function(){
+    overlay.style.opacity = '0';
+    _bdayRevealAfter(320, function(){
+      overlay.style.display = 'none';
+      if (typeof onDone === 'function') onDone();
+    });
+  });
+}
+
+// Plays once per person, ever — tracked the same way as OSL's own
+// oslRevealShown flag, just a flat boolean since there's only one day.
+function _bdayMaybeShowReveal() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user) return;
+  if (window.userData && window.userData.birthdayRevealSeen) return;
+  window.userData = window.userData || {};
+  window.userData.birthdayRevealSeen = true;
+  if (window.db) {
+    window.db.collection('users').doc(user.uid).set({ birthdayRevealSeen: true }, { merge: true }).catch(function(err){ console.error('Save birthday reveal-seen error:', err); });
+  }
+  _playBirthdayReveal();
+}
+
+// Manual replay from the header link — not owner-gated, since watching
+// something you've already seen again is harmless either way.
+function previewBirthdayReveal(evt) {
+  if (evt) evt.stopPropagation();
+  _playBirthdayReveal();
 }
 
 // ── FAVORITE SONGS (per artist, crowdsourced by everyone in the OSL group) ──
@@ -5655,8 +5932,11 @@ function _runOslPreviewSequence() {
      attendees sub-screen (kept as the always-visible avatar row only), and
      the standalone photo-album overlay (the Photos sub-tab already covers
      that). PLACEHOLDER CONTENT: pregame location, afters location, and all
-     three times are marked TBD below — search BIRTHDAY_STOPS and fill in
-     the real plan before actually sending invites. -->
+     three times are marked TBD below in BIRTHDAY_STOPS_DEFAULT — but the
+     real way to fix that now is the in-app ✎ edit buttons (owner-only,
+     gated to Nate's phone), which write to the birthdayEvent/main Firestore
+     doc; that doc is the actual source of truth once it exists, the
+     DEFAULT array only seeds it once and serves as an offline fallback. -->
 <div class="screen" id="screen-birthday-group">
 
   <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
@@ -5670,9 +5950,15 @@ function _runOslPreviewSequence() {
     <div style="padding:4px 20px 16px;position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
       <div style="display:flex;align-items:center;gap:12px;min-width:0">
         <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎂</div>
-        <div style="min-width:0">
-          <div style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px">Nate's Birthday</div>
-          <div id="bday-going-status" style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Add your date · 3 stops</div>
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="bday-title-text" style="font-size:19px;font-weight:800;color:white;letter-spacing:-0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Nate's Birthday</div>
+            <div id="bday-edit-hero-btn" onclick="openBdayHeroEdit()" style="display:none;cursor:pointer;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.14);align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0">✎</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:2px">
+            <div id="bday-going-status" style="font-size:12px;color:rgba(255,255,255,0.4)">Add your date · 3 stops</div>
+            <div onclick="previewBirthdayReveal(event)" style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.9);cursor:pointer;flex-shrink:0;white-space:nowrap">▶ Preview</div>
+          </div>
         </div>
       </div>
     </div>
@@ -5699,6 +5985,20 @@ function _runOslPreviewSequence() {
       <button onclick="bdaySetRsvp('going')" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">I'm in ✓</button>
       <button onclick="bdaySetRsvp('maybe')" style="width:100%;background:rgba(255,255,255,0.1);color:white;border:0.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Maybe</button>
       <button onclick="bdaySetRsvp('no')" style="width:100%;background:transparent;color:rgba(255,255,255,0.45);border:none;padding:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Can't make it</button>
+    </div>
+  </div>
+
+  <!-- ENTRY REVEAL — mirrors OSL's day-reveal: eyebrow, title, then each
+       stop staggers in as its own card. Plays once per person (tracked via
+       birthdayRevealSeen), or on demand via the Preview link in the header. -->
+  <div id="bday-reveal" style="display:none;position:absolute;inset:0;z-index:70;background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 60%,#150A30 100%);flex-direction:column;opacity:0;transition:opacity 0.3s ease">
+    <div style="flex-shrink:0;padding:54px 20px 4px;text-align:center">
+      <div id="bday-reveal-eyebrow" style="font-size:11px;font-weight:700;color:rgba(168,159,232,0.75);text-transform:uppercase;letter-spacing:0.2em;opacity:0;transform:translateY(8px);transition:opacity 0.3s ease,transform 0.3s ease">The Plan</div>
+      <div id="bday-reveal-title" style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.6px;margin-top:6px;opacity:0;transform:translateY(8px);transition:opacity 0.3s ease,transform 0.3s ease">Nate's Birthday</div>
+    </div>
+    <div id="bday-reveal-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px 8px">
+      <div id="bday-reveal-wrap"></div>
+      <div id="bday-reveal-summary" style="text-align:center;font-size:12.5px;color:rgba(255,255,255,0.4);opacity:0;transition:opacity 0.3s ease;padding:6px 0 0"></div>
     </div>
   </div>
 
@@ -5764,9 +6064,12 @@ function _runOslPreviewSequence() {
       <div class="bday-stop-tab" data-stop="afters" onclick="selectBdayStop('afters')" style="flex:1;text-align:center;font-size:12px;font-weight:600;padding:11px 4px;color:rgba(255,255,255,0.5);border-bottom:2px solid transparent;cursor:pointer">🎉 Afters</div>
     </div>
 
-    <div style="position:relative;z-index:2;padding:14px 16px 4px;flex-shrink:0">
-      <div id="bday-stop-name" style="font-size:18px;font-weight:800;color:#fff"></div>
-      <div id="bday-stop-time" style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px"></div>
+    <div style="position:relative;z-index:2;padding:14px 16px 4px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div style="min-width:0">
+        <div id="bday-stop-name" style="font-size:18px;font-weight:800;color:#fff"></div>
+        <div id="bday-stop-time" style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px"></div>
+      </div>
+      <div id="bday-edit-stop-btn" onclick="openBdayStopEdit(window._bdayCurrentStop)" style="display:none;cursor:pointer;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.14);align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0">✎</div>
     </div>
 
     <div id="bday-stop-going" style="position:relative;z-index:2;padding:8px 16px;display:flex;gap:12px;overflow-x:auto;flex-shrink:0"></div>
@@ -5827,6 +6130,24 @@ function _runOslPreviewSequence() {
       <button onclick="setBdayStopPrimaryPhotoFromViewer()" style="margin-top:14px;background:rgba(168,159,232,0.9);color:#0D0820;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">★ Set as Background</button>
       <button onclick="bdayStopPhotoDownload()" style="margin-top:12px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⬇ Save Photo</button>
       <button id="bday-stop-photo-viewer-delete" onclick="deleteBdayStopPhoto()" style="display:none;margin-top:12px;background:rgba(220,60,60,0.9);color:white;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete Photo</button>
+    </div>
+  </div>
+
+  <!-- OWNER-ONLY EDIT MODAL — shared body, populated per context by
+       openBdayHeroEdit / openBdayStopEdit. Only shows for Nate (checked by
+       phone, same pattern as the feedback-archive gate elsewhere in this
+       file) since this is premade content with one real owner, not a
+       generic per-user editor. -->
+  <div id="bday-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end">
+    <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:20px 20px 0;flex-shrink:0">
+        <div id="bday-edit-title" style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:14px">Edit</div>
+      </div>
+      <div id="bday-edit-body" style="padding:0 20px;overflow-y:auto;flex:1;min-height:0"></div>
+      <div style="padding:14px 20px 20px;flex-shrink:0;border-top:0.5px solid var(--rule);display:flex;gap:8px">
+        <button onclick="closeBdayEditModal()" style="flex:1;padding:13px;border-radius:14px;background:var(--bg);border:0.5px solid var(--rule);font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);font-family:inherit">Cancel</button>
+        <button id="bday-edit-save-btn" style="flex:2;padding:13px;border-radius:14px;background:var(--indigo);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+      </div>
     </div>
   </div>
 
@@ -6541,7 +6862,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.147.0-birthday-premade-osl-style';
+window.INNINGS_BUILD = 'v4.148.0-birthday-edit-reveal-osl-archive';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -6560,7 +6881,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(id==='birthday-group'&&typeof startBirthdayChat==='function')startBirthdayChat();if(id==='birthday-group'&&typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -8439,6 +8760,16 @@ function _oslHasConcluded() {
   return _todayLocal() > OSL_LAST_DAY;
 }
 
+// Once the festival's actually over, its own auto-created memory (see
+// _convertOslToMemoryIfNeeded below) is where it lives now — the live
+// group, chat, and photos are all still fully intact and reachable from
+// that memory's "Reopen Outside Lands" link, this just stops the Feed
+// banner from reading as if it's still upcoming.
+function _applyOslBannerVisibility() {
+  var el = document.getElementById('osl-feed-banner');
+  if (el) el.style.display = _oslHasConcluded() ? 'none' : 'flex';
+}
+
 window._oslMemoryConversionRunning = false;
 function _convertOslToMemoryIfNeeded(user, pdata) {
   if (!user || !window.db) return;
@@ -8497,6 +8828,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
       name: 'Outside Lands 2026',
       date: '2026-08-07',
       vibe: '🎪 Festival',
+      isOslMemory: true,
       highlight: highlight,
       dedication: '',
       photo: bundle.photos[0] || '',
@@ -9831,12 +10163,19 @@ function renderMemoryView(m) {
 
   var sharedByLine = isForeign ? '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px">Shared by ' + _escapeHtml(m._ownerName || 'a friend') + '</div>' : '';
   var boxScoreHtml = m.boxScore ? '<div id="md-boxscore-slot" style="margin-bottom:14px">' + _boxScoreCardHtml(m.boxScore, true) + '</div>' : '<div id="md-boxscore-slot"></div>';
+  // The OSL Feed banner disappears once the festival's over — everything
+  // it led to (chat, photos, full lineup) is still there, just reached
+  // from here instead now that the live event itself has become this memory.
+  var oslReopenHtml = (m.isOslMemory && !isForeign)
+    ? '<div onclick="nav(\'osl-group\')" style="display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,0.14);border:0.5px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:14px">↩ Reopen Outside Lands — chat &amp; photos</div>'
+    : '';
 
   scroll.innerHTML =
     '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
       '<div style="font-size:19px;font-weight:700;color:#fff;letter-spacing:-0.4px;margin-bottom:3px">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
       '<div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:' + (isForeign ? '2' : '14') + 'px">' + _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : '')) + '</div>' +
       sharedByLine +
+      oslReopenHtml +
       boxScoreHtml +
 
       '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
