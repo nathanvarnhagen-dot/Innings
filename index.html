@@ -100,6 +100,84 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes stop-gradient-shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 .stop-anim-swatch{width:48px;height:48px;border-radius:50%;overflow:hidden;position:relative;cursor:pointer;border:2px solid transparent;flex-shrink:0;background:linear-gradient(160deg,#1A0A2E,#0D0820)}
 
+/* ══════════════ V5 IMMERSIVE — shared across Feed, Memories, Group,
+   Profile, Calendar. Same night-gradient/twinkle/glow language OSL and
+   the Birthday screen already use (reusing .osl-light/osl-twinkle rather
+   than duplicating it), just extended to the everyday screens. Dark
+   surfaces get the lavender accent (--lav); anything still light keeps
+   the existing indigo accent — that split is deliberate, not leftover. ══ */
+.imm-plate{position:absolute;background:rgba(168,159,232,0.5);clip-path:polygon(50% 0%,100% 38%,100% 100%,0% 100%,0% 38%);animation:osl-tent-bob 7s ease-in-out infinite}
+.imm-hero{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);position:relative;overflow:hidden;flex-shrink:0;padding:10px 20px 20px}
+.imm-hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.22) 0%,transparent 60%);pointer-events:none}
+.imm-hero-row{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.imm-hero-back{position:relative;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);padding-bottom:8px;cursor:pointer;border:none;background:none}
+.imm-glass-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+
+.imm-body{flex:1;overflow-y:auto;background:#0D0820;padding:16px 16px 20px;display:flex;flex-direction:column;gap:10px}
+.imm-section{display:flex;align-items:center;justify-content:space-between}
+.imm-eyebrow{font-size:11px;font-weight:700;color:rgba(168,159,232,0.8);text-transform:uppercase;letter-spacing:0.14em}
+.imm-link{font-size:12px;font-weight:700;color:#A89FE8;cursor:pointer}
+
+.imm-row{position:relative;overflow:hidden;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.2s ease}
+.imm-row:active{transform:scale(0.98)}
+.imm-row-icon{width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.imm-row-title{font-size:14px;font-weight:700;color:#fff}
+.imm-row-sub{font-size:11.5px;color:rgba(255,255,255,0.42);margin-top:2px}
+
+.imm-empty{background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:30px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px}
+.imm-empty-icon{width:52px;height:52px;border-radius:16px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:22px}
+.imm-empty-title{font-size:16px;font-weight:700;color:#fff}
+.imm-empty-sub{font-size:12.5px;color:rgba(255,255,255,0.42);line-height:1.55;max-width:230px}
+.imm-empty-btn{margin-top:4px;background:#A89FE8;color:#0D0820;border:none;border-radius:13px;padding:11px 20px;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer}
+
+.imm-mini{border-radius:16px;padding:14px 16px;text-align:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)}
+.imm-mini-txt{font-size:12.5px;color:rgba(255,255,255,0.45)}
+.imm-mini-btn{margin-top:8px;border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600;display:inline-block;background:rgba(168,159,232,0.16);color:#A89FE8;cursor:pointer}
+
+.imm-note{display:flex;align-items:center;gap:8px;border-radius:14px;padding:9px 13px;font-size:11.5px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55)}
+.imm-note svg{flex-shrink:0}
+.imm-note-plain{display:flex;align-items:flex-start;gap:8px;font-size:11px;line-height:1.5;color:rgba(255,255,255,0.4)}
+
+.imm-hero-stat{text-align:center;width:100%;position:relative}
+.imm-hero-stat-num{font-size:46px;font-weight:900;color:#fff;letter-spacing:-2px;line-height:1}
+.imm-hero-stat-lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);margin-top:5px}
+.imm-hstats{display:flex;justify-content:center;position:relative;width:100%}
+.imm-hstat{text-align:center;padding:0 22px}
+.imm-hstat-num{font-size:25px;font-weight:900;color:#fff;letter-spacing:-1px;line-height:1}
+.imm-hstat-num.accent{color:#A89FE8}
+.imm-hstat-lbl{font-size:9.5px;font-weight:600;color:rgba(255,255,255,0.4);margin-top:5px;text-transform:uppercase;letter-spacing:0.06em}
+.imm-hstat-div{width:1px;background:rgba(255,255,255,0.14)}
+
+/* nav bar — dark/glass version used on every immersive root tab */
+.imm-nav{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08)}
+.imm-nav .nav-item>svg{color:rgba(255,255,255,0.38)}
+.imm-nav .nav-pill{background:rgba(168,159,232,0.16)}
+.imm-nav .nav-pill svg{color:#A89FE8}
+.imm-nav .nav-pill span{color:#A89FE8}
+
+/* group detail */
+.imm-gh-icon{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.imm-gh-name{font-size:19px;font-weight:800;color:#fff;letter-spacing:-0.4px}
+.imm-gh-sub{font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px}
+.imm-memstrip{padding:10px 20px;display:flex;gap:10px;flex-shrink:0;background:rgba(13,8,32,0.4);border-bottom:0.5px solid rgba(255,255,255,0.06);overflow-x:auto}
+.imm-tabsrow{display:flex;padding:0 20px;flex-shrink:0;background:rgba(13,8,32,0.55);border-bottom:0.5px solid rgba(255,255,255,0.08)}
+.imm-tabchip{flex:1;text-align:center;font-size:12.5px;font-weight:600;padding:10px 0;border-bottom:2px solid transparent;color:rgba(255,255,255,0.5);cursor:pointer;white-space:nowrap}
+.imm-tabchip.active{color:#A89FE8;font-weight:700;border-bottom-color:#A89FE8}
+.imm-chatpanel{flex:1;overflow-y:auto;background:#0D0820;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.imm-msgbar{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08);padding:10px 16px 24px;display:flex;gap:10px;align-items:center;flex-shrink:0}
+.imm-msg-input{flex:1;font-size:13px;padding:10px 14px;border-radius:22px;outline:none;font-family:inherit;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff}
+.imm-msg-input::placeholder{color:rgba(255,255,255,0.35)}
+.imm-send-btn{width:36px;height:36px;border-radius:50%;background:#A89FE8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
+/* profile */
+.imm-p-hero{position:relative;height:210px;flex-shrink:0;overflow:hidden}
+.imm-p-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0) 30%,rgba(10,10,15,0.7) 68%,rgba(10,10,15,0.96) 100%);z-index:2}
+.imm-p-info{position:absolute;bottom:0;left:0;right:0;padding:0 24px 16px;z-index:3;display:flex;align-items:flex-end;justify-content:space-between}
+.imm-p-streak{background:#150A30;padding:4px 20px 14px;flex-shrink:0;position:relative}
+.imm-p-scard{flex:1;text-align:center;padding:10px 4px;border-radius:12px}
+.imm-p-scard.on{background:rgba(168,159,232,0.18)}
+.imm-p-scard.on .s-val{color:#C4BFEF}
+
 /* ONBOARDING — dark top for brand, white bottom for form */
 .ob-screen{background:var(--card)}
 .ob-wrap{flex:1;display:flex;flex-direction:column}
@@ -227,7 +305,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .fchip{display:inline-flex;font-size:12px;font-weight:600;padding:2px 7px;border-radius:7px;background:var(--bg);color:var(--subtle);border:1px solid var(--rule)}
 
 /* MEMORY CARD */
-.mem-snap{background:var(--card);border-radius:20px;overflow:hidden;border:1px solid var(--rule);box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.mem-snap{background:rgba(255,255,255,0.055);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.09)}
 .mem-snap-img{height:110px;position:relative;display:flex;align-items:center;justify-content:center;font-size:36px}
 .mem-snap-img.ballpark{background:linear-gradient(135deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%)}
 .mem-snap-score{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:8px 12px 10px}
@@ -235,12 +313,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .mem-snap-score-det{font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px}
 .mem-snap-body{padding:12px 14px}
 .mem-snap-who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.mem-snap-names{font-size:13px;font-weight:700;color:var(--black)}
-.mem-snap-date{font-size:11px;color:var(--subtle);margin-top:1px}
-.mem-snap-caption{font-size:13px;color:var(--mid);line-height:1.5;margin-bottom:10px}
-.mem-snap-highlight{background:var(--indigo-light);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
-.mem-snap-highlight i{font-size:15px;color:var(--indigo);flex-shrink:0}
-.mem-snap-highlight span{font-size:12px;color:var(--indigo-dark);font-weight:600;line-height:1.35}
+.mem-snap-names{font-size:13px;font-weight:700;color:#fff}
+.mem-snap-date{font-size:11px;color:rgba(255,255,255,0.42);margin-top:1px}
+.mem-snap-caption{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:10px}
+.mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
+.mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}
+.mem-snap-highlight span{font-size:12px;color:#A89FE8;font-weight:600;line-height:1.35}
 
 /* ARTICLE SHARE */
 .art-share{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--rule);max-width:78%}
@@ -266,22 +344,33 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .unread{width:20px;height:20px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white}
 
 /* GROUP DETAIL */
-.g-hdr{background:var(--indigo-deep);padding:0 20px;flex-shrink:0;position:relative;overflow:hidden}
-.g-hdr::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(107,99,181,0.3) 0%,transparent 65%);pointer-events:none}
+.g-hdr{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);padding:0 20px;flex-shrink:0;position:relative;overflow:hidden}
+.g-hdr::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(168,159,232,0.28) 0%,transparent 65%);pointer-events:none}
 .gh-status{height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:8px;position:relative}
 .back-btn{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);cursor:pointer;border:none;background:none}
 .gh-main{display:flex;align-items:center;gap:12px;padding:8px 0 14px;position:relative}
 .gh-icon{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .gh-name{font-size:18px;font-weight:800;color:white;letter-spacing:-0.4px}
 .gh-sub{font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px}
-.members-strip{background:var(--card);padding:10px 20px;display:flex;gap:12px;border-bottom:1px solid var(--rule);flex-shrink:0;overflow-x:auto}
+.members-strip{background:rgba(13,8,32,0.4);padding:10px 20px;display:flex;gap:12px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;overflow-x:auto}
 .members-strip::-webkit-scrollbar{display:none}
 .mem-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
 .m-av-sm{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.m-nm-sm{font-size:10px;color:var(--subtle)}
-.g-tabs{background:var(--card);border-bottom:1px solid var(--rule);display:flex;padding:0 20px;flex-shrink:0}
-.convo{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.convo::-webkit-scrollbar{display:none}
+.m-nm-sm{font-size:10px;color:rgba(255,255,255,0.45)}
+.g-tabs{background:rgba(13,8,32,0.55);border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;padding:0 20px;flex-shrink:0}
+#gd-tabs .tab-l{color:rgba(255,255,255,0.5)}
+#gd-tabs .tab-l.active{color:#A89FE8;font-weight:700;border-bottom-color:#A89FE8}
+#gd-chat-input{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08) !important}
+#gd-chat-input .msg-input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.12);color:#fff}
+#gd-chat-input .msg-input::placeholder{color:rgba(255,255,255,0.35)}
+#gd-chat-input .send-btn{background:#A89FE8}
+#gd-chat-input .send-btn i{color:#0D0820}
+#gd-chat-panel{background:#0D0820;flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+#gd-chat-panel::-webkit-scrollbar{display:none}
+#my-friends-list,#all-friends-grid{--indigo-light:rgba(168,159,232,0.16);--indigo:#A89FE8;--black:#ffffff}
+#gd-blank-panel{color:#fff}
+#gd-members-panel{background:#0D0820}
+#gd-games-panel{background:#0D0820}
 .date-div{text-align:center;font-size:11px;color:var(--subtle);font-weight:600}
 .input-zone{background:var(--card);border-top:1px solid var(--rule);padding:10px 16px 24px;display:flex;gap:10px;align-items:center;flex-shrink:0}
 
@@ -437,7 +526,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .photo-slide.active{opacity:1}
 .photo-slide.has-photo::before{display:none}
 .photo-slide.has-photo{background-size:cover;background-position:center}
-.slide-1{background:linear-gradient(160deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%)}
+.slide-1{background:linear-gradient(160deg,#1A0A2E 0%,#0D0820 45%,#3D1A6B 100%)}
 .slide-1::before{content:'⚾';position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:64px;opacity:0.12}
 .slide-2{background:linear-gradient(150deg,#2d1f4e 0%,#1a1640 50%,#3d2060 100%)}
 .slide-2::before{content:'🏟️';position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:64px;opacity:0.12}
@@ -457,15 +546,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .fan-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px}
 .badge-gold{background:rgba(212,175,55,0.2);color:#D4AF37;border:1px solid rgba(212,175,55,0.25)}
 .badge-team{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.08)}
-.streak-bar{background:var(--black);padding:4px 20px 14px;flex-shrink:0}
+.streak-bar{background:linear-gradient(180deg,#150A30,#0D0820);padding:4px 20px 14px;flex-shrink:0}
 .streak-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
 .streak-cards{display:flex;gap:8px}
 .s-card{flex:1;text-align:center;padding:10px 4px}
-.s-card.on{background:rgba(107,99,181,0.18);border-radius:12px}
+.s-card.on{background:rgba(168,159,232,0.18);border-radius:12px}
 .s-val{font-size:20px;font-weight:800;color:white;letter-spacing:-1px;line-height:1}
-.s-card.on .s-val{color:#C4BFEF}
+.s-card.on .s-val{color:#A89FE8}
 .s-unit{font-size:10px;color:rgba(255,255,255,0.28);margin-top:3px;font-weight:500}
 .sec-title{font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+#screen-calendar .sec-title,#screen-profile .sec-title{color:#fff}
 .stats-card{background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
 .mem-hero{background:var(--indigo-deep);padding:16px 18px;display:flex;align-items:center;gap:14px}
 .mem-num{font-size:44px;font-weight:900;color:white;letter-spacing:-3px;line-height:1}
@@ -1034,72 +1124,80 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 <!-- ═══ FEED ═══ -->
 <div class="screen" id="screen-feed">
-  <div class="status-light"></div>
-  <div class="topbar-light">
-    <div>
-      <span class="app-name">Inn<em>ings</em></span>
-      <div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div>
-    </div>
-    <div style="display:flex;gap:10px">
-      <div class="icon-btn" id="notif-bell-btn" onclick="nav('notifications')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mid)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+  <div class="status-dark"></div>
+  <div class="imm-hero">
+    <div class="imm-hero-glow"></div>
+    <div class="imm-plate" style="left:-14px;bottom:-16px;width:74px;height:59px;opacity:0.10"></div>
+    <div class="imm-plate" style="right:-18px;bottom:-22px;width:58px;height:46px;opacity:0.08;animation-delay:2s"></div>
+    <span class="osl-light" style="left:16%;top:20%;animation-delay:0s"></span>
+    <span class="osl-light" style="left:80%;top:16%;animation-delay:0.9s"></span>
+    <span class="osl-light" style="left:36%;top:10%;animation-delay:1.6s"></span>
+    <span class="osl-light" style="left:62%;top:26%;animation-delay:0.4s"></span>
+    <span class="osl-light" style="left:90%;top:32%;animation-delay:2.1s"></span>
+    <div class="imm-hero-row">
+      <div>
+        <div style="font-size:29px;font-weight:800;color:#fff;letter-spacing:-1.4px;line-height:1"><span class="app-name" style="font-size:inherit;color:inherit">Inn<em style="color:#A89FE8;font-style:normal">ings</em></span></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.04em;margin-top:4px">memories created together</div>
+      </div>
+      <div class="icon-btn imm-glass-btn" id="notif-bell-btn" onclick="nav('notifications')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
     </div>
   </div>
 
-  <div class="scroll">
+  <div class="scroll imm-body">
 
     <!-- OSL BANNER -->
-    <div class="banner-pop-card" id="osl-feed-banner" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'osl-group')">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <div class="banner-pop-card imm-row" id="osl-feed-banner" onclick="bannerNavWithPop(this,'osl-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
-        <div class="banner-pop-icon" style="position:relative;font-size:28px">🎪</div>
+        <div class="banner-pop-icon" style="position:relative;font-size:19px">🎪</div>
       </div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:white">Outside Lands 2026</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Aug 7–9 · Golden Gate Park · Tap to open →</div>
+      <div style="flex:1" class="imm-row-title-wrap">
+        <div class="imm-row-title">Outside Lands 2026</div>
+        <div class="imm-row-sub">Aug 7–9 · Golden Gate Park · Tap to open →</div>
       </div>
     </div>
 
     <!-- BIRTHDAY BANNER -->
-    <div class="banner-pop-card" style="background:linear-gradient(135deg,#1A0A2E,#3D1A6B);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'birthday-group')">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'birthday-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
-        <div class="banner-pop-icon" style="position:relative;font-size:28px">🎂</div>
+        <div class="banner-pop-icon" style="position:relative;font-size:19px">🎂</div>
       </div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:white">Nate's Birthday</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Pregame · Game · Afters · Tap to open →</div>
+        <div class="imm-row-title">Nate's Birthday</div>
+        <div class="imm-row-sub">Pregame · Game · Afters · Tap to open →</div>
       </div>
     </div>
 
     <!-- FEEDBACK BANNER -->
-    <div class="banner-pop-card" style="background:linear-gradient(135deg,#2A2460,#3D3580);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:10px;transition:transform 0.25s ease,opacity 0.25s ease" onclick="bannerNavWithPop(this,'feedback-group')">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'feedback-group')">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
-        <div class="banner-pop-icon" style="position:relative;font-size:28px">💬</div>
+        <div class="banner-pop-icon" style="position:relative;font-size:19px">💬</div>
       </div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:white">Feedback</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">Tell Nate what's working (and what's not) · Tap to open →</div>
+        <div class="imm-row-title">Feedback</div>
+        <div class="imm-row-sub">Tell Nate what's working (and what's not) · Tap to open →</div>
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 2px 6px">
-      <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px">Coming up</div>
-      <div onclick="startFuturePlan()" style="font-size:12px;font-weight:700;color:var(--indigo);cursor:pointer">＋ It's coming up</div>
+    <div class="imm-section" style="padding:8px 2px 0">
+      <div class="imm-eyebrow">Coming up</div>
+      <div onclick="startFuturePlan()" class="imm-link">＋ It's coming up</div>
     </div>
-    <div id="feed-upcoming-list" style="display:none;flex-direction:column"></div>
-    <div id="feed-upcoming-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;gap:10px">
-      <div style="width:56px;height:56px;border-radius:18px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px">⚾</div>
-      <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">Nothing coming up yet</div>
-      <div style="font-size:13px;color:var(--subtle);line-height:1.6;max-width:250px">Post something you're going to — make it public and anyone in your circle can see it and come along if they want.</div>
-      <button onclick="startFuturePlan()" style="margin-top:6px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Post what's coming up</button>
+    <div id="feed-upcoming-list" style="display:none;flex-direction:column;gap:10px"></div>
+    <div id="feed-upcoming-empty" class="imm-empty">
+      <div class="imm-empty-icon">⚾</div>
+      <div class="imm-empty-title">Nothing coming up yet</div>
+      <div class="imm-empty-sub">Post something you're going to — make it public and anyone in your circle can see it and come along if they want.</div>
+      <button onclick="startFuturePlan()" class="imm-empty-btn">Post what's coming up</button>
     </div>
 
   </div>
-    <div class="bottom-nav">
+    <div class="bottom-nav imm-nav">
     <button class="nav-item active" onclick="nav('feed')" aria-label="Feed"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg><span>Feed</span></div></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
-    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
+    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item" onclick="nav('memories')" aria-label="Memories"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </div>
@@ -1183,26 +1281,31 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 </div>
 <div class="screen" id="screen-calendar">
-  <div class="status-light"></div>
-  <div class="topbar-light"><div><span class="app-name">Inn<em>ings</em></span><div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div></div></div>
-  <div class="ss-strip">
-    <div class="ss"><div class="ss-v" id="cal-moments">0</div><div class="ss-l">Moments</div></div>
-    <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v" id="cal-year">0</div><div class="ss-l">This year</div></div>
-    <div class="ss-div"></div>
-    <div class="ss"><div class="ss-v" id="cal-streak" style="color:var(--indigo)">0</div><div class="ss-l">Streak</div></div>
+  <div class="status-dark"></div>
+  <div class="imm-hero" style="padding:10px 20px 22px">
+    <div class="imm-hero-glow"></div>
+    <div class="imm-plate" style="left:-14px;bottom:-18px;width:64px;height:51px;opacity:0.08"></div>
+    <span class="osl-light" style="left:14%;top:16%;animation-delay:0.4s"></span>
+    <span class="osl-light" style="left:86%;top:20%;animation-delay:1.7s"></span>
+    <div class="imm-hstats">
+      <div class="imm-hstat"><div class="imm-hstat-num" id="cal-moments">0</div><div class="imm-hstat-lbl">Moments</div></div>
+      <div class="imm-hstat-div"></div>
+      <div class="imm-hstat"><div class="imm-hstat-num" id="cal-year">0</div><div class="imm-hstat-lbl">This year</div></div>
+      <div class="imm-hstat-div"></div>
+      <div class="imm-hstat"><div class="imm-hstat-num accent" id="cal-streak">0</div><div class="imm-hstat-lbl">Streak</div></div>
+    </div>
   </div>
-  <div class="scroll" id="cal-content"></div>
-  <div id="cal-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
-    <div style="width:64px;height:64px;border-radius:20px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">📅</div>
-    <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px">Nothing on the calendar yet</div>
-    <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:260px">RSVP to an event or save a moment and it'll show up here as a timeline of your life.</div>
-    <button onclick="nav('create-group')" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">Create a moment</button>
+  <div class="scroll imm-body" id="cal-content"></div>
+  <div id="cal-empty" class="imm-empty" style="flex:1;margin:16px;justify-content:center;background:#0D0820;border:none">
+    <div class="imm-empty-icon">📅</div>
+    <div class="imm-empty-title">Nothing on the calendar yet</div>
+    <div class="imm-empty-sub">RSVP to an event or save a moment and it'll show up here as a timeline of your life.</div>
+    <button onclick="nav('create-group')" class="imm-empty-btn">Create a moment</button>
   </div>
-    <div class="bottom-nav">
+    <div class="bottom-nav imm-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item active" onclick="nav('calendar')" aria-label="Calendar"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg><span>Calendar</span></div></button>
-    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
+    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item" onclick="nav('memories')" aria-label="Memories"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </div>
@@ -6372,18 +6475,18 @@ function _runOslPreviewSequence() {
   <div class="g-tabs tabs-light" id="gd-tabs"></div>
 
   <!-- BLANK CANVAS -->
-  <div id="gd-blank-panel" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:10px">
+  <div id="gd-blank-panel" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:10px;background:#0D0820">
     <div style="font-size:34px">🧩</div>
-    <div style="font-size:17px;font-weight:700;color:var(--black);letter-spacing:-0.3px">This group is a blank canvas</div>
-    <div style="font-size:13px;color:var(--subtle);line-height:1.6;max-width:260px">Add a feature to get it going — start with a group chat.</div>
-    <button onclick="showFeaturePicker()" style="margin-top:8px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Add a feature</button>
+    <div style="font-size:17px;font-weight:700;color:#fff;letter-spacing:-0.3px">This group is a blank canvas</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.42);line-height:1.6;max-width:260px">Add a feature to get it going — start with a group chat.</div>
+    <button onclick="showFeaturePicker()" style="margin-top:8px;background:#A89FE8;color:#0D0820;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ Add a feature</button>
   </div>
 
   <!-- CHAT PANEL -->
   <div class="convo" id="gd-chat-panel" style="display:none">
     <div id="group-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:40px 16px">
       <div style="font-size:28px" id="group-chat-empty-icon">💬</div>
-      <div style="font-size:13px;color:var(--subtle)">No messages yet — say the first thing</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.45)">No messages yet — say the first thing</div>
     </div>
     <div id="group-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
@@ -6396,27 +6499,27 @@ function _runOslPreviewSequence() {
   </div>
 
   <!-- MEMBERS PANEL -->
-  <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px">
+  <div id="gd-members-panel" style="display:none;flex:1;overflow-y:auto;padding:18px 16px;background:#0D0820">
     <div id="gd-members-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px"></div>
     <div style="display:flex;gap:16px;justify-content:center;margin-top:18px">
-      <div style="font-size:12px;color:var(--indigo);font-weight:600;cursor:pointer" onclick="groupToggleAddFriends()">＋ Add friends</div>
+      <div style="font-size:12px;color:#A89FE8;font-weight:600;cursor:pointer" onclick="groupToggleAddFriends()">＋ Add friends</div>
     </div>
     <div id="gd-add-friends" style="display:none;margin-top:12px"></div>
-    <div onclick="groupShareInvite()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);cursor:pointer;margin-top:18px">
+    <div onclick="groupShareInvite()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1.5px dashed rgba(255,255,255,0.15);cursor:pointer;margin-top:18px">
       <div style="font-size:20px">📲</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--black)">Invite someone new</div><div style="font-size:11px;color:var(--subtle)">Share a link from your contacts, Messages, or anywhere</div></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">Invite someone new</div><div style="font-size:11px;color:rgba(255,255,255,0.42)">Share a link from your contacts, Messages, or anywhere</div></div>
     </div>
   </div>
 
   <!-- GAMES PANEL -->
-  <div id="gd-games-panel" style="display:none;flex-direction:column;flex:1;min-height:0">
-    <div style="background:var(--card);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
-      <button onclick="gdGamesNav(-1)" style="background:var(--bg);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:var(--subtle);font-family:inherit">‹</button>
+  <div id="gd-games-panel" style="display:none;flex-direction:column;flex:1;min-height:0;background:#0D0820">
+    <div style="background:rgba(13,8,32,0.7);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0">
+      <button onclick="gdGamesNav(-1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:rgba(255,255,255,0.6);font-family:inherit">‹</button>
       <div style="text-align:center;cursor:pointer" onclick="gdGamesToday()">
-        <div id="gd-games-date-label" style="font-size:14px;font-weight:700;color:var(--black)">Today</div>
-        <div id="gd-games-today-link" style="display:none;font-size:11px;color:var(--indigo);font-weight:600;margin-top:2px">Jump to today</div>
+        <div id="gd-games-date-label" style="font-size:14px;font-weight:700;color:#fff">Today</div>
+        <div id="gd-games-today-link" style="display:none;font-size:11px;color:#A89FE8;font-weight:600;margin-top:2px">Jump to today</div>
       </div>
-      <button onclick="gdGamesNav(1)" style="background:var(--bg);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:var(--subtle);font-family:inherit">›</button>
+      <button onclick="gdGamesNav(1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:rgba(255,255,255,0.6);font-family:inherit">›</button>
     </div>
     <div id="gd-games-list" class="scroll-bare" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px"></div>
   </div>
@@ -6648,38 +6751,45 @@ function _runOslPreviewSequence() {
 
 <!-- ═══ MEMORIES ═══ -->
 <div class="screen" id="screen-memories">
-  <div class="status-light"></div>
-  <div class="topbar-light"><div><span class="app-name">Inn<em>ings</em></span><div style="font-size:10px;color:var(--subtle);letter-spacing:0.04em;margin-top:-2px">memories created together</div></div></div>
-  <div class="scroll">
-    <div style="text-align:center;padding:12px 0 20px">
-      <div id="mem-count" style="font-size:32px;font-weight:900;color:var(--black);letter-spacing:-2px;line-height:1">0</div>
-      <div style="font-size:13px;color:var(--subtle);margin-top:4px;font-weight:500">Memories this season</div>
+  <div class="status-dark"></div>
+  <div class="imm-hero" style="padding:10px 20px 26px;text-align:center">
+    <div class="imm-hero-glow"></div>
+    <div class="imm-plate" style="left:-14px;bottom:-16px;width:70px;height:56px;opacity:0.09"></div>
+    <div class="imm-plate" style="right:-16px;bottom:-20px;width:56px;height:45px;opacity:0.07;animation-delay:1.8s"></div>
+    <span class="osl-light" style="left:18%;top:18%;animation-delay:0.2s"></span>
+    <span class="osl-light" style="left:78%;top:22%;animation-delay:1.3s"></span>
+    <span class="osl-light" style="left:50%;top:8%;animation-delay:0.7s"></span>
+    <div class="imm-hero-stat">
+      <div id="mem-count" class="imm-hero-stat-num">0</div>
+      <div class="imm-hero-stat-lbl">Memories this season</div>
     </div>
-    <div class="closed-banner"><i class="ti ti-lock"></i> Your memories are private. Only people in the moment with you can see them.</div>
+  </div>
+  <div class="scroll imm-body">
+    <div class="imm-note"><i class="ti ti-lock" style="color:#A89FE8;font-size:15px"></i> Your memories are private. Only people in the moment with you can see them.</div>
 
     <!-- UPCOMING (future moments) -->
-    <div id="upcoming-section" style="display:none;margin-bottom:18px">
-      <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Upcoming</div>
+    <div id="upcoming-section" style="display:none;margin-bottom:8px">
+      <div class="imm-eyebrow" style="margin-bottom:10px">Upcoming</div>
       <div id="upcoming-list"></div>
     </div>
 
 
     <!-- REAL SAVED MOMENTS render here (newest first) -->
-    <div id="past-memories-title" style="display:none;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Past Memories</div>
+    <div id="past-memories-title" class="imm-eyebrow" style="display:none;margin-bottom:2px">Past Memories</div>
     <div id="mem-list" style="display:flex;flex-direction:column;gap:12px"></div>
 
     <!-- EMPTY STATE -->
-    <div id="mem-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:12px">
-      <div style="width:64px;height:64px;border-radius:22px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:28px">❤️</div>
-      <div style="font-size:19px;font-weight:700;color:var(--black);letter-spacing:-0.5px">Your memories live here</div>
-      <div style="font-size:14px;color:var(--subtle);line-height:1.6;max-width:250px">Every moment deserves a home. Tap + to save your first one.</div>
-      <button onclick="nav('create-group')" style="margin-top:6px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Save your first moment</button>
+    <div id="mem-empty" class="imm-empty" style="display:none;margin-top:4px">
+      <div class="imm-empty-icon">❤️</div>
+      <div class="imm-empty-title">Your memories live here</div>
+      <div class="imm-empty-sub">Every moment deserves a home. Tap + to save your first one.</div>
+      <button onclick="nav('create-group')" class="imm-empty-btn">Save your first moment</button>
     </div>
   </div>
-  <div class="bottom-nav">
+  <div class="bottom-nav imm-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
-    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
+    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item active" onclick="nav('memories')" aria-label="Memories"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Memories</span></div></button>
     <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </div>
@@ -6762,6 +6872,8 @@ function _runOslPreviewSequence() {
     <div class="photo-overlay"></div>
     <div class="photo-status"></div>
     <div class="photo-dots" id="photo-dots"></div>
+    <span class="osl-light" style="left:14%;top:18%;animation-delay:0.3s;z-index:2"></span>
+    <span class="osl-light" style="left:82%;top:24%;animation-delay:1.6s;z-index:2"></span>
     <div onclick="document.getElementById('profile-photo-input').click()" style="position:absolute;top:56px;right:16px;z-index:6;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,0.3)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
@@ -6807,18 +6919,18 @@ function _runOslPreviewSequence() {
     </div>
   </div>
 
-  <div class="scroll">
+  <div class="scroll imm-body">
 
     <!-- WHO I AM -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="sec-title" style="margin-bottom:0">Who I am</div>
-      <div onclick="showAddInterest()" style="font-size:12px;font-weight:600;color:var(--indigo);cursor:pointer">+ Add</div>
+      <div onclick="showAddInterest()" style="font-size:12px;font-weight:600;color:#A89FE8;cursor:pointer">+ Add</div>
     </div>
-    <div class="card" style="padding:14px 16px" id="who-i-am-card">
+    <div style="padding:14px 16px;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:20px" id="who-i-am-card">
       <div style="display:flex;flex-wrap:wrap;gap:8px" id="interests-container">
         <div id="interests-empty" style="width:100%;text-align:center;padding:8px 0">
-          <div style="font-size:13px;color:var(--subtle);margin-bottom:8px">Tell people who you are</div>
-          <button onclick="showAddInterest()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add your first interest</button>
+          <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:8px">Tell people who you are</div>
+          <button onclick="showAddInterest()" style="background:rgba(168,159,232,0.16);color:#A89FE8;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add your first interest</button>
         </div>
       </div>
     </div>
@@ -6849,23 +6961,23 @@ function _runOslPreviewSequence() {
         <!-- FRIENDS -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="sec-title" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;gap:4px" onclick="openAllFriends()">Friends <span style="opacity:0.4;font-size:10px">›</span></div>
-      <div onclick="showAddFriendsSheet()" style="font-size:12px;font-weight:600;color:var(--indigo);cursor:pointer">+ Add</div>
+      <div onclick="showAddFriendsSheet()" style="font-size:12px;font-weight:600;color:#A89FE8;cursor:pointer">+ Add</div>
     </div>
     <div id="my-friends-list" style="display:flex;flex-wrap:nowrap;overflow-x:auto;gap:10px;margin-bottom:14px"></div>
-    <div id="my-friends-empty" class="card" style="padding:14px 16px;text-align:center;margin-bottom:14px">
-      <div style="font-size:13px;color:var(--subtle)">No friends yet — tap + Add above, or add from inside a group</div>
+    <div id="my-friends-empty" style="padding:14px 16px;text-align:center;margin-bottom:14px;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:20px">
+      <div style="font-size:13px;color:rgba(255,255,255,0.45)">No friends yet — tap + Add above, or add from inside a group</div>
     </div>
 
     <!-- ALL FRIENDS — full list, opened by tapping the "Friends" section
          title above. Same chip renderer as the single-line strip
          (_renderFriendChips), just wrapping into a grid here instead of
          scrolling in one line, same pattern as osl-attendees-detail. -->
-    <div id="all-friends-overlay" style="display:none;flex-direction:column;background:var(--card);position:fixed;inset:0;z-index:100">
-      <div style="padding:14px 16px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;gap:12px;flex-shrink:0">
-        <button onclick="closeAllFriends()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+    <div id="all-friends-overlay" style="display:none;flex-direction:column;background:#0D0820;position:fixed;inset:0;z-index:100">
+      <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <button onclick="closeAllFriends()" style="background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
         </button>
-        <div style="font-size:16px;font-weight:700;color:var(--black)">Friends</div>
+        <div style="font-size:16px;font-weight:700;color:white">Friends</div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:18px 16px">
         <div id="all-friends-grid" style="display:flex;flex-wrap:wrap;gap:16px 10px"></div>
@@ -6874,12 +6986,12 @@ function _runOslPreviewSequence() {
         <!-- MY GROUPS -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="sec-title" style="margin-bottom:0">My groups</div>
-      <div onclick="showNewGroupModal()" style="font-size:12px;font-weight:600;color:var(--indigo);cursor:pointer">+ New</div>
+      <div onclick="showNewGroupModal()" style="font-size:12px;font-weight:600;color:#A89FE8;cursor:pointer">+ New</div>
     </div>
     <div id="my-groups-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
-    <div id="my-groups-empty" class="card" style="padding:16px;text-align:center;margin-bottom:14px">
-      <div style="font-size:13px;color:var(--subtle);margin-bottom:8px">You're not in any groups yet</div>
-      <button onclick="showNewGroupModal()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Create a group</button>
+    <div id="my-groups-empty" style="padding:16px;text-align:center;margin-bottom:14px;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:20px">
+      <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:8px">You're not in any groups yet</div>
+      <button onclick="showNewGroupModal()" style="background:rgba(168,159,232,0.16);color:#A89FE8;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Create a group</button>
     </div>
 
     <!-- ADD FRIENDS SHEET -->
@@ -6929,15 +7041,15 @@ function _runOslPreviewSequence() {
 
     <!-- PRIVACY NOTE -->
     <div style="display:flex;align-items:flex-start;gap:8px;padding:2px 4px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B0B0C8" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      <div style="font-size:11px;color:var(--subtle);line-height:1.5">Groups are private. Friends of friends can see your groups and request access. Strangers can only find you by phone number.</div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);line-height:1.5">Groups are private. Friends of friends can see your groups and request access. Strangers can only find you by phone number.</div>
     </div>
 
-    <div id="profile-build-stamp" style="text-align:center;font-size:10px;color:var(--subtle);opacity:0.5;margin-top:14px">build</div>
+    <div id="profile-build-stamp" style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);opacity:0.5;margin-top:14px">build</div>
 
   </div>
 
-  <div class="bottom-nav">
+  <div class="bottom-nav imm-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
@@ -6994,7 +7106,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v4.152.0-osl-memory-selfheal-cal-fix-friends-line';
+window.INNINGS_BUILD = 'v5.0.0-immersive-feed-memories-group-profile-calendar';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8630,17 +8742,17 @@ function renderInterests(list) {
   if (!c) return;
   if (!list || !list.length) {
     c.innerHTML = '<div id="interests-empty" style="width:100%;text-align:center;padding:8px 0">' +
-      '<div style="font-size:13px;color:var(--subtle);margin-bottom:8px">Tell people who you are</div>' +
-      '<button onclick="showAddInterest()" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add your first interest</button>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:8px">Tell people who you are</div>' +
+      '<button onclick="showAddInterest()" style="background:rgba(168,159,232,0.16);color:#A89FE8;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add your first interest</button>' +
     '</div>';
     return;
   }
   c.innerHTML = list.map(function(it, i){
     var emoji = it.emoji || _fallbackInterestEmoji(it.label || '');
-    return '<div onclick="removeInterest(' + i + ')" style="display:inline-flex;align-items:center;gap:6px;background:var(--indigo-light);border-radius:20px;padding:7px 13px;cursor:pointer">' +
-      '<span style="font-size:15px">' + _escapeHtml(emoji) + '</span><span style="font-size:13px;font-weight:600;color:var(--indigo)">' + _escapeHtml(it.label || '') + '</span></div>';
+    return '<div onclick="removeInterest(' + i + ')" style="display:inline-flex;align-items:center;gap:6px;background:rgba(168,159,232,0.16);border-radius:20px;padding:7px 13px;cursor:pointer">' +
+      '<span style="font-size:15px">' + _escapeHtml(emoji) + '</span><span style="font-size:13px;font-weight:600;color:#A89FE8">' + _escapeHtml(it.label || '') + '</span></div>';
   }).join('') +
-  '<div id="add-interest-btn" onclick="showAddInterest()" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:0.5px solid var(--rule);border-radius:20px;padding:7px 13px;cursor:pointer"><span style="font-size:13px;color:var(--indigo);font-weight:600">+ Add</span></div>';
+  '<div id="add-interest-btn" onclick="showAddInterest()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;padding:7px 13px;cursor:pointer"><span style="font-size:13px;color:#A89FE8;font-weight:600">+ Add</span></div>';
 }
 
 function showAddInterest() { var m=document.getElementById('add-interest-modal'); if(m) m.style.display='flex'; }
@@ -9077,7 +9189,7 @@ function loadFeedMoments() {
   var listEl = document.getElementById('feed-upcoming-list');
   var emptyEl = document.getElementById('feed-upcoming-empty');
   if (!user || !window.db || !listEl) return;
-  listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Loading…</div>';
+  listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,0.4);padding:12px 2px">Loading…</div>';
   listEl.style.display = 'flex';
   if (emptyEl) emptyEl.style.display = 'none';
 
@@ -9137,7 +9249,7 @@ function loadFeedMoments() {
     }).join('');
   }).catch(function(err){
     console.error('Load feed moments error:', err);
-    listEl.innerHTML = '<div style="font-size:13px;color:var(--subtle);padding:12px 2px">Could not load feed — try again</div>';
+    listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,0.4);padding:12px 2px">Could not load feed — try again</div>';
   });
 }
 
@@ -10005,7 +10117,7 @@ function renderMoments(moments) {
     var meta = [];
     if (totalPhotos > 1) meta.push(totalPhotos + ' photos');
     if (nComments) meta.push(nComments + (nComments === 1 ? ' comment' : ' comments'));
-    var metaLine = meta.length ? '<div style="font-size:11px;color:var(--subtle);margin-top:8px">' + meta.join('  ·  ') + '</div>' : '';
+    var metaLine = meta.length ? '<div style="font-size:11px;color:rgba(255,255,255,0.42);margin-top:8px">' + meta.join('  ·  ') + '</div>' : '';
     return '<div class="mem-snap" style="cursor:pointer" onclick="openMemory(\'' + m._id + '\')">' + img +
       '<div class="mem-snap-body">' +
         '<div class="mem-snap-who">' +
@@ -11114,12 +11226,12 @@ function _calRenderMonth(year, month, momentsByDate) {
     var dayMoments = momentsByDate[dateStr] || [];
     var isToday = dateStr === todayStr;
     var isSelected = dateStr === window._calSelectedDate;
-    var bg = isSelected ? 'var(--indigo)' : 'transparent';
-    var textColor = isSelected ? 'white' : 'var(--black)';
-    var ring = (isToday && !isSelected) ? 'box-shadow:inset 0 0 0 1.5px var(--indigo);' : '';
+    var bg = isSelected ? '#A89FE8' : 'transparent';
+    var textColor = isSelected ? '#0D0820' : 'rgba(255,255,255,0.85)';
+    var ring = (isToday && !isSelected) ? 'box-shadow:inset 0 0 0 1.5px #A89FE8;' : '';
     var hasPast = dayMoments.some(function(m){ return !m._future && !m._osl; });
     var hasUpcoming = dayMoments.some(function(m){ return m._future || m._osl; });
-    var dotColor = isSelected ? 'white' : 'var(--indigo)';
+    var dotColor = isSelected ? '#0D0820' : '#A89FE8';
     var dot;
     if (hasPast) {
       dot = '<div style="width:5px;height:5px;border-radius:50%;background:' + dotColor + ';margin-top:2px"></div>';
@@ -11138,12 +11250,12 @@ function _calRenderMonth(year, month, momentsByDate) {
 
   return '<div style="margin-bottom:16px">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
-      '<button onclick="_calGoToMonth(-1)" style="background:var(--card);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--subtle);font-family:inherit">‹</button>' +
-      '<div style="font-size:15px;font-weight:700;color:var(--black)">' + CAL_MONTH_NAMES[month] + ' ' + year + '</div>' +
-      '<button onclick="_calGoToMonth(1)" style="background:var(--card);border:0.5px solid var(--rule);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--subtle);font-family:inherit">›</button>' +
+      '<button onclick="_calGoToMonth(-1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.6);font-family:inherit">‹</button>' +
+      '<div style="font-size:15px;font-weight:700;color:#fff">' + CAL_MONTH_NAMES[month] + ' ' + year + '</div>' +
+      '<button onclick="_calGoToMonth(1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.6);font-family:inherit">›</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">' +
-      CAL_WEEKDAY_LABELS.map(function(l){ return '<div style="text-align:center;font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.04em">' + l + '</div>'; }).join('') +
+      CAL_WEEKDAY_LABELS.map(function(l){ return '<div style="text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.04em">' + l + '</div>'; }).join('') +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">' + cells + '</div>' +
   '</div>';
@@ -11153,16 +11265,16 @@ function _calRenderDayDetail(momentsByDate) {
   var selected = window._calSelectedDate;
 
   if (!selected) {
-    return '<div style="text-align:center;padding:20px 0;font-size:13px;color:var(--subtle)">Tap a day to see what happened</div>';
+    return '<div style="text-align:center;padding:20px 0;font-size:13px;color:rgba(255,255,255,0.4)">Tap a day to see what happened</div>';
   }
 
   var dayMoments = momentsByDate[selected] || [];
   var header = '<div class="sec-title">' + _formatCalDate(selected) + '</div>';
 
   if (!dayMoments.length) {
-    return header + '<div style="text-align:center;padding:16px;background:var(--card);border:1px solid var(--rule);border-radius:16px">' +
-      '<div style="font-size:13px;color:var(--subtle);margin-bottom:10px">Nothing saved for this day yet</div>' +
-      '<button onclick="_calCreateForDate(\'' + selected + '\')" style="background:var(--indigo-light);color:var(--indigo);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add a moment</button>' +
+    return header + '<div style="text-align:center;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px">' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.42);margin-bottom:10px">Nothing saved for this day yet</div>' +
+      '<button onclick="_calCreateForDate(\'' + selected + '\')" style="background:rgba(168,159,232,0.16);color:#A89FE8;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ Add a moment</button>' +
     '</div>';
   }
 
@@ -11177,16 +11289,16 @@ function _calRenderDayDetail(momentsByDate) {
       }
       if (m._future) {
         var futureEmoji = (m.vibe || '📅').trim().split(' ')[0];
-        return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
-          '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(futureEmoji) + '</div>' +
-          '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
-          '<div style="font-size:11px;font-weight:700;color:var(--indigo);margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Upcoming</div></div>' +
+        return '<div onclick="openFutureDetail(\'' + m._id + '\')" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(futureEmoji) + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(m.title || 'Untitled plan') + '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:#A89FE8;margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Upcoming</div></div>' +
         '</div>';
       }
       var emoji = (m.vibe || '⚾').trim().split(' ')[0];
-      return '<div onclick="openMemory(\'' + m._id + '\')" style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
-        '<div style="width:40px;height:40px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
-        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--black)">' + _escapeHtml(m.name || 'Untitled moment') + '</div></div>' +
+      return '<div onclick="openMemory(\'' + m._id + '\')" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+        '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(m.name || 'Untitled moment') + '</div></div>' +
       '</div>';
     }).join('') +
   '</div>';
