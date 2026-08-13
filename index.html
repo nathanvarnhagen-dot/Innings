@@ -150,7 +150,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 /* nav bar — dark/glass version used on every immersive root tab */
 .imm-nav{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08)}
-.imm-nav .nav-item>svg{color:rgba(255,255,255,0.38)}
+.imm-nav .nav-item>svg{color:rgba(255,255,255,0.5)}
 .imm-nav .nav-pill{background:rgba(168,159,232,0.16)}
 .imm-nav .nav-pill svg{color:#A89FE8}
 .imm-nav .nav-pill span{color:#A89FE8}
@@ -367,7 +367,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 #gd-chat-input .send-btn i{color:#0D0820}
 #gd-chat-panel{background:#0D0820;flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 #gd-chat-panel::-webkit-scrollbar{display:none}
-#my-friends-list,#all-friends-grid{--indigo-light:rgba(168,159,232,0.16);--indigo:#A89FE8;--black:#ffffff}
 #gd-blank-panel{color:#fff}
 #gd-members-panel{background:#0D0820}
 #gd-games-panel{background:#0D0820}
@@ -7052,7 +7051,7 @@ function _runOslPreviewSequence() {
   <div class="bottom-nav imm-nav">
     <button class="nav-item" onclick="nav('feed')" aria-label="Feed"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg></button>
     <button class="nav-item" onclick="nav('calendar')" aria-label="Calendar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg></button>
-    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
+    <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item" onclick="nav('memories')" aria-label="Memories"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button class="nav-item active" onclick="nav('profile')" aria-label="Profile"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></div></button>
   </div>
@@ -7106,7 +7105,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.0.0-immersive-feed-memories-group-profile-calendar';
+window.INNINGS_BUILD = 'v5.0.1-nav-fix-friendchips-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11183,7 +11182,7 @@ function renderCalendar() {
 
   var hasContent = true;
   content.innerHTML = html;
-  content.style.display = 'block';
+  content.style.display = 'flex';
   if (empty) empty.style.display = 'none';
 }
 
@@ -14110,22 +14109,26 @@ function _ensureFriendListed(theirUid) {
     .catch(function(err){ console.error('Sync friends list error:', err); });
 }
 
-function _renderFriendChips(containerEl, uids) {
+function _renderFriendChips(containerEl, uids, dark) {
   if (!containerEl) return;
   if (!uids.length) { containerEl.innerHTML = ''; return; }
-  containerEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading…</div>';
+  var loadingColor = dark ? 'rgba(255,255,255,0.4)' : 'var(--subtle)';
+  var avBg = dark ? 'rgba(168,159,232,0.16)' : 'var(--indigo-light)';
+  var avColor = dark ? '#A89FE8' : 'var(--indigo)';
+  var nameColor = dark ? '#ffffff' : 'var(--black)';
+  containerEl.innerHTML = '<div style="font-size:12px;color:' + loadingColor + '">Loading…</div>';
   Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
     containerEl.innerHTML = docs.map(function(doc){
       var d = doc.data() || {};
       var nm = d.name || 'Innings User';
       return '<div onclick="openUserProfile(\'' + doc.id + '\')" style="display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;cursor:pointer">' +
-        '<div style="width:48px;height:48px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
-        '<div style="font-size:11px;font-weight:600;color:var(--black);text-align:center;line-height:1.3">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
+        '<div style="width:48px;height:48px;border-radius:50%;background:' + avBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + avColor + '">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+        '<div style="font-size:11px;font-weight:600;color:' + nameColor + ';text-align:center;line-height:1.3">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
       '</div>';
     }).join('');
   }).catch(function(err){
     console.error('Render friend chips error:', err);
-    containerEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>';
+    containerEl.innerHTML = '<div style="font-size:12px;color:' + loadingColor + '">Could not load friends</div>';
   });
 }
 
@@ -14152,7 +14155,7 @@ function loadMyFriendsList() {
     uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
     if (emptyEl) emptyEl.style.display = uids.length ? 'none' : 'block';
     window._myFriendUids = uids;
-    _renderFriendChips(listEl, uids);
+    _renderFriendChips(listEl, uids, true);
   }).catch(function(err){
     console.error('Load my friends error:', err);
   });
@@ -14161,7 +14164,7 @@ function loadMyFriendsList() {
 function openAllFriends() {
   var box = document.getElementById('all-friends-overlay');
   if (box) box.style.display = 'flex';
-  _renderFriendChips(document.getElementById('all-friends-grid'), window._myFriendUids || []);
+  _renderFriendChips(document.getElementById('all-friends-grid'), window._myFriendUids || [], true);
 }
 
 function closeAllFriends() {
