@@ -111,7 +111,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .imm-hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.22) 0%,transparent 60%);pointer-events:none}
 .imm-hero-row{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
 .imm-hero-back{position:relative;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);padding-bottom:8px;cursor:pointer;border:none;background:none}
-.imm-glass-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.icon-btn.imm-glass-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
 
 .imm-body{flex:1;overflow-y:auto;background:#0D0820;padding:16px 16px 20px;display:flex;flex-direction:column;gap:10px}
 .imm-section{display:flex;align-items:center;justify-content:space-between}
@@ -149,7 +149,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .imm-hstat-div{width:1px;background:rgba(255,255,255,0.14)}
 
 /* nav bar — dark/glass version used on every immersive root tab */
-.imm-nav{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08)}
+.bottom-nav.imm-nav{background:rgba(13,8,32,0.94);border-top:0.5px solid rgba(255,255,255,0.08)}
 .imm-nav .nav-item>svg{color:rgba(255,255,255,0.5)}
 .imm-nav .nav-pill{background:rgba(168,159,232,0.16)}
 .imm-nav .nav-pill svg{color:#A89FE8}
@@ -1123,8 +1123,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 <!-- ═══ FEED ═══ -->
 <div class="screen" id="screen-feed">
-  <div class="status-dark"></div>
-  <div class="imm-hero">
+  <div class="imm-hero" style="padding-top:calc(env(safe-area-inset-top, 20px) + 14px)">
     <div class="imm-hero-glow"></div>
     <div class="imm-plate" style="left:-14px;bottom:-16px;width:74px;height:59px;opacity:0.10"></div>
     <div class="imm-plate" style="right:-18px;bottom:-22px;width:58px;height:46px;opacity:0.08;animation-delay:2s"></div>
@@ -1280,8 +1279,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 </div>
 <div class="screen" id="screen-calendar">
-  <div class="status-dark"></div>
-  <div class="imm-hero" style="padding:10px 20px 22px">
+  <div class="imm-hero" style="padding:calc(env(safe-area-inset-top, 20px) + 14px) 20px 22px">
     <div class="imm-hero-glow"></div>
     <div class="imm-plate" style="left:-14px;bottom:-18px;width:64px;height:51px;opacity:0.08"></div>
     <span class="osl-light" style="left:14%;top:16%;animation-delay:0.4s"></span>
@@ -6750,8 +6748,7 @@ function _runOslPreviewSequence() {
 
 <!-- ═══ MEMORIES ═══ -->
 <div class="screen" id="screen-memories">
-  <div class="status-dark"></div>
-  <div class="imm-hero" style="padding:10px 20px 26px;text-align:center">
+  <div class="imm-hero" style="padding:calc(env(safe-area-inset-top, 20px) + 14px) 20px 26px;text-align:center">
     <div class="imm-hero-glow"></div>
     <div class="imm-plate" style="left:-14px;bottom:-16px;width:70px;height:56px;opacity:0.09"></div>
     <div class="imm-plate" style="right:-16px;bottom:-20px;width:56px;height:45px;opacity:0.07;animation-delay:1.8s"></div>
@@ -7105,7 +7102,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.0.1-nav-fix-friendchips-fix';
+window.INNINGS_BUILD = 'v5.0.2-specificity-fix-topgap-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
