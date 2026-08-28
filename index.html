@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.2.1-osl-retro-rsvp-theme-color';
+window.INNINGS_BUILD = 'v5.2.2-osl-error-surfacing';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9109,6 +9109,13 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
     if (!existing.empty) {
       window._oslMemoryConversionRunning = false;
       if (!(pdata && pdata.oslConvertedToMemory)) userRef.set({ oslConvertedToMemory: true }, { merge: true }).catch(function(){});
+      // A memory doc already exists here. If it's not showing up on the
+      // Memories screen despite that, this isn't a "never converted" bug —
+      // it's a render/data issue with the existing doc. Force a refresh and
+      // say so plainly, rather than silently returning and leaving it
+      // looking like nothing happened.
+      if (typeof loadMoments === 'function') loadMoments();
+      if (typeof ib_toast === 'function') ib_toast('Found your existing Outside Lands memory — check Memories now');
       return;
     }
     return Promise.all([
@@ -9176,6 +9183,11 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
   }).catch(function(err){
     window._oslMemoryConversionRunning = false;
     console.error('Convert OSL to memory error:', err);
+    // This used to only log to a console nobody was looking at, which is
+    // exactly how "still not a memory" went unexplained for as long as it
+    // did. Whatever Firestore is actually objecting to (permission-denied,
+    // a missing index, anything) now shows up on screen instead of hiding.
+    if (typeof ib_toast === 'function') ib_toast('OSL memory failed: ' + ((err && (err.code || err.message)) || 'unknown error'));
   });
 }
 
