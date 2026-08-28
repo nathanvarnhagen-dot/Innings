@@ -6096,12 +6096,12 @@ function _playOslDayReveal(dayKey, mode, acts, onDone) {
 }
 
 // ── OSL MEMORY REVEAL — plays once, automatically, every time the OSL
-// memory is opened. Same card-by-card pacing as the live day reveal above,
-// but built from what got saved on the memory rather than live RSVP state:
-// no per-act attendance was ever recorded historically, so this shows the
-// acts you saw as a sequence, then everyone who was there with you as a
-// group at the end, instead of faking a per-act friend breakdown the data
-// doesn't actually support.
+// memory is opened. Groups the acts you saw by festival day (using the same
+// stageData lineup table the live screens read from) and shows who else was
+// at each specific act, pulled from loadOslFriendRsvps — the per-act RSVP
+// data lives permanently on each friend's own account, so it's still there
+// after the festival ends even though nothing about it was copied onto the
+// memory itself. Paced quickly per act, with a beat held on each day change.
 window._oslMemRevealTimers = [];
 function _clearOslMemRevealTimers() { window._oslMemRevealTimers.forEach(clearTimeout); window._oslMemRevealTimers = []; }
 function _oslMemRevealAfter(ms, fn) { window._oslMemRevealTimers.push(setTimeout(fn, ms)); }
@@ -6112,6 +6112,24 @@ function _skipOslMemoryReveal() {
   _clearOslMemRevealTimers();
   overlay.style.opacity = '0';
   setTimeout(function(){ overlay.style.display = 'none'; }, 220);
+}
+
+// Reverse-lookup from the static lineup table: act name -> which day/stage/
+// time it actually ran. Built once and cached — the lineup itself doesn't
+// change per-user, so there's nothing to invalidate.
+function _oslActLookup() {
+  if (window._oslActLookupCache) return window._oslActLookupCache;
+  var lookup = {};
+  Object.keys(OSL_DAY_DATES).forEach(function(dayKey){
+    var stages = stageData[dayKey] || {};
+    Object.keys(stages).forEach(function(stageKey){
+      stages[stageKey].acts.forEach(function(act){
+        lookup[act.name] = { dayKey: dayKey, stage: stages[stageKey].name, time: act.time, startMinutes: _actStartMinutes(act.time) };
+      });
+    });
+  });
+  window._oslActLookupCache = lookup;
+  return lookup;
 }
 
 function _playOslMemoryReveal(memory) {
@@ -6129,61 +6147,111 @@ function _playOslMemoryReveal(memory) {
   // Older ones only have the truncated "A, B, C + N more" display string —
   // strip the suffix and use whatever names are actually in it rather than
   // showing nothing for memories made before oslActs existed.
-  var acts = (memory.oslActs && memory.oslActs.length)
+  var actNames = (memory.oslActs && memory.oslActs.length)
     ? memory.oslActs
     : String(memory.highlight || '').replace(/\s*\+\s*\d+\s*more$/, '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-  if (!acts.length) return;
+  if (!actNames.length) return;
 
-  _clearOslMemRevealTimers();
-  wrap.innerHTML = '';
-  summary.style.opacity = '0'; summary.textContent = '';
-  alsoWrap.style.opacity = '0'; alsoList.innerHTML = '';
-  scrollEl.scrollTop = 0;
-  eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
-  title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
-  overlay.style.display = 'flex';
-  overlay.style.opacity = '0';
-
-  eyebrow.textContent = 'You Were There';
-  title.textContent = memory.name || 'Outside Lands';
-  var stagger = 380, startDelay = 300;
-
-  requestAnimationFrame(function(){
-    overlay.style.opacity = '1';
-    eyebrow.style.opacity = '1'; eyebrow.style.transform = 'translateY(0)';
-    _oslMemRevealAfter(50, function(){ title.style.opacity = '1'; title.style.transform = 'translateY(0)'; });
-  });
-
-  acts.forEach(function(actName, i){
-    _oslMemRevealAfter(startDelay + i * stagger, function(){
-      var card = document.createElement('div');
-      card.style.cssText = 'width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:16px;margin-bottom:10px;opacity:0;transform:translateY(16px);transition:opacity 0.32s cubic-bezier(.2,.8,.3,1),transform 0.32s cubic-bezier(.2,.8,.3,1)';
-      card.innerHTML = '<div style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml(actName) + '</div>';
-      wrap.appendChild(card);
-      requestAnimationFrame(function(){
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-        scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
-      });
+  loadOslFriendRsvps(function(){
+    var lookup = _oslActLookup();
+    var byDay = {};
+    var unplaced = [];
+    actNames.forEach(function(name){
+      var info = lookup[name];
+      if (!info) { unplaced.push({ name: name, startMinutes: 0 }); return; }
+      byDay[info.dayKey] = byDay[info.dayKey] || [];
+      byDay[info.dayKey].push({ name: name, stage: info.stage, time: info.time, startMinutes: info.startMinutes });
     });
-  });
+    Object.keys(byDay).forEach(function(k){ byDay[k].sort(function(a,b){ return a.startMinutes - b.startMinutes; }); });
 
-  var lastAt = startDelay + (acts.length - 1) * stagger;
-  var people = memory.people || [];
-  _oslMemRevealAfter(lastAt + 500, function(){
-    summary.textContent = acts.length + ' act' + (acts.length === 1 ? '' : 's');
-    summary.style.opacity = '1';
-    if (people.length) {
-      alsoList.innerHTML = people.map(function(name){
-        return '<div style="padding:6px 0;font-size:13px;color:rgba(255,255,255,0.85)">' + _escapeHtml(name) + '</div>';
-      }).join('');
-      alsoWrap.style.opacity = '1';
+    // Build a flat timeline of steps in day order: a day-header step, then
+    // that day's acts, repeating per day — plus anything that couldn't be
+    // matched to a day tacked on at the end rather than silently dropped.
+    var steps = [];
+    ['fri', 'sat', 'sun'].forEach(function(dayKey){
+      if (!byDay[dayKey] || !byDay[dayKey].length) return;
+      steps.push({ type: 'day', label: OSL_DAY_LABELS[dayKey] || dayKey });
+      byDay[dayKey].forEach(function(act){ steps.push({ type: 'act', act: act }); });
+    });
+    if (unplaced.length) {
+      if (steps.length) steps.push({ type: 'day', label: 'Also' });
+      unplaced.forEach(function(act){ steps.push({ type: 'act', act: act }); });
     }
-    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
-  });
-  _oslMemRevealAfter(lastAt + 1800, function(){
+
+    _clearOslMemRevealTimers();
+    wrap.innerHTML = '';
+    summary.style.opacity = '0'; summary.textContent = '';
+    alsoWrap.style.opacity = '0'; alsoList.innerHTML = '';
+    scrollEl.scrollTop = 0;
+    eyebrow.style.opacity = '0'; eyebrow.style.transform = 'translateY(8px)';
+    title.style.opacity = '0'; title.style.transform = 'translateY(8px)';
+    overlay.style.display = 'flex';
     overlay.style.opacity = '0';
-    _oslMemRevealAfter(320, function(){ overlay.style.display = 'none'; });
+
+    eyebrow.textContent = 'You Were There';
+    title.textContent = memory.name || 'Outside Lands';
+
+    requestAnimationFrame(function(){
+      overlay.style.opacity = '1';
+      eyebrow.style.opacity = '1'; eyebrow.style.transform = 'translateY(0)';
+      _oslMemRevealAfter(50, function(){ title.style.opacity = '1'; title.style.transform = 'translateY(0)'; });
+    });
+
+    // Quick per-act pacing, with a held beat whenever a day header lands —
+    // long enough to actually read "Friday, Aug 7" before acts start moving.
+    var t = 300;
+    var actGap = 240, dayGap = 480;
+    steps.forEach(function(step){
+      var at = t;
+      _oslMemRevealAfter(at, function(){
+        if (step.type === 'day') {
+          var header = document.createElement('div');
+          header.style.cssText = 'width:100%;text-align:center;padding:14px 0 6px;opacity:0;transform:translateY(10px);transition:opacity 0.3s ease,transform 0.3s ease';
+          header.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(168,159,232,0.8)">' + _escapeHtml(step.label) + '</div>';
+          wrap.appendChild(header);
+          requestAnimationFrame(function(){ header.style.opacity = '1'; header.style.transform = 'translateY(0)'; });
+        } else {
+          var act = step.act;
+          var card = document.createElement('div');
+          card.style.cssText = 'width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;margin-bottom:8px;opacity:0;transform:translateY(14px);transition:opacity 0.26s cubic-bezier(.2,.8,.3,1),transform 0.26s cubic-bezier(.2,.8,.3,1)';
+          var whoId = 'oslmem-who-' + Math.random().toString(36).slice(2);
+          var subLine = act.stage ? (act.stage + (act.time ? ' · ' + act.time : '')) : '';
+          card.innerHTML = '<div style="font-size:17px;font-weight:800;color:white;letter-spacing:-0.3px">' + _escapeHtml(act.name) + '</div>' +
+            (subLine ? '<div style="font-size:11.5px;color:rgba(255,255,255,0.4);margin-top:2px">' + _escapeHtml(subLine) + '</div>' : '') +
+            '<div id="' + whoId + '" style="margin-top:8px;display:flex;align-items:center;min-height:22px"></div>';
+          wrap.appendChild(card);
+          var friends = (window._oslFriendRsvps || {})[act.name] || [];
+          if (friends.length) {
+            var whoEl = document.getElementById(whoId);
+            var maxFit = _oslRevealFitAvatarCount(whoEl.clientWidth || 300, friends.length);
+            whoEl.innerHTML = _oslRevealAvatarsHtml(friends, maxFit);
+          }
+          requestAnimationFrame(function(){
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+            scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+          });
+        }
+      });
+      t += step.type === 'day' ? dayGap : actGap;
+    });
+
+    var people = memory.people || [];
+    _oslMemRevealAfter(t + 400, function(){
+      summary.textContent = actNames.length + ' act' + (actNames.length === 1 ? '' : 's');
+      summary.style.opacity = '1';
+      if (people.length) {
+        alsoList.innerHTML = people.map(function(name){
+          return '<div style="padding:6px 0;font-size:13px;color:rgba(255,255,255,0.85)">' + _escapeHtml(name) + '</div>';
+        }).join('');
+        alsoWrap.style.opacity = '1';
+      }
+      scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+    });
+    _oslMemRevealAfter(t + 1800, function(){
+      overlay.style.opacity = '0';
+      _oslMemRevealAfter(320, function(){ overlay.style.display = 'none'; });
+    });
   });
 }
 
@@ -7262,7 +7330,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.5.0-osl-memory-reveal';
+window.INNINGS_BUILD = 'v5.5.1-osl-reveal-by-day';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
