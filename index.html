@@ -107,7 +107,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
    surfaces get the lavender accent (--lav); anything still light keeps
    the existing indigo accent — that split is deliberate, not leftover. ══ */
 .imm-plate{position:absolute;background:rgba(168,159,232,0.5);clip-path:polygon(50% 0%,100% 38%,100% 100%,0% 100%,0% 38%);animation:osl-tent-bob 7s ease-in-out infinite}
-.imm-hero{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);position:relative;overflow:hidden;flex-shrink:0;padding:10px 20px 20px}
+.imm-hero{background:#1A0A2E;position:relative;overflow:hidden;flex-shrink:0;padding:10px 20px 20px}
 .imm-hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.22) 0%,transparent 60%);pointer-events:none}
 .imm-hero-row{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
 .imm-hero-back{position:relative;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);padding-bottom:8px;cursor:pointer;border:none;background:none}
@@ -181,7 +181,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 /* ONBOARDING — dark top for brand, white bottom for form */
 .ob-screen{background:#1A0A2E}
 .ob-wrap{flex:1;display:flex;flex-direction:column}
-.ob-top{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 32px 44px;flex:1}
+.ob-top{background:#1A0A2E;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 32px 44px;flex:1}
 .ob-logo{font-size:48px;font-weight:800;color:white;letter-spacing:-3px;line-height:1;text-align:center;margin-bottom:5px}
 .ob-logo em{color:#A89FE8;font-style:normal}
 .ob-tagline{font-size:11px;font-weight:600;color:rgba(255,255,255,0.22);letter-spacing:0.18em;text-transform:uppercase;text-align:center;margin-bottom:32px}
@@ -351,7 +351,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .unread{width:20px;height:20px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white}
 
 /* GROUP DETAIL */
-.g-hdr{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);padding:0 20px;flex-shrink:0;position:relative;overflow:hidden}
+.g-hdr{background:#1A0A2E;padding:0 20px;flex-shrink:0;position:relative;overflow:hidden}
 .g-hdr::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(168,159,232,0.28) 0%,transparent 65%);pointer-events:none}
 .gh-status{height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:8px;position:relative}
 .back-btn{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);cursor:pointer;border:none;background:none}
@@ -716,7 +716,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 </div>
 
 <!-- ═══ WELCOME MESSAGE (FOUNDER INTRO) ═══ -->
-<div class="screen" id="screen-welcome-intro" style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);display:flex;flex-direction:column">
+<div class="screen" id="screen-welcome-intro" style="background:#1A0A2E;display:flex;flex-direction:column">
 
   <div style="position:absolute;top:0;left:0;right:0;z-index:20;padding:52px 24px 0;display:flex;flex-direction:column;align-items:center;gap:18px">
     <div style="width:52px;height:52px;border-radius:15px;background:var(--indigo-deep);border:2px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.35)">
@@ -1210,7 +1210,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 <!-- ═══ FEEDBACK GROUP ═══ -->
 <div class="screen" id="screen-feedback-group" style="background:var(--indigo-deep)">
-  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+  <div style="background:#1A0A2E;flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
       <button class="back-btn" onclick="navBack()">
@@ -1344,7 +1344,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
        That was the actual mismatch across the last few rounds: the bell
        was correctly aligned *within* the Back row, but Back was never the
        right row to pair it with in the first place. -->
-  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+  <div style="background:#1A0A2E;flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="padding:10px 20px 0;position:relative">
       <button class="back-btn" onclick="navBack()">
@@ -6132,7 +6132,7 @@ function _runOslPreviewSequence() {
      fallback. -->
 <div class="screen" id="screen-birthday-group">
 
-  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+  <div style="background:#1A0A2E;flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="padding:10px 20px 0;position:relative">
       <button class="back-btn" onclick="navBack()">
@@ -6439,7 +6439,7 @@ function _runOslPreviewSequence() {
 
 <!-- ═══ FRIEND'S FESTIVAL — read-only view of someone else's OSL picks ═══ -->
 <div class="screen" id="screen-their-festival">
-  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+  <div style="background:#1A0A2E;flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 8px;position:relative">
       <button class="back-btn" onclick="closeTheirFestival()">
@@ -6806,7 +6806,7 @@ function _runOslPreviewSequence() {
 
 <!-- ═══ FRIEND HUB ═══ -->
 <div class="screen" id="screen-friend-hub">
-  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+  <div style="background:#1A0A2E;flex-shrink:0;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
     <div style="height:calc(env(safe-area-inset-top, 20px) + 30px);display:flex;align-items:flex-end;padding:0 20px 8px;position:relative">
       <button class="back-btn" onclick="navBack()">
@@ -6838,7 +6838,7 @@ function _runOslPreviewSequence() {
 
 <!-- ═══ MEMORY DETAIL ═══ -->
 <div class="screen" id="screen-memory-detail" style="background:var(--indigo-deep)">
-  <div id="md-bg-rotator" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#3D3580,#1A1640)"></div>
+  <div id="md-bg-rotator" style="position:absolute;inset:0;z-index:0;overflow:hidden;background:#1A0A2E"></div>
   <div style="position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(10,10,20,0.5) 0%,rgba(10,10,20,0.08) 22%,rgba(10,10,20,0.12) 55%,rgba(10,10,20,0.78) 100%)"></div>
 
   <div class="status-light" style="position:relative;z-index:2;background:transparent"></div>
@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.3.3-revert-dvh-regression';
+window.INNINGS_BUILD = 'v5.4.0-uniform-hero-color';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
