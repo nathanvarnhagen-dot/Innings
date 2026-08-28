@@ -319,6 +319,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
 .mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}
 .mem-snap-highlight span{font-size:12px;color:#A89FE8;font-weight:600;line-height:1.35}
+.people-chip{flex-shrink:0;text-align:center;cursor:pointer;width:58px}
+.people-chip .av{width:52px;height:52px;font-size:16px;margin:0 auto 6px}
+.people-chip-name{font-size:11px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.people-chip-count{font-size:10px;color:rgba(255,255,255,0.42);white-space:nowrap}
+.mem-avstack{display:flex;flex-shrink:0}
+.mem-avstack .av{width:28px;height:28px;font-size:10px;border:2px solid #1A1640;margin-left:-9px}
+.mem-avstack .av:first-child{margin-left:0}
 
 /* ARTICLE SHARE */
 .art-share{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--rule);max-width:78%}
@@ -6763,6 +6770,12 @@ function _runOslPreviewSequence() {
   <div class="scroll imm-body">
     <div class="imm-note"><i class="ti ti-lock" style="color:#A89FE8;font-size:15px"></i> Your memories are private. Only people in the moment with you can see them.</div>
 
+    <!-- PEOPLE ROW: quick tap-through to a friend's shared memories -->
+    <div id="people-row-section" style="display:none;margin-bottom:4px">
+      <div class="imm-eyebrow" style="margin-bottom:10px">People</div>
+      <div id="people-row-list" style="display:flex;gap:16px;overflow-x:auto;padding-bottom:2px"></div>
+    </div>
+
     <!-- UPCOMING (future moments) -->
     <div id="upcoming-section" style="display:none;margin-bottom:8px">
       <div class="imm-eyebrow" style="margin-bottom:10px">Upcoming</div>
@@ -6788,6 +6801,38 @@ function _runOslPreviewSequence() {
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item active" onclick="nav('memories')" aria-label="Memories"><div class="nav-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Memories</span></div></button>
     <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+  </div>
+</div>
+
+<!-- ═══ FRIEND HUB ═══ -->
+<div class="screen" id="screen-friend-hub">
+  <div style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);flex-shrink:0;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,159,232,0.2) 0%,transparent 60%)"></div>
+    <div style="height:calc(env(safe-area-inset-top, 20px) + 30px);display:flex;align-items:flex-end;padding:0 20px 8px;position:relative">
+      <button class="back-btn" onclick="navBack()">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+        <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin-left:4px">Back</span>
+      </button>
+    </div>
+    <div style="padding:4px 20px 22px;position:relative;text-align:center">
+      <div id="fh-avatar" class="av av-a" style="width:64px;height:64px;font-size:22px;margin:0 auto 12px"></div>
+      <div id="fh-name" style="font-size:21px;font-weight:800;color:white;letter-spacing:-0.4px"></div>
+      <div class="imm-hero-stat" style="margin-top:14px">
+        <div id="fh-count" class="imm-hero-stat-num" style="font-size:34px">0</div>
+        <div class="imm-hero-stat-lbl">Memories together</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll imm-body">
+    <div style="display:flex;gap:8px;margin-bottom:2px">
+      <button id="fh-tab-mem" onclick="_fhShowTab('mem')" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:#A89FE8;color:#1A1640">Memories</button>
+      <button id="fh-tab-bi" onclick="_fhShowTab('bi')" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)">Between Innings</button>
+    </div>
+    <div id="fh-pane-mem" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div id="fh-pane-bi" style="display:none;flex-direction:column;gap:14px;align-items:center;text-align:center;padding:36px 16px">
+      <div style="font-size:32px">🧵</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.55);line-height:1.6;max-width:260px">A private, quiet thread just between the two of you — designed, and coming soon.</div>
+    </div>
   </div>
 </div>
 
@@ -7102,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.1.1-tagged-memories-viewport-fix';
+window.INNINGS_BUILD = 'v5.2.0-friend-hub';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10108,12 +10153,14 @@ function renderMoments(moments) {
   var count = document.getElementById('mem-count');
   var pastTitle = document.getElementById('past-memories-title');
   if (count) count.textContent = moments.length;
+  renderPeopleRow(moments);
 
   var hasReal = moments.length > 0;
   if (empty) empty.style.display = hasReal ? 'none' : 'flex';
   if (pastTitle) pastTitle.style.display = hasReal ? 'block' : 'none';
   if (!list) return;
 
+  var avColors = ['av-a', 'av-b', 'av-c', 'av-d', 'av-e'];
   list.innerHTML = moments.map(function(m) {
     var emoji = (m.vibe || '⚾').trim().split(' ')[0];
     var img = m.photo
@@ -10122,6 +10169,7 @@ function renderMoments(moments) {
     var sub = _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : ''));
     var caption = m.highlight ? '<div class="mem-snap-caption">' + _escapeHtml(m.highlight) + '</div>' : '';
     var people = (m.people || []);
+    var uids = (m.taggedUids || []);
     var who = people.length ? 'You + ' + (people.length === 1 ? _escapeHtml(people[0]) : people.length + ' others') : 'Just you';
     var nComments = (m.comments || []).length;
     var totalPhotos = (m.photos || []).length + (m.photo ? 1 : 0);
@@ -10129,15 +10177,90 @@ function renderMoments(moments) {
     if (totalPhotos > 1) meta.push(totalPhotos + ' photos');
     if (nComments) meta.push(nComments + (nComments === 1 ? ' comment' : ' comments'));
     var metaLine = meta.length ? '<div style="font-size:11px;color:rgba(255,255,255,0.42);margin-top:8px">' + meta.join('  ·  ') + '</div>' : '';
+    var avStack = '<div class="mem-avstack"><div class="av av-a">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
+      uids.slice(0, 2).map(function(uid, i){
+        var nm = people[i] || 'Friend';
+        var safeNm = _escapeHtml(nm).replace(/'/g, "\\'");
+        return '<div class="av ' + avColors[(i + 1) % avColors.length] + '" onclick="event.stopPropagation();openFriendHub(\'' + uid + '\',\'' + safeNm + '\')" style="cursor:pointer">' + _escapeHtml(_initials(nm)) + '</div>';
+      }).join('') +
+    '</div>';
     return '<div class="mem-snap" style="cursor:pointer" onclick="openMemory(\'' + m._id + '\')">' + img +
       '<div class="mem-snap-body">' +
-        '<div class="mem-snap-who">' +
-          '<div class="av av-a" style="width:28px;height:28px;font-size:10px">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
+        '<div class="mem-snap-who">' + avStack +
           '<div><div class="mem-snap-names">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
           '<div class="mem-snap-date">' + who + '  ·  ' + sub + '</div></div>' +
         '</div>' + caption + metaLine +
       '</div></div>';
   }).join('');
+}
+
+function renderPeopleRow(moments) {
+  var wrap = document.getElementById('people-row-section');
+  var list = document.getElementById('people-row-list');
+  if (!wrap || !list) return;
+  var map = {};
+  (moments || []).forEach(function(m){
+    var uids = m.taggedUids || [];
+    var names = m.people || [];
+    uids.forEach(function(uid, i){
+      if (!uid) return;
+      if (!map[uid]) map[uid] = { name: names[i] || 'Friend', count: 0 };
+      map[uid].count++;
+    });
+  });
+  var people = Object.keys(map).map(function(uid){ return { uid: uid, name: map[uid].name, count: map[uid].count }; });
+  people.sort(function(a, b){ return b.count - a.count; });
+  wrap.style.display = people.length ? 'block' : 'none';
+  if (!people.length) return;
+  var colors = ['av-a', 'av-b', 'av-c', 'av-d', 'av-e'];
+  list.innerHTML = people.map(function(p, i){
+    var safeNm = _escapeHtml(p.name).replace(/'/g, "\\'");
+    return '<div class="people-chip" onclick="openFriendHub(\'' + p.uid + '\',\'' + safeNm + '\')">' +
+      '<div class="av ' + colors[i % colors.length] + '">' + _escapeHtml(_initials(p.name)) + '</div>' +
+      '<div class="people-chip-name">' + _escapeHtml(p.name) + '</div>' +
+      '<div class="people-chip-count">' + p.count + ' together</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openFriendHub(uid, name) {
+  window._openFriendUid = uid;
+  var avEl = document.getElementById('fh-avatar');
+  var nameEl = document.getElementById('fh-name');
+  var countEl = document.getElementById('fh-count');
+  var paneEl = document.getElementById('fh-pane-mem');
+  if (avEl) avEl.textContent = _initials(name);
+  if (nameEl) nameEl.textContent = name;
+
+  var shared = (window._moments || []).filter(function(m){ return (m.taggedUids || []).indexOf(uid) !== -1; });
+  if (countEl) countEl.textContent = shared.length;
+  if (paneEl) {
+    paneEl.innerHTML = shared.length ? shared.map(function(m){
+      var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+      var img = m.photo
+        ? '<div class="mem-snap-img" style="background-image:url(' + m.photo + ');background-size:cover;background-position:center"></div>'
+        : '<div class="mem-snap-img" style="background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%);font-size:34px">' + _escapeHtml(emoji) + '</div>';
+      var sub = _escapeHtml((m.vibe || '') + (m.date ? '  ·  ' + _formatMomentDate(m.date) : ''));
+      return '<div class="mem-snap" style="cursor:pointer" onclick="openMemory(\'' + m._id + '\')">' + img +
+        '<div class="mem-snap-body"><div class="mem-snap-names">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
+        '<div class="mem-snap-date">' + sub + '</div></div></div>';
+    }).join('') : '<div style="text-align:center;padding:30px 10px;color:rgba(255,255,255,0.4);font-size:13px">No shared memories yet</div>';
+  }
+  _fhShowTab('mem');
+  nav('friend-hub');
+}
+
+function _fhShowTab(tab) {
+  var memBtn = document.getElementById('fh-tab-mem');
+  var biBtn = document.getElementById('fh-tab-bi');
+  var memPane = document.getElementById('fh-pane-mem');
+  var biPane = document.getElementById('fh-pane-bi');
+  if (memBtn) memBtn.style.background = tab === 'mem' ? '#A89FE8' : 'rgba(255,255,255,.08)';
+  if (memBtn) memBtn.style.color = tab === 'mem' ? '#1A1640' : 'rgba(255,255,255,.5)';
+  if (biBtn) biBtn.style.background = tab === 'bi' ? '#A89FE8' : 'rgba(255,255,255,.08)';
+  if (biBtn) biBtn.style.color = tab === 'bi' ? '#1A1640' : 'rgba(255,255,255,.5)';
+  if (memPane) memPane.style.display = tab === 'mem' ? 'flex' : 'none';
+  if (biPane) biPane.style.display = tab === 'bi' ? 'flex' : 'none';
 }
 
 // ── PROFILE STATS + SOCIAL STREAK ──
