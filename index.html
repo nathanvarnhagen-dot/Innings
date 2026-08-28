@@ -28,8 +28,8 @@
 :root{
   --indigo:#3D3580;--indigo-dark:#2A2460;--indigo-deep:#1A1640;
   --indigo-light:#EEEDF8;--indigo-mid:#6B63B5;
-  --bg:#F6F6F9;--card:#FFFFFF;--black:#0A0A0F;
-  --mid:#3C3C52;--subtle:#8E8EA8;--rule:#EAEAF0;
+  --bg:#0D0820;--card:#1A1640;--black:#F5F3FF;
+  --mid:#C7C0E8;--subtle:#7A73A8;--rule:rgba(255,255,255,0.1);
   --win:#2D6A4F;--win-bg:#E8F2EB;--loss:#993C1D;--loss-bg:#FAECE7;
 }
 html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;background:#1A1640;overflow:hidden}
@@ -258,7 +258,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .live-eyebrow span{font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:1px}
 .live-title{font-size:16px;font-weight:700;color:var(--black);margin-bottom:2px}
 .live-sub{font-size:12px;color:var(--subtle);margin-bottom:14px}
-.score-dark{background:var(--black);border-radius:14px;padding:14px 18px;margin-bottom:12px}
+.score-dark{background:#0A0A0F;border-radius:14px;padding:14px 18px;margin-bottom:12px}
 .score-row{display:flex;align-items:center;justify-content:space-between}
 .score-team{font-size:13px;font-weight:600;color:rgba(255,255,255,0.5)}
 .score-num{font-size:28px;font-weight:900;color:white;letter-spacing:-2px}
@@ -541,7 +541,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .p-name{font-size:20px;font-weight:800;color:white;letter-spacing:-0.6px}
 .p-handle{font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px}
 .edit-btn{font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.12);padding:7px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;white-space:nowrap}
-.badges-row{background:var(--black);padding:10px 20px;display:flex;gap:8px;flex-shrink:0}
+.badges-row{background:#0A0A0F;padding:10px 20px;display:flex;gap:8px;flex-shrink:0}
 .fan-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px}
 .badge-gold{background:rgba(212,175,55,0.2);color:#D4AF37;border:1px solid rgba(212,175,55,0.25)}
 .badge-team{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.08)}
@@ -777,7 +777,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
   <div style="position:absolute;bottom:0;left:0;right:0;z-index:20;padding:0 24px env(safe-area-inset-bottom,44px);display:flex;flex-direction:column;gap:12px">
     <div id="wi-hint" style="text-align:center;font-size:11px;color:rgba(255,255,255,0.28);font-weight:600">tap or swipe to continue</div>
-    <button id="wi-cta" onclick="wiComplete()" style="width:100%;background:#fff;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity 0.3s ease, transform 0.3s ease">Let's play ball</button>
+    <button id="wi-cta" onclick="wiComplete()" style="width:100%;background:#A89FE8;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity 0.3s ease, transform 0.3s ease">Let's play ball</button>
   </div>
 
 </div>
@@ -974,7 +974,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
             </div>
           </div>
           <div style="font-size:13px;font-weight:600;color:var(--indigo-dark);margin-bottom:8px">for</div>
-          <textarea id="remember-text" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:white;resize:none;height:90px;font-family:inherit;line-height:1.6;border-radius:12px;padding:12px" placeholder="Couldn't have asked for a better person to share this with. Here's to more innings together."></textarea>
+          <textarea id="remember-text" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:var(--card);resize:none;height:90px;font-family:inherit;line-height:1.6;border-radius:12px;padding:12px" placeholder="Couldn't have asked for a better person to share this with. Here's to more innings together."></textarea>
         </div>
       </div>
 
@@ -2122,7 +2122,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div id="act-detail-songs" style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
-    <div id="act-detail-composer" style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
+    <div id="act-detail-composer" style="position:relative;z-index:2;background:var(--card);border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
       <div id="act-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
       <div style="display:flex;gap:10px;align-items:center">
         <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendActMessage();}">
@@ -6314,7 +6314,7 @@ function _runOslPreviewSequence() {
       <div id="bday-stop-photos-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 16px;align-content:start"></div>
     </div>
 
-    <div id="bday-stop-composer" style="position:relative;z-index:2;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
+    <div id="bday-stop-composer" style="position:relative;z-index:2;background:var(--card);border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
       <div id="bday-stop-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
       <div style="display:flex;gap:10px;align-items:center">
         <input id="bday-stop-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendBdayStopMessage();}">
@@ -6828,7 +6828,7 @@ function _runOslPreviewSequence() {
   <div id="photo-lightbox" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.94);z-index:200;align-items:center;justify-content:center;flex-direction:column">
     <div onclick="closePhotoLightbox()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:white">×</div>
     <img id="lightbox-img" src="" style="max-width:92%;max-height:72%;object-fit:contain;border-radius:8px">
-    <a id="lightbox-download" href="" download="innings-photo.jpg" style="margin-top:20px;background:white;color:var(--indigo-deep);border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit">Download</a>
+    <a id="lightbox-download" href="" download="innings-photo.jpg" style="margin-top:20px;background:#A89FE8;color:var(--indigo-deep);border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit">Download</a>
     <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:12px;text-align:center;padding:0 32px">On iPhone: tap and hold the photo above to save it</div>
   </div>
 </div>
@@ -6849,7 +6849,7 @@ function _runOslPreviewSequence() {
     <button onclick="futureDetailDelete()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--loss);font-family:inherit">Delete</button>
   </div>
   <div class="scroll" id="fd-scroll" style="padding:0"></div>
-  <div id="fd-composer" style="display:none;background:white;border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
+  <div id="fd-composer" style="display:none;background:var(--card);border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="future-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
       <button onclick="showCreatePollModal('future', window._openFutureId)" aria-label="Create a poll" style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:0.5px solid var(--rule);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
@@ -7102,7 +7102,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.0.3-calendar-deadspace-fix';
+window.INNINGS_BUILD = 'v5.1.0-immersive-everywhere';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7812,7 +7812,7 @@ function goToStep(n) {
     var step = document.getElementById('create-step-' + i);
     var ind = document.getElementById('step-ind-' + i);
     if (step) step.style.display = 'none';
-    if (ind) ind.style.background = i <= n ? '#3D3580' : '#EAEAF0';
+    if (ind) ind.style.background = i <= n ? '#3D3580' : 'var(--rule)';
   }
   var active = document.getElementById('create-step-' + n);
   if (active) {
@@ -7882,13 +7882,13 @@ function _persistCustomVibeIfNew(vibeStr) {
 function selectVibe(el) {
   var pills = document.querySelectorAll('#vibe-pills > div:not(.vibe-other)');
   pills.forEach(function(p) {
-    p.style.background = '#F6F6F9';
-    p.style.color = '#8E8EA8';
+    p.style.background = 'var(--bg)';
+    p.style.color = 'var(--subtle)';
     p.style.fontWeight = '500';
-    p.style.borderColor = '#EAEAF0';
+    p.style.borderColor = 'var(--rule)';
   });
-  el.style.background = '#EEEDF8';
-  el.style.color = '#3D3580';
+  el.style.background = '#A89FE8';
+  el.style.color = '#1A1640';
   el.style.fontWeight = '600';
   el.style.borderColor = 'transparent';
   window._momentVibe = el.textContent.trim();
@@ -9162,9 +9162,9 @@ function loadFutureMoments() {
       var rsvpUi = isOwner
         ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going · tap to edit</div>'
         : '<div style="display:flex;gap:6px;margin-top:12px">' +
-          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
-          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
-          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'#A89FE8':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'#A89FE8':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='no'?'#A89FE8':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='no'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
       return '<div onclick="_heroZoomToFuture(this,\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.08em">' + _escapeHtml(m.vibe || '') + '</div>' +
@@ -9227,8 +9227,8 @@ function loadFeedMoments() {
       var rsvpUi = isOwner
         ? '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:10px">' + goingCount + ' going · tap to edit</div>'
         : '<div style="display:flex;gap:6px;margin-top:12px">' +
-          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
-          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'white':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'going\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='going'?'#A89FE8':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='going'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Going</button>' +
+          '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'maybe\')" style="flex:1;padding:8px 4px;border-radius:10px;background:' + (myRsvp==='maybe'?'#A89FE8':'rgba(255,255,255,0.2)') + ';color:' + (myRsvp==='maybe'?'#1A1640':'white') + ';border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Maybe</button>' +
           '<button onclick="event.stopPropagation();futureRsvp(\'' + m._id + '\',\'no\')" style="flex:1;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,0.2);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Can\'t go</button>' +
         '</div>';
       return '<div onclick="_heroZoomToFuture(this,\'' + m._id + '\')" style="cursor:pointer;' + _futureBgStyle(m) + ';border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.15)">' +
@@ -11681,7 +11681,7 @@ function renderOslChat(msgs) {
     return '<div class="msg"><div class="m-av av-b"' + theirAvAttrs + '>' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer;background:white;box-shadow:0 2px 10px rgba(61,53,128,0.08)">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer;background:var(--card);border:0.5px solid rgba(255,255,255,0.08)">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, 'osl');
