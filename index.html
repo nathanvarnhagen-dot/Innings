@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.2.2-osl-error-surfacing';
+window.INNINGS_BUILD = 'v5.2.3-osl-invalid-argument-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9132,7 +9132,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
       var friendUids = [];
       results[2].forEach(function(d){ friendUids.push(d.data().toUid); });
       results[3].forEach(function(d){ friendUids.push(d.data().fromUid); });
-      friendUids = friendUids.filter(function(v, i){ return friendUids.indexOf(v) === i; });
+      friendUids = friendUids.filter(function(v, i){ return !!v && friendUids.indexOf(v) === i; });
 
       var friendLookup = friendUids.length
         ? Promise.all(friendUids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }))
@@ -9273,7 +9273,7 @@ function loadFeedMoments() {
     var friendUids = [];
     results[0].forEach(function(d){ friendUids.push(d.data().toUid); });
     results[1].forEach(function(d){ friendUids.push(d.data().fromUid); });
-    friendUids = friendUids.filter(function(v,i){ return friendUids.indexOf(v) === i; }).slice(0, 10);
+    friendUids = friendUids.filter(function(v,i){ return !!v && friendUids.indexOf(v) === i; }).slice(0, 10);
 
     var queries = [
       window.db.collection('futureMoments').where('ownerUid','==',user.uid).get(),
