@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Innings">
-<meta name="theme-color" content="#1A1640">
+<meta name="theme-color" content="#1A0A2E">
 <meta property="og:title" content="Innings — Every moment deserves a home">
 <meta property="og:description" content="A private space for memories with the people that matter.">
 <meta property="og:image" content="https://innings-zeta.vercel.app/og-image.png">
@@ -1399,11 +1399,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div style="font-size:34px;margin-bottom:6px">🎪</div>
     <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px">Outside Lands 2026</div>
     <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:22px">Aug 7–9 · Golden Gate Park</div>
-    <div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px">Are you going?</div>
+    <div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px" id="osl-rsvp-question">Are you going?</div>
     <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px">
-      <button onclick="oslSetRsvp('going')" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">I'm going ✓</button>
-      <button onclick="oslSetRsvp('maybe')" style="width:100%;background:rgba(255,255,255,0.1);color:white;border:0.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Maybe</button>
-      <button onclick="oslSetRsvp('no')" style="width:100%;background:transparent;color:rgba(255,255,255,0.45);border:none;padding:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Can't make it this year</button>
+      <button onclick="oslSetRsvp('going')" style="width:100%;background:rgba(168,159,232,0.95);color:#0D0820;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit" id="osl-rsvp-going-btn">I'm going ✓</button>
+      <button onclick="oslSetRsvp('maybe')" style="width:100%;background:rgba(255,255,255,0.1);color:white;border:0.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit" id="osl-rsvp-maybe-btn">Maybe</button>
+      <button onclick="oslSetRsvp('no')" style="width:100%;background:transparent;color:rgba(255,255,255,0.45);border:none;padding:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit" id="osl-rsvp-no-btn">Can't make it this year</button>
     </div>
   </div>
 
@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.2.0-friend-hub';
+window.INNINGS_BUILD = 'v5.2.1-osl-retro-rsvp-theme-color';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8177,7 +8177,12 @@ function saveNewMoment() {
   var photo = window._momentPhoto || '';
   var peopleObjs = (window._momentPeople || []).slice();
   var people = peopleObjs.map(function(p){ return p.name; });
-  var taggedUids = peopleObjs.map(function(p){ return p.uid; }).filter(function(uid){ return !!uid; });
+  // Keep this the same length and order as `people` — using '' rather than
+  // filtering out null uids. A manually-typed person (no account, uid:
+  // null) still needs a placeholder here so a real tagged friend later in
+  // the list doesn't shift into their slot. Anything reading this elsewhere
+  // (People row, avatar stack, friend hub) already skips falsy entries.
+  var taggedUids = peopleObjs.map(function(p){ return p.uid || ''; });
   var photos = (window._momentExtraPhotos || []).slice();
 
   var user = window.currentUser || (window.auth && window.auth.currentUser);
@@ -10178,10 +10183,9 @@ function renderMoments(moments) {
     if (nComments) meta.push(nComments + (nComments === 1 ? ' comment' : ' comments'));
     var metaLine = meta.length ? '<div style="font-size:11px;color:rgba(255,255,255,0.42);margin-top:8px">' + meta.join('  ·  ') + '</div>' : '';
     var avStack = '<div class="mem-avstack"><div class="av av-a">' + _escapeHtml(_initials((window.userData && window.userData.name) || 'You')) + '</div>' +
-      uids.slice(0, 2).map(function(uid, i){
-        var nm = people[i] || 'Friend';
-        var safeNm = _escapeHtml(nm).replace(/'/g, "\\'");
-        return '<div class="av ' + avColors[(i + 1) % avColors.length] + '" onclick="event.stopPropagation();openFriendHub(\'' + uid + '\',\'' + safeNm + '\')" style="cursor:pointer">' + _escapeHtml(_initials(nm)) + '</div>';
+      uids.map(function(uid, i){ return { uid: uid, name: people[i] || 'Friend' }; }).filter(function(p){ return !!p.uid; }).slice(0, 2).map(function(p, i){
+        var safeNm = _escapeHtml(p.name).replace(/'/g, "\\'");
+        return '<div class="av ' + avColors[(i + 1) % avColors.length] + '" onclick="event.stopPropagation();openFriendHub(\'' + p.uid + '\',\'' + safeNm + '\')" style="cursor:pointer">' + _escapeHtml(_initials(p.name)) + '</div>';
       }).join('') +
     '</div>';
     return '<div class="mem-snap" style="cursor:pointer" onclick="openMemory(\'' + m._id + '\')">' + img +
@@ -11070,12 +11074,29 @@ function oslCheckRsvp() {
     myRsvps = window.userData.oslActRsvps;
     if (typeof updateMyFest === 'function') updateMyFest();
   }
-  if (!rsvp && !_oslHasConcluded()) {
-    if (overlay) overlay.style.display = 'flex';
+  if (!rsvp) {
+    if (overlay) { _oslRenderRsvpOverlayCopy(); overlay.style.display = 'flex'; }
   } else {
     if (overlay) overlay.style.display = 'none';
     renderOslState();
   }
+}
+
+// The overlay defaults to future-tense "are you going" copy for while the
+// festival is still upcoming. If someone opens OSL for the first time
+// after it's already happened — never RSVP'd during the live window, so
+// never got the memory-conversion path triggered either — this swaps in
+// past-tense copy instead so "are you going?" doesn't read as broken.
+function _oslRenderRsvpOverlayCopy() {
+  var q = document.getElementById('osl-rsvp-question');
+  var bGoing = document.getElementById('osl-rsvp-going-btn');
+  var bMaybe = document.getElementById('osl-rsvp-maybe-btn');
+  var bNo = document.getElementById('osl-rsvp-no-btn');
+  var past = _oslHasConcluded();
+  if (q) q.textContent = past ? 'Did you go?' : 'Are you going?';
+  if (bGoing) bGoing.textContent = past ? "I was there ✓" : "I'm going ✓";
+  if (bMaybe) bMaybe.textContent = past ? 'Sort of / part of it' : 'Maybe';
+  if (bNo) bNo.textContent = past ? "Wasn't there" : "Can't make it this year";
 }
 
 function oslSetRsvp(val) {
@@ -11091,6 +11112,13 @@ function oslSetRsvp(val) {
     window.db.collection('users').doc(user.uid).set({ oslRsvp: val }, { merge: true }).catch(function(err){ console.error('OSL rsvp error:', err); });
     if (!prevRsvp && val) {
       _postOslFeedNotice({ uid: user.uid, author: (window.userData && window.userData.name) || 'Someone', systemType: 'join' });
+    }
+    // Setting this retroactively (festival already over) is exactly the
+    // case the next-reload-only trigger in auth.onAuthStateChanged misses —
+    // fire the conversion check right now too, so it doesn't wait on a
+    // reload that may not come for a while.
+    if (_oslHasConcluded() && (val === 'going' || val === 'maybe') && typeof _convertOslToMemoryIfNeeded === 'function') {
+      _convertOslToMemoryIfNeeded(user, window.userData);
     }
   }
   if (typeof ib_toast === 'function') ib_toast(val === 'going' ? "You're going 🎉" : val === 'maybe' ? 'Marked as maybe' : 'Marked as not going');
