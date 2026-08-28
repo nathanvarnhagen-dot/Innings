@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -179,9 +179,9 @@ html,body{height:100%;height:100dvh;width:100%;font-family:-apple-system,BlinkMa
 .imm-p-scard.on .s-val{color:#C4BFEF}
 
 /* ONBOARDING — dark top for brand, white bottom for form */
-.ob-screen{background:var(--card)}
+.ob-screen{background:#1A0A2E}
 .ob-wrap{flex:1;display:flex;flex-direction:column}
-.ob-top{background:var(--indigo-deep);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 32px 44px;flex:1}
+.ob-top{background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 32px 44px;flex:1}
 .ob-logo{font-size:48px;font-weight:800;color:white;letter-spacing:-3px;line-height:1;text-align:center;margin-bottom:5px}
 .ob-logo em{color:#A89FE8;font-style:normal}
 .ob-tagline{font-size:11px;font-weight:600;color:rgba(255,255,255,0.22);letter-spacing:0.18em;text-transform:uppercase;text-align:center;margin-bottom:32px}
@@ -716,7 +716,7 @@ html,body{height:100%;height:100dvh;width:100%;font-family:-apple-system,BlinkMa
 </div>
 
 <!-- ═══ WELCOME MESSAGE (FOUNDER INTRO) ═══ -->
-<div class="screen" id="screen-welcome-intro" style="background:var(--indigo-deep);display:flex;flex-direction:column">
+<div class="screen" id="screen-welcome-intro" style="background:linear-gradient(135deg,#1A0A2E 0%,#3D1A6B 100%);display:flex;flex-direction:column">
 
   <div style="position:absolute;top:0;left:0;right:0;z-index:20;padding:52px 24px 0;display:flex;flex-direction:column;align-items:center;gap:18px">
     <div style="width:52px;height:52px;border-radius:15px;background:var(--indigo-deep);border:2px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.35)">
@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.3.1-dvh-fallback-bg';
+window.INNINGS_BUILD = 'v5.3.2-onboard-intro-bg-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
