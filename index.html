@@ -6111,7 +6111,12 @@ function _skipOslMemoryReveal() {
   if (!overlay || overlay.style.display === 'none') return;
   _clearOslMemRevealTimers();
   overlay.style.opacity = '0';
-  setTimeout(function(){ overlay.style.display = 'none'; }, 220);
+  var done = window._oslMemRevealOnDone;
+  window._oslMemRevealOnDone = null;
+  setTimeout(function(){
+    overlay.style.display = 'none';
+    if (typeof done === 'function') done();
+  }, 220);
 }
 
 // Reverse-lookup from the static lineup table: act name -> which day/stage/
@@ -6132,7 +6137,7 @@ function _oslActLookup() {
   return lookup;
 }
 
-function _playOslMemoryReveal(memory) {
+function _playOslMemoryReveal(memory, onDone) {
   var overlay = document.getElementById('osl-memory-reveal');
   var eyebrow = document.getElementById('oslmem-reveal-eyebrow');
   var title = document.getElementById('oslmem-reveal-title');
@@ -6141,16 +6146,32 @@ function _playOslMemoryReveal(memory) {
   var summary = document.getElementById('oslmem-reveal-summary');
   var alsoWrap = document.getElementById('oslmem-reveal-also-wrap');
   var alsoList = document.getElementById('oslmem-reveal-also-list');
-  if (!overlay) return;
+  if (!overlay) { if (typeof onDone === 'function') onDone(); return; }
+  window._oslMemRevealOnDone = onDone;
 
-  // Memories saved after this feature shipped carry the full act list.
-  // Older ones only have the truncated "A, B, C + N more" display string —
-  // strip the suffix and use whatever names are actually in it rather than
-  // showing nothing for memories made before oslActs existed.
-  var actNames = (memory.oslActs && memory.oslActs.length)
-    ? memory.oslActs
-    : String(memory.highlight || '').replace(/\s*\+\s*\d+\s*more$/, '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-  if (!actNames.length) return;
+  // Memories saved after this feature shipped carry the full act list. For
+  // older ones, the truncated "A, B, C + N more" highlight string is a last
+  // resort, not the real fix — the actual full list is still sitting on the
+  // current user's own account (oslActRsvps never got cleared after the
+  // festival), so reconstruct from there instead whenever it's available,
+  // and write it back onto the memory so this doesn't need reconstructing
+  // every time it's opened again.
+  var actNames = (memory.oslActs && memory.oslActs.length) ? memory.oslActs : null;
+  if (!actNames) {
+    var ownRsvps = (window.userData && window.userData.oslActRsvps) || {};
+    var reconstructed = Object.keys(ownRsvps).filter(function(k){ return ownRsvps[k] === 'going'; });
+    if (reconstructed.length) {
+      actNames = reconstructed;
+      var user = window.currentUser || (window.auth && window.auth.currentUser);
+      if (user && window.db && memory._id) {
+        window.db.collection('users').doc(user.uid).collection('moments').doc(memory._id)
+          .update({ oslActs: reconstructed }).catch(function(){});
+      }
+    } else {
+      actNames = String(memory.highlight || '').replace(/\s*\+\s*\d+\s*more$/, '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+  }
+  if (!actNames.length) { if (typeof onDone === 'function') onDone(); return; }
 
   loadOslFriendRsvps(function(){
     var lookup = _oslActLookup();
@@ -6250,7 +6271,12 @@ function _playOslMemoryReveal(memory) {
     });
     _oslMemRevealAfter(t + 1800, function(){
       overlay.style.opacity = '0';
-      _oslMemRevealAfter(320, function(){ overlay.style.display = 'none'; });
+      _oslMemRevealAfter(320, function(){
+        overlay.style.display = 'none';
+        var done = window._oslMemRevealOnDone;
+        window._oslMemRevealOnDone = null;
+        if (typeof done === 'function') done();
+      });
     });
   });
 }
@@ -7330,7 +7356,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.5.1-osl-reveal-by-day';
+window.INNINGS_BUILD = 'v5.5.2-osl-reveal-into-group-selfheal';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10540,6 +10566,16 @@ function openMemory(id, returnTo) {
 }
 
 function _openMemoryWithData(m, returnTo) {
+  if (m.isOslMemory && typeof _playOslMemoryReveal === 'function') {
+    // The generic memory template (a map screenshot and a "who was there"
+    // row) doesn't earn its place for OSL — the real page for this memory
+    // is the actual festival group, lineup and chat and photos included.
+    // The reveal plays right over whatever screen is currently active, then
+    // lands there directly instead of on an intermediate card first.
+    window._memoryReturnTo = returnTo || 'memories';
+    _playOslMemoryReveal(m, function(){ nav('osl-group'); });
+    return;
+  }
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   window._openMomentId = m._id;
   window._openMomentOwnerUid = user ? user.uid : null;
@@ -10550,7 +10586,6 @@ function _openMemoryWithData(m, returnTo) {
   _navApplyScreen('memory-detail');
   _autoRefreshStaleBoxScore(m);
   _startLiveBoxScorePolling(m);
-  if (m.isOslMemory && typeof _playOslMemoryReveal === 'function') _playOslMemoryReveal(m);
 }
 
 // While a memory's box score isn't final yet (game still going), poll for
