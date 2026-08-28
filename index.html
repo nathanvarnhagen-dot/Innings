@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Innings">
@@ -7102,7 +7102,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.1.0-immersive-everywhere';
+window.INNINGS_BUILD = 'v5.1.1-tagged-memories-viewport-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8932,29 +8932,42 @@ function loadMoments() {
 // Future moments and past memories are two different collections with
 // different shapes. There's no server-side cron in this stack, so "the
 // moment it happens" really means "the next time your own device checks" —
-// on sign-in, and every time the Feed loads its "Coming up" list. Only the
-// plan's owner can do this (matches who's allowed to write into that
-// person's own memories), so it always happens from your own device.
+// on sign-in, and every time the Feed loads its "Coming up" list. Runs for
+// plans you own AND plans you're tagged in — each person converts their own
+// copy into their own memories on their own device (matches who's allowed
+// to write there). The shared plan doc is marked converted per-uid rather
+// than deleted, so whichever person's device gets to it first doesn't erase
+// it before everyone else tagged in it has had a chance to convert too.
 function _convertPastFuturePlans(user) {
   if (!user || !window.db) return;
+  if (window._convertingPlans) return;
+  window._convertingPlans = true;
   var today = _todayLocal();
-  window.db.collection('futureMoments').where('ownerUid', '==', user.uid).get().then(function(snap){
-    var toConvert = [];
-    snap.forEach(function(doc){
-      var m = Object.assign({ _id: doc.id }, doc.data());
-      if (m.date && m.date < today) toConvert.push(m);
+  Promise.all([
+    window.db.collection('futureMoments').where('ownerUid', '==', user.uid).get(),
+    window.db.collection('futureMoments').where('taggedUids', 'array-contains', user.uid).get()
+  ]).then(function(results){
+    var map = {};
+    results[0].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
+    results[1].forEach(function(doc){ map[doc.id] = Object.assign({ _id: doc.id }, doc.data()); });
+    var toConvert = Object.keys(map).map(function(k){ return map[k]; }).filter(function(m){
+      if (!(m.date && m.date < today)) return false;
+      return (m.convertedUids || []).indexOf(user.uid) === -1;
     });
+    window._convertingPlans = false;
     if (!toConvert.length) return;
     Promise.all(toConvert.map(function(m){ return _convertFutureMomentToMemory(m, user); })).then(function(){
       if (typeof loadMoments === 'function') loadMoments();
       if (typeof loadFutureMoments === 'function') loadFutureMoments();
       if (typeof ib_toast === 'function') ib_toast(toConvert.length === 1 ? '"' + (toConvert[0].title || 'Your plan') + '" is now a memory 📖' : toConvert.length + ' plans became memories 📖');
     }).catch(function(err){ console.error('Convert past plans error:', err); });
-  }).catch(function(err){ console.error('Check past plans error:', err); });
+  }).catch(function(err){ window._convertingPlans = false; console.error('Check past plans error:', err); });
 }
 
 function _convertFutureMomentToMemory(m, user) {
-  var uids = (m.taggedUids || []).slice();
+  var otherUids = [m.ownerUid].concat(m.taggedUids || []).filter(function(uid, i, arr){
+    return uid && uid !== user.uid && arr.indexOf(uid) === i;
+  });
   var freshBoxScore = Promise.resolve(m.boxScore || null);
   if (m.boxScore && m.boxScore.gamePk) {
     freshBoxScore = fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(m.boxScore.gamePk))
@@ -8962,7 +8975,7 @@ function _convertFutureMomentToMemory(m, user) {
       .catch(function(){ return m.boxScore; });
   }
   return Promise.all([
-    Promise.all(uids.map(function(uid){
+    Promise.all(otherUids.map(function(uid){
       return window.db.collection('users').doc(uid).get().then(function(doc){
         return (doc.exists && doc.data().name) ? doc.data().name : 'A friend';
       }).catch(function(){ return 'A friend'; });
@@ -8980,14 +8993,16 @@ function _convertFutureMomentToMemory(m, user) {
       photo: '',
       photos: [],
       people: names,
-      taggedUids: uids,
+      taggedUids: otherUids,
       boxScore: _sanitizeForFirestore(boxScore),
       stops: _sanitizeForFirestore(m.stops || []),
       comments: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
   }).then(function(){
-    return window.db.collection('futureMoments').doc(m._id).delete();
+    return window.db.collection('futureMoments').doc(m._id).update({
+      convertedUids: firebase.firestore.FieldValue.arrayUnion(user.uid)
+    });
   }).catch(function(err){
     console.error('Convert future plan to memory error:', m._id, err);
   });
