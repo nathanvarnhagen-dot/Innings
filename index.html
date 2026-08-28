@@ -7147,7 +7147,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.2.3-osl-invalid-argument-fix';
+window.INNINGS_BUILD = 'v5.2.4-osl-staged-diagnostics';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9085,6 +9085,13 @@ function _applyOslBannerVisibility() {
 }
 
 window._oslMemoryConversionRunning = false;
+function _oslStage(promise, label) {
+  return promise.catch(function(err){
+    if (err && !err._oslStage) err._oslStage = label;
+    throw err;
+  });
+}
+
 function _convertOslToMemoryIfNeeded(user, pdata) {
   if (!user || !window.db) return;
   if (!_oslHasConcluded()) return;
@@ -9105,7 +9112,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
   // This makes the whole thing self-healing: if the flag is wrongly set
   // from a past failed attempt, this notices there's no memory yet and
   // just creates it now.
-  momentsRef.where('isOslMemory', '==', true).limit(1).get().then(function(existing){
+  _oslStage(momentsRef.where('isOslMemory', '==', true).limit(1).get(), 'exists-check').then(function(existing){
     if (!existing.empty) {
       window._oslMemoryConversionRunning = false;
       if (!(pdata && pdata.oslConvertedToMemory)) userRef.set({ oslConvertedToMemory: true }, { merge: true }).catch(function(){});
@@ -9118,12 +9125,12 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
       if (typeof ib_toast === 'function') ib_toast('Found your existing Outside Lands memory — check Memories now');
       return;
     }
-    return Promise.all([
+    return _oslStage(Promise.all([
       window.db.collection('oslPhotos').where('uid', '==', user.uid).get(),
       window.db.collection('actPhotos').where('uid', '==', user.uid).get(),
       window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
       window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
-    ]).then(function(results){
+    ]), 'reads').then(function(results){
       var photos = [];
       results[0].forEach(function(doc){ var p = doc.data().photo; if (p) photos.push(p); });
       results[1].forEach(function(doc){ var p = doc.data().photo; if (p) photos.push(p); });
@@ -9138,7 +9145,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
         ? Promise.all(friendUids.map(function(uid){ return window.db.collection('users').doc(uid).get(); }))
         : Promise.resolve([]);
 
-      return friendLookup.then(function(docs){
+      return _oslStage(friendLookup, 'friend-lookup').then(function(docs){
         var peopleNames = [], taggedUids = [];
         docs.forEach(function(doc){
           var d = doc.data() || {};
@@ -9174,7 +9181,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       batch.set(userRef, { oslConvertedToMemory: true }, { merge: true });
-      return batch.commit();
+      return _oslStage(batch.commit(), 'write');
     });
   }).then(function(){
     window._oslMemoryConversionRunning = false;
@@ -9183,11 +9190,12 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
   }).catch(function(err){
     window._oslMemoryConversionRunning = false;
     console.error('Convert OSL to memory error:', err);
-    // This used to only log to a console nobody was looking at, which is
-    // exactly how "still not a memory" went unexplained for as long as it
-    // did. Whatever Firestore is actually objecting to (permission-denied,
-    // a missing index, anything) now shows up on screen instead of hiding.
-    if (typeof ib_toast === 'function') ib_toast('OSL memory failed: ' + ((err && (err.code || err.message)) || 'unknown error'));
+    // This used to only log to a console nobody was looking at, and even
+    // once surfaced, a bare error code alone wasn't enough to pin down
+    // where in a five-stage chain it happened. Now it names the stage too.
+    var stage = err && err._oslStage ? ' [' + err._oslStage + ']' : '';
+    var detail = (err && (err.code || err.message)) || 'unknown error';
+    if (typeof ib_toast === 'function') ib_toast('OSL memory failed' + stage + ': ' + detail);
   });
 }
 
