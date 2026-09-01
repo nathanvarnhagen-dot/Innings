@@ -63,27 +63,62 @@ function teamName(team) {
   return team.abbrev || null;
 }
 
+// Lower confidence than anything else in this file — the NHL boxscore
+// response nests things a few different ways depending on game state, and
+// this tries the paths that seemed most likely from documentation rather
+// than a confirmed live example. Returns an empty array rather than
+// guessing wrong if none of these paths match.
+function extractPeriods(data) {
+  var byPeriod = (data.boxscore && data.boxscore.linescore && data.boxscore.linescore.byPeriod)
+    || (data.linescore && data.linescore.byPeriod)
+    || (data.summary && data.summary.linescore && data.summary.linescore.byPeriod)
+    || [];
+  if (!byPeriod.length) return [];
+  return byPeriod.map(function (p, i) {
+    var num = p.period != null ? p.period : (i + 1);
+    return {
+      label: num <= 3 ? String(num) : 'OT' + (num > 4 ? (num - 3) : ''),
+      away: p.away != null ? p.away : (p.awayScore != null ? p.awayScore : null),
+      home: p.home != null ? p.home : (p.homeScore != null ? p.homeScore : null)
+    };
+  });
+}
+
+// Same confidence caveat as above — tries the most likely path for a
+// period-by-period goal list and gives up cleanly if it's not there.
+function extractGoalHighlights(data) {
+  var scoring = (data.summary && data.summary.scoring) || [];
+  var goals = [];
+  try {
+    scoring.forEach(function (period) {
+      (period.goals || []).forEach(function (g) {
+        var scorer = (g.name && g.name.default) || g.playerName || null;
+        if (scorer) goals.push({ emoji: '🏒', text: scorer + ' goal' + (g.strength && g.strength !== 'ev' ? ' (' + g.strength.toUpperCase() + ')' : '') });
+      });
+    });
+  } catch (e) {
+    // Malformed goal data shouldn't take down the whole box score.
+  }
+  return goals.slice(-4);
+}
+
 function summarize(data, gamePk) {
   var away = data.awayTeam || {};
   var home = data.homeTeam || {};
-  var periods = (data.boxscore && data.boxscore.linescore && data.boxscore.linescore.byPeriod) || data.periodDescriptor ? (data.linescore && data.linescore.byPeriod) || [] : [];
-  // NHL periods don't map to MLB's inning-grid shape, and the box score
-  // card already renders fine without it — leaving `innings` empty here on
-  // purpose rather than forcing a hockey period grid into a baseball-shaped
-  // field.
   return {
     gamePk: data.id || (gamePk ? Number(gamePk) : null),
     away: teamName(away),
     home: teamName(home),
     awayScore: away.score != null ? away.score : null,
     homeScore: home.score != null ? home.score : null,
-    innings: [],
+    innings: extractPeriods(data),
     venue: (data.venue && (data.venue.default || data.venue)) || null,
     date: data.gameDate || null,
     status: (data.gameState === 'OFF' || data.gameState === 'FINAL') ? 'Final' : (data.gameState === 'LIVE' ? 'Live' : 'Scheduled'),
     winningPitcher: null,
     losingPitcher: null,
     savePitcher: null,
-    homeRuns: []
+    homeRuns: [],
+    highlights: extractGoalHighlights(data)
   };
 }
