@@ -7404,7 +7404,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.12.0-fix-baseball-default-vibe';
+window.INNINGS_BUILD = 'v5.13.0-tag-sport-on-boxscore';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7854,6 +7854,18 @@ function _flourishKeyForVibe(vibe) {
   var emoji = String(vibe || '').trim().split(' ')[0];
   return VIBE_EMOJI_TO_FLOURISH[emoji] || 'default';
 }
+// The sport tagged directly on an attached box score is a more reliable
+// signal than the vibe emoji — vibe can be edited separately or just never
+// set on an older memory, but the sport that was actually searched for and
+// attached can't drift. Only falls back to reading the vibe when there's
+// no box score to go by at all (a hangout, a meal, anything non-sport).
+function _flourishKeyForMemory(m) {
+  if (m && m.boxScore && m.boxScore.sport) {
+    var bucket = _flourishKeyForBsModalSport(m.boxScore.sport);
+    if (SPORT_FLOURISH[bucket]) return bucket;
+  }
+  return _flourishKeyForVibe(m && m.vibe);
+}
 function _flourishKeyForBsModalSport(s) {
   if (s === 'nfl') return 'football';
   if (s === 'nba' || s === 'wnba') return 'basketball';
@@ -8100,6 +8112,7 @@ function useNowMultisportGame() {
     .then(function(r){ return r.json(); })
     .then(function(box){
       window._momentBoxScore = _sanitizeForFirestore(box);
+      window._momentBoxScore.sport = entry.league;
       var sportEmoji = { football: '🏈', basketball: '🏀', hockey: '🏒', soccer: '⚽' }[entry.sport] || '🏆';
       _playSportFlourish(entry.sport, function(){
         _proceedToMemoryForm();
@@ -8124,6 +8137,7 @@ function useNowGame() {
     .then(function(r){ return r.json(); })
     .then(function(box){
       window._momentBoxScore = _sanitizeForFirestore(box);
+      window._momentBoxScore.sport = 'mlb';
       _playSportFlourish('mlb', function(){
         _proceedToMemoryForm();
         quickVibe('⚾ Game');
@@ -8953,6 +8967,11 @@ function _applyBoxScoreToContext(box) {
   closeBoxScoreModal();
   if (!ctx) return;
   box = _sanitizeForFirestore(box);
+  // The precise league key (not just a broad bucket) — needed so a later
+  // refresh can hit the exact right endpoint. "basketball" alone can't
+  // tell a refresh whether to ask ESPN for nba or wnba; the modal already
+  // knows exactly which one was searched, so just keep that.
+  if (box) box.sport = window._bsModalSport || 'mlb';
   if (ctx.type === 'moment') {
     var m = _findMoment(window._openMomentId);
     if (!m) return;
@@ -11334,7 +11353,7 @@ function _openMemoryWithData(m, returnTo) {
   _navApplyScreen('memory-detail');
   _autoRefreshStaleBoxScore(m);
   _startLiveBoxScorePolling(m);
-  _playSportFlourish(_flourishKeyForVibe(m.vibe));
+  _playSportFlourish(_flourishKeyForMemory(m));
 }
 
 // While a memory's box score isn't final yet (game still going), poll for
@@ -11356,13 +11375,20 @@ function _startLiveBoxScorePolling(m) {
 // track which exact game it was) can be stuck showing pre-game info forever
 // otherwise. Whenever the owner opens a memory, quietly check for that and
 // pull the real result — no button, same as the plan-to-memory conversion.
+// Routes by the tagged sport rather than assuming MLB — that assumption
+// meant a still-live NFL/NBA/NHL/soccer score was never actually being
+// refreshed at all, silently hitting an endpoint that had no idea what
+// gamePk it was even being asked about.
 function _autoRefreshStaleBoxScore(m) {
   if (!m || !m.boxScore || m.boxScore.status === 'Final') return;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || window._openMomentOwnerUid !== user.uid) return;
+  var sport = m.boxScore.sport || 'mlb';
 
   if (m.boxScore.gamePk) {
-    fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(m.boxScore.gamePk))
+    var url = (typeof _bsModalBoxscoreUrl === 'function') ? _bsModalBoxscoreUrl(sport, m.boxScore.gamePk) : null;
+    if (!url) return;
+    fetch(url)
       .then(function(r){ return r.json(); })
       .then(function(box){ _applyRefreshedBoxScore(m, box); })
       .catch(function(err){ console.error('Auto-refresh box score error:', err); });
@@ -11371,6 +11397,9 @@ function _autoRefreshStaleBoxScore(m) {
 
   // Older attachments made before gamePk was tracked — re-find the same
   // game by date + team names so this heals itself without manual action.
+  // This legacy path only ever applies to pre-multi-sport data, so it
+  // staying MLB-only here is intentional, not an oversight.
+  if (sport !== 'mlb') return;
   if (!m.date || !m.boxScore.away || !m.boxScore.home) return;
   fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(m.date))
     .then(function(r){ return r.json(); })
@@ -11387,6 +11416,11 @@ function _autoRefreshStaleBoxScore(m) {
 function _applyRefreshedBoxScore(m, box) {
   if (!box || !box.home) return;
   var safe = _sanitizeForFirestore(box);
+  // A fresh fetch never carries the sport tag — it's not part of any
+  // backend's actual response, only ever added client-side at attach time
+  // — so it has to be carried forward by hand or every refresh quietly
+  // reverts the memory back to guessing from its vibe.
+  if (m.boxScore && m.boxScore.sport) safe.sport = m.boxScore.sport;
   m.boxScore = safe;
   // Patch just the box score card in place rather than re-rendering the
   // whole scrolling container (md-scroll) — replacing an entire scroll
