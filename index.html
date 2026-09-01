@@ -2212,6 +2212,15 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="flex-shrink:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.3);padding:4px 0 calc(env(safe-area-inset-bottom, 14px) + 6px)">Tap to skip</div>
 </div>
 
+<!-- ═══ SPORT FLOURISH — a brief, tappable-to-skip celebration that plays
+     right when a game or festival gets confirmed (Happening Now, and
+     attaching a game manually), before landing on the form/screen behind
+     it. Short on purpose — this is a beat, not a scene. ═══ -->
+<div id="sport-flourish" style="display:none;position:absolute;inset:0;z-index:70;background:rgba(13,8,32,0.88);flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 0.25s ease" onclick="_skipSportFlourish()">
+  <div id="sport-flourish-emoji" style="font-size:88px;transform:scale(0.3) rotate(-15deg);opacity:0;transition:transform 0.5s cubic-bezier(.34,1.56,.64,1),opacity 0.3s ease"></div>
+  <div id="sport-flourish-caption" style="font-size:17px;font-weight:800;color:white;margin-top:14px;opacity:0;transition:opacity 0.3s ease"></div>
+</div>
+
 <script>
 var _rsvp = 'going';
 function setRsvp(val) {
@@ -7395,7 +7404,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.9.0-multisport-game-attach';
+window.INNINGS_BUILD = 'v5.10.0-periods-highlights-flourish';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7803,6 +7812,71 @@ function _haversineMeters(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── SPORT FLOURISH ── a short, skippable celebration played at the moment
+// a game or festival gets confirmed. Deliberately brief (about a second)
+// and interruptible by a tap — this is meant to feel like a beat, not
+// something that gets in the way if you've already seen it a dozen times.
+var SPORT_FLOURISH = {
+  mlb: { emoji: '⚾', caption: 'Play ball!' },
+  football: { emoji: '🏈', caption: 'Touchdown!' },
+  basketball: { emoji: '🏀', caption: 'Nothing but net!' },
+  hockey: { emoji: '🏒', caption: 'Top shelf!' },
+  soccer: { emoji: '⚽', caption: 'Goooal!' },
+  festival: { emoji: '🎪', caption: "Let's go!" }
+};
+function _flourishKeyForBsModalSport(s) {
+  if (s === 'nfl') return 'football';
+  if (s === 'nba' || s === 'wnba') return 'basketball';
+  if (s === 'nhl') return 'hockey';
+  if (s === 'mls' || s === 'nwsl') return 'soccer';
+  return 'mlb';
+}
+window._sportFlourishTimer = null;
+window._sportFlourishOnDone = null;
+function _skipSportFlourish() {
+  var overlay = document.getElementById('sport-flourish');
+  if (!overlay || overlay.style.display === 'none') return;
+  clearTimeout(window._sportFlourishTimer);
+  overlay.style.opacity = '0';
+  var done = window._sportFlourishOnDone;
+  window._sportFlourishOnDone = null;
+  setTimeout(function(){ overlay.style.display = 'none'; if (typeof done === 'function') done(); }, 200);
+}
+function _playSportFlourish(sportKey, onDone) {
+  var overlay = document.getElementById('sport-flourish');
+  var emojiEl = document.getElementById('sport-flourish-emoji');
+  var captionEl = document.getElementById('sport-flourish-caption');
+  var d = SPORT_FLOURISH[sportKey];
+  if (!overlay || !emojiEl || !captionEl || !d) { if (typeof onDone === 'function') onDone(); return; }
+  window._sportFlourishOnDone = onDone;
+  emojiEl.textContent = d.emoji;
+  captionEl.textContent = d.caption;
+  emojiEl.style.transition = 'none';
+  emojiEl.style.transform = 'scale(0.3) rotate(-15deg)';
+  emojiEl.style.opacity = '0';
+  captionEl.style.opacity = '0';
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '0';
+  requestAnimationFrame(function(){
+    overlay.style.opacity = '1';
+    requestAnimationFrame(function(){
+      emojiEl.style.transition = 'transform 0.5s cubic-bezier(.34,1.56,.64,1),opacity 0.3s ease';
+      emojiEl.style.transform = 'scale(1) rotate(0deg)';
+      emojiEl.style.opacity = '1';
+      setTimeout(function(){ captionEl.style.opacity = '1'; }, 150);
+    });
+  });
+  window._sportFlourishTimer = setTimeout(function(){
+    overlay.style.opacity = '0';
+    setTimeout(function(){
+      overlay.style.display = 'none';
+      var done = window._sportFlourishOnDone;
+      window._sportFlourishOnDone = null;
+      if (typeof done === 'function') done();
+    }, 220);
+  }, 1300);
+}
+
 function _matchNearbyVenue(lat, lng) {
   var ballpark = null, ballparkDist = Infinity;
   MLB_BALLPARKS.forEach(function(bp){
@@ -7996,12 +8070,14 @@ function useNowMultisportGame() {
     .then(function(r){ return r.json(); })
     .then(function(box){
       window._momentBoxScore = _sanitizeForFirestore(box);
-      _proceedToMemoryForm();
       var sportEmoji = { football: '🏈', basketball: '🏀', hockey: '🏒', soccer: '⚽' }[entry.sport] || '🏆';
-      quickVibe(sportEmoji + ' Game');
-      var dateEl = document.getElementById('moment-date');
-      if (dateEl) dateEl.value = _todayLocal();
-      if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(window._momentBoxScore);
+      _playSportFlourish(entry.sport, function(){
+        _proceedToMemoryForm();
+        quickVibe(sportEmoji + ' Game');
+        var dateEl = document.getElementById('moment-date');
+        if (dateEl) dateEl.value = _todayLocal();
+        if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(window._momentBoxScore);
+      });
     })
     .catch(function(err){
       console.error('Happening-now multisport boxscore error:', err);
@@ -8012,21 +8088,23 @@ function useNowMultisportGame() {
 
 function useNowGame() {
   if (!window._nowGamePk) { skipNowLocation(); return; }
-  if (typeof ib_toast === 'function') ib_toast('Loading box score…');
+  if (typeof ib_toast === 'function') ib_toast('Loading game…');
   var gamePk = window._nowGamePk;
   fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(gamePk))
     .then(function(r){ return r.json(); })
     .then(function(box){
       window._momentBoxScore = _sanitizeForFirestore(box);
-      _proceedToMemoryForm();
-      quickVibe('⚾ Game');
-      var dateEl = document.getElementById('moment-date');
-      if (dateEl) dateEl.value = _todayLocal();
-      if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(window._momentBoxScore);
+      _playSportFlourish('mlb', function(){
+        _proceedToMemoryForm();
+        quickVibe('⚾ Game');
+        var dateEl = document.getElementById('moment-date');
+        if (dateEl) dateEl.value = _todayLocal();
+        if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(window._momentBoxScore);
+      });
     })
     .catch(function(err){
       console.error('Happening-now boxscore error:', err);
-      if (typeof ib_toast === 'function') ib_toast('Could not load box score — continuing anyway');
+      if (typeof ib_toast === 'function') ib_toast('Could not load game — continuing anyway');
       _proceedToMemoryForm();
     });
 }
@@ -8047,8 +8125,10 @@ function _renderNowFestival(fv) {
 }
 
 function useNowFestival(screenId) {
-  backToStep0();
-  nav(screenId);
+  _playSportFlourish('festival', function(){
+    backToStep0();
+    nav(screenId);
+  });
 }
 
 function _renderNowPin(lat, lng) {
@@ -8866,7 +8946,9 @@ function _applyBoxScoreToContext(box) {
     }
   } else if (ctx.type === 'moment-create') {
     window._momentBoxScore = box;
-    if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(box);
+    _playSportFlourish(_flourishKeyForBsModalSport(window._bsModalSport), function(){
+      if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(box);
+    });
   } else if (ctx.type === 'bdayGame') {
     var gs = _bdayStopById('game');
     if (!gs || !window._bdayEventData) return;
@@ -8900,22 +8982,34 @@ function _boxScoreCardHtml(box, dark) {
   var bg = dark ? 'rgba(255,255,255,0.14)' : 'var(--bg)';
   var border = dark ? 'none' : '0.5px solid var(--rule)';
   var innings = box.innings || [];
-  var inningHeader = innings.map(function(i){ return '<div style="flex:1;text-align:center;font-size:9.5px;color:' + subColor + '">' + _escapeHtml(String(i.num)) + '</div>'; }).join('');
+  // `label` covers quarters/periods ("Q1", "1st") where the old MLB-only
+  // `num` (a plain inning number) doesn't fit — falls back to num so
+  // existing MLB data renders exactly as it always has.
+  var periodHeader = innings.map(function(i){ return '<div style="flex:1;text-align:center;font-size:9.5px;color:' + subColor + '">' + _escapeHtml(String(i.label != null ? i.label : i.num)) + '</div>'; }).join('');
   var awayRow = innings.map(function(i){ return '<div style="flex:1;text-align:center;font-size:11px;font-weight:600;color:' + color + '">' + (i.away != null ? i.away : '-') + '</div>'; }).join('');
   var homeRow = innings.map(function(i){ return '<div style="flex:1;text-align:center;font-size:11px;font-weight:600;color:' + color + '">' + (i.home != null ? i.home : '-') + '</div>'; }).join('');
   var hrLines = (box.homeRuns || []).slice(0, 4).map(function(hr){
     return '<div style="font-size:11px;color:' + subColor + ';margin-top:3px;line-height:1.4">⚾ ' + _escapeHtml(hr.description || (hr.batter ? hr.batter + ' home run' : 'Home run')) + '</div>';
   }).join('');
   var decisionLine = box.winningPitcher ? '<div style="font-size:11px;color:' + subColor + ';margin-top:4px">W: ' + _escapeHtml(box.winningPitcher) + (box.losingPitcher ? ' · L: ' + _escapeHtml(box.losingPitcher) : '') + (box.savePitcher ? ' · SV: ' + _escapeHtml(box.savePitcher) : '') + '</div>' : '';
+  // Generic brief-descriptor line for the non-MLB sports — scoring plays,
+  // goal scorers, a leading performer, whatever that sport's backend
+  // populated. MLB keeps using its own homeRuns/pitcher fields above rather
+  // than being migrated to this, since that path is proven and there's no
+  // reason to touch it.
+  var highlightLines = (box.highlights || []).slice(0, 4).map(function(h){
+    return '<div style="font-size:11px;color:' + subColor + ';margin-top:3px;line-height:1.4">' + _escapeHtml((h.emoji || '') + ' ' + (h.text || '')) + '</div>';
+  }).join('');
   return '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
       '<div style="font-size:10px;color:' + subColor + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + _escapeHtml(box.status || 'Final') + '</div>' +
     '</div>' +
-    (innings.length ? '<div style="display:flex;margin-bottom:2px">' + inningHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
+    (innings.length ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
     (box.venue ? '<div style="font-size:11px;color:' + subColor + '">' + _escapeHtml(box.venue) + '</div>' : '') +
     decisionLine +
     hrLines +
+    highlightLines +
   '</div>';
 }
 
