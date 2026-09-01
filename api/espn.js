@@ -13,7 +13,13 @@
 // Confidence note: built from public documentation and community examples
 // of this endpoint's shape, not from a live reference the way api/mlb.js
 // was — that one already existed and worked. This is a first pass and
-// should be tested against a real live game before being trusted.
+// should be tested against a real live game before being trusted. The
+// least certain part specifically: quarter/period scores come from
+// competitor.linescores, and brief highlights from scoringPlays or
+// leaders — these are the fields most likely to be named differently or
+// missing entirely if a real response doesn't match what's assumed here.
+// Both fail gracefully to an empty array rather than breaking the whole
+// response if that happens.
 
 var LEAGUE_PATHS = {
   nfl: 'football/nfl',
@@ -47,7 +53,7 @@ module.exports = async function handler(req, res) {
       const r = await fetch(url);
       const data = await r.json();
       res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
-      res.status(200).json(summarizeSummary(data, eventId));
+      res.status(200).json(summarizeSummary(data, eventId, league));
       return;
     }
     res.status(400).json({ error: 'Unknown mode — use schedule or boxscore' });
@@ -79,28 +85,90 @@ function summarizeEvent(event) {
   };
 }
 
-function summarizeSummary(data, eventId) {
+var SOCCER_LEAGUES = { mls: true, nwsl: true };
+
+// Quarter/half labels differ by sport family — football and basketball both
+// use quarters, soccer uses halves. Extra periods beyond the normal count
+// are overtime, labeled generically rather than guessing a sport-specific
+// OT naming convention.
+function periodLabel(league, index, total) {
+  var isSoccer = SOCCER_LEAGUES[league];
+  var regulation = isSoccer ? 2 : 4;
+  if (index < regulation) return isSoccer ? (index === 0 ? '1st' : '2nd') : 'Q' + (index + 1);
+  return total - regulation > 1 ? 'OT' + (index - regulation + 1) : 'OT';
+}
+
+// Best-effort period-by-period extraction from competitor.linescores, which
+// is where ESPN's summary endpoint has historically put this — not
+// confirmed against a live game, so if quarters don't show up for a
+// particular sport, this is the first place to check.
+function extractPeriods(league, awayComp, homeComp) {
+  var awayLines = (awayComp && awayComp.linescores) || [];
+  var homeLines = (homeComp && homeComp.linescores) || [];
+  var count = Math.max(awayLines.length, homeLines.length);
+  if (!count) return [];
+  var periods = [];
+  for (var i = 0; i < count; i++) {
+    periods.push({
+      label: periodLabel(league, i, count),
+      away: awayLines[i] ? Number(awayLines[i].value != null ? awayLines[i].value : awayLines[i].displayValue) : null,
+      home: homeLines[i] ? Number(homeLines[i].value != null ? homeLines[i].value : homeLines[i].displayValue) : null
+    });
+  }
+  return periods;
+}
+
+// Brief descriptor line, sport-appropriate emoji — scoring plays for
+// football/soccer, a leading scorer for basketball. Best-effort: if the
+// expected field isn't where this looks, it just comes back empty rather
+// than breaking anything, since the score card already renders fine
+// without it.
+function extractHighlights(league, data) {
+  var emoji = { nfl: '🏈', mls: '⚽', nwsl: '⚽', nba: '🏀', wnba: '🏀' }[league] || '🏆';
+  var highlights = [];
+  try {
+    if (league === 'nfl' || SOCCER_LEAGUES[league]) {
+      (data.scoringPlays || []).slice(-4).forEach(function (p) {
+        if (p && p.text) highlights.push({ emoji: emoji, text: p.text });
+      });
+    } else if (league === 'nba' || league === 'wnba') {
+      (data.leaders || []).forEach(function (teamLeaders) {
+        var cat = (teamLeaders.leaders || [])[0];
+        var top = cat && cat.leaders && cat.leaders[0];
+        if (top && top.athlete) {
+          highlights.push({ emoji: emoji, text: top.athlete.displayName + ' — ' + top.displayValue + ' pts' });
+        }
+      });
+    }
+  } catch (e) {
+    // Swallow and return whatever was already collected — a malformed
+    // highlight isn't worth failing the whole box score over.
+  }
+  return highlights.slice(0, 4);
+}
+
+function summarizeSummary(data, eventId, league) {
   var header = data.header || {};
-  var event = { id: header.id || eventId, competitions: header.competitions, status: header.competitions && header.competitions[0] && header.competitions[0].status };
+  var comp = (header.competitions && header.competitions[0]) || {};
+  var competitors = comp.competitors || [];
+  var awayComp = competitors.filter(function (c) { return c.homeAway === 'away'; })[0] || {};
+  var homeComp = competitors.filter(function (c) { return c.homeAway === 'home'; })[0] || {};
+  var event = { id: header.id || eventId, competitions: header.competitions, status: comp.status };
   var basic = summarizeEvent(event) || {};
-  // Deliberately not attempting a play-by-play/quarter-by-quarter grid here
-  // per sport — that structure is genuinely different for every one of
-  // these five leagues, and getting it subtly wrong five different ways
-  // untested is worse than just showing the final score cleanly, which the
-  // existing box score card already renders fine without extra detail.
   return {
     gamePk: basic.gamePk || eventId,
     away: basic.away,
     home: basic.home,
     awayScore: basic.awayScore,
     homeScore: basic.homeScore,
-    innings: [],
+    innings: extractPeriods(league, awayComp, homeComp),
     venue: basic.venue,
-    date: header.competitions && header.competitions[0] && header.competitions[0].date,
+    date: comp.date || null,
     status: basic.status,
     winningPitcher: null,
     losingPitcher: null,
     savePitcher: null,
-    homeRuns: []
+    homeRuns: [],
+    highlights: extractHighlights(league, data)
   };
 }
