@@ -7404,7 +7404,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.11.0-open-memory-flourish';
+window.INNINGS_BUILD = 'v5.12.0-fix-baseball-default-vibe';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7830,6 +7830,9 @@ var SPORT_FLOURISH = {
   meal: { emoji: '🍽️', caption: 'Bon appétit!' },
   trip: { emoji: '✈️', caption: 'Bon voyage!' },
   home: { emoji: '🏡', caption: 'Home sweet home' },
+  comedy: { emoji: '🎤', caption: 'And she sticks the landing!' },
+  movie: { emoji: '🎬', caption: 'Lights down' },
+  concert: { emoji: '🎵', caption: 'Encore!' },
   default: { emoji: '✨', caption: 'There you are' }
 };
 // Reads the emoji off the front of whatever vibe is saved on the memory
@@ -7842,7 +7845,10 @@ var VIBE_EMOJI_TO_FLOURISH = {
   '🍺': 'hangout', '🍻': 'hangout', '🍸': 'hangout', '🥂': 'hangout',
   '🍽️': 'meal', '🍴': 'meal', '🍕': 'meal', '🍔': 'meal',
   '✈️': 'trip', '🧳': 'trip',
-  '🏠': 'home', '🛋️': 'home', '🏡': 'home'
+  '🏠': 'home', '🛋️': 'home', '🏡': 'home',
+  '🎤': 'comedy', '😂': 'comedy',
+  '🎬': 'movie', '🍿': 'movie',
+  '🎵': 'concert', '🎶': 'concert', '🎸': 'concert', '🎧': 'concert'
 };
 function _flourishKeyForVibe(vibe) {
   var emoji = String(vibe || '').trim().split(' ')[0];
@@ -8303,7 +8309,7 @@ function _applyFutureHeroCoverPhoto(url) {
 // plus an always-present "+ Other" that reveals an emoji + label pair for
 // defining a one-off (or new reusable) vibe on the spot.
 var FUTURE_VIBE_FIXED = ['⚾ Game','🎪 Festival','🎵 Concert','🍺 Hangout','✈️ Trip'];
-window._futureVibe = window._futureVibe || '⚾ Game';
+window._futureVibe = window._futureVibe || '';
 window._futureVibeMode = window._futureVibeMode || 'fixed';
 
 function renderFutureVibePills() {
@@ -8312,7 +8318,7 @@ function renderFutureVibePills() {
   var custom = (window.userData && window.userData.customVibes) || [];
   var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
   var all = FUTURE_VIBE_FIXED.concat(customStrs);
-  var current = window._futureVibe || '⚾ Game';
+  var current = window._futureVibe || '';
   var isOther = window._futureVibeMode === 'other';
   container.innerHTML = all.map(function(v){
     var active = !isOther && v === current;
@@ -8658,7 +8664,7 @@ function saveFutureMoment() {
   var locEl = document.getElementById('future-location');
   var location = locEl && locEl.value.trim() ? locEl.value.trim() : '';
   var theme = window._futureTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
-  var vibe = window._futureVibe || '⚾ Game';
+  var vibe = window._futureVibe || '';
   var ticketLinkEl = document.getElementById('future-ticket-link');
   var ticketLink = ticketLinkEl && ticketLinkEl.value.trim() ? ticketLinkEl.value.trim() : '';
   var coverPhoto = window._futureCoverPhoto || '';
@@ -8711,7 +8717,7 @@ function resetFutureForm() {
   window._futureTheme = null;
   var heroEl = document.getElementById('future-hero');
   if (heroEl) heroEl.style.background = 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
-  window._futureVibe = '⚾ Game';
+  window._futureVibe = '';
   window._futureVibeMode = 'fixed';
   window._futureInvitees = [];
   window._futurePublic = false;
@@ -8970,7 +8976,10 @@ function _applyBoxScoreToContext(box) {
     }
   } else if (ctx.type === 'moment-create') {
     window._momentBoxScore = box;
-    _playSportFlourish(_flourishKeyForBsModalSport(window._bsModalSport), function(){
+    var bsSport = window._bsModalSport || 'mlb';
+    var bsEmoji = { mlb: '⚾', nfl: '🏈', nba: '🏀', wnba: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[bsSport] || '🏆';
+    _playSportFlourish(_flourishKeyForBsModalSport(bsSport), function(){
+      quickVibe(bsEmoji + ' Game');
       if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(box);
     });
   } else if (ctx.type === 'bdayGame') {
@@ -9061,7 +9070,7 @@ function saveNewMoment() {
   if (!highlightText && window._nowPinLabel) { highlightText = 'at ' + window._nowPinLabel; }
   var rememberEl = document.getElementById('remember-text');
   var dedication = rememberEl ? rememberEl.value.trim() : '';
-  var vibe = window._momentVibe || '⚾ Game';
+  var vibe = window._momentVibe || '';
   _persistCustomVibeIfNew(vibe);
   var photo = window._momentPhoto || '';
   var peopleObjs = (window._momentPeople || []).slice();
@@ -10676,7 +10685,7 @@ function renderFutureEdit(m) {
   var custom = (window.userData && window.userData.customVibes) || [];
   var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
   var knownVibes = FUTURE_VIBE_FIXED.concat(customStrs);
-  var savedVibe = m.vibe || '⚾ Game';
+  var savedVibe = m.vibe || '';
   window._fdVibe = savedVibe;
   window._fdVibeMode = knownVibes.indexOf(savedVibe) !== -1 ? 'fixed' : 'other';
   var themes = ['linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)','linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)','linear-gradient(135deg,#F472B6 0%,#FB923C 100%)','linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)','linear-gradient(135deg,#FBBF24 0%,#F87171 100%)','linear-gradient(135deg,#34D399 0%,#3B82F6 100%)','linear-gradient(135deg,#F87171 0%,#EC4899 100%)','linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%)','linear-gradient(135deg,#FACC15 0%,#4ADE80 100%)','linear-gradient(135deg,#818CF8 0%,#F472B6 100%)'];
@@ -10959,7 +10968,7 @@ function renderFdVibePills() {
   var custom = (window.userData && window.userData.customVibes) || [];
   var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
   var all = FUTURE_VIBE_FIXED.concat(customStrs);
-  var current = window._fdVibe || '⚾ Game';
+  var current = window._fdVibe || '';
   var isOther = window._fdVibeMode === 'other';
   container.innerHTML = all.map(function(v){
     var active = !isOther && v === current;
@@ -11024,7 +11033,7 @@ function futureDetailSave() {
     time: tm ? tm.value : '',
     location: l && l.value.trim() ? l.value.trim() : '',
     theme: window._fdTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
-    vibe: window._fdVibe || '⚾ Game',
+    vibe: window._fdVibe || '',
     ticketLink: ticketLink,
     coverPhoto: coverPhoto,
     taggedUids: window._fdInvitees || [],
@@ -11032,7 +11041,7 @@ function futureDetailSave() {
     stops: stops
   }).then(function(){
     if (typeof ib_toast === 'function') ib_toast('Plan updated');
-    _persistCustomVibeIfNewFromFuture(window._fdVibe || '⚾ Game');
+    _persistCustomVibeIfNewFromFuture(window._fdVibe || '');
     if (typeof loadFutureMoments === 'function') loadFutureMoments();
     if (typeof loadFeedMoments === 'function') loadFeedMoments();
     var m = (window._futureMomentsCache || {})[id];
@@ -11142,7 +11151,7 @@ function renderMoments(moments) {
 
   var avColors = ['av-a', 'av-b', 'av-c', 'av-d', 'av-e'];
   list.innerHTML = moments.map(function(m) {
-    var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+    var emoji = (m.vibe || '✨').trim().split(' ')[0];
     var img = m.photo
       ? '<div class="mem-snap-img" style="background-image:url(' + m.photo + ');background-size:cover;background-position:center"></div>'
       : '<div class="mem-snap-img" style="background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%);font-size:34px">' + _escapeHtml(emoji) + '</div>';
@@ -11215,7 +11224,7 @@ function openFriendHub(uid, name) {
   if (countEl) countEl.textContent = shared.length;
   if (paneEl) {
     paneEl.innerHTML = shared.length ? shared.map(function(m){
-      var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+      var emoji = (m.vibe || '✨').trim().split(' ')[0];
       var img = m.photo
         ? '<div class="mem-snap-img" style="background-image:url(' + m.photo + ');background-size:cover;background-position:center"></div>'
         : '<div class="mem-snap-img" style="background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%);font-size:34px">' + _escapeHtml(emoji) + '</div>';
@@ -11581,7 +11590,7 @@ function renderMemoryView(m) {
       return '<div class="md-bg-slide" onclick="openPhotoLightbox(\'' + p.replace(/'/g, "\\'") + '\')" style="position:absolute;inset:0;background-image:url(' + p + ');background-size:cover;background-position:center;opacity:' + (i === 0 ? '1' : '0') + ';transition:opacity 1.6s ease;cursor:pointer"></div>';
     }).join('');
   } else {
-    bgBox.innerHTML = '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:130px;opacity:0.22">' + _escapeHtml((m.vibe || '⚾').split(' ')[0]) + '</div>';
+    bgBox.innerHTML = '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#3D3580,#1A1640);display:flex;align-items:center;justify-content:center;font-size:130px;opacity:0.22">' + _escapeHtml((m.vibe || '✨').split(' ')[0]) + '</div>';
   }
   if (progBox) {
     progBox.innerHTML = allPhotos.length > 1
@@ -11753,7 +11762,7 @@ function momentConvertToFuturePlan() {
     time: '',
     location: (m.highlight || '').replace(/^at\s+/i, ''),
     theme: 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)',
-    vibe: m.vibe || '⚾ Game',
+    vibe: m.vibe || '',
     taggedUids: m.taggedUids || [],
     public: false,
     rsvps: {},
@@ -12539,7 +12548,7 @@ function _calRenderDayDetail(momentsByDate) {
           '<div style="font-size:11px;font-weight:700;color:#A89FE8;margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Upcoming</div></div>' +
         '</div>';
       }
-      var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+      var emoji = (m.vibe || '✨').trim().split(' ')[0];
       return '<div onclick="openMemory(\'' + m._id + '\')" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
         '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
         '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(m.name || 'Untitled moment') + '</div></div>' +
@@ -15082,7 +15091,7 @@ function _renderVpSharedMemories(memories) {
   listEl.style.display = 'grid';
   window._vpSharedMemoriesData = memories;
   listEl.innerHTML = memories.map(function(m, i){
-    var emoji = (m.vibe || '⚾').trim().split(' ')[0];
+    var emoji = (m.vibe || '✨').trim().split(' ')[0];
     var imgStyle = m.photo
       ? 'background-image:url(' + m.photo + ');background-size:cover;background-position:center'
       : 'background:linear-gradient(135deg,#3D3580 0%,#2A2460 55%,#1A1640 100%)';
