@@ -7404,7 +7404,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.10.0-periods-highlights-flourish';
+window.INNINGS_BUILD = 'v5.11.0-open-memory-flourish';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7812,18 +7812,42 @@ function _haversineMeters(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── SPORT FLOURISH ── a short, skippable celebration played at the moment
-// a game or festival gets confirmed. Deliberately brief (about a second)
-// and interruptible by a tap — this is meant to feel like a beat, not
-// something that gets in the way if you've already seen it a dozen times.
+// ── SPORT FLOURISH ── a short, skippable celebration. Originally just for
+// confirming a game/festival at creation time; now also plays whenever any
+// memory is opened, themed to whatever kind of memory it is — sport,
+// festival, or otherwise. Known vibes get a specific animation; anything
+// else (a custom vibe like "Bar Crawl" or "Chill Night" with an emoji this
+// map doesn't recognize) still gets the generic default rather than
+// nothing, since the point is every memory gets *something* fun.
 var SPORT_FLOURISH = {
   mlb: { emoji: '⚾', caption: 'Play ball!' },
   football: { emoji: '🏈', caption: 'Touchdown!' },
   basketball: { emoji: '🏀', caption: 'Nothing but net!' },
   hockey: { emoji: '🏒', caption: 'Top shelf!' },
   soccer: { emoji: '⚽', caption: 'Goooal!' },
-  festival: { emoji: '🎪', caption: "Let's go!" }
+  festival: { emoji: '🎪', caption: "Let's go!" },
+  hangout: { emoji: '🍺', caption: 'Cheers!' },
+  meal: { emoji: '🍽️', caption: 'Bon appétit!' },
+  trip: { emoji: '✈️', caption: 'Bon voyage!' },
+  home: { emoji: '🏡', caption: 'Home sweet home' },
+  default: { emoji: '✨', caption: 'There you are' }
 };
+// Reads the emoji off the front of whatever vibe is saved on the memory
+// ("⚾ Game", "🍻 Bar Crawl", a fully custom one) and matches it to a
+// themed animation where recognized, falling back to the generic default
+// rather than guessing at emoji this map was never taught.
+var VIBE_EMOJI_TO_FLOURISH = {
+  '⚾': 'mlb', '🏈': 'football', '🏀': 'basketball', '🏒': 'hockey', '⚽': 'soccer',
+  '🎪': 'festival',
+  '🍺': 'hangout', '🍻': 'hangout', '🍸': 'hangout', '🥂': 'hangout',
+  '🍽️': 'meal', '🍴': 'meal', '🍕': 'meal', '🍔': 'meal',
+  '✈️': 'trip', '🧳': 'trip',
+  '🏠': 'home', '🛋️': 'home', '🏡': 'home'
+};
+function _flourishKeyForVibe(vibe) {
+  var emoji = String(vibe || '').trim().split(' ')[0];
+  return VIBE_EMOJI_TO_FLOURISH[emoji] || 'default';
+}
 function _flourishKeyForBsModalSport(s) {
   if (s === 'nfl') return 'football';
   if (s === 'nba' || s === 'wnba') return 'basketball';
@@ -11301,6 +11325,7 @@ function _openMemoryWithData(m, returnTo) {
   _navApplyScreen('memory-detail');
   _autoRefreshStaleBoxScore(m);
   _startLiveBoxScorePolling(m);
+  _playSportFlourish(_flourishKeyForVibe(m.vibe));
 }
 
 // While a memory's box score isn't final yet (game still going), poll for
