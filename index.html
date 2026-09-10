@@ -308,16 +308,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .mem-snap{background:rgba(255,255,255,0.055);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.09)}
 .mem-snap-img{height:110px;position:relative;display:flex;align-items:center;justify-content:center;font-size:36px}
 .mem-snap-img.ballpark{background:linear-gradient(135deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%)}
-.mem-snap-score{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:8px 12px 10px}
+.mem-snap-score{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));pad
+.mem-snap-caption{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:10px}
+.mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
+.mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}ding:8px 12px 10px}
 .mem-snap-score-line{font-size:13px;font-weight:800;color:white;letter-spacing:-0.3px}
 .mem-snap-score-det{font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px}
 .mem-snap-body{padding:12px 14px}
 .mem-snap-who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .mem-snap-names{font-size:13px;font-weight:700;color:#fff}
 .mem-snap-date{font-size:11px;color:rgba(255,255,255,0.42);margin-top:1px}
-.mem-snap-caption{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:10px}
-.mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
-.mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}
 .mem-snap-highlight span{font-size:12px;color:#A89FE8;font-weight:600;line-height:1.35}
 .people-chip{flex-shrink:0;text-align:center;cursor:pointer;width:58px}
 .people-chip .av{width:52px;height:52px;font-size:16px;margin:0 auto 6px}
@@ -1188,16 +1188,25 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- BIRTHDAY BANNER -->
-    <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'birthday-group')">
+    <!-- GAMES BANNER — entry point into the sport→game→cheat sheet browser -->
+    <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'games')">
       <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
-        <div class="banner-pop-icon" style="position:relative;font-size:19px">🎂</div>
+        <div class="banner-pop-icon" style="position:relative;font-size:19px">⚾</div>
       </div>
       <div style="flex:1">
-        <div class="imm-row-title">Nate's Birthday</div>
-        <div class="imm-row-sub">Pregame · Game · Afters · Tap to open →</div>
+        <div class="imm-row-title">Games</div>
+        <div class="imm-row-sub">Browse today's lineups · Tap to open →</div>
       </div>
+    </div>
+
+    <!-- LIVE FEED — games the person has marked Watching from the Games screen.
+         Hidden entirely when the list is empty; see renderLiveFeed(). -->
+    <div id="feed-live-feed-section" style="display:none;flex-direction:column;gap:8px">
+      <div class="imm-section" style="padding:8px 2px 0">
+        <div class="imm-eyebrow">Live feed</div>
+      </div>
+      <div id="feed-live-feed-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
     <!-- FEEDBACK BANNER -->
@@ -1231,6 +1240,63 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <button class="nav-item" onclick="nav('create-group')" aria-label="Create group" style="position:relative"><div style="width:42px;height:42px;border-radius:50%;background:#A89FE8;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(61,53,128,0.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D0820" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></button>
     <button class="nav-item" onclick="nav('memories')" aria-label="Memories"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
     <button class="nav-item" onclick="nav('profile')" aria-label="Profile"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+  </div>
+</div>
+
+<!-- ═══ GAMES BROWSER — sport chips, today's games, tap through to a
+     cheat sheet + open chat for one specific game. Independent of Groups;
+     reached from the Games banner on Feed. MLB only for now — NFL/college
+     chips are visible but stubbed (gamesSportSoon()) until those sports
+     get the same treatment on the /api/espn proxy. ═══ -->
+<div class="screen" id="screen-games">
+  <div style="background:var(--card);padding:14px 16px;padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <button onclick="navBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+    </button>
+    <div style="font-size:16px;font-weight:700;color:#fff">Games</div>
+  </div>
+  <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px">
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:10px">
+      <button id="games-chip-mlb" onclick="gamesSportPick('mlb')" style="flex:0 0 auto;background:var(--indigo);color:#fff;font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:22px;border:none;cursor:pointer;font-family:inherit">MLB</button>
+      <button onclick="gamesSportSoon()" style="flex:0 0 auto;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:22px;border:none;cursor:pointer;font-family:inherit">NFL</button>
+      <button onclick="gamesSportSoon()" style="flex:0 0 auto;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:22px;border:none;cursor:pointer;font-family:inherit">College football</button>
+    </div>
+    <div id="games-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
+
+<!-- ═══ GAME DETAIL — cheat sheet + an open chat, reached from the Games
+     screen above or from a Live Feed card on Feed. One instance re-used
+     per game; window._activeBrowseGame tracks which. ═══ -->
+<div class="screen" id="screen-game">
+  <div style="background:var(--card);padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <div style="padding:0 16px 12px;display:flex;align-items:center;gap:12px">
+      <button onclick="navBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div id="game-detail-title" style="flex:1;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Loading…</div>
+      <button id="game-watch-btn" onclick="toggleGameWatching()" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.7);font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0"><i class="ti ti-eye"></i> <span id="game-watch-label">Watch</span></button>
+    </div>
+    <div style="display:flex;gap:6px;padding:0 16px 12px">
+      <button id="game-tab-sheet" onclick="gameDetailTab('sheet')" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cheat sheet</button>
+      <button id="game-tab-chat" onclick="gameDetailTab('chat')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Chat</button>
+    </div>
+  </div>
+  <div id="game-sheet-panel" class="scroll-bare" style="display:block;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
+  <div id="game-chat-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px;flex-direction:column;gap:10px">
+    <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0">Open to anyone with the link — no group needed for the beta.</div>
+    <div id="game-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
+      <div style="font-size:30px">⚾</div>
+      <div style="font-size:14px;font-weight:700;color:#fff">No messages yet</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.42);max-width:220px;line-height:1.5">Talk about the game right here.</div>
+    </div>
+    <div id="game-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div id="game-chat-input-zone" class="input-zone" style="display:none;flex-direction:column;align-items:stretch;gap:8px">
+    <div style="display:flex;gap:10px;align-items:center">
+      <input id="game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGameMessage();}">
+      <button class="send-btn" onclick="sendGameMessage()"><i class="ti ti-send"></i></button>
+    </div>
   </div>
 </div>
 
@@ -7404,7 +7470,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.13.0-tag-sport-on-boxscore';
+window.INNINGS_BUILD = 'v5.15.0-games-live-feed';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -7423,7 +7489,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feed'&&typeof startWatchingList==='function')startWatchingList();if(id==='games'&&typeof loadGamesList==='function')loadGamesList();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -14345,6 +14411,445 @@ function closeGroupGameDetail() {
   var overlay = document.getElementById('gd-game-detail');
   if (overlay) overlay.style.display = 'none';
   window._gdActiveGame = null;
+}
+
+// ── PREGAME CHEAT SHEET HELPERS — shared by the Games screen (see
+// GAMES BROWSER below) to build a probable-starter + lineup summary from
+// /api/mlb?mode=pregame. Purely data-in/string-out, no DOM coupling, so
+// they live here once rather than duplicated per screen that uses them.
+window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: null };
+
+// Small curated set of players whose Baseball-Reference ID we already
+// know, so their chip can jump straight to the page instead of running a
+// name search. Anyone not in here still gets a (labeled) search-page link.
+var PREGAME_BR_SEED = {
+  'Colt Keith':'k/keithco01','Kevin McGonigle':'m/mcgonke01','Gleyber Torres':'t/torregl01',
+  'Riley Greene':'g/greenri03','Dillon Dingler':'d/dingldi01','Zach McKinstry':'m/mckinza01',
+  'Spencer Torkelson':'t/torkesp01','Max Clark':'c/clarkma04','John Peck':'p/peckjo01',
+  'Troy Melton':'m/meltotr01','Luke Keaschall':'k/keasclu01','Brooks Lee':'l/leebr02',
+  'Kody Clemens':'c/clemeko01','Ryan Jeffers':'j/jeffery01','Josh Bell':'b/belljo02',
+  'Royce Lewis':'l/lewisro02','Trevor Larnach':'l/larnatr01','Kaelen Culpepper':'c/culpeka01',
+  'Walker Jenkins':'j/jenkiwa01','Joe Ryan':'r/ryanjo04'
+};
+
+function _pregameSlug(n) {
+  return String(n).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function _pregameLinks(name, mlbamId) {
+  var seed = PREGAME_BR_SEED[name];
+  var out = [{
+    label: 'BR', exact: !!seed,
+    url: seed
+      ? 'https://www.baseball-reference.com/players/' + seed + '.shtml'
+      : 'https://www.baseball-reference.com/search/search.fcgi?search=' + encodeURIComponent(name)
+  }];
+  if (mlbamId) {
+    out.push({ label: 'Savant', exact: true,
+      url: 'https://baseballsavant.mlb.com/savant-player/' + _pregameSlug(name) + '-' + mlbamId });
+  }
+  return out;
+}
+
+function _pregameLinkChips(name, mlbamId) {
+  return _pregameLinks(name, mlbamId).map(function (l) {
+    return '<a href="' + _escapeHtml(l.url) + '" target="_blank" rel="noopener" style="font-size:10px;font-weight:700;padding:6px 9px;border-radius:8px;flex-shrink:0;text-decoration:none;' +
+      (l.exact ? 'background:rgba(168,159,232,.2);color:#CECBF6' : 'background:rgba(255,255,255,.09);color:rgba(255,255,255,.62)') +
+      '">' + l.label + '</a>';
+  }).join('');
+}
+
+// The one hitter worth watching: the best OPS among anyone with a real
+// sample this season, with a callout instead for a young player already
+// hitting well, since that's usually the more interesting watch.
+function _pregameWatchLine(side) {
+  var rows = (side.rows || []).filter(function (r) { return r.pa > 40; });
+  if (!rows.length) {
+    return (side.rows && side.rows[0]) ? (side.rows[0].name + ' is the one to keep an eye on here.') : '';
+  }
+  var best = rows.slice().sort(function (a, b) { return b.ops - a.ops; })[0];
+  var young = rows.filter(function (r) { return r.age && r.age <= 23; })
+    .sort(function (a, b) { return b.ops - a.ops; })[0];
+  if (young && young.ops > 0.7 && young.name !== best.name) {
+    return young.name + ' is ' + young.age + ' and already hitting ' + young.line.split(' / ')[0] +
+      '. Watch what the pitcher does to him the second time through.';
+  }
+  return best.name + ' is the most dangerous bat in this lineup at ' + best.line +
+    '. If the game turns, it probably turns on him.';
+}
+
+function _pregameMarkedIdx(side) {
+  var rows = (side.rows || []).filter(function (r) { return r.pa > 40; });
+  if (!rows.length) return -1;
+  var best = rows.slice().sort(function (a, b) { return b.ops - a.ops; })[0];
+  return (side.rows || []).indexOf(best);
+}
+
+// ── GAMES BROWSER — sport chips + today's games, independent of Groups.
+// Reached from the Games banner on Feed. MLB only for now; the roster of
+// chips is visible so the shape is right, but NFL/college just toast
+// "coming soon" until those sports get pregame support on api/espn.js.
+window._gamesListCache = [];
+function loadGamesList(date) {
+  var requestedDate = date || _todayLocal();
+  var listEl = document.getElementById('games-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
+  fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(requestedDate))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var games = data.games || [];
+      window._gamesListCache = games;
+      if (!games.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">⚾</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No MLB games today</div></div>';
+        return;
+      }
+      listEl.innerHTML = games.map(function (g, i) {
+        var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
+        return '<div onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">' +
+          '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+          '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
+          '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+      }).join('');
+    })
+    .catch(function (err) {
+      console.error('Load games list error:', err);
+      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load today\'s games — try again.</div>';
+    });
+}
+
+function openGameFromList(i) {
+  var g = (window._gamesListCache || [])[i];
+  if (!g) return;
+  openGameScreen(g.gamePk, g.away, g.home);
+}
+
+function gamesSportPick(sport) {
+  // Only MLB is wired up for the beta — this just re-confirms the chip
+  // and reloads, so tapping it never looks like a no-op.
+  loadGamesList();
+}
+
+function gamesSportSoon() {
+  if (typeof ib_toast === 'function') ib_toast('More sports coming soon');
+}
+
+// ── GAME DETAIL — cheat sheet + open chat for one specific game.
+window._activeBrowseGame = null;
+
+function openGameScreen(gamePk, away, home) {
+  window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null };
+  var titleEl = document.getElementById('game-detail-title');
+  if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
+  nav('game');
+  gameDetailTab('sheet');
+  loadGameCheatSheet(gamePk);
+  _refreshGameWatchButton(gamePk);
+}
+
+function gameDetailTab(key) {
+  var sheetBtn = document.getElementById('game-tab-sheet');
+  var chatBtn = document.getElementById('game-tab-chat');
+  var sheetPanel = document.getElementById('game-sheet-panel');
+  var chatPanel = document.getElementById('game-chat-panel');
+  var inputZone = document.getElementById('game-chat-input-zone');
+  if (!sheetBtn || !chatBtn) return;
+  var onStyle = 'background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit';
+  var offStyle = 'background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit';
+  if (key === 'chat') {
+    sheetBtn.style.cssText = offStyle;
+    chatBtn.style.cssText = onStyle;
+    if (sheetPanel) sheetPanel.style.display = 'none';
+    if (chatPanel) chatPanel.style.display = 'flex';
+    if (inputZone) inputZone.style.display = 'flex';
+    var gamePk = window._activeBrowseGame && window._activeBrowseGame.gamePk;
+    if (gamePk) startGameChat(gamePk);
+  } else {
+    sheetBtn.style.cssText = onStyle;
+    chatBtn.style.cssText = offStyle;
+    if (sheetPanel) sheetPanel.style.display = 'block';
+    if (chatPanel) chatPanel.style.display = 'none';
+    if (inputZone) inputZone.style.display = 'none';
+  }
+}
+
+function loadGameCheatSheet(gamePk) {
+  var el = document.getElementById('game-sheet-panel');
+  if (!el) return;
+  window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk };
+  el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading lineups…</div>';
+  fetch('/api/mlb?mode=pregame&gamePk=' + encodeURIComponent(gamePk))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+      if (!data || data.error || !data.away || !data.home) {
+        el.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">No lineup info available for this game yet.</div>';
+        return;
+      }
+      window._gdPregame.data = data;
+      renderGameCheatSheet();
+    })
+    .catch(function (err) {
+      console.error('Load cheat sheet error:', err);
+      el.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">Couldn\'t load lineups — try again.</div>';
+    });
+}
+
+function gameSheetSide(key) {
+  window._gdPregame.side = key;
+  window._gdPregame.expand = false;
+  renderGameCheatSheet();
+}
+
+function gameSheetExpand() {
+  window._gdPregame.expand = !window._gdPregame.expand;
+  renderGameCheatSheet();
+}
+
+function renderGameCheatSheet() {
+  var el = document.getElementById('game-sheet-panel');
+  var state = window._gdPregame;
+  if (!el || !state || !state.data) return;
+  var data = state.data;
+  var side = data[state.side];
+  if (!side) return;
+
+  var h = '<div style="display:flex;gap:8px;margin-bottom:12px">';
+  ['away', 'home'].forEach(function (k) {
+    var s = data[k];
+    if (!s) return;
+    var active = k === state.side;
+    h += '<button onclick="gameSheetSide(\'' + k + '\')" style="flex:1;padding:8px 10px;border-radius:12px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;' +
+      (active ? 'background:var(--indigo);color:#fff' : 'background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)') +
+      '">' + _escapeHtml(s.name) + '</button>';
+  });
+  h += '</div>';
+
+  if (side.projected) {
+    h += '<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:9px 11px;font-size:11.5px;color:rgba(255,255,255,.6);margin-bottom:12px">Lineup not posted yet — showing the active roster instead.</div>';
+  }
+
+  var watch = _pregameWatchLine(side);
+  if (watch) {
+    h += '<div style="background:rgba(168,159,232,.13);border-radius:14px;padding:12px;margin-bottom:12px">' +
+      '<div style="font-size:11.5px;color:#CECBF6;display:flex;align-items:center;gap:6px"><i class="ti ti-bulb"></i> If you watch one thing</div>' +
+      '<div style="color:#fff;font-size:13.5px;line-height:1.55;margin-top:5px">' + _escapeHtml(watch) + '</div></div>';
+  }
+
+  if (side.feat) {
+    h += '<div style="background:rgba(255,255,255,.06);border-left:3px solid #A89FE8;border-radius:0 12px 12px 0;padding:12px;margin-bottom:12px">' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+      '<span style="flex:1;font-size:13.5px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+      _escapeHtml(side.feat.name) + ' <span style="font-size:11px;color:rgba(255,255,255,.45);font-weight:400">' +
+      _escapeHtml(side.feat.role) + (side.feat.age ? ' · ' + side.feat.age : '') + '</span></span>' +
+      _pregameLinkChips(side.feat.name, side.feat.id) + '</div>' +
+      '<div style="color:#CECBF6;font-size:11.5px;margin-top:5px">' + _escapeHtml(side.feat.line) + '</div></div>';
+  }
+
+  var rows = side.rows || [];
+  var vis = state.expand ? rows : rows.slice(0, 4);
+  var marked = _pregameMarkedIdx(side);
+  var showOrder = !side.projected;
+  h += '<div style="background:rgba(255,255,255,.06);border-radius:14px;overflow:hidden">';
+  vis.forEach(function (r, i) {
+    var lead = showOrder
+      ? '<span style="width:16px;flex:0 0 16px;color:rgba(255,255,255,.45);font-size:12px">' + (i + 1) + '</span>'
+      : '<span style="width:28px;flex:0 0 28px;color:rgba(255,255,255,.45);font-size:11px">' + _escapeHtml(r.pos) + '</span>';
+    h += '<div style="padding:11px 12px;' + (i === 0 ? '' : 'border-top:.5px solid rgba(255,255,255,.08);') +
+      (i === marked ? 'background:rgba(168,159,232,.08)' : '') + '">' +
+      '<div style="display:flex;align-items:center;gap:8px">' + lead +
+      '<span style="flex:1;min-width:0;font-size:13.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+      _escapeHtml(r.name) +
+      (showOrder && r.pos ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + _escapeHtml(r.pos) + '</span>' : '') +
+      (r.age ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + r.age + '</span>' : '') +
+      '</span>' + _pregameLinkChips(r.name, r.id) + '</div>' +
+      '<div style="color:#CECBF6;font-size:11.5px;margin:5px 0 0">' + _escapeHtml(r.line) + (r.extra ? ' · ' + _escapeHtml(r.extra) : '') + '</div></div>';
+  });
+  if (rows.length > 4) {
+    h += '<button onclick="gameSheetExpand()" style="width:100%;padding:11px;text-align:center;color:#A89FE8;font-size:12.5px;background:none;border:none;border-top:.5px solid rgba(255,255,255,.08);cursor:pointer;font-family:inherit">' +
+      (state.expand ? 'Show less' : 'Show ' + (rows.length - 4) + ' more') + '</button>';
+  }
+  if (!rows.length) {
+    h += '<div style="padding:14px 12px;font-size:13px;color:rgba(255,255,255,.5)">No player data available for this game yet.</div>';
+  }
+  h += '</div>';
+
+  h += '<div style="color:rgba(255,255,255,.45);font-size:11.5px;line-height:1.6;padding:12px 2px">Lavender chips go straight to the player page. Faded chips run a name search instead.</div>';
+
+  el.innerHTML = h;
+}
+
+// ── WATCHING + LIVE FEED — a per-user, per-game flag stored at
+// users/{uid}/watching/{gamePk}, same owned-subcollection shape as the
+// existing users/{uid}/moments and users/{uid}/private/friends, so it
+// should already fall under whatever rule covers those. Feed polls the
+// box score for anything on the list while the Feed screen is open.
+function _setWatchButtonState(on) {
+  var btn = document.getElementById('game-watch-btn');
+  var label = document.getElementById('game-watch-label');
+  if (!btn || !label) return;
+  if (on) {
+    btn.style.background = 'rgba(124,242,156,.18)';
+    btn.style.borderColor = 'rgba(124,242,156,.4)';
+    btn.style.color = '#9be8ac';
+    label.textContent = 'Watching';
+  } else {
+    btn.style.background = 'rgba(255,255,255,.1)';
+    btn.style.borderColor = 'rgba(255,255,255,.16)';
+    btn.style.color = 'rgba(255,255,255,.7)';
+    label.textContent = 'Watch';
+  }
+}
+
+function _refreshGameWatchButton(gamePk) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { _setWatchButtonState(false); return; }
+  window.db.collection('users').doc(user.uid).collection('watching').doc(String(gamePk)).get()
+    .then(function (doc) {
+      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+      _setWatchButtonState(doc.exists);
+    })
+    .catch(function (err) { console.error('Check watching error:', err); });
+}
+
+function toggleGameWatching() {
+  var g = window._activeBrowseGame;
+  if (!g) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in to track games'); return; }
+  var ref = window.db.collection('users').doc(user.uid).collection('watching').doc(String(g.gamePk));
+  ref.get().then(function (doc) {
+    if (doc.exists) return ref.delete().then(function () { _setWatchButtonState(false); });
+    return ref.set({
+      gamePk: g.gamePk, sport: 'mlb', away: g.away || null, home: g.home || null, addedAt: Date.now()
+    }).then(function () { _setWatchButtonState(true); });
+  }).catch(function (err) {
+    console.error('Toggle watching error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not update — check Firestore rules');
+  });
+}
+
+window._watchingStarted = false;
+window._watchingList = [];
+window._liveFeedCache = [];
+
+function startWatchingList() {
+  if (window._watchingStarted) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  window._watchingStarted = true;
+  window.db.collection('users').doc(user.uid).collection('watching').onSnapshot(function (snap) {
+    var arr = [];
+    snap.forEach(function (doc) { arr.push(Object.assign({ _id: doc.id }, doc.data())); });
+    window._watchingList = arr;
+    renderLiveFeed();
+  }, function (err) {
+    console.error('Watching list error:', err);
+    window._watchingStarted = false;
+  });
+  if (!window._liveFeedInterval) window._liveFeedInterval = setInterval(renderLiveFeed, 30000);
+}
+
+function renderLiveFeed() {
+  var section = document.getElementById('feed-live-feed-section');
+  var list = document.getElementById('feed-live-feed-list');
+  if (!section || !list) return;
+  var games = window._watchingList || [];
+  if (!games.length) { section.style.display = 'none'; window._liveFeedCache = []; return; }
+  section.style.display = 'flex';
+  Promise.all(games.map(function (g) {
+    return fetch('/api/mlb?mode=boxscore&gamePk=' + encodeURIComponent(g.gamePk))
+      .then(function (r) { return r.json(); })
+      .then(function (box) { return { g: g, box: box }; })
+      .catch(function () { return { g: g, box: null }; });
+  })).then(function (results) {
+    window._liveFeedCache = results;
+    list.innerHTML = results.map(function (r, i) {
+      var box = r.box;
+      var away = (box && box.away) || r.g.away || '?';
+      var home = (box && box.home) || r.g.home || '?';
+      var status = (box && box.status) || 'Scheduled';
+      var scoreLabel = (box && box.awayScore != null && box.homeScore != null) ? (box.awayScore + '–' + box.homeScore) : '';
+      return '<div onclick="openLiveFeedGame(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(124,242,156,.28);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:#7CF29C;flex-shrink:0;box-shadow:0 0 6px 1px rgba(124,242,156,.6)"></span>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#fff">' + _escapeHtml(away) + ' @ ' + _escapeHtml(home) + '</div>' +
+        '<div style="font-size:11px;color:#9be8ac;margin-top:2px;font-weight:600">' + _escapeHtml(status) + '</div></div>' +
+        (scoreLabel ? '<div style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + _escapeHtml(scoreLabel) + '</div>' : '') +
+        '</div>';
+    }).join('');
+  });
+}
+
+function openLiveFeedGame(i) {
+  var r = (window._liveFeedCache || [])[i];
+  if (!r) return;
+  var away = (r.box && r.box.away) || r.g.away;
+  var home = (r.box && r.box.home) || r.g.home;
+  openGameScreen(r.g.gamePk, away, home);
+}
+
+// ── OPEN GAME CHAT — flat gameChats collection filtered by gamePk, with
+// no groupId and no membership check: anyone signed in can read and post,
+// on purpose, per the "just for the beta" call on this one. Deliberately
+// plain (no reactions/replies/link-previews) to match.
+window._gameChatStarted = {};
+function startGameChat(gamePk) {
+  var key = String(gamePk);
+  if (window._gameChatStarted[key]) return;
+  if (!window.db) return;
+  window._gameChatStarted[key] = true;
+  window.db.collection('gameChats').where('gamePk', '==', gamePk).limit(300).onSnapshot(function (snap) {
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+    var msgs = [];
+    snap.forEach(function (doc) { msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
+    msgs.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    renderGameChat(msgs);
+  }, function (err) {
+    console.error('Game chat error:', err);
+    window._gameChatStarted[key] = false;
+    if (typeof ib_toast === 'function') ib_toast('Chat unavailable — check Firestore rules');
+  });
+}
+
+function renderGameChat(msgs) {
+  var box = document.getElementById('game-chat-msgs');
+  var empty = document.getElementById('game-chat-empty');
+  if (!box) return;
+  if (empty) empty.style.display = msgs.length ? 'none' : 'flex';
+  var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
+  box.innerHTML = msgs.map(function (c) {
+    var mine = c.uid && c.uid === myUid;
+    if (mine) {
+      return '<div class="msg" style="justify-content:flex-end"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
+        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '</div></div>';
+    }
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
+      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+      '</div></div>';
+  }).join('');
+  var panel = document.getElementById('game-chat-panel');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function sendGameMessage() {
+  if (!window._activeBrowseGame) return;
+  var inp = document.getElementById('game-chat-field');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in to chat'); return; }
+  var author = (window.userData && window.userData.name) || 'You';
+  var gamePk = window._activeBrowseGame.gamePk;
+  if (inp) inp.value = '';
+  window.db.collection('gameChats').add({
+    gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now()
+  }).catch(function (err) {
+    console.error('Game chat send error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules'));
+  });
 }
 
 window._gdGameChatStarted = {};
