@@ -1,4 +1,4 @@
-// Vercel Serverless Function — GET /api/espn?league=nfl|nba|wnba|mls|nwsl&mode=schedule&date=YYYYMMDD
+// Vercel Serverless Function — GET /api/espn?league=nfl|cfb|nba|wnba|mls|nwsl&mode=schedule&date=YYYYMMDD
 //                               GET /api/espn?league=...&mode=boxscore&eventId=<id>
 // One shared file for five leagues, since they all run on the exact same
 // underlying source: ESPN's hidden scoreboard API. This is NOT an official,
@@ -23,6 +23,7 @@
 
 var LEAGUE_PATHS = {
   nfl: 'football/nfl',
+  cfb: 'football/college-football',
   nba: 'basketball/nba',
   wnba: 'basketball/wnba',
   mls: 'soccer/usa.1',
@@ -33,7 +34,7 @@ module.exports = async function handler(req, res) {
   const league = req.query.league;
   const mode = req.query.mode;
   const path = LEAGUE_PATHS[league];
-  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, nba, wnba, mls, or nwsl' }); return; }
+  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, or nwsl' }); return; }
   try {
     if (mode === 'schedule') {
       const date = req.query.date;
@@ -124,10 +125,10 @@ function extractPeriods(league, awayComp, homeComp) {
 // than breaking anything, since the score card already renders fine
 // without it.
 function extractHighlights(league, data) {
-  var emoji = { nfl: '🏈', mls: '⚽', nwsl: '⚽', nba: '🏀', wnba: '🏀' }[league] || '🏆';
+  var emoji = { nfl: '🏈', cfb: '🏈', mls: '⚽', nwsl: '⚽', nba: '🏀', wnba: '🏀' }[league] || '🏆';
   var highlights = [];
   try {
-    if (league === 'nfl' || SOCCER_LEAGUES[league]) {
+    if (league === 'nfl' || league === 'cfb' || SOCCER_LEAGUES[league]) {
       (data.scoringPlays || []).slice(-4).forEach(function (p) {
         if (p && p.text) highlights.push({ emoji: emoji, text: p.text });
       });
