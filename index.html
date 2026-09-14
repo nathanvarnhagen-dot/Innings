@@ -308,16 +308,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .mem-snap{background:rgba(255,255,255,0.055);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.09)}
 .mem-snap-img{height:110px;position:relative;display:flex;align-items:center;justify-content:center;font-size:36px}
 .mem-snap-img.ballpark{background:linear-gradient(135deg,#1a3a5c 0%,#0d2137 40%,#1a4a2e 100%)}
-.mem-snap-score{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));pad
-.mem-snap-caption{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:10px}
-.mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
-.mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}ding:8px 12px 10px}
+.mem-snap-score{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:8px 12px 10px}
 .mem-snap-score-line{font-size:13px;font-weight:800;color:white;letter-spacing:-0.3px}
 .mem-snap-score-det{font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px}
 .mem-snap-body{padding:12px 14px}
 .mem-snap-who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .mem-snap-names{font-size:13px;font-weight:700;color:#fff}
 .mem-snap-date{font-size:11px;color:rgba(255,255,255,0.42);margin-top:1px}
+.mem-snap-caption{font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:10px}
+.mem-snap-highlight{background:rgba(168,159,232,0.14);border-radius:10px;padding:8px 11px;display:flex;align-items:center;gap:7px}
+.mem-snap-highlight i{font-size:15px;color:#A89FE8;flex-shrink:0}
 .mem-snap-highlight span{font-size:12px;color:#A89FE8;font-weight:600;line-height:1.35}
 .people-chip{flex-shrink:0;text-align:center;cursor:pointer;width:58px}
 .people-chip .av{width:52px;height:52px;font-size:16px;margin:0 auto 6px}
@@ -7470,7 +7470,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.15.0-games-live-feed';
+window.INNINGS_BUILD = 'v5.15.1-feedback-bubble-contrast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11728,7 +11728,7 @@ function renderMemoryView(m) {
         '<div class="av av-c" style="width:26px;height:26px;font-size:10px;flex-shrink:0">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="max-width:74%">' +
           '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
-          '<div style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:15px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,0.14)">' + _escapeHtml(c.text) + '</div>' +
+          '<div style="background:rgba(255,255,255,0.94);color:#1A1640;border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:15px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,0.14)">' + _escapeHtml(c.text) + '</div>' +
         '</div></div>';
     }).join('');
   }
@@ -13223,7 +13223,7 @@ function renderFeedbackChat(category, msgs) {
       '<div style="max-width:74%">' +
         '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
         lpHtml +
-        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:var(--black);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + _escapeHtml(c.text) + '</div>') +
+        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:#1A1640;border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + _escapeHtml(c.text) + '</div>') +
         badges +
       '</div></div>';
   }, true);
