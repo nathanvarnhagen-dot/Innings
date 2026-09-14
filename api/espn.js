@@ -57,7 +57,18 @@ module.exports = async function handler(req, res) {
       res.status(200).json(summarizeSummary(data, eventId, league));
       return;
     }
-    res.status(400).json({ error: 'Unknown mode — use schedule or boxscore' });
+    if (mode === 'pregame') {
+      const eventId = req.query.eventId;
+      if (!eventId) { res.status(400).json({ error: 'Missing eventId' }); return; }
+      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/summary?event=' + encodeURIComponent(eventId);
+      const r = await fetch(url);
+      const data = await r.json();
+      const result = await summarizePregame(data, path);
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      res.status(200).json(result);
+      return;
+    }
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, or pregame' });
   } catch (err) {
     res.status(500).json({ error: league.toUpperCase() + ' lookup failed' });
   }
@@ -172,4 +183,102 @@ function summarizeSummary(data, eventId, league) {
     homeRuns: [],
     highlights: extractHighlights(league, data)
   };
+}
+
+// ── PREGAME CHEAT SHEET (NFL/CFB) — no "starting lineup" concept exists
+// pregame for football the way it does for a batting order, so rather
+// than guess one, this returns the WHOLE roster for both teams, ranked
+// by position (skill/impact positions first) so the players worth
+// watching surface at the top instead of needing to scroll a 53-90 man
+// roster to find them.
+//
+// Confidence note: the schedule/boxscore endpoints above are already
+// proven (used elsewhere in the app successfully), but this roster
+// endpoint and its exact response shape have NOT been confirmed against
+// a live fetch in this session — no network path to espn.com from this
+// sandbox. Two specific things to check first if this comes back empty:
+// (1) whether `athletes` is a flat list or grouped as
+// `[{items:[...]}]` (handled defensively either way below), and
+// (2) whether individual athlete objects actually carry
+// `experience.years` / `college.name` — those are best-effort extras,
+// not load-bearing, so their absence degrades gracefully to a blank
+// second line rather than breaking anything.
+var POSITION_PRIORITY = {
+  QB: 1, RB: 2, HB: 2, WR: 3, TE: 4, FB: 5,
+  T: 6, OT: 6, G: 6, OG: 6, C: 6, OL: 6, LT: 6, RT: 6, LG: 6, RG: 6,
+  DE: 7, DT: 7, NT: 7, DL: 7, EDGE: 7,
+  OLB: 8, ILB: 8, MLB: 8, LB: 8,
+  CB: 9, S: 9, FS: 9, SS: 9, DB: 9,
+  K: 10, P: 11, LS: 12
+};
+function _positionPriority(pos) {
+  return (pos && POSITION_PRIORITY[pos] != null) ? POSITION_PRIORITY[pos] : 13;
+}
+function _ordinal(n) {
+  var suf = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
+}
+
+async function summarizePregame(data, path) {
+  var header = data.header || {};
+  var comp = (header.competitions && header.competitions[0]) || {};
+  var competitors = comp.competitors || [];
+  var awayComp = competitors.filter(function (c) { return c.homeAway === 'away'; })[0] || {};
+  var homeComp = competitors.filter(function (c) { return c.homeAway === 'home'; })[0] || {};
+  var awayTeamId = awayComp.team && awayComp.team.id;
+  var homeTeamId = homeComp.team && homeComp.team.id;
+
+  var rosters = await Promise.all([_fetchRoster(path, awayTeamId), _fetchRoster(path, homeTeamId)]);
+  var away = { name: (awayComp.team && awayComp.team.displayName) || null, rows: rosters[0] };
+  var home = { name: (homeComp.team && homeComp.team.displayName) || null, rows: rosters[1] };
+
+  if (!away.name && !home.name) return { error: 'No pregame data available' };
+  return { away: away, home: home };
+}
+
+async function _fetchRoster(path, teamId) {
+  if (!teamId) return [];
+  try {
+    var url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams/' + encodeURIComponent(teamId) + '/roster';
+    var r = await fetch(url);
+    var data = await r.json();
+    var athletes = [];
+    if (Array.isArray(data.athletes) && data.athletes.length && data.athletes[0] && data.athletes[0].items) {
+      data.athletes.forEach(function (group) { athletes = athletes.concat(group.items || []); });
+    } else {
+      athletes = data.athletes || [];
+    }
+    var rows = athletes.map(function (item) {
+      var a = item.athlete || item; // some hydrations nest one level deeper
+      var pos = (a.position && a.position.abbreviation) || null;
+      return {
+        name: a.fullName || a.displayName || 'Unknown',
+        pos: pos,
+        id: a.id || null,
+        age: a.age || null,
+        jersey: a.jersey || null,
+        experience: (a.experience && a.experience.years != null) ? a.experience.years : null,
+        college: (a.college && a.college.name) || null,
+        _priority: _positionPriority(pos)
+      };
+    });
+    rows.sort(function (x, y) {
+      if (x._priority !== y._priority) return x._priority - y._priority;
+      return (Number(x.jersey) || 999) - (Number(y.jersey) || 999);
+    });
+    return rows.map(function (r) {
+      var expLabel = r.experience == null ? '' : (r.experience === 0 ? 'Rookie' : _ordinal(r.experience + 1) + ' season');
+      var jerseyLabel = r.jersey ? '#' + r.jersey : '';
+      return {
+        name: r.name,
+        pos: r.pos,
+        id: r.id,
+        age: r.age,
+        line: jerseyLabel + (expLabel ? (jerseyLabel ? ' · ' : '') + expLabel : ''),
+        extra: r.college || null
+      };
+    });
+  } catch (e) {
+    return [];
+  }
 }
