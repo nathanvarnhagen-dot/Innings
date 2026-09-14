@@ -1261,6 +1261,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <button onclick="gamesSportSoon()" style="flex:0 0 auto;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:22px;border:none;cursor:pointer;font-family:inherit">NFL</button>
       <button onclick="gamesSportSoon()" style="flex:0 0 auto;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:22px;border:none;cursor:pointer;font-family:inherit">College football</button>
     </div>
+    <div style="background:rgba(255,255,255,.04);border-radius:14px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button onclick="gamesNav(-1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:rgba(255,255,255,0.6);font-family:inherit">‹</button>
+      <div style="text-align:center;cursor:pointer" onclick="gamesToday()">
+        <div id="games-date-label" style="font-size:14px;font-weight:700;color:#fff">Today</div>
+        <div id="games-today-link" style="display:none;font-size:11px;color:#A89FE8;font-weight:600;margin-top:2px">Jump to today</div>
+      </div>
+      <button onclick="gamesNav(1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:rgba(255,255,255,0.6);font-family:inherit">›</button>
+    </div>
     <div id="games-list" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
 </div>
@@ -7470,7 +7478,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.15.1-feedback-bubble-contrast';
+window.INNINGS_BUILD = 'v5.15.2-games-date-nav';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -14491,18 +14499,26 @@ function _pregameMarkedIdx(side) {
 // chips is visible so the shape is right, but NFL/college just toast
 // "coming soon" until those sports get pregame support on api/espn.js.
 window._gamesListCache = [];
+window._gamesDate = null;
 function loadGamesList(date) {
-  var requestedDate = date || _todayLocal();
+  window._gamesDate = date || window._gamesDate || _todayLocal();
+  var requestedDate = window._gamesDate;
   var listEl = document.getElementById('games-list');
+  var labelEl = document.getElementById('games-date-label');
+  var todayLinkEl = document.getElementById('games-today-link');
+  var today = _todayLocal();
+  if (labelEl) labelEl.textContent = requestedDate === today ? 'Today' : _formatMomentDate(requestedDate);
+  if (todayLinkEl) todayLinkEl.style.display = requestedDate === today ? 'none' : 'block';
   if (!listEl) return;
   listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
   fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(requestedDate))
     .then(function (r) { return r.json(); })
     .then(function (data) {
+      if (window._gamesDate !== requestedDate) return; // superseded by a newer date nav
       var games = data.games || [];
       window._gamesListCache = games;
       if (!games.length) {
-        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">⚾</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No MLB games today</div></div>';
+        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">⚾</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No MLB games on this day</div></div>';
         return;
       }
       listEl.innerHTML = games.map(function (g, i) {
@@ -14514,9 +14530,24 @@ function loadGamesList(date) {
       }).join('');
     })
     .catch(function (err) {
+      if (window._gamesDate !== requestedDate) return;
       console.error('Load games list error:', err);
-      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load today\'s games — try again.</div>';
+      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load games — try again.</div>';
     });
+}
+
+// Noon avoids any DST/timezone edge cases when shifting a plain YYYY-MM-DD
+// string by a day — same care _todayLocal() already takes elsewhere.
+function gamesNav(delta) {
+  var d = new Date(window._gamesDate + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = '0' + mm;
+  var dd = String(d.getDate()); if (dd.length < 2) dd = '0' + dd;
+  loadGamesList(d.getFullYear() + '-' + mm + '-' + dd);
+}
+
+function gamesToday() {
+  loadGamesList(_todayLocal());
 }
 
 function openGameFromList(i) {
