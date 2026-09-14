@@ -44,7 +44,18 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown mode — use schedule or boxscore' });
+    if (mode === 'pregame') {
+      const gamePk = req.query.gamePk;
+      if (!gamePk) { res.status(400).json({ error: 'Missing gamePk' }); return; }
+      const url = 'https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live';
+      const r = await fetch(url);
+      const data = await r.json();
+      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate');
+      res.status(200).json(summarizePregame(data));
+      return;
+    }
+
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, or pregame' });
   } catch (err) {
     res.status(500).json({ error: 'MLB lookup failed' });
   }
@@ -90,5 +101,94 @@ function summarize(data, gamePk) {
     losingPitcher: (decisions.loser && decisions.loser.fullName) || null,
     savePitcher: (decisions.save && decisions.save.fullName) || null,
     homeRuns: homeRuns.slice(0, 10)
+  };
+}
+
+// ── PREGAME CHEAT SHEET — reuses the same feed/live payload as boxscore
+// mode (one fetch, no extra roster calls) but reads it before first pitch:
+// probable pitcher + season stats for the "feat" block, and the confirmed
+// batting order once MLB posts it (usually 1-3hrs before game time). If
+// the lineup isn't posted yet, falls back to the game-day roster (already
+// present in boxscore.teams.<side>.players, so it's the actual active
+// roster for this game, not the full 40-man) sorted by season plate
+// appearances, with `projected: true` so the frontend can label it as
+// such.
+//
+// Confidence note: the feed/live shape itself (gameData.probablePitchers,
+// boxscore.teams.<side>.battingOrder, seasonStats.batting/pitching) is
+// well-established and matches what api/mlb.js's existing boxscore mode
+// already relies on for the same endpoint — but the battingOrder field
+// specifically hasn't been confirmed against a live pregame gamePk in
+// this session. If lineups still show as "not posted" well after MLB's
+// own site has them, that array's shape is the first thing to check.
+function summarizePregame(data) {
+  var gameData = data.gameData || {};
+  var liveData = data.liveData || {};
+  var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
+  var teams = gameData.teams || {};
+  var probable = gameData.probablePitchers || {};
+
+  var away = _pregameSide(teams.away, boxTeams.away, probable.away);
+  var home = _pregameSide(teams.home, boxTeams.home, probable.home);
+
+  if (!away || !home) return { error: 'No pregame data available' };
+  return { away: away, home: home };
+}
+
+function _pregameSide(team, boxTeam, probablePitcher) {
+  if (!team || !boxTeam) return null;
+  var playersObj = boxTeam.players || {};
+  var battingOrder = boxTeam.battingOrder || [];
+
+  var feat = null;
+  if (probablePitcher && probablePitcher.id) {
+    var pObj = playersObj['ID' + probablePitcher.id];
+    var seasonP = pObj && pObj.seasonStats && pObj.seasonStats.pitching;
+    feat = {
+      name: probablePitcher.fullName || (pObj && pObj.person && pObj.person.fullName) || 'TBD',
+      role: 'Probable SP',
+      age: (pObj && pObj.person && pObj.person.currentAge) || null,
+      id: probablePitcher.id,
+      line: seasonP && seasonP.era != null
+        ? (seasonP.era + ' ERA · ' + (seasonP.wins || 0) + '-' + (seasonP.losses || 0) + ' · ' + (seasonP.strikeOuts || 0) + ' K')
+        : 'No stats yet this season'
+    };
+  }
+
+  var projected = !battingOrder.length;
+  var rows;
+  if (!projected) {
+    rows = battingOrder.map(function (id) { return _pregameRow(playersObj['ID' + id]); }).filter(Boolean);
+  } else {
+    var hitters = Object.keys(playersObj).map(function (k) { return playersObj[k]; }).filter(function (p) {
+      return p.position && p.position.abbreviation !== 'P' && p.seasonStats && p.seasonStats.batting;
+    });
+    hitters.sort(function (a, b) {
+      var paA = Number((a.seasonStats.batting || {}).plateAppearances || 0);
+      var paB = Number((b.seasonStats.batting || {}).plateAppearances || 0);
+      return paB - paA;
+    });
+    rows = hitters.slice(0, 9).map(function (p) { return _pregameRow(p); }).filter(Boolean);
+  }
+
+  return { name: team.name, projected: projected, feat: feat, rows: rows };
+}
+
+function _pregameRow(obj) {
+  if (!obj || !obj.person) return null;
+  var batting = (obj.seasonStats && obj.seasonStats.batting) || {};
+  var avg = batting.avg || '.000';
+  var obp = batting.obp || '.000';
+  var slg = batting.slg || '.000';
+  var pa = batting.plateAppearances != null ? Number(batting.plateAppearances) : 0;
+  return {
+    name: obj.person.fullName,
+    pos: (obj.position && obj.position.abbreviation) || null,
+    age: obj.person.currentAge || null,
+    id: obj.person.id,
+    line: avg + ' / ' + obp + ' / ' + slg,
+    extra: pa ? (pa + ' PA') : null,
+    pa: pa,
+    ops: batting.ops != null ? Number(batting.ops) : 0
   };
 }
