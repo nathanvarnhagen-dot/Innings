@@ -8206,7 +8206,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.17.0-nfl-cfb-schedules';
+window.INNINGS_BUILD = 'v5.18.0-nfl-cfb-full-roster-sheets';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15188,12 +15188,45 @@ function _pregameLinks(name, mlbamId) {
   return out;
 }
 
-function _pregameLinkChips(name, mlbamId) {
-  return _pregameLinks(name, mlbamId).map(function (l) {
+// Same two-chip idea as baseball's BR+Savant: a named reference-site
+// chip (what was actually asked for) plus a guaranteed-exact chip using
+// an ID we actually control. Pro-Football-Reference and Sports-Reference's
+// college-football site don't share an ID system with ESPN, so there's
+// no way to construct a direct player-page URL the way Savant's MLBAM ID
+// allows — every reference-site chip here is a search link. The ESPN
+// chip is exact since it's ESPN's own athlete ID from the same roster
+// call that produced this row.
+function _footballRefLinks(name, espnId, sport) {
+  var isCfb = sport === 'cfb';
+  var refLabel = isCfb ? 'CFB Ref' : 'PFR';
+  var refUrl = isCfb
+    ? 'https://www.sports-reference.com/cfb/search/search.fcgi?search=' + encodeURIComponent(name)
+    : 'https://www.pro-football-reference.com/search/search.fcgi?search=' + encodeURIComponent(name);
+  var out = [{ label: refLabel, exact: false, url: refUrl }];
+  if (espnId) {
+    var espnPath = isCfb ? 'college-football' : 'nfl';
+    out.push({ label: 'ESPN', exact: true,
+      url: 'https://www.espn.com/' + espnPath + '/player/_/id/' + espnId + '/' + _pregameSlug(name) });
+  }
+  return out;
+}
+
+function _refChipsHtml(links) {
+  return links.map(function (l) {
     return '<a href="' + _escapeHtml(l.url) + '" target="_blank" rel="noopener" style="font-size:10px;font-weight:700;padding:6px 9px;border-radius:8px;flex-shrink:0;text-decoration:none;' +
       (l.exact ? 'background:rgba(168,159,232,.2);color:#CECBF6' : 'background:rgba(255,255,255,.09);color:rgba(255,255,255,.62)') +
       '">' + l.label + '</a>';
   }).join('');
+}
+
+function _pregameLinkChips(name, mlbamId) { return _refChipsHtml(_pregameLinks(name, mlbamId)); }
+function _footballLinkChips(name, espnId, sport) { return _refChipsHtml(_footballRefLinks(name, espnId, sport)); }
+
+// Dispatches to the right reference-site pair for whichever sport's
+// cheat sheet is currently open.
+function _cheatSheetLinkChips(name, id, league) {
+  if (league === 'nfl' || league === 'cfb') return _footballLinkChips(name, id, league);
+  return _pregameLinkChips(name, id);
 }
 
 // The one hitter worth watching: the best OPS among anyone with a real
@@ -15476,20 +15509,41 @@ function gameDetailTab(key) {
   }
 }
 
-// Cheat sheets are MLB-only for now — the whole "probable pitcher +
-// starting lineup with batting stats" concept doesn't map onto football,
-// so rather than call the wrong endpoint (or a nonexistent one) for
-// NFL/CFB, this is explicit about not having a football sheet built yet
-// instead of erroring or showing something misleading.
+// Cheat sheets: MLB shows a probable-pitcher feature + batting order (or
+// active roster if the lineup isn't posted yet). NFL/CFB show the WHOLE
+// roster instead — there's no pregame "starting lineup" concept in
+// football the way there is a batting order — ranked so the
+// skill/impact positions surface at the top rather than needing to
+// scroll a 53-90 man roster to find anyone worth watching.
 function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk };
-  if (sport !== 'mlb') {
-    el.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">Cheat sheets aren\'t built for this league yet — schedule and scores still work, and the sheet is next.</div>';
+
+  if (sport === 'nfl' || sport === 'cfb') {
+    el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading rosters…</div>';
+    fetch('/api/espn?league=' + encodeURIComponent(sport) + '&mode=pregame&eventId=' + encodeURIComponent(gamePk))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+        if (!data || data.error || !data.away || !data.home) {
+          el.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">No roster info available for this game yet.</div>';
+          return;
+        }
+        data.league = sport;
+        data.away.roster = true;
+        data.home.roster = true;
+        window._gdPregame.data = data;
+        renderGameCheatSheet();
+      })
+      .catch(function (err) {
+        console.error('Load roster cheat sheet error:', err);
+        el.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">Couldn\'t load rosters — try again.</div>';
+      });
     return;
   }
+
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading lineups…</div>';
   fetch('/api/mlb?mode=pregame&gamePk=' + encodeURIComponent(gamePk))
     .then(function (r) { return r.json(); })
@@ -15526,6 +15580,7 @@ function renderGameCheatSheet() {
   var data = state.data;
   var side = data[state.side];
   if (!side) return;
+  var league = data.league || 'mlb';
 
   var h = '<div style="display:flex;gap:8px;margin-bottom:12px">';
   ['away', 'home'].forEach(function (k) {
@@ -15555,14 +15610,14 @@ function renderGameCheatSheet() {
       '<span style="flex:1;font-size:13.5px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
       _escapeHtml(side.feat.name) + ' <span style="font-size:11px;color:rgba(255,255,255,.45);font-weight:400">' +
       _escapeHtml(side.feat.role) + (side.feat.age ? ' · ' + side.feat.age : '') + '</span></span>' +
-      _pregameLinkChips(side.feat.name, side.feat.id) + '</div>' +
+      _cheatSheetLinkChips(side.feat.name, side.feat.id, league) + '</div>' +
       '<div style="color:#CECBF6;font-size:11.5px;margin-top:5px">' + _escapeHtml(side.feat.line) + '</div></div>';
   }
 
   var rows = side.rows || [];
   var vis = state.expand ? rows : rows.slice(0, 4);
   var marked = _pregameMarkedIdx(side);
-  var showOrder = !side.projected;
+  var showOrder = !side.projected && !side.roster;
   h += '<div style="background:rgba(255,255,255,.06);border-radius:14px;overflow:hidden">';
   vis.forEach(function (r, i) {
     var lead = showOrder
@@ -15575,7 +15630,7 @@ function renderGameCheatSheet() {
       _escapeHtml(r.name) +
       (showOrder && r.pos ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + _escapeHtml(r.pos) + '</span>' : '') +
       (r.age ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + r.age + '</span>' : '') +
-      '</span>' + _pregameLinkChips(r.name, r.id) + '</div>' +
+      '</span>' + _cheatSheetLinkChips(r.name, r.id, league) + '</div>' +
       '<div style="color:#CECBF6;font-size:11.5px;margin:5px 0 0">' + _escapeHtml(r.line) + (r.extra ? ' · ' + _escapeHtml(r.extra) : '') + '</div></div>';
   });
   if (rows.length > 4) {
