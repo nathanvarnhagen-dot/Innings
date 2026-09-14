@@ -50,8 +50,9 @@ module.exports = async function handler(req, res) {
       const url = 'https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live';
       const r = await fetch(url);
       const data = await r.json();
+      const result = await summarizePregame(data);
       res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate');
-      res.status(200).json(summarizePregame(data));
+      res.status(200).json(result);
       return;
     }
 
@@ -104,38 +105,44 @@ function summarize(data, gamePk) {
   };
 }
 
-// ── PREGAME CHEAT SHEET — reuses the same feed/live payload as boxscore
-// mode (one fetch, no extra roster calls) but reads it before first pitch:
-// probable pitcher + season stats for the "feat" block, and the confirmed
-// batting order once MLB posts it (usually 1-3hrs before game time). If
-// the lineup isn't posted yet, falls back to the game-day roster (already
-// present in boxscore.teams.<side>.players, so it's the actual active
-// roster for this game, not the full 40-man) sorted by season plate
-// appearances, with `projected: true` so the frontend can label it as
-// such.
+// ── PREGAME CHEAT SHEET — probable pitcher + season stats for the "feat"
+// block come from the feed/live payload (same fetch as boxscore mode), and
+// the confirmed batting order once MLB posts it (usually 1-3hrs before
+// game time) reads from there too. But pregame — before the lineup is
+// set — feed/live's boxscore.teams.<side>.players list turned out to be
+// too sparse to trust for hitting lines: real regulars were coming back
+// with seasonStats.batting all zeroed out, not just bench/September
+// call-ups. So the "lineup not posted yet" fallback instead makes one
+// extra call per side to the team roster endpoint with hydrated season
+// hitting stats, which is reliable regardless of game/lineup timing.
 //
 // Confidence note: the feed/live shape itself (gameData.probablePitchers,
-// boxscore.teams.<side>.battingOrder, seasonStats.batting/pitching) is
-// well-established and matches what api/mlb.js's existing boxscore mode
-// already relies on for the same endpoint — but the battingOrder field
-// specifically hasn't been confirmed against a live pregame gamePk in
-// this session. If lineups still show as "not posted" well after MLB's
-// own site has them, that array's shape is the first thing to check.
-function summarizePregame(data) {
+// boxscore.teams.<side>.battingOrder, seasonStats.pitching) is
+// well-established and matches what this file's existing boxscore mode
+// already relies on for the same endpoint. The roster+hydrate endpoint
+// used for the fallback (teams/{id}/roster/active?hydrate=person(stats(...)))
+// is a standard, widely-documented pattern but hasn't been confirmed
+// against a live response in this session — if projected lineups come
+// back empty, that's the first thing to check.
+async function summarizePregame(data) {
   var gameData = data.gameData || {};
   var liveData = data.liveData || {};
   var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
   var teams = gameData.teams || {};
   var probable = gameData.probablePitchers || {};
+  var season = (gameData.game && gameData.game.season) || null;
 
-  var away = _pregameSide(teams.away, boxTeams.away, probable.away);
-  var home = _pregameSide(teams.home, boxTeams.home, probable.home);
+  var results = await Promise.all([
+    _pregameSide(teams.away, boxTeams.away, probable.away, season),
+    _pregameSide(teams.home, boxTeams.home, probable.home, season)
+  ]);
+  var away = results[0], home = results[1];
 
   if (!away || !home) return { error: 'No pregame data available' };
   return { away: away, home: home };
 }
 
-function _pregameSide(team, boxTeam, probablePitcher) {
+async function _pregameSide(team, boxTeam, probablePitcher, season) {
   if (!team || !boxTeam) return null;
   var playersObj = boxTeam.players || {};
   var battingOrder = boxTeam.battingOrder || [];
@@ -155,26 +162,85 @@ function _pregameSide(team, boxTeam, probablePitcher) {
     };
   }
 
+  // Hydrated season hitting stats straight from the team roster — used for
+  // BOTH branches below, since feed/live's own pregame batting numbers
+  // turned out unreliable even for players already in a confirmed lineup,
+  // not just the projected-roster fallback.
+  var roster = await _teamHittingRoster(team.id, season);
+  var statsById = {};
+  roster.forEach(function (h) { statsById[h.person.id] = h; });
+
   var projected = !battingOrder.length;
   var rows;
   if (!projected) {
-    rows = battingOrder.map(function (id) { return _pregameRow(playersObj['ID' + id]); }).filter(Boolean);
+    rows = battingOrder.map(function (id) {
+      var hydrated = statsById[id];
+      if (hydrated) return _rowFrom(hydrated.person, hydrated.position, hydrated.stat);
+      return _pregameRowFromFeed(playersObj['ID' + id]); // e.g. same-day activation, not yet on the roster snapshot
+    }).filter(Boolean);
+  } else if (roster.length) {
+    var hitters = roster.slice().sort(function (a, b) {
+      return Number(b.stat.plateAppearances || 0) - Number(a.stat.plateAppearances || 0);
+    });
+    rows = hitters.slice(0, 9).map(function (h) { return _rowFrom(h.person, h.position, h.stat); });
   } else {
-    var hitters = Object.keys(playersObj).map(function (k) { return playersObj[k]; }).filter(function (p) {
-      return p.position && p.position.abbreviation !== 'P' && p.seasonStats && p.seasonStats.batting;
-    });
-    hitters.sort(function (a, b) {
-      var paA = Number((a.seasonStats.batting || {}).plateAppearances || 0);
-      var paB = Number((b.seasonStats.batting || {}).plateAppearances || 0);
-      return paB - paA;
-    });
-    rows = hitters.slice(0, 9).map(function (p) { return _pregameRow(p); }).filter(Boolean);
+    rows = _fallbackRowsFromFeed(playersObj); // roster call itself failed outright — last resort
   }
 
   return { name: team.name, projected: projected, feat: feat, rows: rows };
 }
 
-function _pregameRow(obj) {
+// Real, hydrated season hitting stats straight from the team roster —
+// works regardless of whether MLB has populated feed/live's pregame
+// player list yet. Excludes pitchers.
+async function _teamHittingRoster(teamId, season) {
+  if (!teamId) return [];
+  try {
+    var hydrate = 'person(stats(type=season,group=hitting' + (season ? ',season=' + season : '') + '))';
+    var url = 'https://statsapi.mlb.com/api/v1/teams/' + encodeURIComponent(teamId) + '/roster/active?hydrate=' + encodeURIComponent(hydrate);
+    var r = await fetch(url);
+    var data = await r.json();
+    var roster = data.roster || [];
+    return roster.filter(function (p) { return p.position && p.position.abbreviation !== 'P'; }).map(function (p) {
+      var splits = p.person && p.person.stats && p.person.stats[0] && p.person.stats[0].splits;
+      var stat = (splits && splits[0] && splits[0].stat) || {};
+      return { person: p.person, position: p.position, stat: stat };
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+function _rowFrom(person, position, stat) {
+  var pa = stat.plateAppearances != null ? Number(stat.plateAppearances) : 0;
+  return {
+    name: person.fullName,
+    pos: (position && position.abbreviation) || null,
+    age: person.currentAge || null,
+    id: person.id,
+    line: (stat.avg || '.000') + ' / ' + (stat.obp || '.000') + ' / ' + (stat.slg || '.000'),
+    extra: pa ? (pa + ' PA') : null,
+    pa: pa,
+    ops: stat.ops != null ? Number(stat.ops) : 0
+  };
+}
+
+// Original in-feed heuristic, kept only as a last-resort fallback if the
+// roster+hydrate call above fails outright (network hiccup, endpoint
+// shape change) — better a possibly-sparse lineup than no lineup at all.
+function _fallbackRowsFromFeed(playersObj) {
+  var hitters = Object.keys(playersObj).map(function (k) { return playersObj[k]; }).filter(function (p) {
+    return p.position && p.position.abbreviation !== 'P' && p.seasonStats && p.seasonStats.batting;
+  });
+  hitters.sort(function (a, b) {
+    var paA = Number((a.seasonStats.batting || {}).plateAppearances || 0);
+    var paB = Number((b.seasonStats.batting || {}).plateAppearances || 0);
+    return paB - paA;
+  });
+  return hitters.slice(0, 9).map(function (p) { return _pregameRowFromFeed(p); }).filter(Boolean);
+}
+
+function _pregameRowFromFeed(obj) {
   if (!obj || !obj.person) return null;
   var batting = (obj.seasonStats && obj.seasonStats.batting) || {};
   var avg = batting.avg || '.000';
