@@ -8197,7 +8197,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.21.0-box-score-live-final';
+window.INNINGS_BUILD = 'v5.21.1-box-score-above-sheet';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15678,22 +15678,23 @@ function gameDetailTab(key) {
 
 // Cheat sheets: before a game starts, MLB shows a probable-pitcher
 // feature + batting order (or active roster if the lineup isn't posted
-// yet), and NFL/CFB show the whole roster ranked by position. None of
-// that pregame projection is the useful thing to see anymore once a
-// game is actually live or has finished, though — the box score is —
-// so this checks the game's current status first and branches: pregame
-// content only for a genuinely not-yet-started game, the same
-// _boxScoreCardHtml already used for memory-attached box scores for
-// anything live or concluded. That renderer is already sport-generic
-// (mlb.js and espn.js both feed it the same shape), so this works for
-// any sport with a boxscore endpoint — it just doesn't have anywhere to
-// surface for NBA/WNBA/NHL/MLS/NWSL yet since those don't have real
-// schedules wired into the Games browser to reach a game screen from.
+// yet), and NFL/CFB show the whole roster ranked by position. Once a
+// game is actually live or has finished, the box score (same
+// _boxScoreCardHtml already used for memory-attached box scores) is
+// prepended ABOVE that same cheat sheet content — not a replacement for
+// it, the pregame info is still worth having for reference once the
+// game's underway. Box score and cheat sheet load independently and in
+// parallel; whichever resolves second just re-renders the panel with
+// both pieces now in place. Works for any sport with a boxscore
+// endpoint (mlb.js and espn.js both feed it the same shape) — it just
+// doesn't have anywhere to surface for NBA/WNBA/NHL/MLS/NWSL yet since
+// those don't have real schedules wired into the Games browser to reach
+// a game screen from.
 function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
-  window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk };
+  window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk, boxScoreHtml: '' };
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
 
   fetch(_bsModalBoxscoreUrl(sport, gamePk))
@@ -15701,20 +15702,15 @@ function loadGameCheatSheet(gamePk) {
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
       var started = !!box && !box.error && (_isGameStatusLive(box.status) || _isGameConcluded(box.status));
-      var sheetTabBtn = document.getElementById('game-tab-sheet');
-      if (sheetTabBtn) sheetTabBtn.textContent = started ? 'Box score' : 'Cheat sheet';
-      if (started) {
-        el.innerHTML = _boxScoreCardHtml(box, true) || '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">Couldn\'t load the box score — try again.</div>';
-        return;
-      }
-      _loadPregameSheet(gamePk, sport);
+      if (!started) return; // not started yet — cheat sheet alone is correct, nothing to prepend
+      var html = _boxScoreCardHtml(box, true);
+      if (!html) return;
+      window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
+      renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
     })
-    .catch(function (err) {
-      console.error('Load box score status check error:', err);
-      // Status check itself failed — fall back to pregame content rather
-      // than showing nothing.
-      _loadPregameSheet(gamePk, sport);
-    });
+    .catch(function (err) { console.error('Load box score error:', err); });
+
+  _loadPregameSheet(gamePk, sport);
 }
 
 function _loadPregameSheet(gamePk, sport) {
@@ -15782,7 +15778,8 @@ function renderGameCheatSheet() {
   if (!side) return;
   var league = data.league || 'mlb';
 
-  var h = '<div style="display:flex;gap:8px;margin-bottom:12px">';
+  var h = state.boxScoreHtml || '';
+  h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
   ['away', 'home'].forEach(function (k) {
     var s = data[k];
     if (!s) return;
