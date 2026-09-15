@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.30.1-team-spotlight-cfb-teams-fix';
+window.INNINGS_BUILD = 'v5.31.0-game-time-live-badge-cfb-teams-v2';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15661,6 +15661,37 @@ function _splitSpotlight(games, favTeams) {
   return { spotlight: spotlight, rest: rest };
 }
 
+function _formatGameTime(iso) {
+  if (!iso) return null;
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  var h = d.getHours(), m = d.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12; if (h12 === 0) h12 = 12;
+  var mStr = m < 10 ? '0' + m : String(m);
+  return h12 + ':' + mStr + ' ' + ampm;
+}
+
+// Three states a game card's badge can be in: concluded (final score),
+// live (pulsing dot + LIVE + current score if available), or scheduled
+// (start time, converted to the viewer's local timezone by new Date()
+// — the ISO string from both backends is UTC). Shared by MLB's day
+// list and NFL/CFB's week list so the three states look identical
+// everywhere.
+function _gameBadgeHtml(g) {
+  var concluded = _isGameConcluded(g.status);
+  var live = !concluded && _isGameStatusLive(g.status);
+  var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : null;
+  if (concluded) {
+    return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(scoreLabel || g.status || 'Final') + '</div>';
+  }
+  if (live) {
+    return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(232,98,44,.2);color:#F2916A;flex-shrink:0;font-weight:700;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#F2916A;display:inline-block;flex-shrink:0"></span>LIVE' + (scoreLabel ? ' · ' + _escapeHtml(scoreLabel) : '') + '</div>';
+  }
+  var timeLabel = _formatGameTime(g.startTime) || g.status || 'Scheduled';
+  return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);flex-shrink:0">' + _escapeHtml(timeLabel) + '</div>';
+}
+
 function loadGamesList(date) {
   window._gamesDate = date || window._gamesDate || _todayLocal();
   var requestedDate = window._gamesDate;
@@ -15704,12 +15735,11 @@ function loadGamesList(date) {
   });
 
   function _gamesListCardHtml(g, i) {
-    var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
     var favTeams = window._favTeamsCache[requestedSport] || { favorite: null, following: [] };
     return '<div onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">' +
       '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
       '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-      '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+      _gameBadgeHtml(g) + '</div>';
   }
 }
 
@@ -15860,12 +15890,11 @@ function _renderFootballWeekHtml(games, favTeams) {
 
 function _footballGameCardHtml(g, favTeams, withMargin) {
   var idx = window._gamesListCache.indexOf(g);
-  var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
   var badge = favTeams ? _spotlightBadgeHtml(g, favTeams) : '';
   return '<div onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer' + (withMargin ? ';margin-bottom:8px' : '') + '">' +
     '<div><div style="font-size:14px;font-weight:700;color:#fff">' + badge + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
     '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-    '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+    _gameBadgeHtml(g) + '</div>';
 }
 
 function _footballDayGroupedHtml(games, favTeams) {
