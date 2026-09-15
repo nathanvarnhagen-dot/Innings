@@ -8183,7 +8183,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.18.1-fb-touchdown-caption';
+window.INNINGS_BUILD = 'v5.18.2-osl-toast-once';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10813,17 +10813,28 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
   // This makes the whole thing self-healing: if the flag is wrongly set
   // from a past failed attempt, this notices there's no memory yet and
   // just creates it now.
+  //
+  // oslMemoryToastSeen is separate from oslConvertedToMemory on purpose:
+  // this function runs on every single app load once OSL has concluded,
+  // so without a dedicated "already notified" flag, EVERY load that
+  // finds the memory already existing re-fires the toast — that's the
+  // "seen it dozens of times" bug. oslConvertedToMemory tracks whether
+  // the memory exists; oslMemoryToastSeen tracks whether the person has
+  // already been told about it.
+  var alreadyToasted = !!(pdata && pdata.oslMemoryToastSeen);
   _oslStage(momentsRef.where('isOslMemory', '==', true).limit(1).get(), 'exists-check').then(function(existing){
     if (!existing.empty) {
       window._oslMemoryConversionRunning = false;
-      if (!(pdata && pdata.oslConvertedToMemory)) userRef.set({ oslConvertedToMemory: true }, { merge: true }).catch(function(){});
+      var updates = {};
+      if (!(pdata && pdata.oslConvertedToMemory)) updates.oslConvertedToMemory = true;
+      if (!alreadyToasted) updates.oslMemoryToastSeen = true;
+      if (Object.keys(updates).length) userRef.set(updates, { merge: true }).catch(function(){});
       // A memory doc already exists here. If it's not showing up on the
       // Memories screen despite that, this isn't a "never converted" bug —
-      // it's a render/data issue with the existing doc. Force a refresh and
-      // say so plainly, rather than silently returning and leaving it
-      // looking like nothing happened.
+      // it's a render/data issue with the existing doc. Force a refresh,
+      // and say so plainly the first time — but only the first time.
       if (typeof loadMoments === 'function') loadMoments();
-      if (typeof ib_toast === 'function') ib_toast('Found your existing Outside Lands memory — check Memories now');
+      if (!alreadyToasted && typeof ib_toast === 'function') ib_toast('Found your existing Outside Lands memory — check Memories now');
       return;
     }
     return _oslStage(Promise.all([
@@ -10868,7 +10879,7 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
       var highlight = goingActs.length
         ? goingActs.slice(0, 3).join(', ') + (goingActs.length > 3 ? ' + ' + (goingActs.length - 3) + ' more' : '')
         : 'Three days at Golden Gate Park';
-      // Written together in one batch so the memory and the "done" flag
+      // Written together in one batch so the memory and the "done" flags
       // can never land in a mismatched state again — either both succeed
       // or neither does.
       var batch = window.db.batch();
@@ -10888,13 +10899,13 @@ function _convertOslToMemoryIfNeeded(user, pdata) {
         comments: [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      batch.set(userRef, { oslConvertedToMemory: true }, { merge: true });
+      batch.set(userRef, { oslConvertedToMemory: true, oslMemoryToastSeen: true }, { merge: true });
       return _oslStage(batch.commit(), 'write');
     });
   }).then(function(){
     window._oslMemoryConversionRunning = false;
     if (typeof loadMoments === 'function') loadMoments();
-    if (typeof ib_toast === 'function') ib_toast('Outside Lands is now saved to your Memories 🎪');
+    if (!alreadyToasted && typeof ib_toast === 'function') ib_toast('Outside Lands is now saved to your Memories 🎪');
   }).catch(function(err){
     window._oslMemoryConversionRunning = false;
     console.error('Convert OSL to memory error:', err);
