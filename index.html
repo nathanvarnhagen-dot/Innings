@@ -8195,7 +8195,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.22.0-watch-together-notifs';
+window.INNINGS_BUILD = 'v5.22.1-friend-cache-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16033,29 +16033,34 @@ function _watchingAvatarsHtml(names, max) {
 // Firestore rules make any signed-in user's users/{uid}/watching readable,
 // so this is a direct per-friend existence check rather than a Cloud
 // Function — fine at this beta's scale (small trusted friend groups).
+//
+// Deliberately does NOT reuse window._myFriendUids even when it's already
+// populated — that shared cache has no invalidation, so once set it
+// never picks up a friendship accepted later in the same session. That
+// was silently making this whole feature report "nobody's watching"
+// using a stale, pre-friendship list. Two lightweight indexed queries
+// here are worth the guaranteed-fresh answer.
 function _friendsWatchingGame(gamePk) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) return Promise.resolve([]);
-  var uidsPromise = (window._myFriendUids && window._myFriendUids.length)
-    ? Promise.resolve(window._myFriendUids)
-    : Promise.all([
-        window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
-        window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
-      ]).then(function (results) {
-        var uids = [];
-        results[0].forEach(function (d) { uids.push(d.data().toUid); });
-        results[1].forEach(function (d) { uids.push(d.data().fromUid); });
-        uids = uids.filter(function (v, idx) { return uids.indexOf(v) === idx; });
-        window._myFriendUids = uids;
-        return uids;
-      }).catch(function () { return []; });
+  var uidsPromise = Promise.all([
+    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
+    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
+  ]).then(function (results) {
+    var uids = [];
+    results[0].forEach(function (d) { uids.push(d.data().toUid); });
+    results[1].forEach(function (d) { uids.push(d.data().fromUid); });
+    uids = uids.filter(function (v, idx) { return uids.indexOf(v) === idx; });
+    window._myFriendUids = uids; // still populate the shared cache for other consumers (loadMyFriendsList, etc.)
+    return uids;
+  }).catch(function (err) { console.error('Load friends list for watching check error:', err); return []; });
 
   return uidsPromise.then(function (uids) {
     if (!uids.length) return [];
     return Promise.all(uids.map(function (uid) {
       return window.db.collection('users').doc(uid).collection('watching').doc(String(gamePk)).get()
         .then(function (doc) { return doc.exists ? uid : null; })
-        .catch(function () { return null; });
+        .catch(function (err) { console.error('Check friend watching doc error for', uid, err); return null; });
     }));
   }).then(function (results) { return results.filter(Boolean); });
 }
