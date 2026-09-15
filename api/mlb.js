@@ -24,7 +24,8 @@ module.exports = async function handler(req, res) {
             home: g.teams && g.teams.home && g.teams.home.team && g.teams.home.team.name,
             awayScore: g.teams && g.teams.away ? g.teams.away.score : null,
             homeScore: g.teams && g.teams.home ? g.teams.home.score : null,
-            venue: g.venue && g.venue.name
+            venue: g.venue && g.venue.name,
+            startTime: g.gameDate || null
           });
         });
       });
