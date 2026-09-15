@@ -609,6 +609,14 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 #mlb-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310}
 #mlb-flourish svg{width:100%;height:100%;display:block}
 #mlb-flourish-skip{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.35)}
+/* Watching-together avatar stack — same 2-letter-initials treatment as
+   the friends list elsewhere, just sized down to sit inline in the Live
+   Feed card and the game detail header. */
+.wa-stack .wa{width:22px;height:22px;border-radius:50%;background:rgba(168,159,232,.22);border:2px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#CECBF6;flex-shrink:0}
+.wa-stack .wa + .wa{margin-left:-7px}
+.wa-stack .wa-more{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:rgba(255,255,255,.7);margin-left:-7px;flex-shrink:0}
 .sport-banner svg{width:100%;height:100%;display:block}
 .gb-twinkle{animation:gbTw 2.6s ease-in-out infinite}
 @keyframes gbTw{0%,100%{opacity:.2}50%{opacity:.9}}
@@ -1989,6 +1997,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </button>
       <div id="game-detail-title" style="flex:1;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Loading…</div>
       <button id="game-watch-btn" onclick="toggleGameWatching()" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.7);font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0"><i class="ti ti-eye"></i> <span id="game-watch-label">Watch</span></button>
+    </div>
+    <div id="game-watching-with-row" style="display:none;align-items:center;gap:8px;padding:0 16px 12px 18px">
+      <div id="game-watching-with-avatars" class="wa-stack" style="display:flex;align-items:center"></div>
+      <div id="game-watching-with-text" style="font-size:12px;color:var(--mid)"></div>
     </div>
     <div style="display:flex;gap:6px;padding:0 16px 12px">
       <button id="game-tab-sheet" onclick="gameDetailTab('sheet')" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cheat sheet</button>
@@ -8183,7 +8195,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.19.0-nfl-week-browser';
+window.INNINGS_BUILD = 'v5.20.0-watching-avatars';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15627,10 +15639,13 @@ function openGameScreen(gamePk, away, home, sport) {
   window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: sport || 'mlb' };
   var titleEl = document.getElementById('game-detail-title');
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
+  var rowEl = document.getElementById('game-watching-with-row');
+  if (rowEl) rowEl.style.display = 'none'; // hide until (if) this game's watchers resolve, rather than show stale data from the last game
   nav('game');
   gameDetailTab('sheet');
   loadGameCheatSheet(gamePk);
   _refreshGameWatchButton(gamePk);
+  _loadWatchingWithRow(gamePk);
 }
 
 function gameDetailTab(key) {
@@ -15894,10 +15909,13 @@ function renderLiveFeed() {
         Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
           .then(function (docs) {
             var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
-            var noteEl = document.getElementById('live-feed-friends-' + i);
-            if (!noteEl) return;
-            noteEl.textContent = _friendsWatchingLabel(names);
-            noteEl.style.display = 'block';
+            var rowEl = document.getElementById('live-feed-friends-' + i);
+            var avatarsEl = document.getElementById('live-feed-avatars-' + i);
+            var textEl = document.getElementById('live-feed-friends-text-' + i);
+            if (!rowEl) return;
+            if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
+            if (textEl) textEl.textContent = _friendsWatchingLabel(names);
+            rowEl.style.display = 'flex';
           }).catch(function (err) { console.error('Load friends-watching names error:', err); });
       }).catch(function (err) { console.error('Friends watching lookup error:', err); });
     });
@@ -15922,13 +15940,31 @@ function _liveFeedCardHtml(r, i) {
   var home = (box && box.home) || r.g.home || '?';
   var status = (box && box.status) || 'In Progress';
   var scoreLabel = (box && box.awayScore != null && box.homeScore != null) ? (box.awayScore + '–' + box.homeScore) : '';
-  return '<div onclick="openLiveFeedGame(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(124,242,156,.28);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
-    '<span style="width:7px;height:7px;border-radius:50%;background:#7CF29C;flex-shrink:0;box-shadow:0 0 6px 1px rgba(124,242,156,.6)"></span>' +
+  return '<div onclick="openLiveFeedGame(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(124,242,156,.28);border-radius:16px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">' +
+    '<span style="width:7px;height:7px;border-radius:50%;background:#7CF29C;flex-shrink:0;box-shadow:0 0 6px 1px rgba(124,242,156,.6);margin-top:6px"></span>' +
     '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#fff">' + _escapeHtml(away) + ' @ ' + _escapeHtml(home) + '</div>' +
     '<div style="font-size:11px;color:#9be8ac;margin-top:2px;font-weight:600">' + _escapeHtml(status) + '</div>' +
-    '<div id="live-feed-friends-' + i + '" style="display:none;font-size:11px;color:#A89FE8;margin-top:2px;font-weight:600"></div></div>' +
-    (scoreLabel ? '<div style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + _escapeHtml(scoreLabel) + '</div>' : '') +
+    '<div id="live-feed-friends-' + i + '" style="display:none;align-items:center;gap:7px;margin-top:6px">' +
+    '<div id="live-feed-avatars-' + i + '" class="wa-stack" style="display:flex;align-items:center"></div>' +
+    '<div id="live-feed-friends-text-' + i + '" style="font-size:11px;color:#A89FE8;font-weight:600"></div>' +
+    '</div></div>' +
+    (scoreLabel ? '<div style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px">' + _escapeHtml(scoreLabel) + '</div>' : '') +
     '</div>';
+}
+
+// Small overlapping avatar circles with 2-letter initials — same visual
+// language as the full-size friend avatars elsewhere (_initials()),
+// just sized to sit inline. Caps at `max` shown, collapsing anyone past
+// that into a "+N" bubble instead of letting the row grow unbounded.
+function _watchingAvatarsHtml(names, max) {
+  max = max || 2;
+  var shown = names.slice(0, max);
+  var extra = names.length - shown.length;
+  var html = shown.map(function (nm) {
+    return '<div class="wa" title="' + _escapeHtml(nm) + '">' + _escapeHtml(_initials(nm)) + '</div>';
+  }).join('');
+  if (extra > 0) html += '<div class="wa-more">+' + extra + '</div>';
+  return html;
 }
 
 // Which of my accepted friends also have this exact game marked Watching.
@@ -15966,6 +16002,36 @@ function _friendsWatchingLabel(names) {
   if (names.length === 1) return names[0] + ' is watching too';
   if (names.length === 2) return names[0] + ' and ' + names[1] + ' are watching too';
   return names[0] + ' and ' + (names.length - 1) + ' others are watching too';
+}
+
+// Same idea as _friendsWatchingLabel above but phrased to match the game
+// detail header's avatar stack specifically: that stack shows up to 2
+// faces then a "+N" bubble, so past 2 names this names the first two and
+// counts the rest — rather than "and N others", which wouldn't line up
+// with what the avatars actually show.
+function _watchingWithLabel(names) {
+  if (names.length === 1) return names[0] + ' is also watching';
+  if (names.length === 2) return names[0] + ' and ' + names[1] + ' are also watching';
+  return names[0] + ', ' + names[1] + ' +' + (names.length - 2) + ' more also watching';
+}
+
+function _loadWatchingWithRow(gamePk) {
+  _friendsWatchingGame(gamePk).then(function (uids) {
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return; // superseded
+    var rowEl = document.getElementById('game-watching-with-row');
+    if (!rowEl) return;
+    if (!uids.length) { rowEl.style.display = 'none'; return; }
+    Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
+      .then(function (docs) {
+        if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+        var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
+        var avatarsEl = document.getElementById('game-watching-with-avatars');
+        var textEl = document.getElementById('game-watching-with-text');
+        if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
+        if (textEl) textEl.textContent = _watchingWithLabel(names);
+        rowEl.style.display = 'flex';
+      }).catch(function (err) { console.error('Load watching-with names error:', err); });
+  }).catch(function (err) { console.error('Watching-with lookup error:', err); });
 }
 
 function openLiveFeedGame(i) {
