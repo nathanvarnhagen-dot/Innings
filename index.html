@@ -1766,6 +1766,21 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div onclick="jumpToday();closeCalendar()" style="margin-top:14px;text-align:center;font-size:13px;font-weight:700;color:#A89FE8;cursor:pointer;padding:10px;border-top:0.5px solid rgba(255,255,255,0.08)">Jump to today</div>
 </div>
 
+<!-- ═══ PLAYER LINK SHEET — tap a player's name (currently just the
+     pitcher/batter in a live box score's matchup row) to jump straight
+     to their reference-site links, instead of scrolling down to find
+     them in the roster list below where the small BR/Savant chips
+     already live. Reuses the exact same link-building functions those
+     chips use (_pregameLinks for MLB, _footballRefLinks for NFL/CFB) —
+     just a different presentation for a different trigger point. ═══ -->
+<div id="player-link-backdrop" onclick="if(event.target===this)closePlayerLinkSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:180;align-items:flex-end">
+  <div style="width:100%;max-width:430px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom,16px) + 18px)">
+    <div style="width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:4px;margin:6px auto 14px"></div>
+    <div id="player-link-name" style="font-size:15px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px"></div>
+    <div id="player-link-rows"></div>
+  </div>
+</div>
+
 <!-- ═══ GAMES — LEAGUE COMING SOON — landing spot for any league picked
      on the sport-picker screen other than MLB. Football (NFL + college)
      gets its own animated banner since that one's built; everything else
@@ -8196,7 +8211,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.23.0-live-situation-matchup-plays';
+window.INNINGS_BUILD = 'v5.23.1-player-link-sheet';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9883,11 +9898,11 @@ function _boxScoreCardHtml(box, dark) {
     var mp = box.matchup.pitcher, mb = box.matchup.batter;
     matchupHtml = '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
       '<div style="flex:1;min-width:0"><div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em">Pitching</div>' +
-      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((mp && mp.name) || '—') + '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml(mp, 'mlb') + '</div>' +
       (mp && mp.line ? '<div style="font-size:10.5px;color:#CECBF6;margin-top:1px">' + _escapeHtml(mp.line) + '</div>' : '') + '</div>' +
       '<div style="font-size:10px;color:' + subColor + ';font-weight:700;flex-shrink:0">VS</div>' +
       '<div style="flex:1;min-width:0;text-align:right"><div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em">At bat</div>' +
-      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((mb && mb.name) || '—') + '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml(mb, 'mlb') + '</div>' +
       (mb && mb.line ? '<div style="font-size:10.5px;color:#CECBF6;margin-top:1px">' + _escapeHtml(mb.line) + '</div>' : '') + '</div>' +
       '</div>';
   }
@@ -15289,6 +15304,38 @@ function _footballLinkChips(name, espnId, sport) { return _refChipsHtml(_footbal
 function _cheatSheetLinkChips(name, id, league) {
   if (league === 'nfl' || league === 'cfb') return _footballLinkChips(name, id, league);
   return _pregameLinkChips(name, id);
+}
+
+// Full-name labels here (vs the compact "BR"/"Savant"/"PFR" used on the
+// small inline chips) since this sheet has room for it and the person
+// tapped a name specifically to find out where it goes.
+var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', ESPN: 'ESPN Player Page' };
+function openPlayerLinkSheet(name, id, league) {
+  var links = (league === 'nfl' || league === 'cfb') ? _footballRefLinks(name, id, league) : _pregameLinks(name, id);
+  var nameEl = document.getElementById('player-link-name');
+  var rowsEl = document.getElementById('player-link-rows');
+  if (nameEl) nameEl.textContent = name;
+  if (rowsEl) {
+    rowsEl.innerHTML = links.map(function (l) {
+      return '<a href="' + _escapeHtml(l.url) + '" target="_blank" rel="noopener" onclick="closePlayerLinkSheet()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-top:0.5px solid rgba(255,255,255,.08);text-decoration:none;color:#fff;font-size:14px;font-weight:600">' +
+        '<span>' + _escapeHtml(PLAYER_LINK_LABELS[l.label] || l.label) + '</span>' +
+        '<span style="color:rgba(255,255,255,.35);font-size:16px">›</span></a>';
+    }).join('');
+  }
+  var backdrop = document.getElementById('player-link-backdrop');
+  if (backdrop) backdrop.style.display = 'flex';
+}
+function closePlayerLinkSheet() {
+  var backdrop = document.getElementById('player-link-backdrop');
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+// data-* attributes rather than embedding the name in the onclick string
+// directly — a name with an apostrophe (O'Neill, etc.) would otherwise
+// break out of a single-quoted onclick argument.
+function _clickablePlayerNameHtml(p, league) {
+  if (!p || !p.id) return _escapeHtml((p && p.name) || '—');
+  return '<span data-name="' + _escapeHtml(p.name) + '" data-id="' + _escapeHtml(String(p.id)) + '" data-league="' + _escapeHtml(league) + '" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id,this.dataset.league)" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:3px">' + _escapeHtml(p.name) + '</span>';
 }
 
 // The one hitter worth watching: the best OPS among anyone with a real
