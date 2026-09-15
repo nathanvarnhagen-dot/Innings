@@ -8210,7 +8210,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.24.0-watching-debug-cleanup';
+window.INNINGS_BUILD = 'v5.25.0-football-field-plays';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9866,11 +9866,12 @@ function _boxScoreCardHtml(box, dark) {
     return '<div style="font-size:11px;color:' + subColor + ';margin-top:3px;line-height:1.4">' + _escapeHtml((h.emoji || '') + ' ' + (h.text || '')) + '</div>';
   }).join('');
 
-  // MLB-only for now — balls/strikes/bases/current-batter don't have a
-  // football equivalent, that'd need its own design (down/distance,
-  // current drive) rather than reusing this.
+  // Baseball's situation has balls/strikes/outs/bases; football's has
+  // down/distance/possession — no overlapping field names between the
+  // two shapes, so this branches on which one is actually present
+  // rather than needing a second top-level field.
   var situationHtml = '';
-  if (box.situation) {
+  if (box.situation && (box.situation.balls != null || box.situation.outs != null || box.situation.bases)) {
     var s = box.situation;
     var baseFill = function (on) { return on ? '#7CF29C' : 'rgba(255,255,255,.18)'; };
     var basesSvg = '<svg width="40" height="40" viewBox="0 0 60 60" style="flex-shrink:0">' +
@@ -9889,6 +9890,35 @@ function _boxScoreCardHtml(box, dark) {
       '<div style="margin-top:5px">' + outsDots + '</div></div>' +
       '<div style="text-align:right;font-size:12px;font-weight:700;color:#A89FE8">' + (s.half === 'top' ? '▲' : '▼') + ' ' + _escapeHtml(_ordinalSuffix(s.inning)) +
       '<div style="font-size:9px;color:' + subColor + ';font-weight:600;text-transform:uppercase;margin-top:2px">' + (s.half === 'top' ? 'Top' : 'Bottom') + '</div></div>' +
+      '</div>';
+  } else if (box.situation && (box.situation.down != null || box.situation.possessionText)) {
+    var fs = box.situation;
+    var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+    var downText = fs.down != null ? (downLabels[fs.down] || (fs.down + 'th')) + ' & ' + (fs.distance != null ? fs.distance : '?') : '';
+    var teamAbbr = (fs.team && fs.team.abbreviation) || '';
+    var teamColor = (fs.team && fs.team.color) || '#E31837';
+    // yardLine is assumed 0–100 from the possessing team's own goal line;
+    // flip it when the home team has the ball so it still maps correctly
+    // left-to-right on a field where home's own goal sits on the right.
+    var yardLine = fs.yardLine != null ? fs.yardLine : 50;
+    var pct = fs.homeAway === 'home' ? (100 - yardLine) : yardLine;
+    var fieldX = 24 + (pct / 100) * (390 - 48);
+    var fieldSvg = '<svg width="100%" height="90" viewBox="0 0 390 90" style="display:block">' +
+      '<rect width="390" height="90" fill="#1E4230"/>' +
+      '<rect x="0" y="0" width="24" height="90" fill="rgba(255,255,255,.12)"/>' +
+      '<rect x="366" y="0" width="24" height="90" fill="rgba(255,255,255,.12)"/>' +
+      '<g stroke="rgba(255,255,255,.25)" stroke-width="1">' +
+      [59.5, 95, 130.5, 166, 201.5, 237, 272.5, 308, 343.5].map(function (x) { return '<line x1="' + x + '" y1="0" x2="' + x + '" y2="90"/>'; }).join('') +
+      '</g>' +
+      '<g transform="translate(' + fieldX.toFixed(1) + ',45)">' +
+      '<circle r="12" fill="' + teamColor + '" stroke="#0D0820" stroke-width="2"/>' +
+      '<text x="0" y="3.5" text-anchor="middle" font-size="8" font-weight="800" fill="#fff" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(teamAbbr) + '</text>' +
+      '</g></svg>';
+    situationHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+      '<div style="font-size:12.5px;font-weight:700;color:' + color + ';margin-bottom:8px">' + _escapeHtml(downText) +
+      (fs.possessionText ? ' at ' + _escapeHtml(fs.possessionText) : '') +
+      (teamAbbr ? ' — <span style="color:' + teamColor + '">' + _escapeHtml(teamAbbr) + ' ball</span>' : '') + '</div>' +
+      '<div style="border-radius:8px;overflow:hidden">' + fieldSvg + '</div>' +
       '</div>';
   }
 
@@ -9910,8 +9940,9 @@ function _boxScoreCardHtml(box, dark) {
   if (box.recentPlays && box.recentPlays.length) {
     playsHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
       box.recentPlays.map(function (p) {
-        var tag = (p.half === 'top' ? 'T' : 'B') + (p.inning || '');
-        return '<div style="display:flex;gap:9px;margin-bottom:7px"><div style="flex-shrink:0;width:24px;font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
+        var tag = p.tag != null ? p.tag : ((p.half === 'top' ? 'T' : 'B') + (p.inning || ''));
+        var tagWidth = p.tag != null ? '48px' : '24px';
+        return '<div style="display:flex;gap:9px;margin-bottom:7px"><div style="flex-shrink:0;width:' + tagWidth + ';font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
           '<div style="font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div></div>';
       }).join('') + '</div>';
   }
