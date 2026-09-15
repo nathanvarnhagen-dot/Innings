@@ -2004,12 +2004,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div style="display:flex;gap:6px;padding:0 16px 12px">
       <button id="game-tab-sheet" onclick="gameDetailTab('sheet')" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cheat sheet</button>
-      <button id="game-tab-box" onclick="gameDetailTab('box')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Box score</button>
       <button id="game-tab-chat" onclick="gameDetailTab('chat')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Chat</button>
     </div>
   </div>
   <div id="game-sheet-panel" class="scroll-bare" style="display:block;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
-  <div id="game-box-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
   <div id="game-chat-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px;flex-direction:column;gap:10px">
     <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0">Open to anyone with the link — no group needed for the beta.</div>
     <div id="game-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
@@ -8197,7 +8195,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.21.1-box-score-above-sheet';
+window.INNINGS_BUILD = 'v5.22.0-watch-together-notifs';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15887,11 +15885,43 @@ function toggleGameWatching() {
     if (doc.exists) return ref.delete().then(function () { _setWatchButtonState(false); });
     return ref.set({
       gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, addedAt: Date.now()
-    }).then(function () { _setWatchButtonState(true); });
+    }).then(function () {
+      _setWatchButtonState(true);
+      _notifyFriendsAlreadyWatching(g);
+    });
   }).catch(function (err) {
     console.error('Toggle watching error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not update — check Firestore rules');
   });
+}
+
+// Tells any of my friends who are already watching this exact game that
+// I just joined them — the other direction of the same friend/watching
+// cross-reference _friendsWatchingGame already does for the "Jason is
+// watching too" line on the Live Feed card and game detail header.
+function _notifyFriendsAlreadyWatching(g) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  _friendsWatchingGame(g.gamePk).then(function (uids) {
+    if (!uids.length) return;
+    var myName = (window.userData && window.userData.name) || 'Someone';
+    var batch = window.db.batch();
+    uids.forEach(function (uid) {
+      batch.set(window.db.collection('notifications').doc(), {
+        toUid: uid,
+        type: 'game_watch_joined',
+        fromUid: user.uid,
+        fromName: myName,
+        gamePk: g.gamePk,
+        away: g.away || null,
+        home: g.home || null,
+        sport: g.sport || 'mlb',
+        ts: Date.now(),
+        read: false
+      });
+    });
+    batch.commit().catch(function (err) { console.error('Notify watch-joined error:', err); });
+  }).catch(function (err) { console.error('Notify watch-joined lookup error:', err); });
 }
 
 window._watchingStarted = false;
@@ -16127,14 +16157,49 @@ function sendGameMessage() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in to chat'); return; }
   var author = (window.userData && window.userData.name) || 'You';
-  var gamePk = window._activeBrowseGame.gamePk;
+  var g = window._activeBrowseGame;
+  var gamePk = g.gamePk;
   if (inp) inp.value = '';
   window.db.collection('gameChats').add({
     gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now()
+  }).then(function () {
+    _notifyFriendsWatchingOfChatMessage(g, text);
   }).catch(function (err) {
     console.error('Game chat send error:', err);
     if (typeof ib_toast === 'function') ib_toast('Could not send — ' + (err && err.message ? err.message : 'check Firestore rules'));
   });
+}
+
+// Same friend/watching cross-reference as _notifyFriendsAlreadyWatching
+// above, fired on a new chat message instead of on joining the watch
+// list — only reaches friends who are actually watching this game, not
+// everyone in the open gameChats thread (that stays membership-free on
+// purpose; this notification is scoped to "watching together" specifically).
+function _notifyFriendsWatchingOfChatMessage(g, text) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  _friendsWatchingGame(g.gamePk).then(function (uids) {
+    if (!uids.length) return;
+    var myName = (window.userData && window.userData.name) || 'Someone';
+    var preview = text.length > 80 ? text.slice(0, 80) + '…' : text;
+    var batch = window.db.batch();
+    uids.forEach(function (uid) {
+      batch.set(window.db.collection('notifications').doc(), {
+        toUid: uid,
+        type: 'game_chat_message',
+        fromUid: user.uid,
+        fromName: myName,
+        gamePk: g.gamePk,
+        away: g.away || null,
+        home: g.home || null,
+        sport: g.sport || 'mlb',
+        messagePreview: preview,
+        ts: Date.now(),
+        read: false
+      });
+    });
+    batch.commit().catch(function (err) { console.error('Notify chat message error:', err); });
+  }).catch(function (err) { console.error('Notify chat message lookup error:', err); });
 }
 
 window._gdGameChatStarted = {};
@@ -16656,8 +16721,10 @@ function loadNotifications() {
       else if (n.type === 'friend_accepted') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> accepted your friend request';
       else if (n.type === 'added_to_group') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> added you to a group';
       else if (n.type === 'feedback_post') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted feedback';
+      else if (n.type === 'game_watch_joined') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started watching ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' with you';
+      else if (n.type === 'game_chat_message') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted in the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
-      var subLabel = n.momentName || n.groupName || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
+      var subLabel = n.momentName || n.groupName || n.messagePreview || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
       var acceptBtn = n.type === 'friend_request'
         ? '<div onclick="notifAcceptFriend(event,\'' + n._id + '\')" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:800;color:#0D0820;background:#D4A24C;padding:6px 14px;border-radius:10px;cursor:pointer">Accept friend request</div>'
         : '';
@@ -16696,6 +16763,9 @@ function notifTap(notifId) {
   } else if (n.type === 'feedback_post') {
     nav('feedback-group');
     if (n.category) { setTimeout(function(){ if (typeof feedbackTab === 'function') feedbackTab(n.category); }, 0); }
+  } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message') && n.gamePk) {
+    if (typeof openGameScreen === 'function') openGameScreen(n.gamePk, n.away, n.home, n.sport || 'mlb');
+    if (n.type === 'game_chat_message') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
   }
 }
 
