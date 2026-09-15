@@ -159,6 +159,8 @@ function extractHighlights(league, data) {
   return highlights.slice(0, 4);
 }
 
+var FOOTBALL_LEAGUES = { nfl: true, cfb: true };
+
 function summarizeSummary(data, eventId, league) {
   var header = data.header || {};
   var comp = (header.competitions && header.competitions[0]) || {};
@@ -181,8 +183,95 @@ function summarizeSummary(data, eventId, league) {
     losingPitcher: null,
     savePitcher: null,
     homeRuns: [],
-    highlights: extractHighlights(league, data)
+    highlights: extractHighlights(league, data),
+    situation: FOOTBALL_LEAGUES[league] ? extractFootballSituation(data, awayComp, homeComp) : null,
+    recentPlays: FOOTBALL_LEAGUES[league] ? extractFootballPlays(data) : []
   };
+}
+
+// ── FOOTBALL FIELD POSITION + PLAY-BY-PLAY (NFL + CFB) — mirrors what
+// mlb.js does with balls/strikes/bases/recentPlays for baseball, using
+// whatever field-position data ESPN's summary endpoint carries for a
+// live or recently-finished game.
+//
+// Confidence note: this endpoint's `scoringPlays` (used by
+// extractHighlights above) is confirmed working. The `drives` shape
+// used here (current/previous drives, each with a team and a plays
+// array; each play's start having down/distance/possessionText) is the
+// standard, widely-documented shape for this API but has NOT been
+// confirmed against a live response in this session. Two specific things
+// to check first if this comes back empty: (1) whether `data.situation`
+// or `data.drives.current` is actually where down/distance/yardLine
+// live for an in-progress game, and (2) whether `yardLine` is already a
+// plain 0–100 number (assumed here) or needs different normalization.
+// Everything here degrades to null/empty rather than guessing wrong.
+function extractFootballSituation(data, awayComp, homeComp) {
+  var comp = null;
+  try {
+    var header = data.header || {};
+    comp = (header.competitions && header.competitions[0]) || null;
+  } catch (e) { comp = null; }
+  var sit = (comp && comp.situation) || data.situation || null;
+  var currentDrive = data.drives && data.drives.current;
+
+  var down = sit && sit.down;
+  var distance = sit && sit.distance;
+  var possessionText = sit && sit.possessionText;
+  var yardLine = sit && sit.yardLine;
+  var possessionTeamAbbr = null;
+
+  if (currentDrive) {
+    var lastPlay = (currentDrive.plays && currentDrive.plays.length) ? currentDrive.plays[currentDrive.plays.length - 1] : null;
+    if (lastPlay && lastPlay.start) {
+      if (down == null) down = lastPlay.start.down;
+      if (distance == null) distance = lastPlay.start.distance;
+      if (!possessionText) possessionText = lastPlay.start.possessionText;
+      if (yardLine == null) yardLine = lastPlay.start.yardLine;
+    }
+    if (currentDrive.team) possessionTeamAbbr = currentDrive.team.abbreviation || null;
+  }
+
+  if (down == null && !possessionText) return null;
+
+  var homeAbbr = (homeComp.team && homeComp.team.abbreviation) || null;
+  var isHomeBall = possessionTeamAbbr && homeAbbr && possessionTeamAbbr === homeAbbr;
+
+  return {
+    down: down != null ? down : null,
+    distance: distance != null ? distance : null,
+    possessionText: possessionText || null,
+    yardLine: yardLine != null ? yardLine : null,
+    homeAway: possessionTeamAbbr ? (isHomeBall ? 'home' : 'away') : null,
+    team: possessionTeamAbbr ? {
+      abbreviation: possessionTeamAbbr,
+      color: (currentDrive && currentDrive.team && currentDrive.team.color) ? ('#' + currentDrive.team.color) : null
+    } : null
+  };
+}
+
+function extractFootballPlays(data) {
+  var drives = [];
+  try {
+    if (data.drives) {
+      if (data.drives.current) drives.push(data.drives.current);
+      if (Array.isArray(data.drives.previous)) drives = drives.concat(data.drives.previous.slice().reverse());
+    }
+  } catch (e) { return []; }
+  var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  var plays = [];
+  drives.forEach(function (drive) {
+    if (plays.length >= 5) return;
+    (drive.plays || []).slice().reverse().forEach(function (p) {
+      if (plays.length >= 5 || !p || !p.text) return;
+      var tag = '';
+      if (p.period && p.period.number) tag += 'Q' + p.period.number + ' ';
+      if (p.start && p.start.down != null && p.start.distance != null) {
+        tag += (downLabels[p.start.down] || (p.start.down + 'th')) + '&' + p.start.distance;
+      }
+      plays.push({ tag: tag.trim(), text: p.text });
+    });
+  });
+  return plays.slice(0, 5);
 }
 
 // ── PREGAME CHEAT SHEET (NFL/CFB) — no "starting lineup" concept exists
