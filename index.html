@@ -8243,7 +8243,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.27.0-game-recap-animation';
+window.INNINGS_BUILD = 'v5.27.1-nfl-week-anchor-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15554,14 +15554,35 @@ function _isoDate(d) {
   var dd = String(d.getDate()); if (dd.length < 2) dd = '0' + dd;
   return d.getFullYear() + '-' + mm + '-' + dd;
 }
-var NFL_WEEK1_TUESDAY = (function () {
+// Two genuinely different concepts were previously conflated into one
+// variable, which is exactly what broke the week numbering: which
+// Tuesday starts the REAL season's Week 1 (a fixed calendar date that
+// never changes once the season starts) vs. which Tuesday starts
+// whatever week today happens to fall in (recomputed fresh every time,
+// since "today" keeps moving). The old code used the dynamic value for
+// both, so the label always read "Week 1" for the current week and
+// drifted everywhere else as time passed, no matter what the real
+// season week actually was.
+//
+// NFL_SEASON_WEEK1_TUESDAY is the real anchor: the 2026 season opened
+// Wednesday, September 9 (Patriots @ Seahawks), so the Tuesday
+// immediately before that — 2026-09-08 — is Week 1's start under this
+// app's Tuesday–Monday week convention. This is a hardcoded real date
+// and MUST be updated by hand for next season's actual Week 1.
+var NFL_SEASON_WEEK1_TUESDAY = '2026-09-08';
+
+// NFL_CURRENT_WEEK_TUESDAY is the dynamic one: whichever Tuesday starts
+// the week "today" falls in, computed once when the page loads. This is
+// only ever used to pick a sensible default week to land on and as the
+// target for "Jump to current week" — never for the week-number math.
+var NFL_CURRENT_WEEK_TUESDAY = (function () {
   var today = new Date(_todayLocal() + 'T12:00:00');
   var daysSinceTuesday = (today.getDay() - 2 + 7) % 7; // getDay(): 0=Sun..6=Sat, Tuesday=2
   today.setDate(today.getDate() - daysSinceTuesday);
   return _isoDate(today);
 })();
 function _nflWeekNumber(tuesdayIso) {
-  var a = new Date(NFL_WEEK1_TUESDAY + 'T12:00:00');
+  var a = new Date(NFL_SEASON_WEEK1_TUESDAY + 'T12:00:00');
   var b = new Date(tuesdayIso + 'T12:00:00');
   return 1 + Math.round((b - a) / (7 * 86400000));
 }
@@ -15583,7 +15604,7 @@ function _isGameConcluded(status) {
 
 window._nflWeekTuesday = null;
 function loadNflWeek(tuesdayIso) {
-  window._nflWeekTuesday = tuesdayIso || window._nflWeekTuesday || NFL_WEEK1_TUESDAY;
+  window._nflWeekTuesday = tuesdayIso || window._nflWeekTuesday || NFL_CURRENT_WEEK_TUESDAY;
   var requestedWeek = window._nflWeekTuesday;
   var requestedSport = window._gamesSport;
   var listEl = document.getElementById('games-list');
@@ -15592,7 +15613,7 @@ function loadNflWeek(tuesdayIso) {
   if (labelEl) labelEl.textContent = 'Week ' + _nflWeekNumber(requestedWeek);
   if (jumpEl) {
     jumpEl.textContent = 'Jump to current week';
-    jumpEl.style.display = (requestedWeek === NFL_WEEK1_TUESDAY) ? 'none' : 'block';
+    jumpEl.style.display = (requestedWeek === NFL_CURRENT_WEEK_TUESDAY) ? 'none' : 'block';
   }
   if (!listEl) return;
   var dates = _nflWeekDates(requestedWeek);
@@ -15673,7 +15694,7 @@ function gamesNav(delta) {
 }
 
 function gamesToday() {
-  if (window._gamesSport === 'nfl') { loadNflWeek(NFL_WEEK1_TUESDAY); return; }
+  if (window._gamesSport === 'nfl') { loadNflWeek(NFL_CURRENT_WEEK_TUESDAY); return; }
   loadGamesList(_todayLocal());
 }
 
