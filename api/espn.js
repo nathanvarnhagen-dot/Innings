@@ -74,11 +74,51 @@ module.exports = async function handler(req, res) {
       const url = 'https://site.web.api.espn.com/apis/v2/sports/' + path + '/standings?season=' + encodeURIComponent(season);
       const r = await fetch(url);
       const data = await r.json();
+      // Diagnostic wrapper: if this comes back empty or throws, surface
+      // what ESPN actually sent back instead of a generic failure — two
+      // guesses at this endpoint's shape have already been wrong once
+      // (the domain itself), so the fastest way to get the next one
+      // right is seeing the real response instead of guessing a third
+      // time. Hit this URL directly (add &debug=1) to see it.
+      let result, parseError = null;
+      try { result = summarizeNflStandings(data); }
+      catch (e) { parseError = e.message; result = null; }
+      const ok = result && result.afc && result.nfc;
+      if (!ok || req.query.debug) {
+        res.status(200).json({
+          error: ok ? null : (parseError || 'Computed empty result — afc/nfc missing after parsing'),
+          debug: {
+            topLevelKeys: Object.keys(data || {}),
+            hasChildren: Array.isArray(data.children),
+            childrenCount: (data.children || []).length,
+            firstChildKeys: data.children && data.children[0] ? Object.keys(data.children[0]) : null,
+            firstChildSample: data.children && data.children[0] ? JSON.stringify(data.children[0]).slice(0, 1500) : null
+          },
+          result: result
+        });
+        return;
+      }
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
-      res.status(200).json(summarizeNflStandings(data));
+      res.status(200).json(result);
       return;
     }
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, or pregame' });
+    if (mode === 'teams') {
+      // Same site.api.espn.com host already confirmed working for
+      // schedule/boxscore/pregame (unlike the standings endpoint's
+      // wrong-domain issue) — moderate-high confidence in this shape,
+      // but still not tested against a live response.
+      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300';
+      const r = await fetch(url);
+      const data = await r.json();
+      const list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
+      const teams = (list.teams || []).map(function (t) {
+        return { id: t.team && t.team.id, name: t.team && (t.team.displayName || t.team.name) };
+      }).filter(function (t) { return t.name; }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json({ teams: teams });
+      return;
+    }
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, or teams' });
   } catch (err) {
     res.status(500).json({ error: league.toUpperCase() + ' lookup failed' });
   }
