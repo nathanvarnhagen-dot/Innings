@@ -1723,7 +1723,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div style="background:rgba(255,255,255,.04);border-radius:14px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <button onclick="gamesNav(-1)" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px;color:rgba(255,255,255,0.6);font-family:inherit">‹</button>
-      <div style="text-align:center;cursor:pointer" onclick="openCalendar()">
+      <div style="text-align:center;cursor:pointer" onclick="_gamesLabelTap()">
         <div id="games-date-label" style="font-size:14px;font-weight:700;color:#fff">Today</div>
         <div id="games-today-link" style="display:none;font-size:11px;color:#A89FE8;font-weight:600;margin-top:2px" onclick="event.stopPropagation();gamesToday()">Jump to today</div>
       </div>
@@ -8183,7 +8183,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.18.2-osl-toast-once';
+window.INNINGS_BUILD = 'v5.19.0-nfl-week-browser';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -8202,7 +8202,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feed'&&typeof startWatchingList==='function')startWatchingList();if(id==='games'&&typeof loadGamesList==='function')loadGamesList();if(id==='games-picker'&&typeof renderGamesSportGrid==='function')renderGamesSportGrid();if(id==='games-soon'&&typeof renderGamesSoon==='function')renderGamesSoon();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feed'&&typeof startWatchingList==='function')startWatchingList();if(id==='games'){if(window._gamesSport==='nfl'&&typeof loadNflWeek==='function'){loadNflWeek();}else if(typeof loadGamesList==='function'){loadGamesList();}}if(id==='games-picker'&&typeof renderGamesSportGrid==='function')renderGamesSportGrid();if(id==='games-soon'&&typeof renderGamesSoon==='function')renderGamesSoon();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
@@ -15260,7 +15260,7 @@ function loadGamesList(date) {
   var todayLinkEl = document.getElementById('games-today-link');
   var today = _todayLocal();
   if (labelEl) labelEl.textContent = requestedDate === today ? 'Today' : _formatMomentDate(requestedDate);
-  if (todayLinkEl) todayLinkEl.style.display = requestedDate === today ? 'none' : 'block';
+  if (todayLinkEl) { todayLinkEl.textContent = 'Jump to today'; todayLinkEl.style.display = requestedDate === today ? 'none' : 'block'; }
   if (!listEl) return;
   listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
   fetch(_bsModalScheduleUrl(requestedSport, requestedDate))
@@ -15291,9 +15291,130 @@ function loadGamesList(date) {
     });
 }
 
-// Noon avoids any DST/timezone edge cases when shifting a plain YYYY-MM-DD
-// string by a day — same care _todayLocal() already takes elsewhere.
+// ── NFL WEEK BROWSER — NFL is the one sport here where "a week" is the
+// natural browsing unit instead of a day (teams play roughly once a
+// week), so NFL gets its own nav: ‹ Week N › instead of ‹ day/date ›,
+// stepping 7 days at a time. Weeks run Tuesday–Monday. "Week 1" is
+// anchored to whichever Tue–Mon window contains the day this was built —
+// this is a self-contained relative counter, not the league's own
+// internal week numbering, so it won't necessarily match ESPN's own
+// "week" field if that's ever surfaced elsewhere.
+function _isoDate(d) {
+  var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = '0' + mm;
+  var dd = String(d.getDate()); if (dd.length < 2) dd = '0' + dd;
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+var NFL_WEEK1_TUESDAY = (function () {
+  var today = new Date(_todayLocal() + 'T12:00:00');
+  var daysSinceTuesday = (today.getDay() - 2 + 7) % 7; // getDay(): 0=Sun..6=Sat, Tuesday=2
+  today.setDate(today.getDate() - daysSinceTuesday);
+  return _isoDate(today);
+})();
+function _nflWeekNumber(tuesdayIso) {
+  var a = new Date(NFL_WEEK1_TUESDAY + 'T12:00:00');
+  var b = new Date(tuesdayIso + 'T12:00:00');
+  return 1 + Math.round((b - a) / (7 * 86400000));
+}
+function _nflWeekDates(tuesdayIso) {
+  var dates = [];
+  var d = new Date(tuesdayIso + 'T12:00:00');
+  for (var i = 0; i < 7; i++) { dates.push(_isoDate(d)); d.setDate(d.getDate() + 1); }
+  return dates;
+}
+var NFL_DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function _dowName(iso) {
+  return NFL_DOW_NAMES[new Date(iso + 'T12:00:00').getDay()];
+}
+function _isGameConcluded(status) {
+  if (!status) return false;
+  var s = String(status).toLowerCase();
+  return s.indexOf('final') !== -1 || s.indexOf('postponed') !== -1 || s.indexOf('cancel') !== -1;
+}
+
+window._nflWeekTuesday = null;
+function loadNflWeek(tuesdayIso) {
+  window._nflWeekTuesday = tuesdayIso || window._nflWeekTuesday || NFL_WEEK1_TUESDAY;
+  var requestedWeek = window._nflWeekTuesday;
+  var requestedSport = window._gamesSport;
+  var listEl = document.getElementById('games-list');
+  var labelEl = document.getElementById('games-date-label');
+  var jumpEl = document.getElementById('games-today-link');
+  if (labelEl) labelEl.textContent = 'Week ' + _nflWeekNumber(requestedWeek);
+  if (jumpEl) {
+    jumpEl.textContent = 'Jump to current week';
+    jumpEl.style.display = (requestedWeek === NFL_WEEK1_TUESDAY) ? 'none' : 'block';
+  }
+  if (!listEl) return;
+  var dates = _nflWeekDates(requestedWeek);
+  listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
+  Promise.all(dates.map(function (iso) {
+    return fetch(_bsModalScheduleUrl('nfl', iso))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var games = data.games || [];
+        games.forEach(function (g) { g._dateIso = iso; });
+        return games;
+      })
+      .catch(function () { return []; });
+  })).then(function (results) {
+    if (window._gamesSport !== requestedSport || window._nflWeekTuesday !== requestedWeek) return; // superseded
+    var allGames = [].concat.apply([], results);
+    window._gamesListCache = allGames;
+    if (!allGames.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">🏈</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No NFL games this week</div></div>';
+      return;
+    }
+    listEl.innerHTML = _renderNflWeekHtml(allGames);
+  });
+}
+
+// Not-yet-concluded games (scheduled or in progress) sort to the top,
+// grouped by the day they fall on, in chronological order; concluded
+// games move to their own section at the bottom, grouped the same way.
+function _renderNflWeekHtml(games) {
+  var sortByDate = function (arr) {
+    return arr.slice().sort(function (a, b) { return a._dateIso < b._dateIso ? -1 : a._dateIso > b._dateIso ? 1 : 0; });
+  };
+  var upcoming = sortByDate(games.filter(function (g) { return !_isGameConcluded(g.status); }));
+  var concluded = sortByDate(games.filter(function (g) { return _isGameConcluded(g.status); }));
+
+  var html = _nflDayGroupedHtml(upcoming);
+  if (concluded.length) {
+    html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;padding:16px 2px 8px">Concluded games</div>';
+    html += _nflDayGroupedHtml(concluded);
+  }
+  return html;
+}
+
+function _nflDayGroupedHtml(games) {
+  var html = '';
+  var lastDate = null;
+  games.forEach(function (g) {
+    if (g._dateIso !== lastDate) {
+      lastDate = g._dateIso;
+      html += '<div style="font-size:12px;font-weight:700;color:#A89FE8;padding:' + (html ? '10px' : '0') + ' 2px 6px">' + _dowName(g._dateIso) + '</div>';
+    }
+    var idx = window._gamesListCache.indexOf(g);
+    var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
+    html += '<div onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px">' +
+      '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+      '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
+      '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+  });
+  return html;
+}
+
+// Date-nav arrows and the "jump back" link both need to know whether
+// they're stepping a day (everyone else) or a week (NFL) — same with
+// the label tap, which opens the day calendar for everyone except NFL,
+// since a day-picker doesn't map onto week-based browsing.
 function gamesNav(delta) {
+  if (window._gamesSport === 'nfl') {
+    var wd = new Date(window._nflWeekTuesday + 'T12:00:00');
+    wd.setDate(wd.getDate() + delta * 7);
+    loadNflWeek(_isoDate(wd));
+    return;
+  }
   var d = new Date(window._gamesDate + 'T12:00:00');
   d.setDate(d.getDate() + delta);
   var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = '0' + mm;
@@ -15302,7 +15423,13 @@ function gamesNav(delta) {
 }
 
 function gamesToday() {
+  if (window._gamesSport === 'nfl') { loadNflWeek(NFL_WEEK1_TUESDAY); return; }
   loadGamesList(_todayLocal());
+}
+
+function _gamesLabelTap() {
+  if (window._gamesSport === 'nfl') return;
+  openCalendar();
 }
 
 function openGameFromList(i) {
@@ -15351,16 +15478,17 @@ function pickGamesSport(key) {
     window._gamesSport = 'mlb';
     window._gamesDate = null;
     var bannerElMlb = document.getElementById('games-fb-banner');
-    if (bannerElMlb) bannerElMlb.style.display = 'none';
+    if (bannerElMlb) { clearTimeout(window._gamesFbBannerTimer); bannerElMlb.style.display = 'none'; }
     playMlbFlourish();
     return;
   }
   window._gamesSport = key;
-  window._gamesDate = null; // reset so the new sport defaults to today, not carrying over MLB's date
+  if (key === 'nfl') { window._nflWeekTuesday = null; } // reset to current week
+  else { window._gamesDate = null; } // reset so the new sport defaults to today, not carrying over MLB's date
   var bannerEl = document.getElementById('games-fb-banner');
   if (bannerEl) {
-    bannerEl.style.display = s.banner === 'fb' ? 'block' : 'none';
-    if (s.banner === 'fb') _restartFootballBanner(bannerEl);
+    if (s.banner === 'fb') { _restartFootballBanner(bannerEl); }
+    else { clearTimeout(window._gamesFbBannerTimer); bannerEl.style.display = 'none'; }
   }
   nav('games');
 }
@@ -15371,14 +15499,29 @@ function pickGamesSport(key) {
 // end state instead of replaying — this forces a fresh run each time
 // NFL/CFB is picked. Clearing then re-reading offsetWidth forces the
 // browser to recompute layout in between, which is what actually
-// restarts a CSS animation rather than a no-op reassignment.
+// restarts a CSS animation rather than a no-op reassignment. It also
+// collapses the whole banner out of the schedule screen a beat after
+// "Touchdown!" lands, instead of leaving the frozen scene sitting at
+// the top of the page permanently.
+window._gamesFbBannerTimer = null;
 function _restartFootballBanner(bannerEl) {
+  clearTimeout(window._gamesFbBannerTimer);
+  bannerEl.style.transition = 'none';
+  bannerEl.style.display = 'block';
+  bannerEl.style.opacity = '1';
   var els = bannerEl.querySelectorAll('.gb-fb-ball, .gb-fb-caption');
   els.forEach(function (el) {
     el.style.animation = 'none';
     void el.offsetWidth;
     el.style.animation = '';
   });
+  // Flight + caption together run 3.2s; the extra 600ms just gives
+  // "Touchdown!" a moment to actually be read before it goes away.
+  window._gamesFbBannerTimer = setTimeout(function () {
+    bannerEl.style.transition = 'opacity 0.4s ease';
+    bannerEl.style.opacity = '0';
+    setTimeout(function () { bannerEl.style.display = 'none'; }, 400);
+  }, 3800);
 }
 
 // ── MLB FULL-SCREEN FLOURISH — plays once over the sport picker, then
