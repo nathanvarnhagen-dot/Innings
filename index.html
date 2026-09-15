@@ -635,6 +635,68 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gr-hl-icon{font-size:40px;margin-bottom:14px}
 .gr-hl-text{font-size:17px;font-weight:700;color:#fff;line-height:1.4;max-width:300px}
 .gr-decision-line{font-size:15px;color:var(--lav);font-weight:700;line-height:1.7;text-align:center}
+/* Playoff Picture — bracket boxes, wild card race rows, interactive
+   "play it out" pick pairs, division standings rows. Prefixed pp- to
+   match the mockup this was built from. */
+.pp-section-title{font-size:11px;font-weight:800;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px 2px;display:flex;justify-content:space-between;align-items:center}
+.pp-reset{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:none;letter-spacing:0;cursor:pointer;border:1px solid rgba(255,255,255,.15);padding:3px 9px;border-radius:8px}
+.pp-bracket-sub{font-size:10.5px;color:rgba(255,255,255,.4);margin:-2px 0 10px 2px}
+.pp-bx{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;
+  height:100%;width:100%;display:flex;align-items:center;gap:7px;padding:0 9px}
+.pp-bx.bye{background:rgba(124,242,156,.1);border-color:rgba(124,242,156,.3)}
+.pp-bx.slot{background:rgba(168,159,232,.12);border-color:rgba(168,159,232,.35);flex-direction:column;align-items:flex-start;justify-content:center;gap:1px}
+.pp-bx-seed{width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:9px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pp-bx-name{flex:1;font-size:12px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp-bx-rec{font-size:10px;color:rgba(255,255,255,.5);font-weight:600;flex-shrink:0}
+.pp-bx.slot .pp-bx-name{font-size:10.5px;font-weight:700;color:#fff;white-space:normal;line-height:1.25}
+.pp-bx.slot .pp-bx-rec{font-size:8.5px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.03em}
+.pp-bx.bye .pp-bx-tag{font-size:8px;font-weight:800;color:#9be8ac;background:rgba(124,242,156,.18);padding:2px 6px;border-radius:6px;text-transform:uppercase;flex-shrink:0}
+.pp-wc-row{display:flex;align-items:center;gap:10px;padding:8px 4px}
+.pp-wc-row .rk{width:14px;font-size:11px;color:rgba(255,255,255,.35);font-weight:700;flex-shrink:0}
+.pp-wc-row .nm{flex:1;font-size:13px;font-weight:700;color:#fff}
+.pp-wc-row .wl{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);width:52px;text-align:right;flex-shrink:0}
+.pp-wc-row .gbv{width:44px;text-align:right;font-size:12px;font-weight:800;flex-shrink:0}
+.pp-wc-row.in .gbv{color:#9be8ac}
+.pp-wc-row.out .gbv{color:#e8917a}
+.pp-wc-cutline{border-top:1.5px dashed rgba(255,255,255,.25);margin:2px 0 2px;position:relative}
+.pp-wc-cutline span{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--bg);
+  padding:0 8px;font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.05em}
+.pp-round-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);margin:14px 0 6px 2px}
+.pp-pair{border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden}
+.pp-pick{display:flex;align-items:center;gap:9px;padding:11px 12px;cursor:pointer}
+.pp-pick + .pp-pick{border-top:0.5px solid rgba(255,255,255,.08)}
+.pp-pick.elim{opacity:.35}
+.pp-pick.picked{background:rgba(124,242,156,.1)}
+.pp-pick-name{flex:1;font-size:13px;font-weight:700;color:#fff}
+.pp-pick-rec{font-size:11px;color:rgba(255,255,255,.45);font-weight:600}
+.pp-pick-check{color:#9be8ac;font-size:14px;font-weight:800;margin-left:2px}
+.pp-pending{border:1px dashed rgba(255,255,255,.15);border-radius:12px;padding:14px;text-align:center;
+  font-size:11.5px;color:rgba(255,255,255,.35)}
+.pp-champ{background:linear-gradient(135deg, rgba(255,215,120,.16), rgba(232,142,44,.1));
+  border:1px solid rgba(255,215,120,.35);border-radius:14px;padding:14px;text-align:center;margin-top:14px}
+.pp-champ .lbl{font-size:10px;font-weight:800;color:#f2c869;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.pp-champ .nm{font-size:16px;font-weight:800;color:#fff}
+.pp-div-table{margin-bottom:20px}
+.pp-div-name{font-size:13.5px;font-weight:800;color:#fff;margin-bottom:8px}
+.pp-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:0.5px solid rgba(255,255,255,.06)}
+.pp-row:last-child{border-bottom:none}
+.pp-row.leader .pp-name{color:#fff;font-weight:800}
+.pp-row .pp-rank{width:14px;font-size:11px;color:rgba(255,255,255,.35);font-weight:700;flex-shrink:0}
+.pp-row .pp-name{flex:1;min-width:0;font-size:13px;color:rgba(255,255,255,.75);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp-row .pp-tag{font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:6px;flex-shrink:0;text-transform:uppercase;margin-left:4px}
+.pp-tag.div{background:rgba(124,242,156,.18);color:#9be8ac}
+.pp-tag.wc{background:rgba(168,159,232,.2);color:#CECBF6}
+.pp-row .pp-wl{width:56px;text-align:right;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.8);flex-shrink:0}
+.pp-row .pp-gb{width:36px;text-align:right;font-size:11.5px;color:rgba(255,255,255,.4);flex-shrink:0}
+.pp-col-hdr{display:flex;gap:10px;padding:0 4px 4px;font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.04em}
+.pp-col-hdr .sp{flex:1}
+.pp-col-hdr .w1{width:56px;text-align:right}
+.pp-col-hdr .w2{width:36px;text-align:right}
+.pp-ws-final{text-align:center;padding:24px 16px}
+.pp-ws-final .trophy{font-size:44px;margin-bottom:10px}
+.pp-ws-final .nm{font-size:19px;font-weight:800;color:#fff}
+.pp-ws-final .sub{font-size:11.5px;color:rgba(255,255,255,.5);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
 .sport-banner svg{width:100%;height:100%;display:block}
 .gb-twinkle{animation:gbTw 2.6s ease-in-out infinite}
 @keyframes gbTw{0%,100%{opacity:.2}50%{opacity:.9}}
@@ -1702,6 +1764,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
     </button>
     <div style="font-size:16px;font-weight:700;color:#fff">Games</div>
+    <button id="games-playoff-btn" onclick="openPlayoffPicture()" style="display:none;margin-left:auto;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);border-radius:50%;width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;font-family:inherit">🏆</button>
   </div>
   <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px">
     <div id="games-fb-banner" class="sport-banner" style="display:none;margin-bottom:12px">
@@ -1796,6 +1859,28 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div style="width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:4px;margin:6px auto 14px"></div>
     <div id="player-link-name" style="font-size:15px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px"></div>
     <div id="player-link-rows"></div>
+  </div>
+</div>
+
+<!-- ═══ PLAYOFF PICTURE — MLB only for now. AL/NL/Finals tabs; each
+     league tab renders bracket → wild card standings → interactive
+     "play it out" simulator → full division standings, all built by
+     renderPlayoffPicture() from data fetched once per screen visit. ═══ -->
+<div class="screen" id="screen-playoff-picture">
+  <div style="background:var(--card);padding:14px 16px;padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <button onclick="navBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+    </button>
+    <div style="font-size:16px;font-weight:700;color:#fff">Playoff Picture</div>
+  </div>
+  <div style="display:flex;gap:6px;padding:12px 16px;background:var(--card);flex-shrink:0">
+    <button id="pp-tab-al" onclick="ppShowTab('al')" style="flex:1;text-align:center;padding:9px 4px;border-radius:12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;background:rgba(168,159,232,.2);color:#fff;border:1px solid rgba(168,159,232,.4)">AL</button>
+    <button id="pp-tab-nl" onclick="ppShowTab('nl')" style="flex:1;text-align:center;padding:9px 4px;border-radius:12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);border:1px solid transparent">NL</button>
+    <button id="pp-tab-ws" onclick="ppShowTab('ws')" style="flex:1;text-align:center;padding:9px 4px;border-radius:12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);border:1px solid transparent">🏆 Finals</button>
+  </div>
+  <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 28px">
+    <div id="pp-asof" style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:16px"></div>
+    <div id="pp-content"></div>
   </div>
 </div>
 
@@ -8243,7 +8328,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.27.1-nfl-week-anchor-fix';
+window.INNINGS_BUILD = 'v5.28.0-playoff-picture';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15501,10 +15586,15 @@ function _pregameMarkedIdx(side) {
 window._gamesListCache = [];
 window._gamesDate = null;
 window._gamesSport = 'mlb';
+function _refreshPlayoffBtnVisibility() {
+  var btn = document.getElementById('games-playoff-btn');
+  if (btn) btn.style.display = (window._gamesSport === 'mlb') ? 'flex' : 'none';
+}
 function loadGamesList(date) {
   window._gamesDate = date || window._gamesDate || _todayLocal();
   var requestedDate = window._gamesDate;
   var requestedSport = window._gamesSport;
+  _refreshPlayoffBtnVisibility();
   var listEl = document.getElementById('games-list');
   var labelEl = document.getElementById('games-date-label');
   var todayLinkEl = document.getElementById('games-today-link');
@@ -15607,6 +15697,7 @@ function loadNflWeek(tuesdayIso) {
   window._nflWeekTuesday = tuesdayIso || window._nflWeekTuesday || NFL_CURRENT_WEEK_TUESDAY;
   var requestedWeek = window._nflWeekTuesday;
   var requestedSport = window._gamesSport;
+  _refreshPlayoffBtnVisibility();
   var listEl = document.getElementById('games-list');
   var labelEl = document.getElementById('games-date-label');
   var jumpEl = document.getElementById('games-today-link');
@@ -15752,12 +15843,14 @@ function pickGamesSport(key) {
   if (s.key === 'mlb') {
     window._gamesSport = 'mlb';
     window._gamesDate = null;
+    _refreshPlayoffBtnVisibility();
     var bannerElMlb = document.getElementById('games-fb-banner');
     if (bannerElMlb) { clearTimeout(window._gamesFbBannerTimer); bannerElMlb.style.display = 'none'; }
     playMlbFlourish();
     return;
   }
   window._gamesSport = key;
+  _refreshPlayoffBtnVisibility();
   if (key === 'nfl') { window._nflWeekTuesday = null; } // reset to current week
   else { window._gamesDate = null; } // reset so the new sport defaults to today, not carrying over MLB's date
   var bannerEl = document.getElementById('games-fb-banner');
@@ -15898,6 +15991,223 @@ function pickCalendarDate(iso) {
 // ── GAME DETAIL — cheat sheet + open chat for one specific game.
 window._activeBrowseGame = null;
 
+// ══ PLAYOFF PICTURE — MLB only for now (see the trophy button in the
+// Games header, gated to window._gamesSport === 'mlb'). Fetches
+// /api/mlb?mode=standings once per screen visit, caches it in
+// window._ppData, and everything below (bracket, wild card table, the
+// interactive simulator, division standings) renders from that one
+// payload. window._ppPicks holds the simulator's state — team objects
+// keyed by 'al-wc1', 'al-ds1', 'al-cs', 'nl-...', and 'ws' for the
+// World Series — and persists across tab switches within the visit,
+// but resets on Reset or on leaving and reopening the screen.
+window._ppData = null;
+window._ppPicks = {};
+window._ppTab = 'al';
+
+function openPlayoffPicture() {
+  nav('playoff-picture');
+  window._ppPicks = {};
+  window._ppTab = 'al';
+  ppShowTab('al');
+  var contentEl = document.getElementById('pp-content');
+  if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading standings…</div>';
+  var asofEl = document.getElementById('pp-asof');
+  if (asofEl) {
+    var d = new Date(_todayLocal() + 'T12:00:00');
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    asofEl.textContent = 'If the season ended today, ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+  fetch('/api/mlb?mode=standings')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data || data.error || !data.al || !data.nl) {
+        if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Standings aren\'t available right now.</div>';
+        return;
+      }
+      window._ppData = data;
+      _ppRender();
+    })
+    .catch(function (err) {
+      console.error('Load standings error:', err);
+      if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load standings.</div>';
+    });
+}
+
+function ppShowTab(key) {
+  window._ppTab = key;
+  ['al', 'nl', 'ws'].forEach(function (k) {
+    var btn = document.getElementById('pp-tab-' + k);
+    if (!btn) return;
+    if (k === key) { btn.style.background = 'rgba(168,159,232,.2)'; btn.style.color = '#fff'; btn.style.borderColor = 'rgba(168,159,232,.4)'; }
+    else { btn.style.background = 'rgba(255,255,255,.05)'; btn.style.color = 'rgba(255,255,255,.45)'; btn.style.borderColor = 'transparent'; }
+  });
+  if (window._ppData) _ppRender();
+}
+
+function _ppGb(leaderW, leaderL, w, l) {
+  var diff = ((leaderW - leaderL) - (w - l)) / 2;
+  return diff <= 0 ? '–' : (diff % 1 === 0 ? diff : diff.toFixed(1));
+}
+
+function _ppBySeed(league) {
+  var m = {};
+  ((window._ppData[league] || {}).seeds || []).forEach(function (s) { m[s.seed] = s; });
+  return m;
+}
+
+// Each round's participants come from fixed seeding or the previous
+// round's pick; changing an earlier pick has to invalidate everything
+// built on top of it (see clearDownstream) or the bracket could show a
+// team who's already been eliminated one round back.
+function _ppMatchupTeams(league, id) {
+  var s = _ppBySeed(league);
+  if (id === 'wc1') return [s[4], s[5]];
+  if (id === 'wc2') return [s[3], s[6]];
+  if (id === 'ds1') return [s[1], window._ppPicks[league + '-wc1'] || null];
+  if (id === 'ds2') return [s[2], window._ppPicks[league + '-wc2'] || null];
+  if (id === 'cs') return [window._ppPicks[league + '-ds1'] || null, window._ppPicks[league + '-ds2'] || null];
+  return [null, null];
+}
+function _ppWsTeams() { return [window._ppPicks['al-cs'] || null, window._ppPicks['nl-cs'] || null]; }
+
+function _ppClearDownstream(league, id) {
+  if (id === 'wc1') { delete window._ppPicks[league + '-ds1']; delete window._ppPicks[league + '-cs']; delete window._ppPicks.ws; }
+  if (id === 'wc2') { delete window._ppPicks[league + '-ds2']; delete window._ppPicks[league + '-cs']; delete window._ppPicks.ws; }
+  if (id === 'ds1' || id === 'ds2') { delete window._ppPicks[league + '-cs']; delete window._ppPicks.ws; }
+  if (id === 'cs') { delete window._ppPicks.ws; }
+}
+
+function ppPickWinner(league, id, teamName) {
+  var team = _ppMatchupTeams(league, id).filter(function (t) { return t && t.team === teamName; })[0];
+  if (!team) return;
+  _ppClearDownstream(league, id);
+  window._ppPicks[league + '-' + id] = team;
+  _ppRender();
+}
+function ppPickWs(teamName) {
+  var team = _ppWsTeams().filter(function (t) { return t && t.team === teamName; })[0];
+  if (!team) return;
+  window._ppPicks.ws = team;
+  _ppRender();
+}
+function ppResetPicks() { window._ppPicks = {}; _ppRender(); }
+
+function _ppMiniBracketSvg(bye, wcA, wcB) {
+  var lineColor = 'rgba(255,255,255,.28)';
+  function box(x, y, w, h, cls, inner) {
+    return '<foreignObject x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"><div xmlns="http://www.w3.org/1999/xhtml" class="pp-bx ' + cls + '">' + inner + '</div></foreignObject>';
+  }
+  var teamInner = function (t, extra) { return '<div class="pp-bx-seed">' + t.seed + '</div><div class="pp-bx-name">' + _escapeHtml(t.team) + '</div><div class="pp-bx-rec">' + _escapeHtml(t.rec) + '</div>' + (extra || ''); };
+  var svg = '<svg viewBox="0 0 350 140" width="100%" height="140" style="display:block">';
+  svg += '<path d="M175,20 H210 V58" fill="none" stroke="' + lineColor + '" stroke-width="1.5"/>';
+  svg += '<path d="M175,70 H195 V95" fill="none" stroke="' + lineColor + '" stroke-width="1.5"/>';
+  svg += '<path d="M175,120 H195 V95" fill="none" stroke="' + lineColor + '" stroke-width="1.5"/>';
+  svg += '<path d="M195,95 H210 V58" fill="none" stroke="' + lineColor + '" stroke-width="1.5"/>';
+  svg += '<path d="M210,58 H245" fill="none" stroke="' + lineColor + '" stroke-width="1.5"/>';
+  svg += box(0, 2, 175, 36, 'bye', teamInner(bye, '<span class="pp-bx-tag">Bye</span>'));
+  svg += box(0, 52, 175, 36, '', teamInner(wcA));
+  svg += box(0, 102, 175, 36, '', teamInner(wcB));
+  svg += box(245, 40, 105, 36, 'slot', '<div class="pp-bx-name">Winner faces #' + bye.seed + ' ' + _escapeHtml(bye.team) + '</div><div class="pp-bx-rec">Division Series</div>');
+  svg += '</svg>';
+  return svg;
+}
+
+function _ppBracketHtml(league) {
+  var s = _ppBySeed(league);
+  if (!s[1] || !s[2] || !s[3] || !s[4] || !s[5] || !s[6]) return '';
+  var html = '<div class="pp-section-title">Bracket</div>';
+  html += '<div class="pp-bracket-sub">Top 2 seeds bye to the Division Series. #3 hosts #6, #4 hosts #5 (best-of-3). No reseeding after.</div>';
+  html += _ppMiniBracketSvg(s[1], s[4], s[5]);
+  html += '<div style="height:14px"></div>';
+  html += _ppMiniBracketSvg(s[2], s[3], s[6]);
+  return html;
+}
+
+function _ppWildCardStandingsHtml(league) {
+  var race = (window._ppData[league] || {}).wildcardRace || [];
+  var cutIn = race.filter(function (t) { return t.status === 'in'; });
+  var cutOut = race.filter(function (t) { return t.status === 'out'; });
+  if (!cutIn.length) return '';
+  var lastIn = cutIn[cutIn.length - 1];
+  var html = '<div class="pp-section-title" style="margin-top:22px">Wild Card Standings</div>';
+  cutIn.forEach(function (t, i) {
+    var g = cutOut.length ? _ppGb(t.w, t.l, cutOut[0].w, cutOut[0].l) : '+–';
+    html += '<div class="pp-wc-row in"><div class="rk">' + (i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + (cutOut.length ? '+' + g : '+–') + '</div></div>';
+  });
+  if (cutOut.length) {
+    html += '<div class="pp-wc-cutline"><span>Cut line</span></div>';
+    cutOut.forEach(function (t, i) {
+      html += '<div class="pp-wc-row out"><div class="rk">' + (cutIn.length + i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + _ppGb(lastIn.w, lastIn.l, t.w, t.l) + '</div></div>';
+    });
+  }
+  return html;
+}
+
+function _ppPickPairHtml(league, id, roundLabel) {
+  var teams = _ppMatchupTeams(league, id);
+  var html = '<div class="pp-round-label">' + _escapeHtml(roundLabel) + '</div>';
+  if (!teams[0] || !teams[1]) return html + '<div class="pp-pending">Decide the round above first</div>';
+  var picked = window._ppPicks[league + '-' + id];
+  html += '<div class="pp-pair">' + teams.map(function (t) {
+    var isPicked = picked && picked.team === t.team;
+    var isElim = picked && !isPicked;
+    return '<div class="pp-pick' + (isPicked ? ' picked' : '') + (isElim ? ' elim' : '') + '" data-league="' + _escapeHtml(league) + '" data-id="' + _escapeHtml(id) + '" data-team="' + _escapeHtml(t.team) + '" onclick="ppPickWinner(this.dataset.league,this.dataset.id,this.dataset.team)">' +
+      '<div class="pp-pick-name">' + _escapeHtml(t.team) + '</div><div class="pp-pick-rec">' + _escapeHtml(t.rec) + '</div>' + (isPicked ? '<div class="pp-pick-check">✓</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+  return html;
+}
+
+function _ppPlayItOutHtml(league) {
+  var html = '<div class="pp-section-title" style="margin-top:22px">Play It Out <span class="pp-reset" onclick="ppResetPicks()">Reset</span></div>';
+  html += _ppPickPairHtml(league, 'wc1', 'Wild Card: #4 vs #5');
+  html += _ppPickPairHtml(league, 'wc2', 'Wild Card: #3 vs #6');
+  html += _ppPickPairHtml(league, 'ds1', 'Division Series');
+  html += _ppPickPairHtml(league, 'ds2', 'Division Series');
+  html += _ppPickPairHtml(league, 'cs', 'Championship Series');
+  var champ = window._ppPicks[league + '-cs'];
+  if (champ) html += '<div class="pp-champ"><div class="lbl">' + league.toUpperCase() + ' Champion</div><div class="nm">' + _escapeHtml(champ.team) + '</div></div>';
+  return html;
+}
+
+function _ppStandingsHtml(league) {
+  var divisions = (window._ppData[league] || {}).divisions || [];
+  var html = '<div class="pp-section-title" style="margin-top:22px">Standings</div>';
+  divisions.forEach(function (div) {
+    var leader = div.teams[0];
+    html += '<div class="pp-div-table"><div class="pp-div-name">' + _escapeHtml(div.name) + '</div>';
+    html += '<div class="pp-col-hdr"><span class="sp"></span><span class="w1">W-L</span><span class="w2">GB</span></div>';
+    div.teams.forEach(function (t, i) {
+      var tagHtml = t.tag ? '<span class="pp-tag ' + t.tag + '">' + (t.tag === 'div' ? 'Div' : 'WC') + '</span>' : '';
+      html += '<div class="pp-row' + (i === 0 ? ' leader' : '') + '"><div class="pp-rank">' + (i + 1) + '</div><div class="pp-name">' + _escapeHtml(t.name) + tagHtml + '</div><div class="pp-wl">' + t.w + '-' + t.l + '</div><div class="pp-gb">' + _ppGb(leader.w, leader.l, t.w, t.l) + '</div></div>';
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+function _ppFinalsHtml() {
+  var alChamp = window._ppPicks['al-cs'], nlChamp = window._ppPicks['nl-cs'];
+  if (window._ppPicks.ws) {
+    return '<div class="pp-ws-final"><div class="trophy">🏆</div><div class="nm">' + _escapeHtml(window._ppPicks.ws.team) + ' win the World Series</div><div class="sub">' + _escapeHtml(alChamp.team) + ' vs ' + _escapeHtml(nlChamp.team) + '</div></div>' +
+      '<div style="text-align:center"><span class="pp-reset" onclick="ppResetPicks()">Reset all picks</span></div>';
+  }
+  if (!alChamp || !nlChamp) return '<div class="pp-pending" style="margin-top:8px">Pick an AL and an NL champion first (see those tabs) to set the World Series</div>';
+  return '<div class="pp-section-title">World Series</div>' +
+    '<div class="pp-pair">' +
+    '<div class="pp-pick" data-team="' + _escapeHtml(alChamp.team) + '" onclick="ppPickWs(this.dataset.team)"><div class="pp-pick-name">' + _escapeHtml(alChamp.team) + '</div><div class="pp-pick-rec">AL Champion</div></div>' +
+    '<div class="pp-pick" data-team="' + _escapeHtml(nlChamp.team) + '" onclick="ppPickWs(this.dataset.team)"><div class="pp-pick-name">' + _escapeHtml(nlChamp.team) + '</div><div class="pp-pick-rec">NL Champion</div></div>' +
+    '</div>';
+}
+
+function _ppRender() {
+  var el = document.getElementById('pp-content');
+  if (!el || !window._ppData) return;
+  if (window._ppTab === 'ws') { el.innerHTML = _ppFinalsHtml(); return; }
+  var league = window._ppTab;
+  el.innerHTML = _ppBracketHtml(league) + _ppWildCardStandingsHtml(league) + _ppPlayItOutHtml(league) + _ppStandingsHtml(league);
+}
+
 function openGameScreen(gamePk, away, home, sport, date) {
   window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: sport || 'mlb', date: date || null };
   var titleEl = document.getElementById('game-detail-title');
@@ -15963,6 +16273,8 @@ var _gameRecapBeats = [];
 
 function _teamShortName(name) {
   if (!name) return '';
+  if (/Red Sox$/.test(name)) return 'Red Sox';
+  if (/White Sox$/.test(name)) return 'White Sox';
   var parts = name.trim().split(' ');
   return parts[parts.length - 1];
 }
