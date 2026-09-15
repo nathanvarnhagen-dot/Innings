@@ -70,7 +70,8 @@ module.exports = async function handler(req, res) {
     }
     if (mode === 'standings') {
       if (league !== 'nfl') { res.status(400).json({ error: 'Standings-based playoff seeding is only built for nfl right now — cfb seeding comes from the CFP committee, not computable win-loss standings' }); return; }
-      const url = 'https://site.api.espn.com/apis/v2/sports/' + path + '/standings';
+      const season = req.query.season || new Date().getFullYear();
+      const url = 'https://site.web.api.espn.com/apis/v2/sports/' + path + '/standings?season=' + encodeURIComponent(season);
       const r = await fetch(url);
       const data = await r.json();
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
@@ -388,16 +389,21 @@ async function _fetchRoster(path, teamId) {
 // present and correctly named than in the exact semantics of a
 // division/wildcard rank field near the cutline.
 //
-// Confidence note: this endpoint's shape (site.api.espn.com's v2
-// standings API, nested conference -> division -> team entries, each
-// entry's record coming from a `stats` array of {name, value} pairs)
-// is assumed from general knowledge of this API family, NOT verified
-// against a live response — unlike mlb.js's standings endpoint, which
-// was tested against realistic mock data. If this comes back empty or
-// mis-shaped, the two things to check first: (1) whether `children`
-// nests conference -> division -> entries as assumed, or is flatter,
-// and (2) whether the win/loss stat names are actually 'wins'/'losses'
-// or something else in a real response.
+// Confidence note: the endpoint itself was wrong in the first version
+// of this — site.api.espn.com instead of site.web.api.espn.com (note
+// the extra "web." — a real, documented difference between two
+// separate ESPN API hosts, not a guess), missing the required season
+// param. That's fixed now and is a high-confidence correction, sourced
+// from public documentation of this specific endpoint rather than
+// general pattern-matching. What's still NOT verified against a live
+// response: whether `children` actually nests conference -> division
+// -> team entries the way assumed below, and whether the win/loss stat
+// names are really 'wins'/'losses'. If this is still empty after the
+// domain fix, those are the two things to check next — ideally by
+// hitting the URL directly (https://site.web.api.espn.com/apis/v2/
+// sports/football/nfl/standings?season=2026) and sharing back what
+// the actual shape looks like, the same way a Firestore console check
+// resolved the watching-together bug earlier.
 function _nflStatValue(entry, name) {
   var stat = ((entry.stats || []).filter(function (s) { return s.name === name; })[0]) || null;
   return stat && stat.value != null ? Number(stat.value) : 0;
