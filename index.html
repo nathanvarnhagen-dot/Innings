@@ -617,6 +617,24 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .wa-stack .wa + .wa{margin-left:-7px}
 .wa-stack .wa-more{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid var(--bg);
   display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:rgba(255,255,255,.7);margin-left:-7px;flex-shrink:0}
+/* Game recap — plays once per session on landing on a Final game, before
+   settling into the box score underneath. One beat element whose content
+   JS swaps out each step, rather than pre-declaring a fixed set of beats —
+   the number of highlight beats varies with how many home runs/scoring
+   plays a given game actually had. */
+.gr-beat-in{animation:grBeatIn 0.45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes grBeatIn{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+.gr-final-stamp{font-size:15px;font-weight:800;letter-spacing:.12em;color:#9be8ac;background:rgba(124,242,156,.14);border:1.5px solid rgba(124,242,156,.4);padding:8px 22px;border-radius:10px;display:inline-block}
+.gr-teams{font-size:15px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:10px}
+.gr-final-line{display:flex;align-items:center;justify-content:center;gap:16px}
+.gr-team-score{display:flex;flex-direction:column;align-items:center;gap:6px}
+.gr-team-abbr{font-size:12px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.06em}
+.gr-team-num{font-size:44px;font-weight:800;color:#fff;line-height:1}
+.gr-team-num.winner{color:#9be8ac}
+.gr-dash{font-size:28px;color:rgba(255,255,255,.3);font-weight:300}
+.gr-hl-icon{font-size:40px;margin-bottom:14px}
+.gr-hl-text{font-size:17px;font-weight:700;color:#fff;line-height:1.4;max-width:300px}
+.gr-decision-line{font-size:15px;color:var(--lav);font-weight:700;line-height:1.7;text-align:center}
 .sport-banner svg{width:100%;height:100%;display:block}
 .gb-twinkle{animation:gbTw 2.6s ease-in-out infinite}
 @keyframes gbTw{0%,100%{opacity:.2}50%{opacity:.9}}
@@ -2038,6 +2056,20 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <input id="game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGameMessage();}">
       <button class="send-btn" onclick="sendGameMessage()"><i class="ti ti-send"></i></button>
     </div>
+  </div>
+
+  <!-- ═══ GAME RECAP — full-screen one-shot, same idea as the MLB pregame
+       flourish: plays once per session landing on a game that's already
+       Final, then fades to reveal the box score already rendered
+       underneath. Tap anywhere to skip straight there. ═══ -->
+  <div id="game-recap-overlay" onclick="skipGameRecap()" style="display:none;position:absolute;inset:0;z-index:40;background:#050310;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s ease;overflow:hidden">
+    <span class="osl-light" style="left:18%;top:22%;animation-delay:.2s"></span>
+    <span class="osl-light" style="left:78%;top:16%;animation-delay:1.1s"></span>
+    <span class="osl-light" style="left:55%;top:30%;animation-delay:.7s"></span>
+    <span class="osl-light" style="left:30%;top:65%;animation-delay:1.6s"></span>
+    <span class="osl-light" style="left:85%;top:70%;animation-delay:.4s"></span>
+    <div id="game-recap-beat" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center;width:100%"></div>
+    <div style="position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.35)">Tap to skip</div>
   </div>
 </div>
 
@@ -8211,7 +8243,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.26.1-play-reply-tab-switch';
+window.INNINGS_BUILD = 'v5.27.0-game-recap-animation';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15851,6 +15883,7 @@ function openGameScreen(gamePk, away, home, sport, date) {
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
   var rowEl = document.getElementById('game-watching-with-row');
   if (rowEl) rowEl.style.display = 'none'; // hide until (if) this game's watchers resolve, rather than show stale data from the last game
+  if (typeof skipGameRecap === 'function') skipGameRecap(); // don't let a still-playing recap from the last game bleed into this one
   nav('game');
   gameDetailTab('sheet');
   loadGameCheatSheet(gamePk);
@@ -15898,6 +15931,100 @@ function gameDetailTab(key) {
 // doesn't have anywhere to surface for NBA/WNBA/NHL/MLS/NWSL yet since
 // those don't have real schedules wired into the Games browser to reach
 // a game screen from.
+// ── GAME RECAP — plays once per session (in-memory flag, no Firestore
+// write) when a game's box score first comes back Final. Beats are built
+// fresh from the same box score data _boxScoreCardHtml already renders —
+// nothing new to fetch.
+window._gameRecapShown = {};
+var _gameRecapTimer = null;
+var _gameRecapStep = 0;
+var _gameRecapBeats = [];
+
+function _teamShortName(name) {
+  if (!name) return '';
+  var parts = name.trim().split(' ');
+  return parts[parts.length - 1];
+}
+
+// Highlights are capped at 2 regardless of how many the game actually had,
+// so a 6-homer blowout still finishes in a few seconds — the last 2
+// chronologically (closest to how it actually ended), since there's no
+// win-probability data available to judge "biggest" by instead.
+function _buildGameRecapBeats(box, sport) {
+  var beats = [{ type: 'final' }];
+  beats.push({
+    type: 'score',
+    awayLabel: _teamShortName(box.away),
+    homeLabel: _teamShortName(box.home),
+    awayScore: box.awayScore,
+    homeScore: box.homeScore,
+    awayWins: box.awayScore != null && box.homeScore != null && box.awayScore > box.homeScore,
+    homeWins: box.awayScore != null && box.homeScore != null && box.homeScore > box.awayScore
+  });
+  var highlightSource = (sport === 'mlb')
+    ? (box.homeRuns || []).map(function (hr) { return { icon: '⚾', text: hr.description || (hr.batter ? hr.batter + ' home run' : 'Home run') }; })
+    : (box.highlights || []).map(function (h) { return { icon: h.emoji || '🏈', text: h.text || '' }; });
+  highlightSource.slice(-2).forEach(function (h) { if (h.text) beats.push({ type: 'highlight', icon: h.icon, text: h.text }); });
+  if (sport === 'mlb' && box.winningPitcher) {
+    var decisionParts = ['W: ' + _escapeHtml(box.winningPitcher)];
+    if (box.losingPitcher) decisionParts.push('L: ' + _escapeHtml(box.losingPitcher));
+    if (box.savePitcher) decisionParts.push('SV: ' + _escapeHtml(box.savePitcher));
+    beats.push({ type: 'decision', html: decisionParts.join('<br>') });
+  }
+  return beats;
+}
+
+function _gameRecapBeatHtml(beat) {
+  if (beat.type === 'final') return '<div class="gr-final-stamp gr-beat-in">FINAL</div>';
+  if (beat.type === 'score') {
+    return '<div class="gr-teams gr-beat-in">' + _escapeHtml(beat.awayLabel) + ' @ ' + _escapeHtml(beat.homeLabel) + '</div>' +
+      '<div class="gr-final-line gr-beat-in">' +
+      '<div class="gr-team-score"><div class="gr-team-abbr">' + _escapeHtml(beat.awayLabel.toUpperCase()) + '</div><div class="gr-team-num' + (beat.awayWins ? ' winner' : '') + '">' + (beat.awayScore != null ? beat.awayScore : '-') + '</div></div>' +
+      '<div class="gr-dash">–</div>' +
+      '<div class="gr-team-score"><div class="gr-team-abbr">' + _escapeHtml(beat.homeLabel.toUpperCase()) + '</div><div class="gr-team-num' + (beat.homeWins ? ' winner' : '') + '">' + (beat.homeScore != null ? beat.homeScore : '-') + '</div></div>' +
+      '</div>';
+  }
+  if (beat.type === 'highlight') return '<div class="gr-hl-icon gr-beat-in">' + beat.icon + '</div><div class="gr-hl-text gr-beat-in">' + _escapeHtml(beat.text) + '</div>';
+  if (beat.type === 'decision') return '<div class="gr-decision-line gr-beat-in">' + beat.html + '</div>';
+  return '';
+}
+
+function maybePlayGameRecap(box, sport, gamePk) {
+  if (!box || box.error) return;
+  if (window._gameRecapShown[gamePk]) return;
+  window._gameRecapShown[gamePk] = true;
+  var beats = _buildGameRecapBeats(box, sport);
+  if (beats.length < 2) return; // final score missing — nothing worth a sequence over
+  _gameRecapBeats = beats;
+  _gameRecapStep = 0;
+  var overlay = document.getElementById('game-recap-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  requestAnimationFrame(function () { overlay.style.opacity = '1'; });
+  _showGameRecapStep();
+}
+
+function _showGameRecapStep() {
+  var beatEl = document.getElementById('game-recap-beat');
+  if (_gameRecapStep >= _gameRecapBeats.length) { _finishGameRecap(); return; }
+  if (beatEl) beatEl.innerHTML = _gameRecapBeatHtml(_gameRecapBeats[_gameRecapStep]);
+  var delay = _gameRecapStep === 0 ? 900 : 1500;
+  _gameRecapStep++;
+  _gameRecapTimer = setTimeout(_showGameRecapStep, delay);
+}
+
+function _finishGameRecap() {
+  var overlay = document.getElementById('game-recap-overlay');
+  if (!overlay) return;
+  overlay.style.opacity = '0';
+  setTimeout(function () { overlay.style.display = 'none'; }, 300);
+}
+
+function skipGameRecap() {
+  clearTimeout(_gameRecapTimer);
+  _finishGameRecap();
+}
+
 function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
@@ -15909,12 +16036,14 @@ function loadGameCheatSheet(gamePk) {
     .then(function (r) { return r.json(); })
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
-      var started = !!box && !box.error && (_isGameStatusLive(box.status) || _isGameConcluded(box.status));
-      if (!started) return; // not started yet — cheat sheet alone is correct, nothing to prepend
+      var live = !!box && !box.error && _isGameStatusLive(box.status);
+      var concluded = !!box && !box.error && _isGameConcluded(box.status);
+      if (!live && !concluded) return; // not started yet — cheat sheet alone is correct, nothing to prepend
       var html = _boxScoreCardHtml(box, true, true);
       if (!html) return;
       window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
       renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
+      if (concluded) maybePlayGameRecap(box, sport, gamePk);
     })
     .catch(function (err) { console.error('Load box score error:', err); });
 
