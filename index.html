@@ -8195,7 +8195,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.22.1-friend-cache-fix';
+window.INNINGS_BUILD = 'v5.22.2-watching-debug-logging';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15965,6 +15965,7 @@ function renderLiveFeed() {
     if (!live.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
     section.style.display = 'flex';
     list.innerHTML = live.map(function (r, i) { return _liveFeedCardHtml(r, i); }).join('');
+    console.log('[watching-debug] renderLiveFeed checking', live.length, 'live game(s):', live.map(function(r){ return r.g.gamePk; }));
     live.forEach(function (r, i) {
       _friendsWatchingGame(r.g.gamePk).then(function (uids) {
         if (!uids.length) return;
@@ -16034,15 +16035,15 @@ function _watchingAvatarsHtml(names, max) {
 // so this is a direct per-friend existence check rather than a Cloud
 // Function — fine at this beta's scale (small trusted friend groups).
 //
-// Deliberately does NOT reuse window._myFriendUids even when it's already
-// populated — that shared cache has no invalidation, so once set it
-// never picks up a friendship accepted later in the same session. That
-// was silently making this whole feature report "nobody's watching"
-// using a stale, pre-friendship list. Two lightweight indexed queries
-// here are worth the guaranteed-fresh answer.
+// Temporarily logging every stage here (who I am, which friends were
+// found, what gamePk is being checked, and each friend's watching-doc
+// result) — two rounds of blind fixes on this without confirmation it's
+// resolved means guessing further isn't productive; this makes the
+// actual failure point visible in the console instead.
 function _friendsWatchingGame(gamePk) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) return Promise.resolve([]);
+  if (!user || !window.db) { console.log('[watching-debug] no signed-in user or no db — bailing out'); return Promise.resolve([]); }
+  console.log('[watching-debug] checking gamePk', gamePk, 'as uid', user.uid);
   var uidsPromise = Promise.all([
     window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
     window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
@@ -16052,17 +16053,25 @@ function _friendsWatchingGame(gamePk) {
     results[1].forEach(function (d) { uids.push(d.data().fromUid); });
     uids = uids.filter(function (v, idx) { return uids.indexOf(v) === idx; });
     window._myFriendUids = uids; // still populate the shared cache for other consumers (loadMyFriendsList, etc.)
+    console.log('[watching-debug] accepted friend uids found:', uids);
     return uids;
-  }).catch(function (err) { console.error('Load friends list for watching check error:', err); return []; });
+  }).catch(function (err) { console.error('[watching-debug] Load friends list error:', err); return []; });
 
   return uidsPromise.then(function (uids) {
-    if (!uids.length) return [];
+    if (!uids.length) { console.log('[watching-debug] no accepted friends — nothing to check'); return []; }
     return Promise.all(uids.map(function (uid) {
       return window.db.collection('users').doc(uid).collection('watching').doc(String(gamePk)).get()
-        .then(function (doc) { return doc.exists ? uid : null; })
-        .catch(function (err) { console.error('Check friend watching doc error for', uid, err); return null; });
+        .then(function (doc) {
+          console.log('[watching-debug] friend', uid, 'watching', gamePk, '? ->', doc.exists);
+          return doc.exists ? uid : null;
+        })
+        .catch(function (err) { console.error('[watching-debug] Check friend watching doc error for', uid, err); return null; });
     }));
-  }).then(function (results) { return results.filter(Boolean); });
+  }).then(function (results) {
+    var matched = results.filter(Boolean);
+    console.log('[watching-debug] final result for gamePk', gamePk, ':', matched);
+    return matched;
+  });
 }
 
 function _friendsWatchingLabel(names) {
@@ -16083,15 +16092,17 @@ function _watchingWithLabel(names) {
 }
 
 function _loadWatchingWithRow(gamePk) {
+  console.log('[watching-debug] _loadWatchingWithRow called for gamePk', gamePk);
   _friendsWatchingGame(gamePk).then(function (uids) {
-    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return; // superseded
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) { console.log('[watching-debug] game changed since lookup started — discarding result for', gamePk); return; }
     var rowEl = document.getElementById('game-watching-with-row');
-    if (!rowEl) return;
+    if (!rowEl) { console.log('[watching-debug] game-watching-with-row element not found in DOM'); return; }
     if (!uids.length) { rowEl.style.display = 'none'; return; }
     Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
       .then(function (docs) {
         if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
         var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
+        console.log('[watching-debug] showing watching-with row for', names);
         var avatarsEl = document.getElementById('game-watching-with-avatars');
         var textEl = document.getElementById('game-watching-with-text');
         if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
