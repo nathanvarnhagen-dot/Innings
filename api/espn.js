@@ -68,6 +68,15 @@ module.exports = async function handler(req, res) {
       res.status(200).json(result);
       return;
     }
+    if (mode === 'standings') {
+      if (league !== 'nfl') { res.status(400).json({ error: 'Standings-based playoff seeding is only built for nfl right now — cfb seeding comes from the CFP committee, not computable win-loss standings' }); return; }
+      const url = 'https://site.api.espn.com/apis/v2/sports/' + path + '/standings';
+      const r = await fetch(url);
+      const data = await r.json();
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      res.status(200).json(summarizeNflStandings(data));
+      return;
+    }
     res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, or pregame' });
   } catch (err) {
     res.status(500).json({ error: league.toUpperCase() + ' lookup failed' });
@@ -370,4 +379,94 @@ async function _fetchRoster(path, teamId) {
   } catch (e) {
     return [];
   }
+}
+
+// ── NFL PLAYOFF PICTURE — division standings, wild card race, and
+// bracket seeding, computed from raw win/loss records rather than any
+// rank field the standings response might carry, same reasoning as
+// mlb.js's summarizeStandings: more confident in wins/losses being
+// present and correctly named than in the exact semantics of a
+// division/wildcard rank field near the cutline.
+//
+// Confidence note: this endpoint's shape (site.api.espn.com's v2
+// standings API, nested conference -> division -> team entries, each
+// entry's record coming from a `stats` array of {name, value} pairs)
+// is assumed from general knowledge of this API family, NOT verified
+// against a live response — unlike mlb.js's standings endpoint, which
+// was tested against realistic mock data. If this comes back empty or
+// mis-shaped, the two things to check first: (1) whether `children`
+// nests conference -> division -> entries as assumed, or is flatter,
+// and (2) whether the win/loss stat names are actually 'wins'/'losses'
+// or something else in a real response.
+function _nflStatValue(entry, name) {
+  var stat = ((entry.stats || []).filter(function (s) { return s.name === name; })[0]) || null;
+  return stat && stat.value != null ? Number(stat.value) : 0;
+}
+
+function summarizeNflStandings(data) {
+  var conferences = data.children || [];
+  var divisions = [];
+  conferences.forEach(function (conf) {
+    var confName = conf.name || conf.abbreviation || '';
+    var confKey = /national/i.test(confName) ? 'nfc' : 'afc';
+    var divGroups = conf.children || [];
+    divGroups.forEach(function (div) {
+      var divName = (div.name || div.abbreviation || '').replace(/^(American|National) Football Conference /i, '');
+      var entries = (div.standings && div.standings.entries) || [];
+      var teams = entries.map(function (e) {
+        return { name: (e.team && (e.team.displayName || e.team.name)) || '', w: _nflStatValue(e, 'wins'), l: _nflStatValue(e, 'losses') };
+      });
+      teams.sort(function (a, b) { return _winPctNfl(b) - _winPctNfl(a); });
+      divisions.push({ conf: confKey, name: divName, teams: teams });
+    });
+  });
+
+  var result = {};
+  ['afc', 'nfc'].forEach(function (confKey) {
+    var confDivisions = divisions.filter(function (d) { return d.conf === confKey; });
+    if (!confDivisions.length) return;
+
+    var divWinners = confDivisions.map(function (d) { return Object.assign({}, d.teams[0], { division: d.name }); });
+    divWinners.sort(function (a, b) { return _winPctNfl(b) - _winPctNfl(a); });
+
+    var nonWinners = [];
+    confDivisions.forEach(function (d) {
+      d.teams.slice(1).forEach(function (t) { nonWinners.push(Object.assign({}, t, { division: d.name })); });
+    });
+    nonWinners.sort(function (a, b) { return _winPctNfl(b) - _winPctNfl(a); });
+    var wildCards = nonWinners.slice(0, 3);
+    var chasers = nonWinners.slice(3, 5);
+    var wcNames = {}; wildCards.forEach(function (t) { wcNames[t.name] = true; });
+
+    var seeds = divWinners.map(function (t, i) { return { seed: i + 1, team: _nflTeamShortName(t.name), rec: t.w + '-' + t.l, bye: i === 0 }; })
+      .concat(wildCards.map(function (t, i) { return { seed: i + 5, team: _nflTeamShortName(t.name), rec: t.w + '-' + t.l }; }));
+
+    result[confKey] = {
+      seeds: seeds,
+      wildcardRace: wildCards.map(function (t) { return { team: _nflTeamShortName(t.name), w: t.w, l: t.l, status: 'in' }; })
+        .concat(chasers.map(function (t) { return { team: _nflTeamShortName(t.name), w: t.w, l: t.l, status: 'out' }; })),
+      divisions: confDivisions.map(function (d) {
+        return {
+          name: (confKey === 'afc' ? 'AFC ' : 'NFC ') + d.name,
+          teams: d.teams.map(function (t) {
+            return { name: _nflTeamShortName(t.name), w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
+          })
+        };
+      })
+    };
+  });
+  return result;
+}
+
+function _winPctNfl(t) { return (t.w + t.l) > 0 ? t.w / (t.w + t.l) : 0; }
+
+// Same last-word heuristic as mlb.js's _teamShortName, with the same
+// kind of real collision to special-case: "New York Giants" and "New
+// York Jets" don't collide (different last words), but two-word cities
+// paired with common nicknames are worth a second look each season —
+// none confirmed as of this writing, unlike MLB's Red Sox/White Sox.
+function _nflTeamShortName(name) {
+  if (!name) return '';
+  var parts = name.trim().split(' ');
+  return parts[parts.length - 1];
 }
