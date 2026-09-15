@@ -68,6 +68,8 @@ function summarize(data, gamePk) {
   var linescore = liveData.linescore || {};
   var teams = gameData.teams || {};
   var decisions = liveData.decisions || {};
+  var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
+  var abstractState = (gameData.status && gameData.status.abstractGameState) || null;
 
   var innings = (linescore.innings || []).map(function (inn) {
     return {
@@ -88,6 +90,47 @@ function summarize(data, gamePk) {
     }
   });
 
+  // ── Live situation + current matchup — only meaningful mid-game, so
+  // both stay null outside abstractGameState 'Live' (a Preview game has
+  // no real count/baserunners yet; a Final game's linescore.offense is
+  // whatever it was on the last out, not worth presenting as "current").
+  // Pitcher/batter season lines are pulled from the same
+  // boxscore.teams.<side>.players dict the pregame endpoint already
+  // reads — same confidence caveat as noted there: reliable for
+  // established players, occasionally sparse for very recent call-ups.
+  var situation = null;
+  var matchup = null;
+  if (abstractState === 'Live') {
+    var offense = linescore.offense || {};
+    var defense = linescore.defense || {};
+    situation = {
+      balls: linescore.balls != null ? linescore.balls : null,
+      strikes: linescore.strikes != null ? linescore.strikes : null,
+      outs: linescore.outs != null ? linescore.outs : null,
+      inning: linescore.currentInning || null,
+      half: linescore.isTopInning ? 'top' : 'bottom',
+      bases: { first: !!offense.first, second: !!offense.second, third: !!offense.third }
+    };
+    matchup = {
+      pitcher: defense.pitcher ? _liveParticipant(defense.pitcher, boxTeams, 'pitching') : null,
+      batter: offense.batter ? _liveParticipant(offense.batter, boxTeams, 'batting') : null
+    };
+  }
+
+  // ── Recent plays — last 5 plays with a completed description, most
+  // recent first. Shown for Final too (a short recap), not just Live.
+  var recentPlays = [];
+  if (abstractState === 'Live' || abstractState === 'Final') {
+    var completed = allPlays.filter(function (p) { return p.result && p.result.description; });
+    recentPlays = completed.slice(-5).reverse().map(function (p) {
+      return {
+        inning: (p.about && p.about.inning) || null,
+        half: (p.about && p.about.isTopInning) ? 'top' : 'bottom',
+        text: p.result.description
+      };
+    });
+  }
+
   return {
     gamePk: (gameData.game && gameData.game.pk) || (gamePk ? Number(gamePk) : null),
     away: (teams.away && teams.away.name) || null,
@@ -101,8 +144,25 @@ function summarize(data, gamePk) {
     winningPitcher: (decisions.winner && decisions.winner.fullName) || null,
     losingPitcher: (decisions.loser && decisions.loser.fullName) || null,
     savePitcher: (decisions.save && decisions.save.fullName) || null,
-    homeRuns: homeRuns.slice(0, 10)
+    homeRuns: homeRuns.slice(0, 10),
+    situation: situation,
+    matchup: matchup,
+    recentPlays: recentPlays
   };
+}
+
+function _liveParticipant(person, boxTeams, group) {
+  var pid = 'ID' + person.id;
+  var obj = (boxTeams.away && boxTeams.away.players && boxTeams.away.players[pid])
+    || (boxTeams.home && boxTeams.home.players && boxTeams.home.players[pid]);
+  var stat = obj && obj.seasonStats && obj.seasonStats[group];
+  var line = null;
+  if (stat) {
+    line = group === 'pitching'
+      ? (stat.era != null ? stat.era + ' ERA' : '') + (stat.strikeOuts != null ? ' · ' + stat.strikeOuts + ' K' : '')
+      : (stat.avg || '.000') + ' / ' + (stat.obp || '.000') + ' / ' + (stat.slg || '.000');
+  }
+  return { name: person.fullName, id: person.id, line: line || null };
 }
 
 // ── PREGAME CHEAT SHEET — probable pitcher + season stats for the "feat"
