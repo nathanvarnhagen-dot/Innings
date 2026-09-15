@@ -107,7 +107,16 @@ module.exports = async function handler(req, res) {
       // schedule/boxscore/pregame (unlike the standings endpoint's
       // wrong-domain issue) — moderate-high confidence in this shape,
       // but still not tested against a live response.
-      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300';
+      //
+      // CFB needs its own confirmed fix: college football has 762 teams
+      // across every division (FBS, FCS, DII/DIII), and without
+      // groups=80 (the documented code for "all FBS") the endpoint
+      // returns some other default slice that a plain limit doesn't
+      // reliably cover — which is exactly how a real FBS/Big Ten school
+      // like Oregon went missing. groups=80 scopes this to FBS only,
+      // which is what actually has games in this app anyway.
+      const groupsParam = (league === 'cfb') ? '&groups=80' : '';
+      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300' + groupsParam;
       const r = await fetch(url);
       const data = await r.json();
       const list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
