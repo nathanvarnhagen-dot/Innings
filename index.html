@@ -2004,10 +2004,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
     <div style="display:flex;gap:6px;padding:0 16px 12px">
       <button id="game-tab-sheet" onclick="gameDetailTab('sheet')" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cheat sheet</button>
+      <button id="game-tab-box" onclick="gameDetailTab('box')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Box score</button>
       <button id="game-tab-chat" onclick="gameDetailTab('chat')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Chat</button>
     </div>
   </div>
   <div id="game-sheet-panel" class="scroll-bare" style="display:block;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
+  <div id="game-box-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
   <div id="game-chat-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px;flex-direction:column;gap:10px">
     <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0">Open to anyone with the link — no group needed for the beta.</div>
     <div id="game-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
@@ -8195,7 +8197,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.20.0-watching-avatars';
+window.INNINGS_BUILD = 'v5.21.0-box-score-live-final';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15674,17 +15676,50 @@ function gameDetailTab(key) {
   }
 }
 
-// Cheat sheets: MLB shows a probable-pitcher feature + batting order (or
-// active roster if the lineup isn't posted yet). NFL/CFB show the WHOLE
-// roster instead — there's no pregame "starting lineup" concept in
-// football the way there is a batting order — ranked so the
-// skill/impact positions surface at the top rather than needing to
-// scroll a 53-90 man roster to find anyone worth watching.
+// Cheat sheets: before a game starts, MLB shows a probable-pitcher
+// feature + batting order (or active roster if the lineup isn't posted
+// yet), and NFL/CFB show the whole roster ranked by position. None of
+// that pregame projection is the useful thing to see anymore once a
+// game is actually live or has finished, though — the box score is —
+// so this checks the game's current status first and branches: pregame
+// content only for a genuinely not-yet-started game, the same
+// _boxScoreCardHtml already used for memory-attached box scores for
+// anything live or concluded. That renderer is already sport-generic
+// (mlb.js and espn.js both feed it the same shape), so this works for
+// any sport with a boxscore endpoint — it just doesn't have anywhere to
+// surface for NBA/WNBA/NHL/MLS/NWSL yet since those don't have real
+// schedules wired into the Games browser to reach a game screen from.
 function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk };
+  el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
+
+  fetch(_bsModalBoxscoreUrl(sport, gamePk))
+    .then(function (r) { return r.json(); })
+    .then(function (box) {
+      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+      var started = !!box && !box.error && (_isGameStatusLive(box.status) || _isGameConcluded(box.status));
+      var sheetTabBtn = document.getElementById('game-tab-sheet');
+      if (sheetTabBtn) sheetTabBtn.textContent = started ? 'Box score' : 'Cheat sheet';
+      if (started) {
+        el.innerHTML = _boxScoreCardHtml(box, true) || '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4);line-height:1.5">Couldn\'t load the box score — try again.</div>';
+        return;
+      }
+      _loadPregameSheet(gamePk, sport);
+    })
+    .catch(function (err) {
+      console.error('Load box score status check error:', err);
+      // Status check itself failed — fall back to pregame content rather
+      // than showing nothing.
+      _loadPregameSheet(gamePk, sport);
+    });
+}
+
+function _loadPregameSheet(gamePk, sport) {
+  var el = document.getElementById('game-sheet-panel');
+  if (!el) return;
 
   if (sport === 'nfl' || sport === 'cfb') {
     el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading rosters…</div>';
