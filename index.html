@@ -2017,7 +2017,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div id="game-watching-with-avatars" class="wa-stack" style="display:flex;align-items:center"></div>
       <div id="game-watching-with-text" style="font-size:12px;color:var(--mid)"></div>
     </div>
-    <div id="game-watching-debug" style="display:none;font-size:10px;color:rgba(255,255,255,.35);padding:0 16px 10px 18px;line-height:1.5"></div>
     <div style="display:flex;gap:6px;padding:0 16px 12px">
       <button id="game-tab-sheet" onclick="gameDetailTab('sheet')" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cheat sheet</button>
       <button id="game-tab-chat" onclick="gameDetailTab('chat')" style="background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Chat</button>
@@ -8211,7 +8210,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.23.1-player-link-sheet';
+window.INNINGS_BUILD = 'v5.24.0-watching-debug-cleanup';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15750,8 +15749,6 @@ function openGameScreen(gamePk, away, home, sport) {
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
   var rowEl = document.getElementById('game-watching-with-row');
   if (rowEl) rowEl.style.display = 'none'; // hide until (if) this game's watchers resolve, rather than show stale data from the last game
-  var debugEl = document.getElementById('game-watching-debug');
-  if (debugEl) { debugEl.style.display = 'none'; debugEl.textContent = ''; }
   nav('game');
   gameDetailTab('sheet');
   loadGameCheatSheet(gamePk);
@@ -16076,7 +16073,6 @@ function renderLiveFeed() {
     if (!live.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
     section.style.display = 'flex';
     list.innerHTML = live.map(function (r, i) { return _liveFeedCardHtml(r, i); }).join('');
-    console.log('[watching-debug] renderLiveFeed checking', live.length, 'live game(s):', live.map(function(r){ return r.g.gamePk; }));
     live.forEach(function (r, i) {
       _friendsWatchingGame(r.g.gamePk).then(function (uids) {
         if (!uids.length) return;
@@ -16146,16 +16142,12 @@ function _watchingAvatarsHtml(names, max) {
 // so this is a direct per-friend existence check rather than a Cloud
 // Function — fine at this beta's scale (small trusted friend groups).
 //
-// Temporarily logging every stage here (who I am, which friends were
-// found, what gamePk is being checked, and each friend's watching-doc
-// result) — two rounds of blind fixes on this without confirmation it's
-// resolved means guessing further isn't productive; this makes the
-// actual failure point visible in the console instead.
+// Deliberately does NOT reuse window._myFriendUids even when it's already
+// populated — that shared cache has no invalidation, so once set it
+// never picks up a friendship accepted later in the same session.
 function _friendsWatchingGame(gamePk) {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
-  window._lastWatchingDebug = { gamePk: gamePk, myUid: user ? user.uid : null, friendUids: null, checks: null, error: null };
-  if (!user || !window.db) { window._lastWatchingDebug.error = 'not signed in'; console.log('[watching-debug] no signed-in user or no db — bailing out'); return Promise.resolve([]); }
-  console.log('[watching-debug] checking gamePk', gamePk, 'as uid', user.uid);
+  if (!user || !window.db) return Promise.resolve([]);
   var uidsPromise = Promise.all([
     window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
     window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
@@ -16165,36 +16157,17 @@ function _friendsWatchingGame(gamePk) {
     results[1].forEach(function (d) { uids.push(d.data().fromUid); });
     uids = uids.filter(function (v, idx) { return uids.indexOf(v) === idx; });
     window._myFriendUids = uids; // still populate the shared cache for other consumers (loadMyFriendsList, etc.)
-    window._lastWatchingDebug.friendUids = uids;
-    console.log('[watching-debug] accepted friend uids found:', uids);
     return uids;
-  }).catch(function (err) {
-    window._lastWatchingDebug.error = 'friend list query failed: ' + (err && err.message ? err.message : err);
-    console.error('[watching-debug] Load friends list error:', err);
-    return [];
-  });
+  }).catch(function (err) { console.error('Load friends list for watching check error:', err); return []; });
 
   return uidsPromise.then(function (uids) {
-    if (!uids.length) { window._lastWatchingDebug.checks = []; console.log('[watching-debug] no accepted friends — nothing to check'); return []; }
+    if (!uids.length) return [];
     return Promise.all(uids.map(function (uid) {
       return window.db.collection('users').doc(uid).collection('watching').doc(String(gamePk)).get()
-        .then(function (doc) {
-          console.log('[watching-debug] friend', uid, 'watching', gamePk, '? ->', doc.exists);
-          return { uid: uid, watching: doc.exists };
-        })
-        .catch(function (err) {
-          console.error('[watching-debug] Check friend watching doc error for', uid, err);
-          return { uid: uid, watching: false, error: err && err.message };
-        });
-    })).then(function (checks) {
-      window._lastWatchingDebug.checks = checks;
-      return checks;
-    });
-  }).then(function (checks) {
-    var matched = checks.filter(function (c) { return c.watching; }).map(function (c) { return c.uid; });
-    console.log('[watching-debug] final result for gamePk', gamePk, ':', matched);
-    return matched;
-  });
+        .then(function (doc) { return doc.exists ? uid : null; })
+        .catch(function (err) { console.error('Check friend watching doc error for', uid, err); return null; });
+    }));
+  }).then(function (results) { return results.filter(Boolean); });
 }
 
 function _friendsWatchingLabel(names) {
@@ -16215,53 +16188,22 @@ function _watchingWithLabel(names) {
 }
 
 function _loadWatchingWithRow(gamePk) {
-  console.log('[watching-debug] _loadWatchingWithRow called for gamePk', gamePk);
-  var debugEl = document.getElementById('game-watching-debug');
   _friendsWatchingGame(gamePk).then(function (uids) {
-    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) { console.log('[watching-debug] game changed since lookup started — discarding result for', gamePk); return; }
-    _renderWatchingDebugLine(debugEl);
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return; // superseded
     var rowEl = document.getElementById('game-watching-with-row');
-    if (!rowEl) { console.log('[watching-debug] game-watching-with-row element not found in DOM'); return; }
+    if (!rowEl) return;
     if (!uids.length) { rowEl.style.display = 'none'; return; }
     Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
       .then(function (docs) {
         if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
         var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
-        console.log('[watching-debug] showing watching-with row for', names);
         var avatarsEl = document.getElementById('game-watching-with-avatars');
         var textEl = document.getElementById('game-watching-with-text');
         if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
         if (textEl) textEl.textContent = _watchingWithLabel(names);
         rowEl.style.display = 'flex';
       }).catch(function (err) { console.error('Load watching-with names error:', err); });
-  }).catch(function (err) {
-    console.error('Watching-with lookup error:', err);
-    _renderWatchingDebugLine(debugEl);
-  });
-}
-
-// Temporary — puts the exact same diagnostic _friendsWatchingGame logs to
-// console directly on screen instead, since checking devtools on a phone
-// mid-testing isn't practical. Remove once this is confirmed working.
-function _renderWatchingDebugLine(debugEl) {
-  if (!debugEl) return;
-  var d = window._lastWatchingDebug;
-  if (!d) return;
-  var line;
-  if (d.error) {
-    line = 'debug: error — ' + d.error;
-  } else if (d.friendUids == null) {
-    line = 'debug: friend lookup never resolved';
-  } else if (!d.friendUids.length) {
-    line = 'debug: 0 accepted friends found for uid ' + (d.myUid || '?');
-  } else if (!d.checks) {
-    line = 'debug: ' + d.friendUids.length + ' friend(s) found, watching-check never resolved';
-  } else {
-    var watchingCount = d.checks.filter(function (c) { return c.watching; }).length;
-    line = 'debug: ' + d.friendUids.length + ' friend(s) found (' + d.friendUids.join(', ') + '), ' + watchingCount + ' watching gamePk ' + d.gamePk;
-  }
-  debugEl.textContent = line;
-  debugEl.style.display = 'block';
+  }).catch(function (err) { console.error('Watching-with lookup error:', err); });
 }
 
 function openLiveFeedGame(i) {
