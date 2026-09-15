@@ -1764,7 +1764,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
     </button>
     <div style="font-size:16px;font-weight:700;color:#fff">Games</div>
-    <button id="games-playoff-btn" onclick="openPlayoffPicture(window._gamesSport)" style="display:none;margin-left:auto;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);border-radius:50%;width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;font-family:inherit">🏆</button>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button id="games-playoff-btn" onclick="openPlayoffPicture(window._gamesSport)" style="display:none;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);border-radius:50%;width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;font-family:inherit">🏆</button>
+      <button id="games-teams-btn" onclick="openTeamPrefs(window._gamesSport)" style="display:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:50%;width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;font-family:inherit;color:rgba(255,255,255,.7)"><i class="ti ti-settings"></i></button>
+    </div>
   </div>
   <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px">
     <div id="games-fb-banner" class="sport-banner" style="display:none;margin-bottom:12px">
@@ -1877,6 +1880,25 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 28px">
     <div id="pp-asof" style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:16px"></div>
     <div id="pp-content"></div>
+  </div>
+</div>
+
+<!-- ═══ TEAM PREFERENCES — pick a favorite team (single) and any number
+     of additional teams to follow, per sport. Shows for every sport in
+     the Games browser, not just the ones with a playoff picture. ═══ -->
+<div class="screen" id="screen-team-prefs">
+  <div style="background:var(--card);padding:14px 16px;padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <button onclick="navBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+    </button>
+    <div id="tp-title" style="font-size:16px;font-weight:700;color:#fff">Teams</div>
+  </div>
+  <div style="padding:12px 16px;background:var(--card);flex-shrink:0">
+    <input id="tp-search" oninput="_tpFilterList()" placeholder="Search teams…" style="width:100%;background:var(--bg);border:0.5px solid var(--rule);border-radius:12px;padding:10px 14px;color:#fff;font-size:14px;font-family:inherit">
+  </div>
+  <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:6px 16px 28px">
+    <div style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;padding:8px 2px 14px">Tap the star for your one favorite team. Tap the check to follow any others.</div>
+    <div id="tp-list"></div>
   </div>
 </div>
 
@@ -8324,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.29.0-nfl-playoffs-cfb-weeks';
+window.INNINGS_BUILD = 'v5.30.0-team-prefs-standings-debug';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15582,9 +15604,15 @@ function _pregameMarkedIdx(side) {
 window._gamesListCache = [];
 window._gamesDate = null;
 window._gamesSport = 'mlb';
+// Also toggles the teams (gear) button — that one shows for every sport,
+// not just the ones with a playoff picture, since following a favorite
+// team isn't gated by whether full game browsing exists for that sport
+// yet.
 function _refreshPlayoffBtnVisibility() {
   var btn = document.getElementById('games-playoff-btn');
   if (btn) btn.style.display = (window._gamesSport === 'mlb' || window._gamesSport === 'nfl') ? 'flex' : 'none';
+  var teamsBtn = document.getElementById('games-teams-btn');
+  if (teamsBtn) teamsBtn.style.display = 'flex';
 }
 function loadGamesList(date) {
   window._gamesDate = date || window._gamesDate || _todayLocal();
@@ -16327,6 +16355,98 @@ function _ppRender() {
   if (window._ppTab === 'ws') { el.innerHTML = _ppFinalsHtml(); return; }
   var league = window._ppTab;
   el.innerHTML = _ppBracketHtml(league) + _ppWildCardStandingsHtml(league) + _ppPlayItOutHtml(league) + _ppStandingsHtml(league);
+}
+
+// ══ TEAM PREFERENCES — favorite team (one) + any number of followed
+// teams, per sport. Stored at users/{uid}/teamPrefs/{sport} as
+// {favorite, following, updatedAt}, written in full on every toggle
+// (simplest — these are small documents, no need for incremental
+// updates). window._tpTeams caches the fetched team list per visit;
+// window._tpPrefs holds the current {favorite, following} state.
+function _tpTeamsUrl(sport) {
+  if (sport === 'mlb') return '/api/mlb?mode=teams';
+  return '/api/espn?league=' + encodeURIComponent(sport) + '&mode=teams';
+}
+
+window._tpSport = null;
+window._tpTeams = [];
+window._tpPrefs = { favorite: null, following: [] };
+
+function openTeamPrefs(sport) {
+  window._tpSport = sport;
+  var sportMeta = GAMES_SPORTS.filter(function (s) { return s.key === sport; })[0];
+  var titleEl = document.getElementById('tp-title');
+  if (titleEl) titleEl.textContent = (sportMeta ? sportMeta.name : sport.toUpperCase()) + ' Teams';
+  var searchEl = document.getElementById('tp-search');
+  if (searchEl) searchEl.value = '';
+  var listEl = document.getElementById('tp-list');
+  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading teams…</div>';
+  nav('team-prefs');
+
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  var prefsPromise = (user && window.db)
+    ? window.db.collection('users').doc(user.uid).collection('teamPrefs').doc(sport).get()
+      .then(function (doc) { return doc.exists ? doc.data() : { favorite: null, following: [] }; })
+      .catch(function (err) { console.error('Load team prefs error:', err); return { favorite: null, following: [] }; })
+    : Promise.resolve({ favorite: null, following: [] });
+
+  Promise.all([
+    fetch(_tpTeamsUrl(sport)).then(function (r) { return r.json(); }).catch(function () { return { teams: [] }; }),
+    prefsPromise
+  ]).then(function (results) {
+    if (window._tpSport !== sport) return; // superseded by a later visit
+    window._tpTeams = (results[0] && results[0].teams) || [];
+    window._tpPrefs = { favorite: results[1].favorite || null, following: results[1].following || [] };
+    if (!window._tpTeams.length) {
+      if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load the team list right now.</div>';
+      return;
+    }
+    _tpRenderList();
+  });
+}
+
+function _tpFilterList() { _tpRenderList(); }
+
+function _tpRenderList() {
+  var listEl = document.getElementById('tp-list');
+  if (!listEl) return;
+  var query = ((document.getElementById('tp-search') || {}).value || '').trim().toLowerCase();
+  var teams = query ? window._tpTeams.filter(function (t) { return t.name.toLowerCase().indexOf(query) !== -1; }) : window._tpTeams;
+  if (!teams.length) { listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">No teams match “' + _escapeHtml(query) + '”.</div>'; return; }
+  listEl.innerHTML = teams.map(function (t) {
+    var isFav = window._tpPrefs.favorite === t.name;
+    var isFollowing = window._tpPrefs.following.indexOf(t.name) !== -1;
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:0.5px solid rgba(255,255,255,.06)">' +
+      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFavorite(this.dataset.team)" style="cursor:pointer;font-size:19px;width:24px;text-align:center;flex-shrink:0;color:' + (isFav ? '#F2C869' : 'rgba(255,255,255,.25)') + '">' + (isFav ? '★' : '☆') + '</div>' +
+      '<div style="flex:1;font-size:14px;font-weight:600;color:#fff">' + _escapeHtml(t.name) + '</div>' +
+      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFollow(this.dataset.team)" style="cursor:pointer;width:22px;height:22px;border-radius:7px;border:1.5px solid ' + (isFollowing ? 'rgba(124,242,156,.5)' : 'rgba(255,255,255,.2)') + ';background:' + (isFollowing ? 'rgba(124,242,156,.18)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#9be8ac;font-size:13px;font-weight:800">' + (isFollowing ? '✓' : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _tpSavePrefs() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db || !window._tpSport) return;
+  window.db.collection('users').doc(user.uid).collection('teamPrefs').doc(window._tpSport)
+    .set({ favorite: window._tpPrefs.favorite, following: window._tpPrefs.following, updatedAt: Date.now() })
+    .catch(function (err) {
+      console.error('Save team prefs error:', err);
+      if (typeof ib_toast === 'function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'check Firestore rules'));
+    });
+}
+
+function tpToggleFavorite(teamName) {
+  window._tpPrefs.favorite = (window._tpPrefs.favorite === teamName) ? null : teamName;
+  _tpRenderList();
+  _tpSavePrefs();
+}
+
+function tpToggleFollow(teamName) {
+  var idx = window._tpPrefs.following.indexOf(teamName);
+  if (idx === -1) window._tpPrefs.following.push(teamName);
+  else window._tpPrefs.following.splice(idx, 1);
+  _tpRenderList();
+  _tpSavePrefs();
 }
 
 function openGameScreen(gamePk, away, home, sport, date) {
