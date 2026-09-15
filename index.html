@@ -8196,7 +8196,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.22.3-watching-onscreen-debug';
+window.INNINGS_BUILD = 'v5.23.0-live-situation-matchup-plays';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9819,12 +9819,19 @@ function futureRemoveBoxScore(id) {
 
 // Shared renderer — used both in the create-moment preview (light card) and
 // the memory detail view (frosted dark card over the photo backdrop).
+function _ordinalSuffix(n) {
+  if (n == null) return '';
+  var suf = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
+}
+
 function _boxScoreCardHtml(box, dark) {
   if (!box || !box.home) return '';
   var color = dark ? '#fff' : 'var(--black)';
   var subColor = dark ? 'rgba(255,255,255,0.65)' : 'var(--subtle)';
   var bg = dark ? 'rgba(255,255,255,0.14)' : 'var(--bg)';
   var border = dark ? 'none' : '0.5px solid var(--rule)';
+  var ruleColor = dark ? 'rgba(255,255,255,.1)' : 'var(--rule)';
   var innings = box.innings || [];
   // `label` covers quarters/periods ("Q1", "1st") where the old MLB-only
   // `num` (a plain inning number) doesn't fit — falls back to num so
@@ -9844,13 +9851,67 @@ function _boxScoreCardHtml(box, dark) {
   var highlightLines = (box.highlights || []).slice(0, 4).map(function(h){
     return '<div style="font-size:11px;color:' + subColor + ';margin-top:3px;line-height:1.4">' + _escapeHtml((h.emoji || '') + ' ' + (h.text || '')) + '</div>';
   }).join('');
+
+  // MLB-only for now — balls/strikes/bases/current-batter don't have a
+  // football equivalent, that'd need its own design (down/distance,
+  // current drive) rather than reusing this.
+  var situationHtml = '';
+  if (box.situation) {
+    var s = box.situation;
+    var baseFill = function (on) { return on ? '#7CF29C' : 'rgba(255,255,255,.18)'; };
+    var basesSvg = '<svg width="40" height="40" viewBox="0 0 60 60" style="flex-shrink:0">' +
+      '<polygon points="30,10 50,30 30,50 10,30" fill="none" stroke="' + subColor + '" stroke-width="1.5"/>' +
+      '<circle cx="30" cy="10" r="4.5" fill="' + baseFill(s.bases.second) + '"/>' +
+      '<circle cx="10" cy="30" r="4.5" fill="' + baseFill(s.bases.third) + '"/>' +
+      '<circle cx="50" cy="30" r="4.5" fill="' + baseFill(s.bases.first) + '"/>' +
+      '</svg>';
+    var outsDots = [0, 1, 2].map(function (i) {
+      return '<span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:' + (s.outs != null && i < s.outs ? '#E8622C' : 'rgba(255,255,255,.15)') + '"></span>';
+    }).join('');
+    situationHtml = '<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+      basesSvg +
+      '<div style="flex:1"><div style="font-size:14px;font-weight:800;color:' + color + '">' + (s.balls != null ? s.balls : '-') + '–' + (s.strikes != null ? s.strikes : '-') + '</div>' +
+      '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em">Balls–Strikes</div>' +
+      '<div style="margin-top:5px">' + outsDots + '</div></div>' +
+      '<div style="text-align:right;font-size:12px;font-weight:700;color:#A89FE8">' + (s.half === 'top' ? '▲' : '▼') + ' ' + _escapeHtml(_ordinalSuffix(s.inning)) +
+      '<div style="font-size:9px;color:' + subColor + ';font-weight:600;text-transform:uppercase;margin-top:2px">' + (s.half === 'top' ? 'Top' : 'Bottom') + '</div></div>' +
+      '</div>';
+  }
+
+  var matchupHtml = '';
+  if (box.matchup && (box.matchup.pitcher || box.matchup.batter)) {
+    var mp = box.matchup.pitcher, mb = box.matchup.batter;
+    matchupHtml = '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+      '<div style="flex:1;min-width:0"><div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em">Pitching</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((mp && mp.name) || '—') + '</div>' +
+      (mp && mp.line ? '<div style="font-size:10.5px;color:#CECBF6;margin-top:1px">' + _escapeHtml(mp.line) + '</div>' : '') + '</div>' +
+      '<div style="font-size:10px;color:' + subColor + ';font-weight:700;flex-shrink:0">VS</div>' +
+      '<div style="flex:1;min-width:0;text-align:right"><div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em">At bat</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + color + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((mb && mb.name) || '—') + '</div>' +
+      (mb && mb.line ? '<div style="font-size:10.5px;color:#CECBF6;margin-top:1px">' + _escapeHtml(mb.line) + '</div>' : '') + '</div>' +
+      '</div>';
+  }
+
+  var playsHtml = '';
+  if (box.recentPlays && box.recentPlays.length) {
+    playsHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+      box.recentPlays.map(function (p) {
+        var tag = (p.half === 'top' ? 'T' : 'B') + (p.inning || '');
+        return '<div style="display:flex;gap:9px;margin-bottom:7px"><div style="flex-shrink:0;width:24px;font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
+          '<div style="font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div></div>';
+      }).join('') + '</div>';
+  }
+
   return '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
       '<div style="font-size:10px;color:' + subColor + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + _escapeHtml(box.status || 'Final') + '</div>' +
     '</div>' +
     (innings.length ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
-    (box.venue ? '<div style="font-size:11px;color:' + subColor + '">' + _escapeHtml(box.venue) + '</div>' : '') +
+    situationHtml +
+    matchupHtml +
+    playsHtml +
+    (box.venue ? '<div style="font-size:11px;color:' + subColor + ';margin-top:10px">' + _escapeHtml(box.venue) + '</div>' : '') +
     decisionLine +
     hrLines +
     highlightLines +
