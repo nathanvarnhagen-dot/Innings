@@ -108,21 +108,40 @@ module.exports = async function handler(req, res) {
       // wrong-domain issue) — moderate-high confidence in this shape,
       // but still not tested against a live response.
       //
-      // CFB needs its own confirmed fix: college football has 762 teams
-      // across every division (FBS, FCS, DII/DIII), and without
-      // groups=80 (the documented code for "all FBS") the endpoint
-      // returns some other default slice that a plain limit doesn't
-      // reliably cover — which is exactly how a real FBS/Big Ten school
-      // like Oregon went missing. groups=80 scopes this to FBS only,
-      // which is what actually has games in this app anyway.
-      const groupsParam = (league === 'cfb') ? '&groups=80' : '';
-      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300' + groupsParam;
+      // CFB is on its second fix: college football has 762 teams across
+      // every division (FBS, FCS, DII/DIII). The first attempt added
+      // groups=80 on site.api.espn.com, which turned out not to be
+      // enough on its own — Oregon (a real FBS/Big Ten school) was
+      // still missing after that. This version switches to
+      // site.web.api.espn.com with groups=80&groupType=conference&
+      // enable=groups, a combination confirmed working by someone who
+      // hit this exact problem (not a guess this time) — but since one
+      // "confirmed" fix already turned out incomplete, a debug block is
+      // included below so if Oregon is STILL missing, the actual count
+      // and whether it's present are visible immediately by hitting
+      // this URL directly, instead of a third blind attempt.
+      const cfbParams = '&groups=80&groupType=conference&enable=groups';
+      const host = (league === 'cfb') ? 'site.web.api.espn.com' : 'site.api.espn.com';
+      const params = (league === 'cfb') ? cfbParams : '';
+      const url = 'https://' + host + '/apis/site/v2/sports/' + path + '/teams?limit=300' + params;
       const r = await fetch(url);
       const data = await r.json();
       const list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
       const teams = (list.teams || []).map(function (t) {
         return { id: t.team && t.team.id, name: t.team && (t.team.displayName || t.team.name) };
       }).filter(function (t) { return t.name; }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      if (league === 'cfb') {
+        res.status(200).json({
+          teams: teams,
+          debug: {
+            totalCount: teams.length,
+            hasOregon: teams.some(function (t) { return /oregon/i.test(t.name); }),
+            topLevelKeys: Object.keys(data || {}),
+            hasSports: Array.isArray(data.sports)
+          }
+        });
+        return;
+      }
       res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
       res.status(200).json({ teams: teams });
       return;
@@ -152,7 +171,8 @@ function summarizeEvent(event) {
     home: (parts.home.team && parts.home.team.displayName) || null,
     awayScore: parts.away.score != null ? Number(parts.away.score) : null,
     homeScore: parts.home.score != null ? Number(parts.home.score) : null,
-    venue: (parts.comp.venue && parts.comp.venue.fullName) || null
+    venue: (parts.comp.venue && parts.comp.venue.fullName) || null,
+    startTime: event.date || null
   };
 }
 
