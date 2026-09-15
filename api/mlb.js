@@ -56,7 +56,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, or pregame' });
+    if (mode === 'standings') {
+      const season = req.query.season || new Date().getFullYear();
+      const url = 'https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=' + encodeURIComponent(season) + '&standingsTypes=regularSeason';
+      const r = await fetch(url);
+      const data = await r.json();
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      res.status(200).json(summarizeStandings(data));
+      return;
+    }
+
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, or standings' });
   } catch (err) {
     res.status(500).json({ error: 'MLB lookup failed' });
   }
@@ -317,4 +327,80 @@ function _pregameRowFromFeed(obj) {
     pa: pa,
     ops: batting.ops != null ? Number(batting.ops) : 0
   };
+}
+
+// ── PLAYOFF PICTURE — division standings, wild card race, and bracket
+// seeding, all computed from raw win/loss records rather than trusting
+// the Stats API's own divisionRank/wildCardRank fields. Those fields
+// exist on the real response but their exact semantics near the wild
+// card cutline weren't verified against a live response in this
+// session, so seeding is derived independently here from wins/losses,
+// which every standings response reliably includes. If team names or
+// division names come back oddly formatted, that's the one part of
+// this endpoint's shape that's assumed rather than confirmed.
+function _winPct(t) { return (t.w + t.l) > 0 ? t.w / (t.w + t.l) : 0; }
+
+function summarizeStandings(data) {
+  var divisions = [];
+  (data.records || []).forEach(function (rec) {
+    var leagueId = rec.league && rec.league.id;
+    var league = leagueId === 103 ? 'al' : (leagueId === 104 ? 'nl' : null);
+    if (!league) return;
+    var divName = ((rec.division && rec.division.name) || '').replace('American League', 'AL').replace('National League', 'NL');
+    var teams = (rec.teamRecords || []).map(function (tr) {
+      return { name: (tr.team && tr.team.name) || '', w: tr.wins != null ? tr.wins : 0, l: tr.losses != null ? tr.losses : 0 };
+    });
+    teams.sort(function (a, b) { return _winPct(b) - _winPct(a); });
+    divisions.push({ league: league, name: divName, teams: teams });
+  });
+
+  var result = {};
+  ['al', 'nl'].forEach(function (leagueKey) {
+    var leagueDivisions = divisions.filter(function (d) { return d.league === leagueKey; });
+    if (!leagueDivisions.length) return;
+
+    var divWinners = leagueDivisions.map(function (d) { return Object.assign({}, d.teams[0], { division: d.name }); });
+    divWinners.sort(function (a, b) { return _winPct(b) - _winPct(a); });
+
+    var nonWinners = [];
+    leagueDivisions.forEach(function (d) {
+      d.teams.slice(1).forEach(function (t) { nonWinners.push(Object.assign({}, t, { division: d.name })); });
+    });
+    nonWinners.sort(function (a, b) { return _winPct(b) - _winPct(a); });
+    var wildCards = nonWinners.slice(0, 3);
+    var chasers = nonWinners.slice(3, 5);
+    var wcNames = {}; wildCards.forEach(function (t) { wcNames[t.name] = true; });
+
+    var seeds = divWinners.map(function (t, i) { return { seed: i + 1, team: _teamShortName(t.name), rec: t.w + '-' + t.l, bye: i < 2 }; })
+      .concat(wildCards.map(function (t, i) { return { seed: i + 4, team: _teamShortName(t.name), rec: t.w + '-' + t.l }; }));
+
+    result[leagueKey] = {
+      seeds: seeds,
+      wildcardRace: wildCards.map(function (t) { return { team: _teamShortName(t.name), w: t.w, l: t.l, status: 'in' }; })
+        .concat(chasers.map(function (t) { return { team: _teamShortName(t.name), w: t.w, l: t.l, status: 'out' }; })),
+      divisions: leagueDivisions.map(function (d) {
+        return {
+          name: d.name,
+          teams: d.teams.map(function (t) {
+            return { name: _teamShortName(t.name), w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
+          })
+        };
+      })
+    };
+  });
+  return result;
+}
+
+// Same short-nickname heuristic the game recap already uses — last word
+// of the full team name ("Tampa Bay Rays" -> "Rays") — since there's no
+// abbreviation field being carried through this endpoint either. One
+// real collision confirmed by testing against actual MLB team names:
+// "Boston Red Sox" and "Chicago White Sox" both end in "Sox", so those
+// two are special-cased to keep both words.
+function _teamShortName(name) {
+  if (!name) return '';
+  if (/Red Sox$/.test(name)) return 'Red Sox';
+  if (/White Sox$/.test(name)) return 'White Sox';
+  var parts = name.trim().split(' ');
+  return parts[parts.length - 1];
 }
