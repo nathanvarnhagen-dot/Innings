@@ -8211,7 +8211,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.26.0-game-chat-calendar';
+window.INNINGS_BUILD = 'v5.26.1-play-reply-tab-switch';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -13725,7 +13725,18 @@ function _setReplyTarget(collection, msgId, author, text) {
 // to react to or delete, so msgId is null. That's fine: nothing ever
 // looks up a play's own doc, it's just quoted context on whatever new
 // chat message gets sent.
+// Replying to a play works exactly like replying to a message — same
+// {collection, msgId, author, text} shape the reply preview/consume/
+// quote machinery already handles — except there's no real message doc
+// to react to or delete, so msgId is null. That's fine: nothing ever
+// looks up a play's own doc, it's just quoted context on whatever new
+// chat message gets sent. Switches to the Chat tab FIRST: the reply
+// button lives on the Cheat Sheet tab, and _setReplyTarget's own
+// .focus() call is a no-op on a still-hidden, display:none input — the
+// person needs to already be looking at Chat for anything to visibly
+// happen.
 function _replyToPlay(tag, text) {
+  if (typeof gameDetailTab === 'function') gameDetailTab('chat');
   _setReplyTarget('gameChats', null, tag || 'Play', text || '');
 }
 
