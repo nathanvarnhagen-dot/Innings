@@ -66,7 +66,19 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, or standings' });
+    if (mode === 'teams') {
+      const url = 'https://statsapi.mlb.com/api/v1/teams?sportId=1';
+      const r = await fetch(url);
+      const data = await r.json();
+      const teams = (data.teams || []).map(function (t) {
+        return { id: t.id, name: t.name };
+      }).filter(function (t) { return t.name; }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json({ teams: teams });
+      return;
+    }
+
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, or teams' });
   } catch (err) {
     res.status(500).json({ error: 'MLB lookup failed' });
   }
