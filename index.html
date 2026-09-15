@@ -2033,6 +2033,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="game-chat-msgs" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
   <div id="game-chat-input-zone" class="input-zone" style="display:none;flex-direction:column;align-items:stretch;gap:8px">
+    <div id="game-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
       <input id="game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGameMessage();}">
       <button class="send-btn" onclick="sendGameMessage()"><i class="ti ti-send"></i></button>
@@ -8210,7 +8211,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.25.0-football-field-plays';
+window.INNINGS_BUILD = 'v5.26.0-game-chat-calendar';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9839,7 +9840,7 @@ function _ordinalSuffix(n) {
   return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
 }
 
-function _boxScoreCardHtml(box, dark) {
+function _boxScoreCardHtml(box, dark, allowPlayReply) {
   if (!box || !box.home) return '';
   var color = dark ? '#fff' : 'var(--black)';
   var subColor = dark ? 'rgba(255,255,255,0.65)' : 'var(--subtle)';
@@ -9942,8 +9943,11 @@ function _boxScoreCardHtml(box, dark) {
       box.recentPlays.map(function (p) {
         var tag = p.tag != null ? p.tag : ((p.half === 'top' ? 'T' : 'B') + (p.inning || ''));
         var tagWidth = p.tag != null ? '48px' : '24px';
-        return '<div style="display:flex;gap:9px;margin-bottom:7px"><div style="flex-shrink:0;width:' + tagWidth + ';font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
-          '<div style="font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div></div>';
+        var replyBtn = allowPlayReply
+          ? '<span data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="_replyToPlay(this.dataset.tag,this.dataset.text)" title="Reply to this play" style="flex-shrink:0;color:' + subColor + ';font-size:13px;cursor:pointer;padding:0 2px">↩</span>'
+          : '';
+        return '<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:7px"><div style="flex-shrink:0;width:' + tagWidth + ';font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
+          '<div style="flex:1;font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div>' + replyBtn + '</div>';
       }).join('') + '</div>';
   }
 
@@ -10790,6 +10794,7 @@ function loadMoments() {
       updateProfileStats(arr);
       if (typeof renderCalendar === 'function') renderCalendar();
       if (typeof loadFutureMoments === 'function') loadFutureMoments();
+      if (typeof loadWatchedGamesForCalendar === 'function') loadWatchedGamesForCalendar();
     })
     .catch(function(err) {
       console.error('Load moments error:', err);
@@ -11056,6 +11061,29 @@ function _futureBgStyle(m) {
     return 'background-image:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.6)),url(' + m.coverPhoto + ');background-size:cover;background-position:center';
   }
   return 'background:' + theme;
+}
+
+// ── WATCHED GAMES ON THE CALENDAR — same synthesis pattern renderCalendar()
+// already uses for Outside Lands and future plans: load once, cache by id,
+// and let renderCalendar() fold them into momentsByDate on its own date.
+// Only watching docs with a date attached can be placed — that field was
+// added alongside this feature, so anything marked Watching before this
+// shipped won't have one and just won't show up here (it's still fully
+// intact under Watching/the game screen itself, just not calendar-dated).
+window._watchedGamesCache = {};
+function loadWatchedGamesForCalendar() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { window._watchedGamesCache = {}; return; }
+  window.db.collection('users').doc(user.uid).collection('watching').get().then(function (snap) {
+    var cache = {};
+    snap.forEach(function (doc) {
+      var d = doc.data() || {};
+      if (!d.date) return;
+      cache[doc.id] = Object.assign({ _id: doc.id }, d);
+    });
+    window._watchedGamesCache = cache;
+    if (typeof renderCalendar === 'function') renderCalendar();
+  }).catch(function (err) { console.error('Load watched games for calendar error:', err); });
 }
 
 function loadFutureMoments() {
@@ -13358,6 +13386,14 @@ function renderCalendar() {
     });
   }
 
+  // Games marked Watching, on whichever date they were actually played
+  var watchedCache = window._watchedGamesCache || {};
+  Object.keys(watchedCache).forEach(function(id){
+    var g = watchedCache[id];
+    if (!g.date) return;
+    (momentsByDate[g.date] = momentsByDate[g.date] || []).push(Object.assign({}, g, { _id: id, _watchedGame: true }));
+  });
+
   if (window._calYear == null) {
     var today0 = new Date();
     window._calYear = today0.getFullYear();
@@ -13491,6 +13527,14 @@ function _calRenderDayDetail(momentsByDate) {
           '<div style="font-size:11px;font-weight:700;color:#A89FE8;margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Upcoming</div></div>' +
         '</div>';
       }
+      if (m._watchedGame) {
+        var sportEmoji = { mlb: '⚾', nfl: '🏈', cfb: '🏈', nba: '🏀', wnba: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[m.sport] || '🏆';
+        return '<div data-gamepk="' + _escapeHtml(String(m.gamePk)) + '" data-away="' + _escapeHtml(m.away || '') + '" data-home="' + _escapeHtml(m.home || '') + '" data-sport="' + _escapeHtml(m.sport || 'mlb') + '" data-date="' + _escapeHtml(m.date || '') + '" onclick="openGameScreen(this.dataset.gamepk,this.dataset.away,this.dataset.home,this.dataset.sport,this.dataset.date)" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
+          '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + sportEmoji + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((m.away || '?') + ' @ ' + (m.home || '?')) + '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:#A89FE8;margin-top:1px;text-transform:uppercase;letter-spacing:0.04em">Watched · tap for chat</div></div>' +
+        '</div>';
+      }
       var emoji = (m.vibe || '✨').trim().split(' ')[0];
       return '<div onclick="openMemory(\'' + m._id + '\')" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
         '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + _escapeHtml(emoji) + '</div>' +
@@ -13602,6 +13646,7 @@ function _reactionSheetDelete() {
   else if (target.collection === 'groupGameChat') deleteGroupGameMessage(target.msgId);
   else if (target.collection === 'birthdayChat') deleteBirthdayMessage(target.msgId);
   else if (target.collection === 'birthdayStopChat') deleteBdayStopMessage(target.msgId);
+  else if (target.collection === 'gameChats') deleteGameChatMessage(target.msgId);
 }
 
 // ── EDIT MESSAGE — reuses the same {collection, msgId} the reaction sheet
@@ -13648,7 +13693,8 @@ var REPLY_PREVIEW_MAP = {
   groupChats: { chip: 'group-reply-preview', field: 'group-chat-field' },
   groupGameChat: { chip: 'group-game-reply-preview', field: 'gd-game-chat-field' },
   birthdayChat: { chip: 'bday-reply-preview', field: 'bday-chat-field' },
-  birthdayStopChat: { chip: 'bday-stop-reply-preview', field: 'bday-stop-chat-field' }
+  birthdayStopChat: { chip: 'bday-stop-reply-preview', field: 'bday-stop-chat-field' },
+  gameChats: { chip: 'game-reply-preview', field: 'game-chat-field' }
 };
 
 function _reactionSheetReply() {
@@ -13671,6 +13717,16 @@ function _setReplyTarget(collection, msgId, author, text) {
   var mapEntry = REPLY_PREVIEW_MAP[collection];
   var field = mapEntry && document.getElementById(mapEntry.field);
   if (field) field.focus();
+}
+
+// Replying to a play works exactly like replying to a message — same
+// {collection, msgId, author, text} shape the reply preview/consume/
+// quote machinery already handles — except there's no real message doc
+// to react to or delete, so msgId is null. That's fine: nothing ever
+// looks up a play's own doc, it's just quoted context on whatever new
+// chat message gets sent.
+function _replyToPlay(tag, text) {
+  _setReplyTarget('gameChats', null, tag || 'Play', text || '');
 }
 
 function _cancelReply() {
@@ -15586,7 +15642,11 @@ function _gamesLabelTap() {
 function openGameFromList(i) {
   var g = (window._gamesListCache || [])[i];
   if (!g) return;
-  openGameScreen(g.gamePk, g.away, g.home, window._gamesSport);
+  // NFL's week view tags each game with its own date (_dateIso, since a
+  // week spans several days); MLB/CFB's flat day list uses whichever
+  // single date is currently being browsed.
+  var date = g._dateIso || window._gamesDate || null;
+  openGameScreen(g.gamePk, g.away, g.home, window._gamesSport, date);
 }
 
 // ── GAMES SPORT PICKER — lets you choose a league instead of always
@@ -15774,8 +15834,8 @@ function pickCalendarDate(iso) {
 // ── GAME DETAIL — cheat sheet + open chat for one specific game.
 window._activeBrowseGame = null;
 
-function openGameScreen(gamePk, away, home, sport) {
-  window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: sport || 'mlb' };
+function openGameScreen(gamePk, away, home, sport, date) {
+  window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: sport || 'mlb', date: date || null };
   var titleEl = document.getElementById('game-detail-title');
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
   var rowEl = document.getElementById('game-watching-with-row');
@@ -15840,7 +15900,7 @@ function loadGameCheatSheet(gamePk) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
       var started = !!box && !box.error && (_isGameStatusLive(box.status) || _isGameConcluded(box.status));
       if (!started) return; // not started yet — cheat sheet alone is correct, nothing to prepend
-      var html = _boxScoreCardHtml(box, true);
+      var html = _boxScoreCardHtml(box, true, true);
       if (!html) return;
       window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
       renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
@@ -16023,7 +16083,7 @@ function toggleGameWatching() {
   ref.get().then(function (doc) {
     if (doc.exists) return ref.delete().then(function () { _setWatchButtonState(false); });
     return ref.set({
-      gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, addedAt: Date.now()
+      gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, date: g.date || null, addedAt: Date.now()
     }).then(function () {
       _setWatchButtonState(true);
       _notifyFriendsAlreadyWatching(g);
@@ -16242,7 +16302,7 @@ function openLiveFeedGame(i) {
   if (!r) return;
   var away = (r.box && r.box.away) || r.g.away;
   var home = (r.box && r.box.home) || r.g.home;
-  openGameScreen(r.g.gamePk, away, home, r.g.sport || 'mlb');
+  openGameScreen(r.g.gamePk, away, home, r.g.sport || 'mlb', r.g.date || null);
 }
 
 // ── OPEN GAME CHAT — flat gameChats collection filtered by gamePk, with
@@ -16276,14 +16336,17 @@ function renderGameChat(msgs) {
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = msgs.map(function (c) {
     var mine = c.uid && c.uid === myUid;
+    var badges = _reactionBadgesHtml(c.reactions, true);
     if (mine) {
       return '<div class="msg" style="justify-content:flex-end"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
-        '<div class="bubble me"><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+        '<div class="bubble me" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
-      '<div class="bubble them"><div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + '</div></div>' +
+      '<div class="bubble them" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+      badges +
       '</div></div>';
   }).join('');
   var panel = document.getElementById('game-chat-panel');
@@ -16301,9 +16364,10 @@ function sendGameMessage() {
   var g = window._activeBrowseGame;
   var gamePk = g.gamePk;
   if (inp) inp.value = '';
-  window.db.collection('gameChats').add({
-    gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now()
-  }).then(function () {
+  var msgData = { gamePk: gamePk, uid: user.uid, author: author, text: text, ts: Date.now() };
+  var replyTo = _consumeReplyForSend('gameChats');
+  if (replyTo) msgData.replyTo = replyTo;
+  window.db.collection('gameChats').add(msgData).then(function () {
     _notifyFriendsWatchingOfChatMessage(g, text);
   }).catch(function (err) {
     console.error('Game chat send error:', err);
@@ -16413,6 +16477,12 @@ function deleteGroupGameMessage(msgId) {
   if (!window.db || !msgId) return;
   window.db.collection('groupGameChat').doc(msgId).delete()
     .catch(function(err){ console.error('Delete group game message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
+}
+
+function deleteGameChatMessage(msgId) {
+  if (!window.db || !msgId) return;
+  window.db.collection('gameChats').doc(msgId).delete()
+    .catch(function(err){ console.error('Delete game message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 function sendGroupGameMessage() {
