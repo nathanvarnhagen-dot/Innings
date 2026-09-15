@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.30.0-team-prefs-standings-debug';
+window.INNINGS_BUILD = 'v5.30.1-team-spotlight-cfb-teams-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -15614,6 +15614,53 @@ function _refreshPlayoffBtnVisibility() {
   var teamsBtn = document.getElementById('games-teams-btn');
   if (teamsBtn) teamsBtn.style.display = 'flex';
 }
+// ── FAVORITE/FOLLOWED TEAM SPOTLIGHT — the actual point of Team
+// Preferences: a favorite or followed team's game should surface at
+// the top of whichever list it appears in, not just sit stored and
+// unused. Cached per sport per session (teamPrefs rarely changes
+// mid-browse); _invalidateFavTeamsCache is called from Team
+// Preferences on every save so a change shows up on the very next
+// games-list render, not after a reload.
+window._favTeamsCache = {};
+function _loadFavTeams(sport) {
+  if (window._favTeamsCache[sport]) return Promise.resolve(window._favTeamsCache[sport]);
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return Promise.resolve({ favorite: null, following: [] });
+  return window.db.collection('users').doc(user.uid).collection('teamPrefs').doc(sport).get()
+    .then(function (doc) {
+      var d = doc.exists ? doc.data() : {};
+      var prefs = { favorite: d.favorite || null, following: d.following || [] };
+      window._favTeamsCache[sport] = prefs;
+      return prefs;
+    })
+    .catch(function (err) { console.error('Load favorite teams error:', err); return { favorite: null, following: [] }; });
+}
+function _invalidateFavTeamsCache(sport) { delete window._favTeamsCache[sport]; }
+
+function _gameInvolvesTeam(g, teamName) { return !!teamName && (g.away === teamName || g.home === teamName); }
+function _spotlightBadgeHtml(g, favTeams) {
+  if (_gameInvolvesTeam(g, favTeams.favorite)) return '<span style="color:#F2C869;font-size:13px;margin-right:5px">★</span>';
+  if ((favTeams.following || []).some(function (t) { return _gameInvolvesTeam(g, t); })) return '<span style="color:#9be8ac;font-size:11px;margin-right:5px">●</span>';
+  return '';
+}
+// Pulls favorite/followed games out to their own group (favorite-
+// involving games first within it) and returns whatever's left
+// separately, rather than just marking them in place — "at the top"
+// means actually moved there, not just badged where they already sat.
+function _splitSpotlight(games, favTeams) {
+  if (!favTeams.favorite && !(favTeams.following || []).length) return { spotlight: [], rest: games };
+  var spotlight = [], rest = [];
+  games.forEach(function (g) {
+    var isFav = _gameInvolvesTeam(g, favTeams.favorite);
+    var isFollowing = (favTeams.following || []).some(function (t) { return _gameInvolvesTeam(g, t); });
+    if (isFav || isFollowing) spotlight.push(g); else rest.push(g);
+  });
+  spotlight.sort(function (a, b) {
+    return (_gameInvolvesTeam(b, favTeams.favorite) ? 1 : 0) - (_gameInvolvesTeam(a, favTeams.favorite) ? 1 : 0);
+  });
+  return { spotlight: spotlight, rest: rest };
+}
+
 function loadGamesList(date) {
   window._gamesDate = date || window._gamesDate || _todayLocal();
   var requestedDate = window._gamesDate;
@@ -15627,32 +15674,43 @@ function loadGamesList(date) {
   if (todayLinkEl) { todayLinkEl.textContent = 'Jump to today'; todayLinkEl.style.display = requestedDate === today ? 'none' : 'block'; }
   if (!listEl) return;
   listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
-  fetch(_bsModalScheduleUrl(requestedSport, requestedDate))
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return; // superseded
-      var games = data.games || [];
-      window._gamesListCache = games;
-      if (!games.length) {
-        var sportMeta = GAMES_SPORTS.filter(function (s) { return s.key === requestedSport; })[0];
-        var emptyEmoji = (sportMeta && sportMeta.emoji) || '🏆';
-        var emptyName = (sportMeta && sportMeta.name) || 'league';
-        listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">' + emptyEmoji + '</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No ' + _escapeHtml(emptyName) + ' games on this day</div></div>';
-        return;
-      }
-      listEl.innerHTML = games.map(function (g, i) {
-        var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
-        return '<div onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">' +
-          '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
-          '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-          '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
-      }).join('');
-    })
-    .catch(function (err) {
-      if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return;
-      console.error('Load games list error:', err);
-      listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load games — try again.</div>';
-    });
+  Promise.all([
+    fetch(_bsModalScheduleUrl(requestedSport, requestedDate)).then(function (r) { return r.json(); }),
+    _loadFavTeams(requestedSport)
+  ]).then(function (results) {
+    var data = results[0], favTeams = results[1];
+    if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return; // superseded
+    var games = data.games || [];
+    window._gamesListCache = games;
+    if (!games.length) {
+      var sportMeta = GAMES_SPORTS.filter(function (s) { return s.key === requestedSport; })[0];
+      var emptyEmoji = (sportMeta && sportMeta.emoji) || '🏆';
+      var emptyName = (sportMeta && sportMeta.name) || 'league';
+      listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">' + emptyEmoji + '</div><div style="font-size:13px;color:rgba(255,255,255,.4)">No ' + _escapeHtml(emptyName) + ' games on this day</div></div>';
+      return;
+    }
+    var split = _splitSpotlight(games, favTeams);
+    var html = '';
+    if (split.spotlight.length) {
+      html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">Your teams</div>';
+      html += split.spotlight.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    }
+    html += split.rest.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    listEl.innerHTML = html;
+  }).catch(function (err) {
+    if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return;
+    console.error('Load games list error:', err);
+    listEl.innerHTML = '<div style="text-align:center;padding:24px 16px;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load games — try again.</div>';
+  });
+
+  function _gamesListCardHtml(g, i) {
+    var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
+    var favTeams = window._favTeamsCache[requestedSport] || { favorite: null, following: [] };
+    return '<div onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">' +
+      '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+      '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
+      '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+  }
 }
 
 // ── NFL WEEK BROWSER — NFL is the one sport here where "a week" is the
@@ -15745,16 +15803,20 @@ function loadFootballWeek(sport, tuesdayIso) {
   if (!listEl) return;
   var dates = _footballWeekDates(requestedWeek);
   listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
-  Promise.all(dates.map(function (iso) {
-    return fetch(_bsModalScheduleUrl(sport, iso))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var games = data.games || [];
-        games.forEach(function (g) { g._dateIso = iso; });
-        return games;
-      })
-      .catch(function () { return []; });
-  })).then(function (results) {
+  Promise.all([
+    Promise.all(dates.map(function (iso) {
+      return fetch(_bsModalScheduleUrl(sport, iso))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var games = data.games || [];
+          games.forEach(function (g) { g._dateIso = iso; });
+          return games;
+        })
+        .catch(function () { return []; });
+    })),
+    _loadFavTeams(sport)
+  ]).then(function (outer) {
+    var results = outer[0], favTeams = outer[1];
     if (window._gamesSport !== requestedSport || window._footballWeekTuesday[sport] !== requestedWeek) return; // superseded
     var allGames = [].concat.apply([], results);
     window._gamesListCache = allGames;
@@ -15764,29 +15826,49 @@ function loadFootballWeek(sport, tuesdayIso) {
       listEl.innerHTML = '<div style="text-align:center;padding:32px 16px"><div style="font-size:28px;margin-bottom:8px">' + emoji + '</div><div style="font-size:13px;color:rgba(255,255,255,.4)">' + label + '</div></div>';
       return;
     }
-    listEl.innerHTML = _renderFootballWeekHtml(allGames);
+    var split = _splitSpotlight(allGames, favTeams);
+    var html = '';
+    if (split.spotlight.length) {
+      html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px 8px">Your teams</div>';
+      html += split.spotlight.map(function (g) { return _footballGameCardHtml(g, favTeams, true); }).join('');
+      html += '<div style="height:6px"></div>';
+    }
+    html += _renderFootballWeekHtml(split.rest, favTeams);
+    listEl.innerHTML = html;
   });
 }
 
 // Not-yet-concluded games (scheduled or in progress) sort to the top,
 // grouped by the day they fall on, in chronological order; concluded
 // games move to their own section at the bottom, grouped the same way.
-function _renderFootballWeekHtml(games) {
+// `games` here has already had any favorite/followed games pulled out
+// by _splitSpotlight, so this only ever renders the remainder.
+function _renderFootballWeekHtml(games, favTeams) {
   var sortByDate = function (arr) {
     return arr.slice().sort(function (a, b) { return a._dateIso < b._dateIso ? -1 : a._dateIso > b._dateIso ? 1 : 0; });
   };
   var upcoming = sortByDate(games.filter(function (g) { return !_isGameConcluded(g.status); }));
   var concluded = sortByDate(games.filter(function (g) { return _isGameConcluded(g.status); }));
 
-  var html = _footballDayGroupedHtml(upcoming);
+  var html = _footballDayGroupedHtml(upcoming, favTeams);
   if (concluded.length) {
     html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;padding:16px 2px 8px">Concluded games</div>';
-    html += _footballDayGroupedHtml(concluded);
+    html += _footballDayGroupedHtml(concluded, favTeams);
   }
   return html;
 }
 
-function _footballDayGroupedHtml(games) {
+function _footballGameCardHtml(g, favTeams, withMargin) {
+  var idx = window._gamesListCache.indexOf(g);
+  var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
+  var badge = favTeams ? _spotlightBadgeHtml(g, favTeams) : '';
+  return '<div onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer' + (withMargin ? ';margin-bottom:8px' : '') + '">' +
+    '<div><div style="font-size:14px;font-weight:700;color:#fff">' + badge + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+    '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
+    '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+}
+
+function _footballDayGroupedHtml(games, favTeams) {
   var html = '';
   var lastDate = null;
   games.forEach(function (g) {
@@ -15794,12 +15876,7 @@ function _footballDayGroupedHtml(games) {
       lastDate = g._dateIso;
       html += '<div style="font-size:12px;font-weight:700;color:#A89FE8;padding:' + (html ? '10px' : '0') + ' 2px 6px">' + _dowName(g._dateIso) + '</div>';
     }
-    var idx = window._gamesListCache.indexOf(g);
-    var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : (g.status || 'Sheet');
-    html += '<div onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px">' +
-      '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
-      '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-      '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(String(scoreLabel)) + '</div></div>';
+    html += _footballGameCardHtml(g, favTeams, true);
   });
   return html;
 }
@@ -16429,6 +16506,7 @@ function _tpSavePrefs() {
   if (!user || !window.db || !window._tpSport) return;
   window.db.collection('users').doc(user.uid).collection('teamPrefs').doc(window._tpSport)
     .set({ favorite: window._tpPrefs.favorite, following: window._tpPrefs.following, updatedAt: Date.now() })
+    .then(function () { if (typeof _invalidateFavTeamsCache === 'function') _invalidateFavTeamsCache(window._tpSport); })
     .catch(function (err) {
       console.error('Save team prefs error:', err);
       if (typeof ib_toast === 'function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'check Firestore rules'));
