@@ -373,7 +373,7 @@ function extractFootballPlays(data) {
       if (p.start && p.start.down != null && p.start.distance != null) {
         tag += (downLabels[p.start.down] || (p.start.down + 'th')) + '&' + p.start.distance;
       }
-      plays.push({ tag: tag.trim(), text: p.text });
+      plays.push({ tag: tag.trim(), text: p.text, playId: p.id || null });
     });
   });
   return plays.slice(0, 5);
