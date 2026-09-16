@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.35.0-nba-wnba-mls-nwsl-live';
+window.INNINGS_BUILD = 'v5.35.1-batter-figure-boxscore-only';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10010,15 +10010,21 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   // same direction regardless of handedness.
   var silhouetteCx = (seq.batSide === 'L') ? 205 : 35;
   var flip = (seq.batSide === 'L');
-  var s = flip ? -1 : 1;
-  var batterSvg = '<g opacity="0.3" stroke="#fff" stroke-linecap="round" fill="none">' +
-    '<circle cx="' + silhouetteCx + '" cy="22" r="11" fill="#fff" stroke="none"/>' +
-    '<path d="M ' + silhouetteCx + ' 33 L ' + (silhouetteCx - 3) + ' 120" stroke-width="4"/>' +
-    '<path d="M ' + (silhouetteCx - 3) + ' 120 L ' + (silhouetteCx - 20) + ' 205" stroke-width="4"/>' +
-    '<path d="M ' + (silhouetteCx - 3) + ' 120 L ' + (silhouetteCx + 16) + ' 205" stroke-width="4"/>' +
-    '<path d="M ' + silhouetteCx + ' 60 L ' + (silhouetteCx + s * 20) + ' 85" stroke-width="4"/>' +
-    '<path d="M ' + (silhouetteCx + s * 20) + ' 85 L ' + (silhouetteCx - s * 8) + ' 15" stroke-width="6"/>' +
-    '<circle cx="' + (silhouetteCx - s * 8) + '" cy="15" r="3" fill="#fff" stroke="none"/>' +
+  // A filled, recognizable batter silhouette — head, torso, two legs
+  // planted in a stance, and a bat cocked back over the shoulder — built
+  // from solid rounded capsules (rotated rects) rather than thin stick
+  // lines, which read as a real silhouette instead of a wireframe.
+  // Authored facing right (as if right-handed); for a left-handed
+  // batter the whole group is mirrored around its own center with one
+  // outer transform, rather than flipping every coordinate by hand.
+  var mirrorAttr = flip ? ' transform="translate(' + (2 * silhouetteCx) + ',0) scale(-1,1)"' : '';
+  var batterSvg = '<g opacity="0.32"' + mirrorAttr + '>' +
+    '<circle cx="' + silhouetteCx + '" cy="18" r="10" fill="#fff"/>' +
+    '<rect x="' + (silhouetteCx - 7) + '" y="28" width="14" height="58" rx="7" fill="#fff"/>' +
+    '<rect x="' + (silhouetteCx - 7.5) + '" y="84" width="9" height="60" rx="4.5" fill="#fff" transform="rotate(-15,' + (silhouetteCx - 3) + ',84)"/>' +
+    '<rect x="' + (silhouetteCx - 7.5) + '" y="84" width="9" height="60" rx="4.5" fill="#fff" transform="rotate(20,' + (silhouetteCx - 3) + ',84)"/>' +
+    '<rect x="' + (silhouetteCx - 2) + '" y="34" width="8" height="38" rx="4" fill="#fff" transform="rotate(40,' + (silhouetteCx + 2) + ',34)"/>' +
+    '<rect x="' + (silhouetteCx - 1) + '" y="20" width="6" height="72" rx="3" fill="#fff" transform="rotate(-55,' + (silhouetteCx + 2) + ',20)"/>' +
     '</g>';
 
   var svg = '<svg viewBox="0 0 240 280" width="120" height="140" style="flex-shrink:0">' +
@@ -16965,8 +16971,19 @@ function loadGameCheatSheet(gamePk) {
   window._lastLiveBox = null;
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
   _stopGameLiveRefresh();
-  _refreshBoxScore(gamePk).then(function (isLive) { if (isLive) _startGameLiveRefresh(gamePk); });
-  _loadPregameSheet(gamePk, sport);
+  _refreshBoxScore(gamePk).then(function (isLive) {
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+    // _refreshBoxScore only ever sets boxScoreHtml once the game is live
+    // or concluded — its presence is the same signal loadGameCheatSheet
+    // needs here: has the game actually started. If so, the box score
+    // is all that's needed and the pregame lineup/roster cheat sheet
+    // never gets fetched at all, not just hidden underneath it.
+    if (window._gdPregame.boxScoreHtml) {
+      if (isLive) _startGameLiveRefresh(gamePk);
+      return;
+    }
+    _loadPregameSheet(gamePk, sport);
+  });
 }
 
 function _loadPregameSheet(gamePk, sport) {
@@ -17028,8 +17045,17 @@ function gameSheetExpand() {
 function renderGameCheatSheet() {
   var el = document.getElementById('game-sheet-panel');
   var state = window._gdPregame;
-  if (!el || !state || !state.data) return;
+  if (!el || !state) return;
   var scrollPos = el.scrollTop; // preserved across the innerHTML replace below — otherwise every live-refresh tick would jump the reader back to the top mid-read
+  if (!state.data) {
+    // No pregame data was ever fetched — either it hasn't loaded yet, or
+    // (once the game has started) it was deliberately never requested,
+    // since the box score is all that's needed at that point. Either
+    // way, show whatever box score HTML exists and stop — there's
+    // nothing else to render without state.data.
+    if (state.boxScoreHtml) { el.innerHTML = state.boxScoreHtml; el.scrollTop = scrollPos; }
+    return;
+  }
   var data = state.data;
   var side = data[state.side];
   if (!side) return;
