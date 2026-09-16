@@ -163,11 +163,17 @@ function summarize(data, gamePk) {
   // burned other parts of this app. Falls back to the most recently
   // completed at-bat if there's no play currently in progress (between
   // batters), so the diagram doesn't just go blank in the gap.
+  // Note: pitchSequence is built as soon as we know who's batting, even
+  // with zero pitches recorded yet (the very start of a fresh at-bat,
+  // 0-0 count) — the zone and a generic batter silhouette on the
+  // correct side are still worth showing at that moment, using a
+  // default zone size (3.5/1.5, an average MLB zone) since there's no
+  // pitch yet to read this batter's actual recorded zone from.
   var pitchSequence = null;
   if (abstractState === 'Live') {
     var currentPlay = (liveData.plays && liveData.plays.currentPlay) || allPlays[allPlays.length - 1];
-    if (currentPlay && currentPlay.playEvents) {
-      var pitchEvents = currentPlay.playEvents.filter(function (e) { return e.isPitch && e.pitchData && e.pitchData.coordinates; });
+    if (currentPlay && currentPlay.matchup && currentPlay.matchup.batter) {
+      var pitchEvents = (currentPlay.playEvents || []).filter(function (e) { return e.isPitch && e.pitchData && e.pitchData.coordinates; });
       var pitches = pitchEvents.map(function (e, i) {
         var coords = e.pitchData.coordinates || {};
         return {
@@ -179,17 +185,15 @@ function summarize(data, gamePk) {
           speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null
         };
       }).filter(function (p) { return p.px != null && p.pz != null; });
-      if (pitches.length) {
-        var lastEvent = pitchEvents[pitchEvents.length - 1];
-        pitchSequence = {
-          batter: (currentPlay.matchup && currentPlay.matchup.batter && currentPlay.matchup.batter.fullName) || null,
-          batterId: (currentPlay.matchup && currentPlay.matchup.batter && currentPlay.matchup.batter.id) || null,
-          batSide: (currentPlay.matchup && currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
-          zoneTop: lastEvent.pitchData.strikeZoneTop != null ? lastEvent.pitchData.strikeZoneTop : 3.5,
-          zoneBottom: lastEvent.pitchData.strikeZoneBottom != null ? lastEvent.pitchData.strikeZoneBottom : 1.5,
-          pitches: pitches
-        };
-      }
+      var lastEvent = pitchEvents.length ? pitchEvents[pitchEvents.length - 1] : null;
+      pitchSequence = {
+        batter: currentPlay.matchup.batter.fullName || null,
+        batterId: currentPlay.matchup.batter.id || null,
+        batSide: (currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
+        zoneTop: (lastEvent && lastEvent.pitchData.strikeZoneTop != null) ? lastEvent.pitchData.strikeZoneTop : 3.5,
+        zoneBottom: (lastEvent && lastEvent.pitchData.strikeZoneBottom != null) ? lastEvent.pitchData.strikeZoneBottom : 1.5,
+        pitches: pitches
+      };
     }
   }
 
