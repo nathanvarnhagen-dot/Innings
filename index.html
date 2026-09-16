@@ -716,6 +716,81 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   .gh .gh-draw{stroke-dashoffset:0!important}
   .gh .gh-spark,.gh .gh-fly{display:none}
 }
+/* Live screen — option C (v5.41.0). The live hero carries one mode class:
+   gh-m-intro (first open: highlights show, fly up, scoreboard condenses),
+   gh-m-compact (settled), gh-m-opening / gh-m-open (highlights expanded),
+   gh-m-closing (collapsing again). Static modes are what live refreshes
+   re-render with, so nothing replays every 15 seconds. */
+.gh-sb-score{font-size:52px;line-height:.95;display:block}
+.gh-sb-badge{width:42px;height:42px;font-size:14px}
+.gh-sb-name{max-height:18px;overflow:hidden;white-space:nowrap}
+.gh-strip{max-height:100px;overflow:hidden}
+.gh-mini{display:flex;align-items:center;gap:6px;overflow:hidden;max-height:0;opacity:0}
+.gh-hl{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:900px;padding:1px}
+.gh-hlrow{display:flex;gap:12px;padding:0 12px}
+.gh-hlrow.gh-hlhead{padding:0;justify-content:space-between;align-items:baseline}
+.gh-hlrow.gh-first{padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.08);box-shadow:0 0 0 1px rgba(168,159,232,.3)}
+.gh-hl-btn{height:32px;padding:0 10px 0 12px;border-radius:999px;border:1px solid rgba(168,159,232,.26);background:rgba(168,159,232,.1);color:#E9E5FF;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;font-family:inherit;cursor:pointer;flex-shrink:0}
+.gh-hl-count{min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#A89FE8;color:#1A1640;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.gh-hl-btn-new{animation:ghBtnPulse 1.6s ease-in-out infinite}
+@keyframes ghBtnPulse{0%,100%{box-shadow:0 0 0 0 rgba(168,159,232,.6)}50%{box-shadow:0 0 0 6px rgba(168,159,232,0)}}
+.gh-chev{transition:transform .25s ease}
+.gh-m-open .gh-chev,.gh-m-opening .gh-chev{transform:rotate(180deg)}
+@keyframes ghRowAway{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-190px) scale(.94)}}
+@keyframes ghCollapse{to{max-height:0;padding:0;margin-top:-14px}}
+@keyframes ghScoreS{to{font-size:34px}}
+@keyframes ghBadgeS{to{width:30px;height:30px;font-size:10.5px}}
+@keyframes ghNameS{to{max-height:0;opacity:0}}
+@keyframes ghStripS{to{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-top-width:0;border-bottom-width:0;margin-top:-14px}}
+@keyframes ghMiniIn{to{max-height:24px;opacity:1}}
+@keyframes ghScoreG{from{font-size:34px}}
+@keyframes ghBadgeG{from{width:30px;height:30px;font-size:10.5px}}
+@keyframes ghNameG{from{max-height:0;opacity:0}}
+@keyframes ghStripG{from{max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin-top:-14px}}
+/* settled compact */
+.gh-m-compact .gh-sb-score{font-size:34px}
+.gh-m-compact .gh-sb-badge{width:30px;height:30px;font-size:10.5px}
+.gh-m-compact .gh-sb-name{max-height:0;opacity:0}
+.gh-m-compact .gh-strip,.gh-m-compact .gh-hl{display:none}
+.gh-m-compact .gh-mini{max-height:24px;opacity:1}
+/* expanded */
+.gh-m-open .gh-mini,.gh-m-opening .gh-mini{display:none}
+.gh-m-opening .gh-sb-score{animation:ghScoreG .35s ease-out}
+.gh-m-opening .gh-sb-badge{animation:ghBadgeG .35s ease-out}
+.gh-m-opening .gh-sb-name{animation:ghNameG .35s ease-out}
+.gh-m-opening .gh-strip{animation:ghStripG .35s ease-out}
+.gh-m-opening .gh-hlrow{opacity:0;animation:ghUp .35s cubic-bezier(.2,.8,.2,1) forwards}
+/* first open */
+.gh-m-intro .gh-hlrow{opacity:0;animation:ghUp .5s cubic-bezier(.2,.8,.2,1) forwards,ghRowAway .55s cubic-bezier(.55,0,.8,.2) forwards}
+.gh-m-intro .gh-r0{animation-delay:.45s,3.40s}.gh-m-intro .gh-r1{animation-delay:.55s,3.46s}.gh-m-intro .gh-r2{animation-delay:.65s,3.52s}
+.gh-m-intro .gh-r3{animation-delay:.75s,3.58s}.gh-m-intro .gh-r4{animation-delay:.85s,3.64s}.gh-m-intro .gh-r5{animation-delay:.95s,3.70s}
+.gh-m-intro .gh-r6{animation-delay:1.05s,3.74s}.gh-m-intro .gh-r7{animation-delay:1.15s,3.78s}.gh-m-intro .gh-r8{animation-delay:1.25s,3.82s}
+.gh-m-intro .gh-hl{animation:ghCollapse .55s cubic-bezier(.6,0,.3,1) 3.85s forwards}
+.gh-m-intro .gh-sb-score{animation:ghScoreS .5s ease-in-out 4s forwards}
+.gh-m-intro .gh-sb-badge{animation:ghBadgeS .5s ease-in-out 4s forwards}
+.gh-m-intro .gh-sb-name{animation:ghNameS .4s ease-in-out 4s forwards}
+.gh-m-intro .gh-strip{animation:ghStripS .5s ease-in-out 4s forwards}
+.gh-m-intro .gh-mini{animation:ghMiniIn .4s ease-out 4.35s forwards}
+/* collapsing after the user closes it */
+.gh-m-closing .gh-hlrow{animation:ghRowAway .45s cubic-bezier(.55,0,.8,.2) forwards}
+.gh-m-closing .gh-r8,.gh-m-closing .gh-r7,.gh-m-closing .gh-r6{animation-delay:0s}
+.gh-m-closing .gh-r5{animation-delay:.02s}.gh-m-closing .gh-r4{animation-delay:.05s}.gh-m-closing .gh-r3{animation-delay:.08s}
+.gh-m-closing .gh-r2{animation-delay:.12s}.gh-m-closing .gh-r1{animation-delay:.16s}.gh-m-closing .gh-r0{animation-delay:.2s}
+.gh-m-closing .gh-hl{animation:ghCollapse .45s cubic-bezier(.6,0,.3,1) .35s forwards}
+.gh-m-closing .gh-sb-score{animation:ghScoreS .45s ease-in-out .45s forwards}
+.gh-m-closing .gh-sb-badge{animation:ghBadgeS .45s ease-in-out .45s forwards}
+.gh-m-closing .gh-sb-name{animation:ghNameS .35s ease-in-out .45s forwards}
+.gh-m-closing .gh-strip{animation:ghStripS .45s ease-in-out .45s forwards}
+.gh-m-closing .gh-mini{animation:ghMiniIn .35s ease-out .8s forwards}
+/* Live detail cards under the hero */
+.gh-detail{display:flex;flex-direction:column;gap:14px}
+.gh-card{border-radius:20px;padding:16px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2);color:#fff}
+.gh-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.gh-plays-row{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:.5px solid rgba(255,255,255,.07);cursor:pointer}
+.gh-reply{width:32px;height:32px;margin:-6px -6px 0 0;border-radius:50%;border:0;background:transparent;color:#B9B3E6;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:16px}
+.gh-ring-pitch{transform-box:fill-box;transform-origin:center;animation:ghPitchRing 1.8s ease-out infinite}
+@keyframes ghPitchRing{from{transform:scale(1);opacity:.75}to{transform:scale(2.2);opacity:0}}
+@media (prefers-reduced-motion: reduce){ .gh-ring-pitch{display:none} }
 /* Playoff Picture — bracket boxes, wild card race rows, interactive
    "play it out" pick pairs, division standings rows. Prefixed pp- to
    match the mockup this was built from. */
@@ -8433,7 +8508,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.40.1-game-over-status';
+window.INNINGS_BUILD = 'v5.41.0-live-screen-condensed';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10099,7 +10174,7 @@ var _SZ_SCALE = 70, _SZ_CENTER_X = 250, _SZ_Y_GROUND = 373.5217;
 function _szX(px) { return _SZ_CENTER_X + px * _SZ_SCALE; }
 function _szY(pz) { return _SZ_Y_GROUND - pz * _SZ_SCALE; }
 
-function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
+function _strikeZoneSectionHtml(seq, ruleColor, subColor, color, partsOnly) {
   if (!seq) return '';
   var zoneX1 = _szX(-0.83), zoneX2 = _szX(0.83);
   var zoneY1 = _szY(seq.zoneTop), zoneY2 = _szY(seq.zoneBottom);
@@ -10214,6 +10289,7 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
       '<div style="width:7px;height:7px;border-radius:50%;background:' + _pitchCallColor(label) + '"></div>' + label + '</div>';
   }).join('');
 
+  if (partsOnly) return { svg: svg, list: list, legend: legend }; // live game screen lays these out itself
   // Diagram full-width on top (the zone is the star, same as a
   // broadcast graphic), pitch list stacked below it — not side by side,
   // which is what was squeezing the zone into a small corner before.
@@ -10233,7 +10309,7 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
 // refresh tick — without external state, expanding it would silently
 // re-collapse on the next 15-second poll.
 window._bsDetailState = { expanded: false, side: 'away' };
-function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subColor, color) {
+function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subColor, color, bare) {
   if (!detail || (!detail.away.batters.length && !detail.home.batters.length)) return '';
   var state = window._bsDetailState;
   var teamData = detail[state.side] || { batters: [], pitchers: [] };
@@ -10271,6 +10347,12 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
       body += teamData.pitchers.map(function (p) { return statRow(p.name, p.id, null, [p.ip, p.h, p.r, p.er, p.bb, p.so]); }).join('');
     }
   }
+  if (bare) { // caller supplies its own card — header restyled to match it
+    header = '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:32px" onclick="toggleBoxScoreDetail()">' +
+      '<span class="gh-eyebrow">Box score</span>' +
+      '<span style="height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(168,159,232,.22);color:#D9D4FA;font-size:11.5px;font-weight:700;display:flex;align-items:center">' + (state.expanded ? 'Hide' : 'Show') + '</span></div>';
+    return header + body;
+  }
   return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' + header + body + '</div>';
 }
 
@@ -10301,6 +10383,11 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
   // (for final) linescore + decisions, so this card skips those pieces.
   opts = opts || {};
   var heroLive = opts.hero === 'live', heroFinal = opts.hero === 'final';
+  // Live MLB on the game screen: the restyled detail cards (v5.41.0)
+  if (heroLive && typeof _ghLiveDetailHtml === 'function') {
+    var liveDetail = _ghLiveDetailHtml(box);
+    if (liveDetail) return liveDetail;
+  }
   var color = dark ? '#fff' : 'var(--black)';
   var subColor = dark ? 'rgba(255,255,255,0.65)' : 'var(--subtle)';
   var bg = dark ? 'rgba(255,255,255,0.14)' : 'var(--bg)';
@@ -17309,6 +17396,7 @@ window._ghState = null;
 window._ghCountdownTimer = null;
 
 function _ghResetForGame(gamePk) {
+  if (window._ghState && window._ghState.liveModeTimer) clearTimeout(window._ghState.liveModeTimer);
   window._ghState = { gamePk: gamePk, animated: {}, seenPlays: null, newAt: {}, lastScore: null, startCheckAt: 0 };
   if (window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
 }
@@ -17632,55 +17720,261 @@ function _ghSituationStrip(s) {
   '</div>';
 }
 
-function _ghLiveHtml(m, st) {
-  var meta = (m.status && !/in progress/i.test(m.status)) ? m.status : (m.venue || '');
-  var h = _ghHeader('live', '<span class="gh-dot live"></span>LIVE', meta);
-  var s = m.situation || {};
-  var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
-    (s.inning ? '<div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 10 10">' +
-      (s.half === 'top' ? '<polygon points="5,1 9,8 1,8" fill="#A89FE8"/>' : '<polygon points="1,2 9,2 5,9" fill="#A89FE8"/>') +
-      '</svg><span class="gh-num" style="font-size:24px;line-height:1">' + s.inning + '</span></div>' +
-      '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + (s.half === 'top' ? 'Top' : 'Bot') + '</span>' : '<span class="gh-eyebrow">Live</span>') +
-    '</div>';
-  var prev = st.lastScore;
-  var flash = { away: !!(prev && prev.away !== m.away.score), home: !!(prev && prev.home !== m.home.score) };
-  h += _ghScoreboard(m, center, flash, false);
-  if (m.situation) h += _ghSituationStrip(s);
+function _ghReducedMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
 
-  var plays = m.plays.slice().reverse();
-  h += '<div style="display:flex;flex-direction:column;gap:10px">' +
-    '<div class="gh-row gh-up" style="' + _ghDelay(.45) + 'align-items:baseline"><span class="gh-eyebrow">Highlights so far</span>' +
-    '<span style="font-size:11.5px;color:#9C95D0">' + (plays.length ? plays.length + (plays.length === 1 ? ' scoring play' : ' scoring plays') : '') + '</span></div>';
-  if (!plays.length) {
-    h += '<div class="gh-sub gh-up" style="' + _ghDelay(.6) + 'line-height:1.5">No runs yet. Scoring plays land here as they happen.</div>';
+// Live hero mode. First live render of a game open → 'intro' (unless
+// reduced motion or there's nothing to show yet), which settles to
+// 'compact' once the fly-up finishes. Transitional modes re-render as
+// their settled version so a refresh never replays them.
+function _ghLiveMode(st, playCount) {
+  if (!st.liveMode) {
+    var skipIntro = _ghReducedMotion() || !playCount;
+    st.liveMode = skipIntro ? 'compact' : 'intro';
+    if (!skipIntro) {
+      clearTimeout(st.liveModeTimer);
+      st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'intro') st.liveMode = 'compact'; }, 4800);
+    }
+    return st.liveMode;
   }
+  if (st.liveMode === 'opening') return 'open';
+  if (st.liveMode === 'closing') return 'compact';
+  return st.liveMode;
+}
+
+function ghToggleHighlights() {
+  var st = window._ghState;
+  if (!st) return;
+  var reduce = _ghReducedMotion();
+  var isOpen = st.liveMode === 'open' || st.liveMode === 'opening';
+  var next = isOpen ? (reduce ? 'compact' : 'closing') : (reduce ? 'open' : 'opening');
+  st.liveMode = next;
+  clearTimeout(st.liveModeTimer);
+  if (next === 'closing') st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'closing') st.liveMode = 'compact'; }, 1000);
+  if (next === 'opening') st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'opening') st.liveMode = 'open'; }, 700);
+  st.newSeenAt = Date.now(); // opening the list counts as having seen new plays
+  var el = document.querySelector('#game-sheet-panel .gh[data-phase="live"]');
+  if (!el) { if (typeof renderGameCheatSheet === 'function') renderGameCheatSheet(); return; }
+  // Swap classes in place — no re-render, so only the highlight motion runs.
+  el.className = el.className.replace(/\bgh-m-[a-z]+\b/, 'gh-m-' + next).replace(/\s*\bgh-anim\b/, '');
+  var btn = el.querySelector('.gh-hl-btn');
+  if (btn) {
+    btn.setAttribute('aria-expanded', (next === 'open' || next === 'opening') ? 'true' : 'false');
+    btn.classList.remove('gh-hl-btn-new');
+  }
+}
+
+function _ghPlayKey(p) { return String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text)); }
+
+function _ghLiveHtml(m, st) {
+  var s = m.situation || {};
+  var plays = m.plays.slice().reverse();
   var seen = st.seenPlays;
-  var shown = plays.slice(0, 8);
-  shown.forEach(function (p, i) {
-    var key = String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text));
-    var justArrived = !!seen && !seen[key];
-    if (justArrived) st.newAt[key] = Date.now();
-    var isNew = !!st.newAt[key] && Date.now() - st.newAt[key] < 120000; // NEW tag holds for ~2 min of refreshes
-    var entry = justArrived ? 'gh-up-new' : 'gh-up';
-    var delay = justArrived ? .1 : .6 + i * .1;
-    var isTop = i === 0;
-    var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
-    var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
-    var last = i === shown.length - 1;
-    h += '<div class="' + entry + (isTop ? ' gh-glow' : '') + '" style="' + _ghDelay(delay) + 'display:flex;gap:12px;' + (isTop ? 'padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.08)' : 'padding:0 12px') + '">' +
-      '<div style="width:30px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
-        (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
-      '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;' + (!isTop && !last ? 'padding-bottom:8px' : '') + '">' +
-        '<div class="gh-row" style="gap:8px"><span style="font-size:13.5px;font-weight:700;min-width:0">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
-          (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#C4BFE8') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
-        (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
-        (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
-        (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
-      '</div></div>';
+  plays.forEach(function (p) {
+    var key = _ghPlayKey(p);
+    if (seen && !seen[key]) st.newAt[key] = Date.now(); // arrived since the last render
   });
-  if (plays.length > shown.length) h += '<div class="gh-sub" style="padding-left:54px">+' + (plays.length - shown.length) + ' earlier</div>';
-  h += '</div>';
+  var recentNew = plays.some(function (p) { var t = st.newAt[_ghPlayKey(p)]; return t && Date.now() - t < 120000 && (!st.newSeenAt || t > st.newSeenAt); });
+  var mode = _ghLiveMode(st, plays.length);
+  st.renderMode = mode;
+
+  // Header — LIVE chip + highlights toggle
+  var expanded = mode === 'open';
+  var h = '<div class="gh-row"><span class="gh-chip live"><span class="gh-dot live"></span>LIVE</span>' +
+    (plays.length
+      ? '<button class="gh-hl-btn' + (recentNew && !expanded ? ' gh-hl-btn-new' : '') + '" onclick="ghToggleHighlights()" aria-expanded="' + expanded + '">Highlights<span class="gh-hl-count">' + plays.length + '</span>' +
+        '<svg class="gh-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+      : '<span class="gh-meta">' + _escapeHtml((m.status && !/in progress/i.test(m.status)) ? m.status : (m.venue || '')) + '</span>') +
+    '</div>';
+
+  // Scoreboard — condenses via the mode class
+  var prev = st.lastScore;
+  var betweenHalves = s.outs === 3;
+  var stateLabel = betweenHalves ? (s.half === 'top' ? 'Mid' : 'End') : (s.half === 'top' ? 'Top' : 'Bot');
+  var runners = s.bases || {};
+  var miniBase = function (x, y, on, cx, cy) {
+    return on ? '<rect x="' + x + '" y="' + y + '" width="12" height="12" fill="#A89FE8" transform="rotate(45 ' + cx + ' ' + cy + ')"/>'
+      : '<rect x="' + x + '" y="' + y + '" width="12" height="12" fill="none" stroke="#6E68A6" stroke-width="3" transform="rotate(45 ' + cx + ' ' + cy + ')"/>';
+  };
+  var outsN = s.outs != null ? s.outs : 0;
+  var mini = betweenHalves ? '' : '<div class="gh-mini" aria-hidden="true">' +
+    '<svg width="20" height="20" viewBox="0 0 56 56">' + miniBase(22, 4, runners.second, 28, 10) + miniBase(40, 22, runners.first, 46, 28) + miniBase(4, 22, runners.third, 10, 28) + '</svg>' +
+    [0, 1, 2].map(function (i) { return i < outsN ? '<span style="width:6px;height:6px;border-radius:50%;background:#FF7A6B"></span>' : '<span style="width:6px;height:6px;border-radius:50%;border:1px solid #6E68A6;box-sizing:border-box"></span>'; }).join('') +
+    '<span class="gh-num" style="font-size:13px;margin-left:2px">' + (s.balls != null ? s.balls : 0) + '–' + (s.strikes != null ? s.strikes : 0) + '</span></div>';
+  var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">' +
+    (s.inning ? '<div style="display:flex;align-items:center;gap:4px">' +
+      (betweenHalves ? '' : '<svg width="10" height="10" viewBox="0 0 10 10">' + (s.half === 'top' ? '<polygon points="5,1 9,8 1,8" fill="#A89FE8"/>' : '<polygon points="1,2 9,2 5,9" fill="#A89FE8"/>') + '</svg>') +
+      '<span class="gh-num" style="font-size:22px;line-height:1">' + s.inning + '</span>' +
+      '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0;margin-left:2px">' + stateLabel + '</span></div>' : '<span class="gh-eyebrow">Live</span>') +
+    mini + '</div>';
+  var side = function (t, isRight, flash) {
+    var trailing = t.score != null && (t === m.away ? m.home.score : m.away.score) > t.score;
+    var badge = '<div class="gh-badge gh-sb-badge" style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>';
+    return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + '">' + badge +
+      '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
+        '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short) + '</span>' +
+        '<span class="gh-num gh-sb-score" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
+      '</div></div>';
+  };
+  h += '<div class="gh-row gh-up" style="' + _ghDelay(.15) + '">' +
+    side(m.away, false, !!(prev && prev.away !== m.away.score)) + center + side(m.home, true, !!(prev && prev.home !== m.home.score)) + '</div>';
+
+  // Situation strip (folds away once condensed)
+  if (m.situation) {
+    h += betweenHalves
+      ? '<div class="gh-panel gh-strip" style="text-align:center;font-size:12.5px;color:#D9D4FA">' + (s.half === 'top' ? 'Middle' : 'End') + ' of the ' + _escapeHtml(_ordinalSuffix(s.inning)) + '</div>'
+      : _ghSituationStrip(s).replace('class="gh-panel gh-up gh-row"', 'class="gh-panel gh-strip gh-row"').replace(/animation-delay:[\d.]+s;/, ''); // inline delay would override the collapse timing
+  }
+
+  // Highlights so far
+  if (plays.length) {
+    var shown = plays.slice(0, 8);
+    h += '<div class="gh-hl"><div class="gh-hlrow gh-hlhead gh-r0"><span class="gh-eyebrow">Highlights so far</span>' +
+      '<span style="font-size:11.5px;color:#9C95D0">' + plays.length + (plays.length === 1 ? ' scoring play' : ' scoring plays') + '</span></div>';
+    shown.forEach(function (p, i) {
+      var key = _ghPlayKey(p);
+      var t = st.newAt[key];
+      var isNew = !!t && Date.now() - t < 120000;
+      var isTop = i === 0;
+      var last = i === shown.length - 1;
+      var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
+      var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
+      h += '<div class="gh-hlrow gh-r' + (i + 1) + (isTop ? ' gh-first' : '') + '">' +
+        '<div style="width:32px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
+          (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-bottom:6px">' +
+          '<div class="gh-row" style="gap:8px"><span style="font-size:13.5px;font-weight:700;min-width:0">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
+            (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#D9D4FA') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
+          (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
+          (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
+          (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
+        '</div></div>';
+    });
+    if (plays.length > shown.length) h += '<div class="gh-hlrow gh-sub" style="padding-left:56px">+' + (plays.length - shown.length) + ' earlier</div>';
+    h += '</div>';
+  }
   return h;
+}
+
+// ── LIVE DETAIL — everything the old live box score card showed, in the
+// new card style: at-bat (matchup, strike zone, pitch list), line score,
+// play by play (replies + double-tap reactions, same ids/handlers as
+// before), and the full box score toggle.
+function _ghLiveDetailHtml(box) {
+  var m = _ghModelFromMlbBox(box);
+  if (!m) return '';
+  var s = box.situation || {};
+  var out = '<div class="gh-detail">';
+  var sub = 'rgba(255,255,255,.65)';
+
+  // At bat
+  var mp = box.matchup && box.matchup.pitcher, mb = box.matchup && box.matchup.batter;
+  var seq = box.pitchSequence;
+  if (mp || mb || seq) {
+    var sitText = s.inning ? ((s.half === 'top' ? 'Top' : 'Bottom') + ' ' + _ordinalSuffix(s.inning) + (s.outs != null && s.outs < 3 ? ' · ' + s.outs + (s.outs === 1 ? ' out' : ' outs') : '')) : '';
+    out += '<div class="gh-card"><div class="gh-card-head"><span class="gh-eyebrow">At bat</span><span class="gh-sub">' + _escapeHtml(sitText) + '</span></div>';
+    if (mp || mb) {
+      var who = function (label, p, right) {
+        return '<div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;' + (right ? 'align-items:flex-end;text-align:right' : '') + '">' +
+          '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + label + '</span>' +
+          '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(p, 'mlb') + '</span>' +
+          (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') + '</div>';
+      };
+      out += '<div class="gh-row" style="align-items:center;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>';
+    }
+    if (seq) {
+      var parts = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', sub, '#fff', true);
+      var svg = parts.svg;
+      var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
+      if (lastP && !_ghReducedMotion()) {
+        svg = svg.replace(/<\/svg>$/, '<circle class="gh-ring-pitch" cx="' + _szX(lastP.px).toFixed(1) + '" cy="' + _szY(lastP.pz).toFixed(1) + '" r="17" fill="none" stroke="' + _pitchCallColor(lastP.call) + '" stroke-width="3"/></svg>');
+      }
+      out += '<div style="border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '</div>';
+      if (seq.pitches.length) {
+        out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
+          var c = _pitchCallColor(p.call);
+          return '<div style="display:flex;align-items:center;gap:10px;min-height:26px">' +
+            '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + p.num + '</span>' +
+            (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
+            '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
+            (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
+        }).join('') + '</div>';
+      } else {
+        out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
+      }
+      out += '<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11px;color:#B9B3E6">' +
+        ['Ball', 'Called strike', 'Swinging strike', 'Foul', 'In play'].map(function (label) {
+          return '<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:' + _pitchCallColor(label) + '"></span>' + label + '</span>';
+        }).join('') + '</div>';
+    }
+    out += '</div>';
+  }
+
+  // Line score
+  var inns = box.innings || [];
+  if (inns.length) {
+    var n = Math.max(inns.length, 9);
+    var cols = 'grid-template-columns:38px repeat(' + n + ',minmax(0,1fr)) repeat(3,24px)';
+    var curIdx = s.inning ? s.inning - 1 : -1;
+    var cell = function (txt, idx, bright, extra) {
+      var cur = idx === curIdx;
+      return '<span style="' + (cur ? 'background:rgba(168,159,232,.14);border-radius:6px;' : '') + (bright ? 'color:#fff;' : '') + (extra || '') + '">' + txt + '</span>';
+    };
+    var head = '<span></span>';
+    for (var i = 0; i < n; i++) head += cell((inns[i] && inns[i].num != null) ? inns[i].num : i + 1, i, i === curIdx);
+    head += '<span style="border-left:1px solid rgba(168,159,232,.22);color:#D9D4FA">R</span><span style="color:#D9D4FA">H</span><span style="color:#D9D4FA">E</span>';
+    var teamRow = function (t, key) {
+      var r = '<span style="text-align:left;color:' + t.colors.accent + '">' + _escapeHtml(t.abbr) + '</span>';
+      for (var j = 0; j < n; j++) {
+        var v = inns[j] ? inns[j][key] : null;
+        r += cell(v != null ? v : '', j, v > 0 || j === curIdx);
+      }
+      r += '<span style="border-left:1px solid rgba(168,159,232,.22);color:#fff">' + (t.score != null ? t.score : '') + '</span>' +
+        '<span style="color:#F5F3FF">' + (t.hits != null ? t.hits : '') + '</span><span style="color:#F5F3FF">' + (t.errors != null ? t.errors : '') + '</span>';
+      return '<div class="gh-ls gh-num" style="' + cols + ';height:24px;font-size:' + (n > 10 ? 12.5 : 14) + 'px;color:#9C95D0">' + r + '</div>';
+    };
+    out += '<div class="gh-card" style="padding:14px 16px"><div class="gh-eyebrow" style="margin-bottom:8px">Line score</div>' +
+      '<div style="overflow-x:auto"><div style="min-width:' + (38 + n * 20 + 72) + 'px;display:flex;flex-direction:column;gap:4px">' +
+      '<div class="gh-ls gh-num" style="' + cols + ';height:18px;font-size:11px;color:#9C95D0">' + head + '</div>' +
+      teamRow(m.away, 'away') + teamRow(m.home, 'home') + '</div></div></div>';
+  }
+
+  // Play by play — same play ids, reply + double-tap reaction handlers as the old card
+  var playIds = [];
+  if (box.recentPlays && box.recentPlays.length) {
+    out += '<div class="gh-card" style="padding-bottom:10px"><div class="gh-card-head" style="margin-bottom:6px"><span class="gh-eyebrow">Play by play</span><span style="font-size:11px;color:#9C95D0">Double-tap a play to react</span></div>';
+    box.recentPlays.forEach(function (p, idx) {
+      var tag = p.tag != null ? p.tag : ((p.half === 'top' ? 'T' : 'B') + (p.inning || ''));
+      var idPart = p.atBatIndex != null ? p.atBatIndex : (p.playId != null ? p.playId : ('idx' + idx));
+      var playId = box.gamePk != null ? (box.gamePk + '_' + idPart) : null;
+      if (playId) playIds.push(playId);
+      var rowAttrs = playId
+        ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"'
+        : '';
+      out += '<div class="gh-plays-row"' + rowAttrs + ' style="' + (idx === 0 ? 'border-top:0' : '') + '">' +
+        '<div style="display:flex;gap:10px;align-items:flex-start">' +
+          (p.inning ? _ghInningTag(p.half, p.inning, m).replace('style="', 'style="margin-top:1px;') : '<span class="gh-tag" style="margin-top:1px;background:rgba(168,159,232,.16);color:#D9D4FA">' + _escapeHtml(tag) + '</span>') +
+          '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(p.text) + '</span>' +
+          '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
+        '</div>' +
+        (playId ? '<div id="play-react-' + _escapeHtml(playId) + '" style="margin-left:44px"></div>' : '') +
+        '</div>';
+    });
+    out += '</div>';
+  }
+  if (playIds.length) setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+
+  // Full box score (same expand/team-toggle state as before)
+  var detailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, 'rgba(255,255,255,.08)', sub, '#fff', true);
+  if (detailHtml) out += '<div class="gh-card">' + detailHtml + '</div>';
+
+  if (box.venue) {
+    out += '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9C95D0;padding:0 4px"><i class="ti ti-map-pin"></i>' + _escapeHtml(box.venue) + '</div>';
+  }
+  return out + '</div>';
 }
 
 // ── FINAL ─────────────────────────────────────────────────────────────
@@ -17850,7 +18144,8 @@ function _ghHtmlForState(state) {
     st.seenPlays = seen;
     st.lastScore = { away: model.away.score, home: model.home.score };
   }
-  return '<div class="gh' + (animate ? ' gh-anim' : '') + '" data-phase="' + model.phase + '">' +
+  var modeCls = model.phase === 'live' ? ' gh-m-' + (st.renderMode || 'compact') : '';
+  return '<div class="gh' + (animate ? ' gh-anim' : '') + modeCls + '" data-phase="' + model.phase + '">' +
     '<div class="gh-orb" style="' + (model.phase === 'live' ? 'right:-90px;top:-40px' : 'left:-80px;top:-30px') + '"></div>' +
     '<div class="gh-body">' + body + '</div></div>';
 }
