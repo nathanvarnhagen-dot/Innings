@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.37.0-batter-silhouette-final';
+window.INNINGS_BUILD = 'v5.37.1-zone-centered-batter-bigger';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10001,7 +10001,7 @@ function _pitchCallColor(call) {
 // per-foot scales for X and Y, which distorted the zone into a
 // squashed rectangle instead of the roughly-square shape a real strike
 // zone actually is.
-function _szX(px) { return 90 + (px + 2.2) * 50; }
+function _szX(px) { return 175 + px * 50; }
 function _szY(pz) { return 240 - (pz - 0.3) * 50; }
 
 function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
@@ -10022,12 +10022,20 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   // hands/grip point after that move left them behind; the bat's
   // barrel was brought down to shoulder height; the legs were scaled
   // narrower around the hip pivot; the bat was lengthened and
-  // thickened. All in a local 0–120-ish coordinate space, positioned
-  // here by a plain translate (verified numerically to clear the zone
-  // on both sides before shipping, not eyeballed).
+  // thickened; scaled up 1.25x as a whole (the most this design's
+  // vertical extent can grow before it clips the canvas — computed,
+  // not assumed) and shifted down slightly to stay centered in that
+  // taller footprint. Positioned here by a plain translate, recomputed
+  // against the zone's now-corrected centered position (see _szX
+  // above — it was 25px off-center; the plate/zone move with it
+  // automatically since they're derived from the same function, but
+  // the batter's placement had to be resolved separately).
   var flip = (seq.batSide === 'L');
-  var figureOffsetX = flip ? 232 : 20;
-  var mirrorAxis = 60;
+  var figureScale = 1.25;
+  var scalePivotX = 53, scalePivotY = 117.6;
+  var verticalShift = 10.4;
+  var mirrorAxis = 53;
+  var figureOffsetX = flip ? 230 : 8;
   var HEAD_TORSO =
     '<path d="M 45,55 C 45,46 52,40 60,40 C 67,40 72,46 72,53 C 72,56 68,59 65,59 C 68,61 70,66 67,70 C 64,74 58,74 54,71 L 45,55 Z"/>' +
     '<path d="M 68,48 L 84,52 L 82,56 L 68,52 Z"/>' +
@@ -10044,7 +10052,8 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
     '<circle cx="82" cy="64" r="6"/>' +
     '<path d="M 84.1,60.6 L 28.5,19.2 L 18.0,36.3 L 79.9,67.4 Z"/>';
   var batterInner = HEAD_TORSO + LEGS_NARROWED + ARMS_CONNECTED + GRIP_AND_BAT;
-  var batterMirrored = flip ? '<g transform="translate(' + (2 * mirrorAxis) + ',0) scale(-1,1)">' + batterInner + '</g>' : batterInner;
+  var batterScaled = '<g transform="translate(0,' + verticalShift + ') translate(' + scalePivotX + ',' + scalePivotY + ') scale(' + figureScale + ',' + figureScale + ') translate(' + (-scalePivotX) + ',' + (-scalePivotY) + ')">' + batterInner + '</g>';
+  var batterMirrored = flip ? '<g transform="translate(' + (2 * mirrorAxis) + ',0) scale(-1,1)">' + batterScaled + '</g>' : batterScaled;
   var batterSvg = '<g opacity="0.35" fill="rgba(168,159,232,.55)" stroke="rgba(168,159,232,.8)" stroke-width="0.75" transform="translate(' + figureOffsetX + ',0)">' + batterMirrored + '</g>';
 
   // 3x3 zone grid, matching the classic broadcast strike-zone look.
