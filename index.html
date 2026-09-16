@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.33.0-pitch-strikezone';
+window.INNINGS_BUILD = 'v5.34.0-full-boxscore-clickable-batter';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10034,10 +10034,79 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   }).join('');
 
   return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
-    (seq.batter ? '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Pitches to ' + _escapeHtml(seq.batter) + '</div>' : '') +
+    (seq.batter ? '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Pitches to ' + _clickablePlayerNameHtml({ name: seq.batter, id: seq.batterId }, 'mlb') + '</div>' : '') +
     '<div style="display:flex;gap:14px;align-items:flex-start">' + svg + '<div style="flex:1;min-width:0">' + list + '</div></div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">' + legend + '</div>' +
     '</div>';
+}
+
+// ── FULL BOX SCORE — every batter's and pitcher's actual game line,
+// collapsed by default (this can get long — a 9-inning game easily has
+// 15+ players between both teams) with an away/home toggle when open.
+// State lives outside this pure render function (window._bsDetailState)
+// since the box score card gets rebuilt from scratch on every live
+// refresh tick — without external state, expanding it would silently
+// re-collapse on the next 15-second poll.
+window._bsDetailState = { expanded: false, side: 'away' };
+function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subColor, color) {
+  if (!detail || (!detail.away.batters.length && !detail.home.batters.length)) return '';
+  var state = window._bsDetailState;
+  var teamData = detail[state.side] || { batters: [], pitchers: [] };
+  var colHead = function (cols) {
+    return '<div style="display:flex;gap:6px;padding:2px 0;font-size:9px;color:' + subColor + ';font-weight:700">' +
+      '<div style="flex:1">Player</div>' + cols.map(function (c) { return '<div style="width:' + c.w + 'px;text-align:right">' + c.label + '</div>'; }).join('') + '</div>';
+  };
+  var statRow = function (name, id, pos, cells) {
+    return '<div style="display:flex;gap:6px;padding:5px 0;border-top:0.5px solid ' + ruleColor + ';font-size:11px;color:' + color + '">' +
+      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml({ name: name, id: id }, 'mlb') + (pos ? ' <span style="color:' + subColor + ';font-size:9px">' + _escapeHtml(pos) + '</span>' : '') + '</div>' +
+      cells.map(function (v) { return '<div style="width:22px;text-align:right">' + v + '</div>'; }).join('') + '</div>';
+  };
+
+  var header = '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleBoxScoreDetail()">' +
+    '<div style="font-size:12px;font-weight:700;color:' + color + '">Box Score</div>' +
+    '<div style="font-size:11px;color:' + subColor + '">' + (state.expanded ? '▲ Hide' : '▼ Show') + '</div></div>';
+
+  var body = '';
+  if (state.expanded) {
+    body += '<div style="display:flex;gap:8px;margin:10px 0">' + ['away', 'home'].map(function (side) {
+      var active = side === state.side;
+      var label = side === 'away' ? (awayName || 'Away') : (homeName || 'Home');
+      return '<button onclick="event.stopPropagation();setBoxScoreDetailSide(\'' + side + '\')" style="flex:1;padding:7px 8px;border-radius:8px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+        (active ? 'background:var(--indigo);color:#fff' : 'background:rgba(255,255,255,.08);color:' + subColor) + '">' + _escapeHtml(label) + '</button>';
+    }).join('') + '</div>';
+
+    if (teamData.batters.length) {
+      body += '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Batting</div>';
+      body += colHead([{ label: 'AB', w: 22 }, { label: 'R', w: 22 }, { label: 'H', w: 22 }, { label: 'RBI', w: 26 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }]);
+      body += teamData.batters.map(function (b) { return statRow(b.name, b.id, b.pos, [b.ab, b.r, b.h, b.rbi, b.bb, b.so]); }).join('');
+    }
+    if (teamData.pitchers.length) {
+      body += '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px">Pitching</div>';
+      body += colHead([{ label: 'IP', w: 26 }, { label: 'H', w: 22 }, { label: 'R', w: 22 }, { label: 'ER', w: 22 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }]);
+      body += teamData.pitchers.map(function (p) { return statRow(p.name, p.id, null, [p.ip, p.h, p.r, p.er, p.bb, p.so]); }).join('');
+    }
+  }
+  return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' + header + body + '</div>';
+}
+
+// Rebuilds the box score card from the last-fetched data with current
+// _bsDetailState — needed because the card is a rendered HTML string
+// cached in window._gdPregame.boxScoreHtml, not re-derived on demand,
+// so toggling expand/side has to explicitly regenerate and re-render it.
+function _rerenderBoxScoreFromCache() {
+  if (!window._lastLiveBox || !window._gdPregame) return;
+  var html = _boxScoreCardHtml(window._lastLiveBox, true, true);
+  if (!html) return;
+  window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
+  renderGameCheatSheet();
+}
+function toggleBoxScoreDetail() {
+  window._bsDetailState.expanded = !window._bsDetailState.expanded;
+  _rerenderBoxScoreFromCache();
+}
+function setBoxScoreDetailSide(side) {
+  window._bsDetailState.side = side;
+  _rerenderBoxScoreFromCache();
 }
 
 function _boxScoreCardHtml(box, dark, allowPlayReply) {
@@ -10138,6 +10207,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
   }
 
   var strikeZoneHtml = _strikeZoneSectionHtml(box.pitchSequence, ruleColor, subColor, color);
+  var boxScoreDetailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, ruleColor, subColor, color);
 
   var playsHtml = '';
   if (box.recentPlays && box.recentPlays.length) {
@@ -10163,6 +10233,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
     matchupHtml +
     strikeZoneHtml +
     playsHtml +
+    boxScoreDetailHtml +
     (box.venue ? '<div style="font-size:11px;color:' + subColor + ';margin-top:10px">' + _escapeHtml(box.venue) + '</div>' : '') +
     decisionLine +
     hrLines +
@@ -16796,6 +16867,7 @@ function _refreshBoxScore(gamePk) {
       var live = !!box && !box.error && _isGameStatusLive(box.status);
       var concluded = !!box && !box.error && _isGameConcluded(box.status);
       if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
+      window._lastLiveBox = box; // cached so toggling the box score detail section can rebuild without a re-fetch
       var html = _boxScoreCardHtml(box, true, true);
       if (html) {
         window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
@@ -16831,6 +16903,8 @@ function loadGameCheatSheet(gamePk) {
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk, boxScoreHtml: '' };
+  window._bsDetailState = { expanded: false, side: 'away' }; // fresh collapsed state each new game — don't carry an expanded table over from the last one
+  window._lastLiveBox = null;
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
   _stopGameLiveRefresh();
   _refreshBoxScore(gamePk).then(function (isLive) { if (isLive) _startGameLiveRefresh(gamePk); });
