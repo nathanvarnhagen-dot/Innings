@@ -218,8 +218,66 @@ function summarize(data, gamePk) {
     };
   }
 
+  // ── GAME-STATE HERO (v5.40.0) — every scoring play so far, oldest
+  // first, with the score AFTER the play (result.awayScore/homeScore are
+  // standard fields on every allPlays entry). about.isScoringPlay is the
+  // primary signal; liveData.plays.scoringPlays (an index list into
+  // allPlays) is the fallback if that flag ever comes back missing.
+  // Capped at the last 20 so a slugfest doesn't bloat a memory doc.
+  var scoringSource = allPlays.filter(function (p) { return p.about && p.about.isScoringPlay && p.result; });
+  if (!scoringSource.length) {
+    scoringSource = ((liveData.plays && liveData.plays.scoringPlays) || []).map(function (i) { return allPlays[i]; })
+      .filter(function (p) { return p && p.result; });
+  }
+  var scoringPlays = [];
+  if (abstractState === 'Live' || abstractState === 'Final') {
+    scoringPlays = scoringSource.slice(-20).map(function (p) {
+      var evs = p.playEvents || [];
+      var hit = null;
+      for (var j = evs.length - 1; j >= 0; j--) { if (evs[j] && evs[j].hitData) { hit = evs[j].hitData; break; } }
+      return {
+        atBatIndex: (p.about && p.about.atBatIndex != null) ? p.about.atBatIndex : null,
+        inning: (p.about && p.about.inning) || null,
+        half: (p.about && p.about.isTopInning) ? 'top' : 'bottom',
+        event: p.result.event || null,
+        eventType: p.result.eventType || null,
+        rbi: p.result.rbi != null ? p.result.rbi : 0,
+        batter: (p.matchup && p.matchup.batter && p.matchup.batter.fullName) || null,
+        text: p.result.description || null,
+        awayScore: p.result.awayScore != null ? p.result.awayScore : null,
+        homeScore: p.result.homeScore != null ? p.result.homeScore : null,
+        distance: (hit && hit.totalDistance != null) ? Math.round(hit.totalDistance) : null
+      };
+    });
+  }
+
+  var decisionsDetail = null;
+  var starOfGame = null;
+  if (abstractState === 'Final') {
+    decisionsDetail = {
+      winner: _decisionPerson(decisions.winner, boxTeams, 'win'),
+      loser: _decisionPerson(decisions.loser, boxTeams, 'loss'),
+      save: _decisionPerson(decisions.save, boxTeams, 'save')
+    };
+    starOfGame = _starOfGame(liveData.boxscore, boxScoreDetail);
+  }
+
+  var lsTeams = linescore.teams || {};
   return {
     gamePk: (gameData.game && gameData.game.pk) || (gamePk ? Number(gamePk) : null),
+    awayAbbr: (teams.away && teams.away.abbreviation) || null,
+    homeAbbr: (teams.home && teams.home.abbreviation) || null,
+    awayRecord: _teamRecord(teams.away),
+    homeRecord: _teamRecord(teams.home),
+    awayHits: (lsTeams.away && lsTeams.away.hits != null) ? lsTeams.away.hits : null,
+    homeHits: (lsTeams.home && lsTeams.home.hits != null) ? lsTeams.home.hits : null,
+    awayErrors: (lsTeams.away && lsTeams.away.errors != null) ? lsTeams.away.errors : null,
+    homeErrors: (lsTeams.home && lsTeams.home.errors != null) ? lsTeams.home.errors : null,
+    startTime: (gameData.datetime && gameData.datetime.dateTime) || null,
+    gameState: abstractState,
+    scoringPlays: scoringPlays,
+    decisionsDetail: decisionsDetail,
+    starOfGame: starOfGame,
     away: (teams.away && teams.away.name) || null,
     home: (teams.home && teams.home.name) || null,
     awayScore: (linescore.teams && linescore.teams.away && linescore.teams.away.runs != null) ? linescore.teams.away.runs : null,
@@ -255,6 +313,7 @@ function _extractTeamBoxScore(teamData) {
       r: b.runs != null ? b.runs : 0,
       h: b.hits != null ? b.hits : 0,
       rbi: b.rbi != null ? b.rbi : 0,
+      hr: b.homeRuns != null ? b.homeRuns : 0,
       bb: b.baseOnBalls != null ? b.baseOnBalls : 0,
       so: b.strikeOuts != null ? b.strikeOuts : 0
     };
@@ -275,6 +334,73 @@ function _extractTeamBoxScore(teamData) {
     };
   }).filter(Boolean);
   return { batters: batters, pitchers: pitchers };
+}
+
+// Season W-L (or save count) for a decision pitcher, read from the same
+// boxscore.teams.<side>.players seasonStats this file already trusts for
+// pitchers. rec stays null rather than guessing if the stat is missing.
+function _decisionPerson(person, boxTeams, kind) {
+  if (!person || !person.id) return null;
+  var pid = 'ID' + person.id;
+  var obj = (boxTeams.away && boxTeams.away.players && boxTeams.away.players[pid])
+    || (boxTeams.home && boxTeams.home.players && boxTeams.home.players[pid]);
+  var s = obj && obj.seasonStats && obj.seasonStats.pitching;
+  var rec = null;
+  if (s) {
+    if (kind === 'save') rec = s.saves != null ? String(s.saves) : null;
+    else if (s.wins != null && s.losses != null) rec = s.wins + '-' + s.losses;
+  }
+  return { name: person.fullName || null, id: person.id, rec: rec };
+}
+
+// gameData.teams.<side>.record — wins/losses live either directly on
+// record or under record.leagueRecord depending on the payload; both read.
+function _teamRecord(team) {
+  var r = team && team.record;
+  if (!r) return null;
+  var w = r.wins != null ? r.wins : (r.leagueRecord && r.leagueRecord.wins);
+  var l = r.losses != null ? r.losses : (r.leagueRecord && r.leagueRecord.losses);
+  if (w == null || l == null) return null;
+  return { w: w, l: l };
+}
+
+// Star of the game — boxscore.topPerformers (MLB's own pick, ranked by
+// game score) when present. That field isn't confirmed against a live
+// response in this session, so if it's missing or shaped differently
+// this falls back to the best batting line from boxScoreDetail
+// (H + 2·HR + RBI + ½·R). Either way the result has the same shape.
+function _starOfGame(boxscore, detail) {
+  var tp = (boxscore && boxscore.topPerformers) || [];
+  var teamsObj = (boxscore && boxscore.teams) || {};
+  for (var i = 0; i < tp.length; i++) {
+    var entry = tp[i];
+    var pl = entry && entry.player;
+    if (!pl || !pl.person || !pl.person.id) continue;
+    var isHitter = entry.type === 'hitter';
+    var st = pl.stats && (isHitter ? pl.stats.batting : pl.stats.pitching);
+    var summary = (st && st.summary) || null;
+    if (!summary && st && isHitter) summary = (st.hits || 0) + '-' + (st.atBats || 0) + (st.homeRuns ? ' · ' + st.homeRuns + ' HR' : '') + (st.rbi ? ' · ' + st.rbi + ' RBI' : '');
+    if (!summary && st && !isHitter) summary = (st.inningsPitched || '0.0') + ' IP · ' + (st.strikeOuts || 0) + ' K · ' + (st.earnedRuns || 0) + ' ER';
+    var pid = 'ID' + pl.person.id;
+    var side = (teamsObj.away && teamsObj.away.players && teamsObj.away.players[pid]) ? 'away'
+      : ((teamsObj.home && teamsObj.home.players && teamsObj.home.players[pid]) ? 'home' : null);
+    return { name: pl.person.fullName || null, id: pl.person.id, side: side, summary: summary ? String(summary).replace(/\s*\|\s*/g, ' · ') : null };
+  }
+  if (!detail) return null;
+  var best = null;
+  ['away', 'home'].forEach(function (side) {
+    ((detail[side] && detail[side].batters) || []).forEach(function (b) {
+      var score = (b.h || 0) + 2 * (b.hr || 0) + (b.rbi || 0) + 0.5 * (b.r || 0);
+      if (!best || score > best.score) best = { score: score, side: side, b: b };
+    });
+  });
+  if (!best || best.score < 2) return null;
+  var b = best.b;
+  var bits = [b.h + '-' + b.ab];
+  if (b.hr) bits.push((b.hr > 1 ? b.hr + ' ' : '') + 'HR');
+  if (b.rbi) bits.push(b.rbi + ' RBI');
+  if (b.r && !b.hr) bits.push(b.r + ' R');
+  return { name: b.name, id: b.id, side: best.side, summary: bits.join(' · ') };
 }
 
 function _liveParticipant(person, boxTeams, group) {
@@ -319,16 +445,67 @@ async function summarizePregame(data) {
   var season = (gameData.game && gameData.game.season) || null;
 
   var results = await Promise.all([
-    _pregameSide(teams.away, boxTeams.away, probable.away, season),
-    _pregameSide(teams.home, boxTeams.home, probable.home, season)
+    _pregameSide(teams.away, boxTeams.away, probable.away, season, gameData.players),
+    _pregameSide(teams.home, boxTeams.home, probable.home, season, gameData.players),
+    _standingsByTeam(season)
   ]);
-  var away = results[0], home = results[1];
+  var away = results[0], home = results[1], standings = results[2];
 
   if (!away || !home) return { error: 'No pregame data available' };
-  return { away: away, home: home };
+  [[away, teams.away], [home, teams.home]].forEach(function (pair) {
+    var side = pair[0], team = pair[1] || {};
+    side.abbr = team.abbreviation || null;
+    var st = team.id != null ? standings[team.id] : null;
+    side.record = st ? { w: st.w, l: st.l } : _teamRecord(team);
+    side.standing = st ? { divRank: st.divRank, divName: st.divName, l10: st.l10, streak: st.streak } : null;
+  });
+  return {
+    away: away,
+    home: home,
+    startTime: (gameData.datetime && gameData.datetime.dateTime) || null,
+    venue: (gameData.venue && gameData.venue.name) || null
+  };
 }
 
-async function _pregameSide(team, boxTeam, probablePitcher, season) {
+// Division place, last-10 and streak per team id for the pregame hero —
+// one standings call for both leagues. Division place is derived from
+// win pct within each division (same approach the Playoff Picture uses)
+// instead of trusting divisionRank. Division names fall back to a
+// static id map since the standings payload doesn't always carry them.
+var _DIVISION_NAMES = { 200: 'AL West', 201: 'AL East', 202: 'AL Central', 203: 'NL West', 204: 'NL East', 205: 'NL Central' };
+async function _standingsByTeam(season) {
+  var out = {};
+  try {
+    var url = 'https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&standingsTypes=regularSeason' + (season ? '&season=' + encodeURIComponent(season) : '');
+    var r = await fetch(url);
+    var data = await r.json();
+    (data.records || []).forEach(function (rec) {
+      var divId = rec.division && rec.division.id;
+      var divName = ((rec.division && rec.division.name) || _DIVISION_NAMES[divId] || '').replace('American League', 'AL').replace('National League', 'NL');
+      var rows = (rec.teamRecords || []).map(function (tr) {
+        var l10 = null;
+        ((tr.records && tr.records.splitRecords) || []).forEach(function (sr) {
+          if (sr.type === 'lastTen') l10 = { w: sr.wins, l: sr.losses };
+        });
+        return {
+          id: tr.team && tr.team.id,
+          w: tr.wins != null ? tr.wins : 0,
+          l: tr.losses != null ? tr.losses : 0,
+          l10: l10,
+          streak: (tr.streak && tr.streak.streakCode) || null
+        };
+      });
+      rows.sort(function (a, b) { return _winPct(b) - _winPct(a); });
+      rows.forEach(function (t, i) {
+        if (t.id == null) return;
+        out[t.id] = { w: t.w, l: t.l, divRank: i + 1, divName: divName || null, l10: t.l10, streak: t.streak };
+      });
+    });
+  } catch (e) { /* hero just shows the record without standings */ }
+  return out;
+}
+
+async function _pregameSide(team, boxTeam, probablePitcher, season, gamePlayers) {
   if (!team || !boxTeam) return null;
   var playersObj = boxTeam.players || {};
   var battingOrder = boxTeam.battingOrder || [];
@@ -344,7 +521,17 @@ async function _pregameSide(team, boxTeam, probablePitcher, season) {
       id: probablePitcher.id,
       line: seasonP && seasonP.era != null
         ? (seasonP.era + ' ERA · ' + (seasonP.wins || 0) + '-' + (seasonP.losses || 0) + ' · ' + (seasonP.strikeOuts || 0) + ' K')
-        : 'No stats yet this season'
+        : 'No stats yet this season',
+      // Structured copy of the same season line for the hero's compare bars
+      hand: (gamePlayers && gamePlayers['ID' + probablePitcher.id] && gamePlayers['ID' + probablePitcher.id].pitchHand && gamePlayers['ID' + probablePitcher.id].pitchHand.code) || null,
+      stats: seasonP ? {
+        w: seasonP.wins != null ? seasonP.wins : null,
+        l: seasonP.losses != null ? seasonP.losses : null,
+        era: seasonP.era != null ? seasonP.era : null,
+        whip: seasonP.whip != null ? seasonP.whip : null,
+        so: seasonP.strikeOuts != null ? seasonP.strikeOuts : null,
+        ip: seasonP.inningsPitched != null ? seasonP.inningsPitched : null
+      } : null
     };
   }
 
@@ -373,7 +560,7 @@ async function _pregameSide(team, boxTeam, probablePitcher, season) {
     rows = _fallbackRowsFromFeed(playersObj); // roster call itself failed outright — last resort
   }
 
-  return { name: team.name, projected: projected, feat: feat, rows: rows };
+  return { name: team.name, id: team.id || null, projected: projected, feat: feat, rows: rows };
 }
 
 // Real, hydrated season hitting stats straight from the team roster —
