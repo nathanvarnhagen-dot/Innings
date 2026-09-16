@@ -691,6 +691,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes ghRise{0%{opacity:0;transform:translateY(30px) scale(.5)}25%{opacity:1}100%{opacity:0;transform:translateY(-70px) scale(1.1)}}
 .gh-stamp{padding:2px 8px;border:2px solid #A89FE8;border-radius:8px;transform:rotate(-4deg);font-size:15px;font-weight:800;letter-spacing:.14em;color:#E9E5FF}
 .gh-ls{display:grid;align-items:center;text-align:center;font-variant-numeric:tabular-nums}
+/* Last 10 circles (v5.43.0) */
+.gh-l10-dot{position:relative;width:28px;height:28px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;letter-spacing:-.02em;flex-shrink:0;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.gh-l10-dot.loss{filter:saturate(.55) brightness(.75)}
+.gh-l10-dot.sel{outline:2px solid rgba(255,255,255,.75);outline-offset:3px}
+.gh-l10-wl{width:28px;text-align:center;font-size:9px;font-weight:800;flex-shrink:0}
+.gh-l10-detail{display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(13,8,32,.5);border:1px solid rgba(168,159,232,.14);font-size:12px}
+.gh-l10-detail.on{display:flex;animation:ghFadeIn .25s ease-out}
+@keyframes ghFadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.gh-anim .gh-l10-pop{opacity:0;animation:ghL10Pop .38s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes ghL10Pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
 /* Entry animations — first render of a phase only */
 .gh-anim .gh-up,.gh-up-new{opacity:0;animation:ghUp .6s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes ghUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -711,7 +721,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes ghWin{from{opacity:0;transform:translateY(10px)}60%{text-shadow:0 0 28px rgba(168,159,232,.95)}to{opacity:1;transform:none;text-shadow:0 0 14px rgba(168,159,232,.35)}}
 @media (prefers-reduced-motion: reduce){
   .gh *,.gh *::after{animation:none!important}
-  .gh .gh-up,.gh .gh-up-new,.gh .gh-from-l,.gh .gh-from-r,.gh .gh-pop,.gh .gh-stamp-in,.gh .gh-win{opacity:1!important}
+  .gh .gh-up,.gh .gh-up-new,.gh .gh-l10-pop,.gh .gh-from-l,.gh .gh-from-r,.gh .gh-pop,.gh .gh-stamp-in,.gh .gh-win{opacity:1!important}
   .gh .gh-grow-l,.gh .gh-grow-r{transform:none!important}
   .gh .gh-draw{stroke-dashoffset:0!important}
   .gh .gh-spark,.gh .gh-fly{display:none}
@@ -8509,7 +8519,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.42.0-final-highlights-lineup';
+window.INNINGS_BUILD = 'v5.43.0-last10-opponents';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -17514,6 +17524,7 @@ function _ghSideFromPregame(s) {
     name: s.name, short: _teamShortName(s.name), abbr: abbr, colors: _ghTeamColors(abbr),
     record: s.record || null, divRank: st.divRank || null, divName: st.divName || null,
     l10: st.l10 || null, streak: st.streak || null,
+    last10: (s.last10 && s.last10.length) ? s.last10 : null,
     pitcher: f ? { name: f.name, id: f.id || null, hand: f.hand || null, stats: f.stats || null } : null
   };
 }
@@ -17618,7 +17629,7 @@ function _ghCompareRow(label, a, b, lowerBetter, delay) {
   '</div>';
 }
 
-function _ghPreHtml(m) {
+function _ghPreHtml(m, st, animating) {
   var meta = [_formatGameTime(m.startTime), m.venue].filter(Boolean).join(' · ');
   var h = _ghHeader('pre', '<span class="gh-dot pre"></span>PRE-GAME', meta);
 
@@ -17682,7 +17693,9 @@ function _ghPreHtml(m) {
   }
   h += '</div>';
 
-  if (m.away.l10 || m.home.l10) {
+  if (m.away.last10 || m.home.last10) {
+    h += _ghLast10Html(m, st, animating);
+  } else if (m.away.l10 || m.home.l10) {
     var formRow = function (s, delay) {
       if (!s.l10) return '';
       var pct = Math.round((s.l10.w / Math.max(1, s.l10.w + s.l10.l)) * 100);
@@ -17696,6 +17709,100 @@ function _ghPreHtml(m) {
       '<div class="gh-eyebrow">Last 10</div>' + formRow(m.away, 1.4) + formRow(m.home, 1.5) + '</div>';
   }
   return h;
+}
+
+// ── LAST 10 — one circle per game, oldest → latest, in the OPPONENT's
+// colors with their abbreviation inside; green ring = win, red ring +
+// dimmed = loss, W/L letter underneath. Tap a circle for the score.
+// Record + streak are computed from the same list; on the first render
+// the circles pop in one by one while the record counts up.
+function _ghL10Record(games) {
+  var w = games.filter(function (g) { return g.res === 'W'; }).length;
+  var streak = '';
+  if (games.length) {
+    var last = games[games.length - 1].res, n = 0;
+    for (var i = games.length - 1; i >= 0 && games[i].res === last; i--) n++;
+    streak = last + n;
+  }
+  return { rec: w + '–' + (games.length - w), streak: streak };
+}
+function _ghL10DateLabel(iso) {
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return iso || '';
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function _ghL10DetailInner(g) {
+  var win = g.res === 'W';
+  return '<span class="gh-tag" style="font-size:11px;' + (win ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + g.res + ' ' + g.us + '–' + g.them + '</span>' +
+    '<span style="font-weight:700">' + (g.home ? 'vs ' : 'at ') + _escapeHtml(_teamShortName(g.oppName || '') || g.opp || '') + '</span>' +
+    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml(_ghL10DateLabel(g.date)) + '</span>';
+}
+function _ghLast10Html(m, st, animating) {
+  var sel = st && st.l10Sel;
+  var h = '<div class="gh-up" style="' + _ghDelay(1.3) + 'display:flex;flex-direction:column;gap:12px">' +
+    '<div class="gh-row" style="align-items:baseline"><span class="gh-eyebrow">Last 10</span><span style="font-size:11px;color:#9C95D0">oldest → latest · tap a game</span></div>';
+  [['away', m.away], ['home', m.home]].forEach(function (pair, ti) {
+    var key = pair[0], s = pair[1];
+    var games = s.last10;
+    if (!games) return;
+    var r = _ghL10Record(games);
+    var streakWin = /^W/.test(r.streak);
+    var base = 1.45 + ti * 0.08;
+    h += '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';width:36px">' + _escapeHtml(s.abbr) + '</span>' +
+        '<span class="gh-sub" style="flex:1">' + _escapeHtml(s.short) + '</span>' +
+        '<span id="gh-l10-rec-' + key + '" class="gh-num" style="font-size:17px">' + (animating ? '0–0' : r.rec) + '</span>' +
+        (r.streak ? '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + (streakWin ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + r.streak + '</span>' : '') +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:2px">';
+    games.forEach(function (g, i) {
+      var win = g.res === 'W';
+      var c = _ghTeamColors(g.opp);
+      var isSel = sel && sel.side === key && sel.i === i;
+      var label = (win ? 'Won ' : 'Lost ') + g.us + ' to ' + g.them + (g.home ? ' vs ' : ' at ') + (g.oppName || g.opp || '') + ', ' + _ghL10DateLabel(g.date);
+      h += '<button class="gh-l10-dot gh-l10-pop' + (win ? '' : ' loss') + (isSel ? ' sel' : '') + '" data-side="' + key + '" data-i="' + i + '" onclick="ghL10Pick(this)" aria-label="' + _escapeHtml(label) + '" aria-pressed="' + (isSel ? 'true' : 'false') + '"' +
+        ' style="' + _ghDelay(base + i * 0.11) + 'background:' + c.bg + ';color:' + c.fg + ';box-shadow:0 0 0 2px ' + (win ? '#7CF29C' : '#FF7A6B') + '">' + _escapeHtml(g.opp || '?') + '</button>';
+    });
+    h += '</div><div style="display:flex;justify-content:space-between;gap:2px;margin-top:-4px" aria-hidden="true">';
+    games.forEach(function (g, i) {
+      h += '<span class="gh-l10-wl gh-l10-pop" style="' + _ghDelay(base + i * 0.11 + 0.05) + 'color:' + (g.res === 'W' ? '#7CF29C' : '#FF9A8E') + '">' + g.res + '</span>';
+    });
+    var selGame = sel && sel.side === key ? games[sel.i] : null;
+    h += '</div><div id="gh-l10-detail-' + key + '" class="gh-l10-detail' + (selGame ? ' on' : '') + '">' + (selGame ? _ghL10DetailInner(selGame) : '') + '</div></div>';
+    if (animating) _ghL10CountUp(key, games, base);
+  });
+  return h + '</div>';
+}
+function _ghL10CountUp(key, games, base) {
+  if (_ghReducedMotion()) { setTimeout(function () { var el = document.getElementById('gh-l10-rec-' + key); if (el) el.textContent = _ghL10Record(games).rec; }, 0); return; }
+  games.forEach(function (g, i) {
+    setTimeout(function () {
+      var el = document.getElementById('gh-l10-rec-' + key);
+      if (el) el.textContent = _ghL10Record(games.slice(0, i + 1)).rec;
+    }, Math.round((base + i * 0.11) * 1000) + 120);
+  });
+}
+function ghL10Pick(btn) {
+  var st = window._ghState;
+  var data = window._gdPregame && window._gdPregame.data;
+  if (!st || !data) return;
+  var key = btn.getAttribute('data-side'), i = Number(btn.getAttribute('data-i'));
+  var games = data[key] && data[key].last10;
+  if (!games || !games[i]) return;
+  var same = st.l10Sel && st.l10Sel.side === key && st.l10Sel.i === i;
+  st.l10Sel = same ? null : { side: key, i: i };
+  // Update in place — no re-render, so nothing re-animates
+  document.querySelectorAll('#game-sheet-panel .gh-l10-dot.sel').forEach(function (b) { b.classList.remove('sel'); b.setAttribute('aria-pressed', 'false'); });
+  ['away', 'home'].forEach(function (k) {
+    var d = document.getElementById('gh-l10-detail-' + k);
+    if (!d) return;
+    var show = st.l10Sel && st.l10Sel.side === k;
+    d.className = 'gh-l10-detail' + (show ? ' on' : '');
+    d.innerHTML = show ? _ghL10DetailInner(games[i]) : '';
+  });
+  if (!same) { btn.classList.add('sel'); btn.setAttribute('aria-pressed', 'true'); }
 }
 
 // ── LIVE ──────────────────────────────────────────────────────────────
@@ -18171,7 +18278,7 @@ function _ghHtmlForState(state) {
 
   var body;
   try {
-    if (model.phase === 'pre') body = _ghPreHtml(model);
+    if (model.phase === 'pre') body = _ghPreHtml(model, st, !st.animated.pre);
     else if (model.phase === 'live') body = _ghLiveHtml(model, st);
     else body = _ghFinalHtml(model, st);
   } catch (err) {
