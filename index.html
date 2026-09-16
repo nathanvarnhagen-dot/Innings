@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.35.2-strikezone-always-shows';
+window.INNINGS_BUILD = 'v5.36.0-strikezone-redesign';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9996,8 +9996,13 @@ function _pitchCallColor(call) {
   if (c.indexOf('ball') !== -1) return '#7A9CC6';
   return 'rgba(255,255,255,.35)';
 }
-function _szX(px) { return 10 + (px + 1.6) / 3.2 * 220; }
-function _szY(pz) { return 270 - (pz - 0.3) / 4.4 * 260; }
+// New wider, consistent-scale coordinate system (350x260, ~50px per
+// foot in both dimensions) — the previous one used different pixel-
+// per-foot scales for X and Y, which distorted the zone into a
+// squashed rectangle instead of the roughly-square shape a real strike
+// zone actually is.
+function _szX(px) { return 90 + (px + 2.2) * 50; }
+function _szY(pz) { return 240 - (pz - 0.3) * 50; }
 
 function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   if (!seq) return '';
@@ -10007,35 +10012,53 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   // (see the note above _pitchCallColor). `flip` mirrors the whole pose
   // horizontally so the arms/bat reach toward the plate on whichever
   // side the batter actually stands, rather than always reaching the
-  // same direction regardless of handedness.
-  var silhouetteCx = (seq.batSide === 'L') ? 205 : 35;
+  // same direction regardless of handedness. The wider canvas leaves
+  // real room for the silhouette clear of the zone on either side,
+  // rather than competing for the same cramped space.
+  var silhouetteCx = (seq.batSide === 'L') ? 300 : 50;
   var flip = (seq.batSide === 'L');
-  // A filled, recognizable batter silhouette — head, torso, two legs
-  // planted in a stance, and a bat cocked back over the shoulder — built
-  // from solid rounded capsules (rotated rects) rather than thin stick
-  // lines, which read as a real silhouette instead of a wireframe.
-  // Authored facing right (as if right-handed); for a left-handed
-  // batter the whole group is mirrored around its own center with one
-  // outer transform, rather than flipping every coordinate by hand.
+  // A filled, grounded batting stance — conservative rotation angles
+  // (well under the previous version's) so it reads as a person
+  // standing planted in the box holding a bat near the shoulder,
+  // rather than mid-stride or swinging a cane, which is what the wider
+  // angles actually looked like once rendered.
   var mirrorAttr = flip ? ' transform="translate(' + (2 * silhouetteCx) + ',0) scale(-1,1)"' : '';
-  var batterSvg = '<g opacity="0.32"' + mirrorAttr + '>' +
-    '<circle cx="' + silhouetteCx + '" cy="18" r="10" fill="#fff"/>' +
-    '<rect x="' + (silhouetteCx - 7) + '" y="28" width="14" height="58" rx="7" fill="#fff"/>' +
-    '<rect x="' + (silhouetteCx - 7.5) + '" y="84" width="9" height="60" rx="4.5" fill="#fff" transform="rotate(-15,' + (silhouetteCx - 3) + ',84)"/>' +
-    '<rect x="' + (silhouetteCx - 7.5) + '" y="84" width="9" height="60" rx="4.5" fill="#fff" transform="rotate(20,' + (silhouetteCx - 3) + ',84)"/>' +
-    '<rect x="' + (silhouetteCx - 2) + '" y="34" width="8" height="38" rx="4" fill="#fff" transform="rotate(40,' + (silhouetteCx + 2) + ',34)"/>' +
-    '<rect x="' + (silhouetteCx - 1) + '" y="20" width="6" height="72" rx="3" fill="#fff" transform="rotate(-55,' + (silhouetteCx + 2) + ',20)"/>' +
+  var batterSvg = '<g opacity="0.3"' + mirrorAttr + '>' +
+    '<circle cx="' + silhouetteCx + '" cy="30" r="11" fill="#fff"/>' +
+    '<rect x="' + (silhouetteCx - 8) + '" y="43" width="16" height="60" rx="8" fill="#fff"/>' +
+    '<rect x="' + (silhouetteCx - 11) + '" y="100" width="10" height="70" rx="5" fill="#fff" transform="rotate(-10,' + (silhouetteCx - 2) + ',100)"/>' +
+    '<rect x="' + (silhouetteCx - 11) + '" y="100" width="10" height="70" rx="5" fill="#fff" transform="rotate(14,' + (silhouetteCx - 2) + ',100)"/>' +
+    '<rect x="' + (silhouetteCx - 2.5) + '" y="50" width="9" height="35" rx="4.5" fill="#fff" transform="rotate(22,' + (silhouetteCx + 3) + ',50)"/>' +
+    '<rect x="' + (silhouetteCx - 1.5) + '" y="20" width="7" height="65" rx="3.5" fill="#fff" transform="rotate(-18,' + (silhouetteCx + 3) + ',50)"/>' +
     '</g>';
 
-  var svg = '<svg viewBox="0 0 240 280" width="120" height="140" style="flex-shrink:0">' +
+  // 3x3 zone grid, matching the classic broadcast strike-zone look.
+  var gridSvg = '';
+  for (var i = 1; i < 3; i++) {
+    var gx = zoneX1 + (zoneX2 - zoneX1) * i / 3;
+    var gy = zoneY1 + (zoneY2 - zoneY1) * i / 3;
+    gridSvg += '<line x1="' + gx.toFixed(1) + '" y1="' + zoneY1.toFixed(1) + '" x2="' + gx.toFixed(1) + '" y2="' + zoneY2.toFixed(1) + '" stroke="rgba(255,255,255,.22)" stroke-width="1"/>';
+    gridSvg += '<line x1="' + zoneX1.toFixed(1) + '" y1="' + gy.toFixed(1) + '" x2="' + zoneX2.toFixed(1) + '" y2="' + gy.toFixed(1) + '" stroke="rgba(255,255,255,.22)" stroke-width="1"/>';
+  }
+
+  // A proper home-plate pentagon, sized off the zone's own width so it
+  // scales sensibly with it, sitting just below.
+  var plateCx = (zoneX1 + zoneX2) / 2, plateW = (zoneX2 - zoneX1) * 1.15, plateY = zoneY2 + 14;
+  var plateSvg = '<path d="M ' + (plateCx - plateW / 2).toFixed(1) + ' ' + plateY.toFixed(1) +
+    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + plateY.toFixed(1) +
+    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + (plateY + 13).toFixed(1) +
+    ' L ' + plateCx.toFixed(1) + ' ' + (plateY + 25).toFixed(1) +
+    ' L ' + (plateCx - plateW / 2).toFixed(1) + ' ' + (plateY + 13).toFixed(1) + ' Z" fill="rgba(255,255,255,.14)"/>';
+
+  var svg = '<svg viewBox="0 0 350 260" width="100%" height="150" style="display:block">' +
     batterSvg +
-    '<rect x="0" y="0" width="240" height="280" fill="rgba(255,255,255,.03)" rx="8"/>' +
-    '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>' +
-    '<path d="M 95 210 L 145 210 L 145 222 L 120 234 L 95 222 Z" fill="rgba(255,255,255,.12)"/>';
+    '<rect x="0" y="0" width="350" height="260" fill="rgba(255,255,255,.03)" rx="10"/>' +
+    '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>' +
+    gridSvg + plateSvg;
   seq.pitches.forEach(function (p) {
     var x = _szX(p.px), y = _szY(p.pz), pColor = _pitchCallColor(p.call);
-    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="10" fill="' + pColor + '"/>' +
-      '<text x="' + x.toFixed(1) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.5"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y + 4.5).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
   });
   svg += '</svg>';
 
@@ -10054,9 +10077,13 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
       '<div style="width:7px;height:7px;border-radius:50%;background:' + _pitchCallColor(label) + '"></div>' + label + '</div>';
   }).join('');
 
+  // Diagram full-width on top (the zone is the star, same as a
+  // broadcast graphic), pitch list stacked below it — not side by side,
+  // which is what was squeezing the zone into a small corner before.
   return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
     (seq.batter ? '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Pitches to ' + _clickablePlayerNameHtml({ name: seq.batter, id: seq.batterId }, 'mlb') + '</div>' : '') +
-    '<div style="display:flex;gap:14px;align-items:flex-start">' + svg + '<div style="flex:1;min-width:0">' + list + '</div></div>' +
+    '<div style="border-radius:10px;overflow:hidden;margin-bottom:10px">' + svg + '</div>' +
+    '<div>' + list + '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">' + legend + '</div>' +
     '</div>';
 }
