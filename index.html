@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.36.0-strikezone-redesign';
+window.INNINGS_BUILD = 'v5.37.0-batter-silhouette-final';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10012,25 +10012,40 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   // (see the note above _pitchCallColor). `flip` mirrors the whole pose
   // horizontally so the arms/bat reach toward the plate on whichever
   // side the batter actually stands, rather than always reaching the
-  // same direction regardless of handedness. The wider canvas leaves
-  // real room for the silhouette clear of the zone on either side,
-  // rather than competing for the same cramped space.
-  var silhouetteCx = (seq.batSide === 'L') ? 300 : 50;
+  // same direction regardless of handedness.
+  //
+  // This silhouette started from a reference render (head/helmet/torso/
+  // legs built as smooth bezier curves, not primitive shapes), then
+  // corrected in stages: the bat was mirrored point-for-point around
+  // the body's center so the barrel points away from the pitcher
+  // instead of toward it; the arms were rebuilt to actually reach the
+  // hands/grip point after that move left them behind; the bat's
+  // barrel was brought down to shoulder height; the legs were scaled
+  // narrower around the hip pivot; the bat was lengthened and
+  // thickened. All in a local 0–120-ish coordinate space, positioned
+  // here by a plain translate (verified numerically to clear the zone
+  // on both sides before shipping, not eyeballed).
   var flip = (seq.batSide === 'L');
-  // A filled, grounded batting stance — conservative rotation angles
-  // (well under the previous version's) so it reads as a person
-  // standing planted in the box holding a bat near the shoulder,
-  // rather than mid-stride or swinging a cane, which is what the wider
-  // angles actually looked like once rendered.
-  var mirrorAttr = flip ? ' transform="translate(' + (2 * silhouetteCx) + ',0) scale(-1,1)"' : '';
-  var batterSvg = '<g opacity="0.3"' + mirrorAttr + '>' +
-    '<circle cx="' + silhouetteCx + '" cy="30" r="11" fill="#fff"/>' +
-    '<rect x="' + (silhouetteCx - 8) + '" y="43" width="16" height="60" rx="8" fill="#fff"/>' +
-    '<rect x="' + (silhouetteCx - 11) + '" y="100" width="10" height="70" rx="5" fill="#fff" transform="rotate(-10,' + (silhouetteCx - 2) + ',100)"/>' +
-    '<rect x="' + (silhouetteCx - 11) + '" y="100" width="10" height="70" rx="5" fill="#fff" transform="rotate(14,' + (silhouetteCx - 2) + ',100)"/>' +
-    '<rect x="' + (silhouetteCx - 2.5) + '" y="50" width="9" height="35" rx="4.5" fill="#fff" transform="rotate(22,' + (silhouetteCx + 3) + ',50)"/>' +
-    '<rect x="' + (silhouetteCx - 1.5) + '" y="20" width="7" height="65" rx="3.5" fill="#fff" transform="rotate(-18,' + (silhouetteCx + 3) + ',50)"/>' +
+  var figureOffsetX = flip ? 232 : 20;
+  var mirrorAxis = 60;
+  var HEAD_TORSO =
+    '<path d="M 45,55 C 45,46 52,40 60,40 C 67,40 72,46 72,53 C 72,56 68,59 65,59 C 68,61 70,66 67,70 C 64,74 58,74 54,71 L 45,55 Z"/>' +
+    '<path d="M 68,48 L 84,52 L 82,56 L 68,52 Z"/>' +
+    '<path d="M 52,70 C 46,72 38,82 36,94 C 34,106 38,126 44,140 C 52,140 64,138 70,130 C 72,116 70,96 66,80 C 64,72 60,70 52,70 Z"/>';
+  var LEGS_NARROWED =
+    '<g transform="translate(53,0) scale(0.65,1) translate(-53,0)">' +
+    '<path d="M 40,136 C 34,148 24,166 18,185 C 15,194 10,208 8,214 L 22,216 L 28,206 C 36,194 46,172 52,152 Z"/>' +
+    '<path d="M 66,132 C 72,146 82,168 88,190 C 90,198 94,208 98,214 C 92,216 78,216 76,212 C 72,204 66,188 60,170 C 56,156 56,142 56,132 Z"/>' +
     '</g>';
+  var ARMS_CONNECTED =
+    '<path d="M 60.3,79.5 L 83.9,68.6 L 80.1,59.4 L 55.7,68.5 Z"/>' +
+    '<path d="M 68.0,75.6 L 83.6,67.7 L 80.4,60.3 L 64.0,66.4 Z"/>';
+  var GRIP_AND_BAT =
+    '<circle cx="82" cy="64" r="6"/>' +
+    '<path d="M 84.1,60.6 L 28.5,19.2 L 18.0,36.3 L 79.9,67.4 Z"/>';
+  var batterInner = HEAD_TORSO + LEGS_NARROWED + ARMS_CONNECTED + GRIP_AND_BAT;
+  var batterMirrored = flip ? '<g transform="translate(' + (2 * mirrorAxis) + ',0) scale(-1,1)">' + batterInner + '</g>' : batterInner;
+  var batterSvg = '<g opacity="0.35" fill="rgba(168,159,232,.55)" stroke="rgba(168,159,232,.8)" stroke-width="0.75" transform="translate(' + figureOffsetX + ',0)">' + batterMirrored + '</g>';
 
   // 3x3 zone grid, matching the classic broadcast strike-zone look.
   var gridSvg = '';
