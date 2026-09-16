@@ -23,6 +23,9 @@
 </style>
 <title>Innings — Every moment deserves a home</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -606,9 +609,75 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
    MLB is picked from the sport picker, then dismisses into the schedule.
    Separate overlay from the ambient/looping .sport-banner treatment used
    on the football "coming soon" screen. */
-#mlb-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310}
-#mlb-flourish svg{width:100%;height:100%;display:block}
-#mlb-flourish-skip{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.35)}
+#mlb-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310;overflow:hidden}
+#mlb-flourish-skip{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:12px;color:rgba(237,234,255,.58)}
+/* "Lights on" MLB flourish (v5.44.0) — one 8s timeline on a fixed 390×844
+   stage, scaled to cover the screen by playMlbFlourish() (--mlbf-s). The ball
+   is an HTML dot on offset-path, which is why the whole stage scales as one
+   box instead of the SVG scaling on its own. Beats: light banks ignite
+   (0–1.5s) → field + wall draw (1.5–3.1s) → contact at 3.5s → ball clears
+   the right-field wall ~4.5s → caption 5.1s → dismiss at 7s. Everything runs
+   once (fill both); display:none → block restarts it on the next pick. */
+.mlbf-stage{position:absolute;left:50%;top:50%;width:390px;height:844px;transform:translate(-50%,-50%) scale(var(--mlbf-s,1));transform-origin:50% 50%}
+.mlbf-stage>svg{position:absolute;left:0;top:0;width:390px;height:844px;display:block}
+.mlbf-bulb1{animation:mlbfBulb1 8s linear both}
+.mlbf-bulb2{animation:mlbfBulb2 8s linear both}
+.mlbf-bulb3{animation:mlbfBulb3 8s linear both}
+.mlbf-bulb4{animation:mlbfBulb4 8s linear both}
+@keyframes mlbfBulb1{0%,4.5%{opacity:.1}5.25%{opacity:1}6.4%{opacity:.3}7.5%,100%{opacity:1}}
+@keyframes mlbfBulb2{0%,8.25%{opacity:.1}9%{opacity:1}10.1%{opacity:.3}11.25%,100%{opacity:1}}
+@keyframes mlbfBulb3{0%,12%{opacity:.1}12.75%{opacity:1}13.9%{opacity:.3}15%,100%{opacity:1}}
+@keyframes mlbfBulb4{0%,15.75%{opacity:.1}16.5%{opacity:1}17.6%{opacity:.3}18.75%,100%{opacity:1}}
+.mlbf-beam1{animation:mlbfBeam1 8s ease-out both}
+.mlbf-beam2{animation:mlbfBeam2 8s ease-out both}
+.mlbf-beam3{animation:mlbfBeam3 8s ease-out both}
+.mlbf-beam4{animation:mlbfBeam4 8s ease-out both}
+@keyframes mlbfBeam1{0%,6.75%{opacity:0}15%,100%{opacity:1}}
+@keyframes mlbfBeam2{0%,10.5%{opacity:0}18.75%,100%{opacity:1}}
+@keyframes mlbfBeam3{0%,14.25%{opacity:0}22.5%,100%{opacity:1}}
+@keyframes mlbfBeam4{0%,18%{opacity:0}26.25%,100%{opacity:1}}
+.mlbf-haze{animation:mlbfHaze 8s ease-out both}
+@keyframes mlbfHaze{0%,13.5%{opacity:0}37.5%,100%{opacity:1}}
+.mlbf-stands{animation:mlbfStands 8s ease-out both}
+@keyframes mlbfStands{0%,14%{opacity:0}32%,100%{opacity:1}}
+.mlbf-line{stroke-dasharray:100;animation:mlbfLine 8s cubic-bezier(.45,.05,.25,1) both}
+@keyframes mlbfLine{0%,19.5%{stroke-dashoffset:100}33%,100%{stroke-dashoffset:0}}
+.mlbf-arc{stroke-dasharray:100;animation:mlbfArc 8s cubic-bezier(.45,.05,.25,1) both}
+@keyframes mlbfArc{0%,25.5%{stroke-dashoffset:100}39%,100%{stroke-dashoffset:0}}
+.mlbf-wall{animation:mlbfWall 8s ease-out both}
+@keyframes mlbfWall{0%,30%{opacity:0}40%,100%{opacity:1}}
+.mlbf-bases{animation:mlbfBases 8s ease-out both}
+@keyframes mlbfBases{0%,30%{opacity:0}36%,100%{opacity:1}}
+.mlbf-mote{opacity:0;animation:mlbfMote 4.5s ease-in-out infinite}
+@keyframes mlbfMote{0%{opacity:0;transform:translateY(0)}30%{opacity:.55}100%{opacity:0;transform:translateY(-70px)}}
+.mlbf-contact{transform-origin:195px 728px;animation:mlbfContact 8s ease-out both}
+@keyframes mlbfContact{0%,43.8%{opacity:0;transform:scale(1)}44.3%{opacity:.9}54%,100%{opacity:0;transform:scale(5)}}
+.mlbf-contact-dot{animation:mlbfContactDot 8s ease-out both}
+@keyframes mlbfContactDot{0%,43.8%{opacity:0}44.3%{opacity:1}50%,100%{opacity:0}}
+.mlbf-trail{stroke-dasharray:100;animation:mlbfTrail 8s linear both}
+@keyframes mlbfTrail{0%,44%{stroke-dashoffset:100;animation-timing-function:cubic-bezier(.2,.6,.4,1)}64%,100%{stroke-dashoffset:0}}
+.mlbf-trail-fade{animation:mlbfTrailFade 8s ease-in-out both}
+@keyframes mlbfTrailFade{0%,64%{opacity:1}84%,100%{opacity:.22}}
+.mlbf-ball-vis{position:absolute;inset:0;animation:mlbfBallVis 8s linear both}
+@keyframes mlbfBallVis{0%,43.8%{opacity:0}44.2%{opacity:1}60%{opacity:1}66%,100%{opacity:0}}
+.mlbf-ball{position:absolute;left:0;top:0;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#D9D4FA 70%);box-shadow:0 0 12px 3px rgba(212,205,250,.8),0 0 34px 8px rgba(168,159,232,.35);offset-path:path('M 195 728 Q 266 175 338 500');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+@keyframes mlbfBall{0%,44%{offset-distance:0%;transform:scale(1);animation-timing-function:cubic-bezier(.2,.6,.4,1)}64%,100%{offset-distance:100%;transform:scale(.4)}}
+.mlbf-wall-hi{animation:mlbfWallHi 8s ease-out both}
+@keyframes mlbfWallHi{0%,55%{opacity:0}58%{opacity:1}90%,100%{opacity:.35}}
+.mlbf-flare{animation:mlbfFlare 8s ease-in-out both}
+@keyframes mlbfFlare{0%,55%{opacity:0}60%{opacity:1}80%,100%{opacity:0}}
+.mlbf-spark{transform-box:fill-box;transform-origin:center;animation:mlbfSpark 8s ease-out both}
+@keyframes mlbfSpark{0%,58%{opacity:0;transform:scale(.4)}59%{opacity:1;transform:scale(1.4)}62%,100%{opacity:0;transform:scale(1)}}
+.mlbf-cap{position:absolute;left:0;right:0;top:262px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:mlbfCap 8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes mlbfCap{0%,64%{opacity:0;transform:translateY(12px)}75%,100%{opacity:1;transform:none}}
+.mlbf-cap-title{font-family:'Instrument Serif',Georgia,serif;font-size:54px;font-weight:400;letter-spacing:-.01em;line-height:1;color:#F5F3FF}
+.mlbf-cap-sub{font-size:13px;font-weight:500;color:#B9B3E6}
+@media (prefers-reduced-motion: reduce){
+  #mlb-flourish .mlbf-stage *{animation:none!important}
+  #mlb-flourish .mlbf-line,#mlb-flourish .mlbf-arc,#mlb-flourish .mlbf-trail{stroke-dashoffset:0!important}
+  #mlb-flourish .mlbf-ball-vis,#mlb-flourish .mlbf-contact,#mlb-flourish .mlbf-contact-dot,#mlb-flourish .mlbf-flare,#mlb-flourish .mlbf-spark,#mlb-flourish .mlbf-mote{opacity:0!important}
+  #mlb-flourish .mlbf-trail-fade{opacity:.35!important}
+}
 /* Watching-together avatar stack — same 2-letter-initials treatment as
    the friends list elsewhere, just sized down to sit inline in the Live
    Feed card and the game detail header. */
@@ -871,42 +940,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes gbLg{0%,100%{opacity:.5}50%{opacity:.85}}
 .gb-board-pixel{animation:gbBp 1.8s steps(1) infinite}
 @keyframes gbBp{0%,100%{opacity:.9}33%{opacity:.4}66%{opacity:.7}}
-.gbfs-bb-ball{animation:gbBbArc 3.6s ease-out 1 forwards}
-@keyframes gbBbArc{
-  0%   {transform:translate(0px,0px);opacity:0}
-  3%   {transform:translate(4px,-7px);opacity:1}
-  6%   {transform:translate(13.5px,-24.1px);opacity:1}
-  11%  {transform:translate(26.7px,-45.3px);opacity:1}
-  17%  {transform:translate(39.7px,-63.5px);opacity:1}
-  22%  {transform:translate(52.5px,-78.7px);opacity:1}
-  28%  {transform:translate(65px,-91px);opacity:1}
-  33%  {transform:translate(77.3px,-100.3px);opacity:1}
-  39%  {transform:translate(89.3px,-106.7px);opacity:1}
-  44%  {transform:translate(101.1px,-110.1px);opacity:1}
-  50%  {transform:translate(112.7px,-110.5px);opacity:1}
-  55%  {transform:translate(124px,-108px);opacity:1}
-  58%  {transform:translate(124px,-108px);opacity:0}
-  100% {opacity:0}
-}
-.gbfs-bb-splash{animation:gbBbSplash 3.6s ease-out 1 forwards}
-@keyframes gbBbSplash{
-  0%,52%{opacity:0;transform:scale(.3)}
-  57%{opacity:1;transform:scale(1)}
-  72%{opacity:0;transform:scale(2.1)}
-  100%{opacity:0}
-}
-.gb-bb-wave{animation:gbBbWave 2.8s ease-in-out infinite}
-@keyframes gbBbWave{0%,100%{transform:translateY(0)}50%{transform:translateY(2px)}}
-.gb-bb-kayak{animation:gbBbBob 3.4s ease-in-out infinite}
-@keyframes gbBbBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
-.gbfs-bb-caption{transform-box:fill-box;transform-origin:50% 50%;animation:gbBbCaption 3.6s ease-out 1 forwards}
-@keyframes gbBbCaption{
-  0%,73%{opacity:0;transform:scale(.85) translateY(4px)}
-  78%{opacity:1;transform:scale(1.05) translateY(0)}
-  84%{opacity:1;transform:scale(1) translateY(0)}
-  95%{opacity:1;transform:scale(1) translateY(0)}
-  100%{opacity:0;transform:scale(.95) translateY(-3px)}
-}
 .gb-fb-ball{transform-box:fill-box;transform-origin:50% 50%;animation:gbFbFly 3.2s linear forwards}
 @keyframes gbFbFly{
   0%   {transform:translate(0px,0px)     rotate(-35deg);opacity:0}
@@ -1715,208 +1748,161 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
 </div>
 
-<!-- ═══ MLB FULL-SCREEN FLOURISH — plays once when MLB is picked from the
-     sport picker above, then dismisses into the Games schedule. One-shot
-     versions (gbfs-*) of the same keyframes the football banner's ambient
-     pieces still loop on — see playMlbFlourish()/skipMlbFlourish() below. ═══ -->
+<!-- ═══ MLB FULL-SCREEN FLOURISH — "Lights on" (v5.44.0). Plays once when
+     MLB is picked from the sport picker, then dismisses into the Games
+     schedule: light banks ignite, the field and outfield wall draw in, a
+     home run clears the right-field wall, "Play ball" settles in. All
+     timing lives in the .mlbf-* CSS; scaling + dismissal live in
+     playMlbFlourish()/skipMlbFlourish() below. ═══ -->
 <div id="mlb-flourish" onclick="skipMlbFlourish()">
-  <svg viewBox="0 0 390 700" xmlns="http://www.w3.org/2000/svg">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <defs>
-      <linearGradient id="fSkyDeep" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#050310"/>
-        <stop offset="100%" stop-color="#1A1640"/>
-      </linearGradient>
-      <linearGradient id="fSky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1A1640"/>
-        <stop offset="100%" stop-color="#0D0820"/>
-      </linearGradient>
-      <linearGradient id="fGrass" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3C7A50"/>
-        <stop offset="100%" stop-color="#1E4230"/>
-      </linearGradient>
-      <linearGradient id="fGrassDeep" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1E4230"/>
-        <stop offset="100%" stop-color="#0B1A11"/>
-      </linearGradient>
-      <linearGradient id="fCove" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3A5E8A"/>
-        <stop offset="100%" stop-color="#16305A"/>
-      </linearGradient>
-      <linearGradient id="fHaze" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#C7C0E8" stop-opacity="0"/>
-        <stop offset="100%" stop-color="#C7C0E8" stop-opacity=".22"/>
-      </linearGradient>
-      <radialGradient id="fDirt" cx="50%" cy="30%" r="70%">
-        <stop offset="0%" stop-color="#A5825A"/>
-        <stop offset="100%" stop-color="#7A5C3C"/>
-      </radialGradient>
-      <clipPath id="fGrassClip">
-        <path d="M0 160 L390 160 L390 78 Q195 54 0 78 Z"/>
-      </clipPath>
-      <linearGradient id="fVignette" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#0B1A11" stop-opacity="0"/>
-        <stop offset="100%" stop-color="#050310" stop-opacity=".9"/>
-      </linearGradient>
+    <linearGradient id="mlbfSky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="mlbfBeam" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="mlbfFlare" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="mlbfHaze" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="mlbfHalo" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="mlbfTrail" gradientUnits="userSpaceOnUse" x1="195" y1="728" x2="300" y2="380">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
     </defs>
 
-    <!-- extended top sky — deepens above the original horizon so the
-         scene doesn't start flush against the top of the screen -->
-    <rect x="0" y="0" width="390" height="300" fill="url(#fSkyDeep)"/>
-    <circle class="gb-twinkle" cx="60" cy="40" r="1.2" fill="#fff" style="animation-delay:.1s"/>
-    <circle class="gb-twinkle" cx="150" cy="70" r="1" fill="#fff" style="animation-delay:.9s"/>
-    <circle class="gb-twinkle" cx="90" cy="130" r="1.1" fill="#fff" style="animation-delay:1.4s"/>
-    <circle class="gb-twinkle" cx="250" cy="35" r="1" fill="#fff" style="animation-delay:.5s"/>
-    <circle class="gb-twinkle" cx="340" cy="150" r="1.2" fill="#fff" style="animation-delay:1.8s"/>
-    <circle class="gb-twinkle" cx="200" cy="190" r="1" fill="#fff" style="animation-delay:.3s"/>
-    <circle class="gb-twinkle" cx="40" cy="220" r="1.1" fill="#fff" style="animation-delay:1.1s"/>
-    <circle cx="292" cy="95" r="34" fill="#E8E4FF" opacity=".08"/>
-    <circle cx="292" cy="95" r="17" fill="#F5F3FF" opacity=".5"/>
-    <path d="M0 250 Q90 220 195 245 T390 235 V300 H0 Z" fill="#2C3E66" opacity=".3"/>
+    <rect x="0" y="0" width="390" height="844" fill="url(#mlbfSky)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="690" rx="270" ry="180" fill="url(#mlbfHaze)"></ellipse>
 
-    <!-- original scene, unchanged internally, dropped into the lower
-         two-thirds of the taller canvas -->
-    <g transform="translate(0,300)">
-      <rect width="390" height="160" fill="url(#fSky)"/>
-      <circle class="gb-twinkle" cx="40" cy="6" r="1.1" fill="#fff" style="animation-delay:.2s"/>
-      <circle class="gb-twinkle" cx="110" cy="4" r="1" fill="#fff" style="animation-delay:1.1s"/>
-      <circle class="gb-twinkle" cx="330" cy="5" r="1.1" fill="#fff" style="animation-delay:.6s"/>
-      <circle class="gb-twinkle" cx="70" cy="10" r="1" fill="#fff" style="animation-delay:1.6s"/>
-
-      <path d="M0 24 Q60 16 130 22 T260 20 T390 24 V32 H0 Z" fill="#2C3E66" opacity=".5"/>
-
-      <rect x="0" y="18" width="390" height="10" fill="url(#fCove)" opacity=".7"/>
-      <g stroke="#3A5A85" stroke-width=".8" opacity=".45">
-        <line x1="298" y1="10" x2="298" y2="20"/>
-        <line x1="322" y1="7" x2="322" y2="20"/>
-        <line x1="346" y1="10" x2="346" y2="20"/>
-        <path d="M290 15 Q310 6 330 15 T390 15" fill="none"/>
-      </g>
-
-      <path d="M -10 44 Q 195 12 400 44 L 400 30 Q 195 -2 -10 30 Z" fill="#2A2460" opacity=".65"/>
-      <path d="M -10 50 Q 195 20 400 50 L 400 42 Q 195 14 -10 42 Z" fill="#3D3580" opacity=".45"/>
-      <g fill="#4A4390" opacity=".4">
-        <circle cx="24" cy="34" r=".9"/><circle cx="46" cy="28" r=".9"/><circle cx="68" cy="24" r=".8"/>
-        <circle cx="320" cy="24" r=".8"/><circle cx="342" cy="28" r=".9"/><circle cx="364" cy="34" r=".9"/>
-      </g>
-
-      <rect x="0" y="4" width="390" height="46" fill="url(#fHaze)"/>
-
-      <g>
-        <rect x="164" y="6" width="3" height="30" fill="#2A2460"/>
-        <rect x="223" y="6" width="3" height="30" fill="#2A2460"/>
-        <circle class="gb-light-glow" cx="165.5" cy="5" r="2.4" fill="#E8E4FF" opacity=".7" style="animation-delay:.3s"/>
-        <circle class="gb-light-glow" cx="224.5" cy="5" r="2.4" fill="#E8E4FF" opacity=".7" style="animation-delay:1.2s"/>
-        <rect x="169" y="14" width="52" height="20" rx="1.5" fill="#0A0620" stroke="#4A4390" stroke-width=".8"/>
-        <rect class="gb-board-pixel" x="171" y="16.5" width="14" height="6" fill="#C0392B" style="animation-delay:0s"/>
-        <rect class="gb-board-pixel" x="187" y="16.5" width="14" height="6" fill="#E8B923" style="animation-delay:.6s"/>
-        <rect class="gb-board-pixel" x="203" y="16.5" width="14" height="6" fill="#2E7D46" style="animation-delay:1.1s"/>
-        <rect x="171" y="24" width="46" height="8" fill="#1A1640"/>
-        <rect x="173" y="26" width="19" height="2" fill="#8B84C8" opacity=".8"/>
-        <rect x="173" y="29" width="29" height="2" fill="#6B63B5" opacity=".6"/>
-      </g>
-
-      <g opacity=".85">
-        <rect x="70" y="38" width="20" height="6" fill="#2E5C8A"/>
-        <rect x="94" y="38" width="15" height="6" fill="#D9D9D9"/>
-        <rect x="315" y="38" width="18" height="6" fill="#2E5C8A"/>
-      </g>
-
-      <g>
-        <rect x="264" y="33" width="28" height="7.5" rx="1" fill="#C0392B"/>
-        <text x="278" y="38.7" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5" font-weight="700" fill="#F5F3FF">LEVI'S</text>
-      </g>
-
-      <rect x="258" y="24" width="132" height="16" fill="url(#fCove)"/>
-      <path class="gb-bb-wave" d="M258 30 Q 278 27 298 30 T 338 30 T 390 30 V24 H258 Z" fill="#4A7AAE" opacity=".55"/>
-      <g class="gb-bb-kayak">
-        <ellipse cx="300" cy="30" rx="6" ry="2" fill="#0A0620" opacity=".5"/>
-        <rect x="297" y="26.5" width="5.5" height="2.8" rx="1.3" fill="#6B63B5"/>
-      </g>
-      <g class="gb-bb-kayak" style="animation-delay:.8s">
-        <ellipse cx="345" cy="33" rx="5.5" ry="1.8" fill="#0A0620" opacity=".45"/>
-        <rect x="342.5" y="30" width="5" height="2.5" rx="1.2" fill="#8B84C8"/>
-      </g>
-
-      <rect x="253" y="38" width="113" height="12" fill="#A0522D"/>
-      <rect x="253" y="38" width="113" height="3" fill="#C97B4A"/>
-
-      <rect x="25.2" y="4" width="1.6" height="42" fill="#E8B923"/>
-      <rect x="363.2" y="4" width="1.6" height="42" fill="#E8B923"/>
-
-      <g transform="translate(103,44) scale(.5)">
-        <ellipse cx="0" cy="21" rx="17" ry="3" fill="#0A0620" opacity=".3"/>
-        <ellipse cx="0" cy="9" rx="15" ry="10" fill="#8B5A2B"/>
-        <circle cx="-9" cy="-3" r="6.5" fill="#8B5A2B"/>
-        <circle cx="0" cy="-5" r="7" fill="#8B5A2B"/>
-        <circle cx="9" cy="-3" r="6.5" fill="#8B5A2B"/>
-        <circle cx="-15" cy="4" r="5.5" fill="#8B5A2B"/>
-        <path d="M-9 3 Q0 8 9 3 M-6 -1 Q0 4 6 -1 M-11 8 Q0 13 11 8" fill="none" stroke="#5C3A1E" stroke-width="1" opacity=".7"/>
-      </g>
-
-      <rect x="8" y="32" width="6" height="18" fill="#A0522D"/>
-      <rect x="8" y="32" width="6" height="3" fill="#C97B4A"/>
-      <g transform="translate(65,20) rotate(45 0 26) scale(.62)">
-        <rect x="-3" y="-8" width="6" height="8" fill="#5C1717"/>
-        <polygon points="-8,16 8,16 3,0 -3,0" fill="#C0392B"/>
-        <rect x="-8" y="16" width="16" height="40" rx="2" fill="#C0392B"/>
-        <rect x="-8" y="32" width="16" height="9" fill="#F5F3FF"/>
-      </g>
-
-      <path d="M8 60 Q195 51 382 60 L382 52 Q195 43 8 52 Z" fill="#8B6B4A"/>
-
-      <g clip-path="url(#fGrassClip)">
-        <rect width="390" height="160" fill="url(#fGrass)"/>
-        <g fill="#fff" opacity=".07">
-          <rect x="0" y="54" width="390" height="5"/>
-          <rect x="0" y="66" width="390" height="7"/>
-          <rect x="0" y="82" width="390" height="10"/>
-          <rect x="0" y="102" width="390" height="14"/>
-          <rect x="0" y="128" width="390" height="18"/>
-        </g>
-      </g>
-
-      <g stroke="#EEEDF8" stroke-width="1.3" opacity=".7">
-        <line x1="195" y1="158" x2="26" y2="49"/>
-        <line x1="195" y1="158" x2="364" y2="49"/>
-      </g>
-
-      <path d="M195 158 L260 120 L195 82 L130 120 Z" fill="url(#fDirt)"/>
-      <path d="M195 158 L260 120 L195 82 L130 120 Z" fill="none" stroke="#6E5236" stroke-width="1" opacity=".5"/>
-      <circle cx="195" cy="112" r="6" fill="#8B6B4A" stroke="#6E5236" stroke-width="1"/>
-      <rect x="255" y="115" width="9" height="9" fill="#F5F3FF" transform="rotate(45 260 120)"/>
-      <rect x="190" y="77" width="9" height="9" fill="#F5F3FF" transform="rotate(45 195 82)"/>
-      <rect x="125" y="115" width="9" height="9" fill="#F5F3FF" transform="rotate(45 130 120)"/>
-      <path d="M187 152 L203 152 L203 156 L195 162 L187 156 Z" fill="#F5F3FF"/>
-
-      <circle class="gbfs-bb-ball" cx="195" cy="152" r="3.4" fill="#fff"/>
-
-      <g transform="translate(319,44)">
-        <g class="gbfs-bb-splash">
-          <circle r="3" fill="#EAF6FF" opacity=".9"/>
-          <circle r="5.5" fill="none" stroke="#BFE3FF" stroke-width="1.8"/>
-          <circle r="10.5" fill="none" stroke="#BFE3FF" stroke-width="1.1" opacity=".65"/>
-          <circle cx="-7" cy="-5" r="1.2" fill="#EAF6FF"/>
-          <circle cx="7" cy="-6" r="1" fill="#EAF6FF"/>
-          <circle cx="0" cy="-9" r="1" fill="#EAF6FF"/>
-        </g>
-      </g>
-
-      <g class="gbfs-bb-caption">
-        <text x="195" y="76" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display',Helvetica,sans-serif" font-size="20" font-weight="800" fill="#F5F3FF" style="paint-order:stroke;stroke:#0D0820;stroke-width:4px;stroke-linejoin:round">Play ball!</text>
-      </g>
+    <g class="mlbf-stands">
+    <path d="M 10 591 Q 195 458 380 591 L 380 546 Q 195 404 10 546 Z" fill="#0B0822"></path>
+    <g fill="none" stroke="#2A2466" stroke-width="1" stroke-opacity=".7">
+    <path d="M 10 576 Q 195 440 380 576"></path>
+    <path d="M 10 561 Q 195 422 380 561"></path>
+    </g>
+    <line x1="10" y1="603" x2="10" y2="540" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.2"></line>
+    <line x1="380" y1="603" x2="380" y2="540" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.2"></line>
     </g>
 
-    <!-- extended foreground grass, continuing the depth cue down to a
-         clean vignette at the bottom edge -->
-    <rect x="0" y="460" width="390" height="240" fill="url(#fGrassDeep)"/>
-    <g fill="#fff" opacity=".06">
-      <rect x="0" y="470" width="390" height="20"/>
-      <rect x="0" y="512" width="390" height="26"/>
-      <rect x="0" y="562" width="390" height="34"/>
-      <rect x="0" y="620" width="390" height="44"/>
+    <polygon class="mlbf-beam1" points="40,170 64,170 300,690 110,690" fill="url(#mlbfBeam)"></polygon>
+    <polygon class="mlbf-beam2" points="350,170 326,170 90,690 280,690" fill="url(#mlbfBeam)"></polygon>
+    <polygon class="mlbf-beam3" points="122,132 142,132 285,690 115,690" fill="url(#mlbfBeam)"></polygon>
+    <polygon class="mlbf-beam4" points="268,132 248,132 105,690 275,690" fill="url(#mlbfBeam)"></polygon>
+
+    <g class="mlbf-flare">
+    <polygon points="40,170 64,170 300,690 110,690" fill="url(#mlbfFlare)"></polygon>
+    <polygon points="350,170 326,170 90,690 280,690" fill="url(#mlbfFlare)"></polygon>
+    <polygon points="122,132 142,132 285,690 115,690" fill="url(#mlbfFlare)"></polygon>
+    <polygon points="268,132 248,132 105,690 275,690" fill="url(#mlbfFlare)"></polygon>
     </g>
-    <rect x="0" y="460" width="390" height="240" fill="url(#fVignette)"/>
-  </svg>
+
+    <circle class="mlbf-beam1" cx="52" cy="161" r="34" fill="url(#mlbfHalo)"></circle>
+    <circle class="mlbf-beam2" cx="338" cy="161" r="34" fill="url(#mlbfHalo)"></circle>
+    <circle class="mlbf-beam3" cx="132" cy="123" r="34" fill="url(#mlbfHalo)"></circle>
+    <circle class="mlbf-beam4" cx="258" cy="123" r="34" fill="url(#mlbfHalo)"></circle>
+
+    <g transform="translate(52,150)">
+    <rect x="-1" y="22" width="2" height="90" fill="#1A1640"></rect>
+    <rect x="-20" y="0" width="40" height="22" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect>
+    <g class="mlbf-bulb1" fill="#F5F3FF">
+    <circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle>
+    <circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle>
+    </g>
+    </g>
+    <g transform="translate(338,150)">
+    <rect x="-1" y="22" width="2" height="90" fill="#1A1640"></rect>
+    <rect x="-20" y="0" width="40" height="22" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect>
+    <g class="mlbf-bulb2" fill="#F5F3FF">
+    <circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle>
+    <circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle>
+    </g>
+    </g>
+    <g transform="translate(132,112)">
+    <rect x="-1" y="22" width="2" height="110" fill="#1A1640"></rect>
+    <rect x="-20" y="0" width="40" height="22" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect>
+    <g class="mlbf-bulb3" fill="#F5F3FF">
+    <circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle>
+    <circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle>
+    </g>
+    </g>
+    <g transform="translate(258,112)">
+    <rect x="-1" y="22" width="2" height="110" fill="#1A1640"></rect>
+    <rect x="-20" y="0" width="40" height="22" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect>
+    <g class="mlbf-bulb4" fill="#F5F3FF">
+    <circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle>
+    <circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle>
+    </g>
+    </g>
+
+    <g fill="#EDEAFF">
+    <circle class="mlbf-mote" cx="150" cy="520" r="1.2" style="animation-delay:.4s"></circle>
+    <circle class="mlbf-mote" cx="228" cy="470" r="1" style="animation-delay:1.5s"></circle>
+    <circle class="mlbf-mote" cx="118" cy="430" r="1" style="animation-delay:2.3s"></circle>
+    <circle class="mlbf-mote" cx="262" cy="560" r="1.2" style="animation-delay:3.1s"></circle>
+    <circle class="mlbf-mote" cx="196" cy="640" r="1" style="animation-delay:1s"></circle>
+    <circle class="mlbf-mote" cx="90" cy="600" r="1" style="animation-delay:3.8s"></circle>
+    </g>
+
+    <path class="mlbf-wall" d="M 10 603 Q 195 470 380 603 L 380 591 Q 195 458 10 591 Z" fill="#171240"></path>
+    <g fill="none" stroke="#D9D4FA" stroke-opacity=".6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+    <path class="mlbf-line" d="M 195 730 L 10 603" pathLength="100"></path>
+    <path class="mlbf-line" d="M 195 730 L 380 603" pathLength="100"></path>
+    <path class="mlbf-line" d="M 195 730 L 275 675 L 195 630 L 115 675 Z" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 10 603 Q 195 470 380 603" pathLength="100" stroke-opacity=".45"></path>
+    <path class="mlbf-arc" d="M 10 591 Q 195 458 380 591" pathLength="100" stroke-opacity=".3" stroke-width="1"></path>
+    </g>
+    <g class="mlbf-wall-hi">
+    <path d="M 261.6 545.1 Q 309.7 557.6 357.8 588 L 357.8 576 Q 309.7 545.6 261.6 533.1 Z" fill="#A89FE8" fill-opacity=".28"></path>
+    <path d="M 261.6 533.1 Q 309.7 545.6 357.8 576" fill="none" stroke="#F5F3FF" stroke-opacity=".85" stroke-width="1.4" stroke-linecap="round"></path>
+    </g>
+    <g class="mlbf-bases">
+    <ellipse cx="195" cy="676" rx="7" ry="3.6" fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1"></ellipse>
+    <rect x="271" y="672" width="8" height="6" fill="#F5F3FF"></rect>
+    <rect x="191" y="627" width="8" height="6" fill="#F5F3FF"></rect>
+    <rect x="111" y="672" width="8" height="6" fill="#F5F3FF"></rect>
+    <path d="M 189 727 L 201 727 L 201 731 L 195 734 L 189 731 Z" fill="#F5F3FF"></path>
+    </g>
+
+    <circle class="mlbf-contact" cx="195" cy="728" r="6" fill="none" stroke="#F5F3FF" stroke-width="1.2"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="728" r="9" fill="#EDEAFF" fill-opacity=".45"></circle>
+
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 728 Q 266 175 338 500" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="9"></path>
+    <path class="mlbf-trail" d="M 195 728 Q 266 175 338 500" pathLength="100" stroke="url(#mlbfTrail)" stroke-width="1.8"></path>
+    </g>
+
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="326" cy="512" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="352" cy="524" r="1.4" style="animation-delay:.18s"></circle>
+    <circle class="mlbf-spark" cx="312" cy="530" r="1.3" style="animation-delay:.36s"></circle>
+    <circle class="mlbf-spark" cx="364" cy="548" r="1.6" style="animation-delay:.5s"></circle>
+    <circle class="mlbf-spark" cx="296" cy="520" r="1.2" style="animation-delay:.7s"></circle>
+    <circle class="mlbf-spark" cx="340" cy="538" r="1.5" style="animation-delay:.86s"></circle>
+    <circle class="mlbf-spark" cx="280" cy="536" r="1.2" style="animation-delay:1.04s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="mlbf-ball"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Play ball</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
   <div id="mlb-flourish-skip">Tap to skip</div>
 </div>
 
@@ -8519,7 +8505,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.43.0-last10-opponents';
+window.INNINGS_BUILD = 'v5.44.0-mlb-lights-homer';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16739,17 +16725,25 @@ function _restartFootballBanner(bannerEl) {
   }, 3800);
 }
 
-// ── MLB FULL-SCREEN FLOURISH — plays once over the sport picker, then
-// hands off to nav('games'). Timed to the single-run gbfs-* animations
-// (3.6s) plus a short buffer so "Play ball!" is actually readable before
-// it dismisses. Tap anywhere to skip straight to the schedule.
+// ── MLB FULL-SCREEN FLOURISH ("Lights on", v5.44.0) — plays once over the
+// sport picker, then hands off to nav('games'). The 390×844 stage is scaled
+// to cover whatever the overlay measures, so the SVG scene and the
+// offset-path ball stay in the same coordinate space. Dismisses at 7s — the
+// caption has been fully in for ~1s by then. Reduced motion shows the lit
+// end state briefly instead. Tap anywhere to skip straight to the schedule.
 window._mlbFlourishTimer = null;
 function playMlbFlourish() {
   var overlay = document.getElementById('mlb-flourish');
   if (!overlay) { nav('games'); return; }
+  clearTimeout(window._mlbFlourishTimer);
   overlay.style.display = 'block';
+  var stage = overlay.querySelector('.mlbf-stage');
+  if (stage) {
+    var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
+    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+  }
   requestAnimationFrame(function () { overlay.style.opacity = '1'; });
-  window._mlbFlourishTimer = setTimeout(finishMlbFlourish, 3900);
+  window._mlbFlourishTimer = setTimeout(finishMlbFlourish, _ghReducedMotion() ? 2200 : 7000);
 }
 function finishMlbFlourish() {
   var overlay = document.getElementById('mlb-flourish');
