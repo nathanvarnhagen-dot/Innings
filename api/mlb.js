@@ -149,7 +149,12 @@ function summarize(data, gamePk) {
       return {
         inning: (p.about && p.about.inning) || null,
         half: (p.about && p.about.isTopInning) ? 'top' : 'bottom',
-        text: p.result.description
+        text: p.result.description,
+        // atBatIndex is a standard, stable field on every MLB play object
+        // (not an endpoint-specific guess) — used as the reaction key so
+        // a specific play can be reacted to across refreshes without its
+        // identity shifting as new plays are added to the feed.
+        atBatIndex: (p.about && p.about.atBatIndex != null) ? p.about.atBatIndex : null
       };
     });
   }
