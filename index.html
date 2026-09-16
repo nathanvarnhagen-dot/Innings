@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.34.0-full-boxscore-clickable-batter';
+window.INNINGS_BUILD = 'v5.34.1-strikezone-reorder-batter-figure';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10003,11 +10003,26 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   if (!seq || !seq.pitches || !seq.pitches.length) return '';
   var zoneX1 = _szX(-0.83), zoneX2 = _szX(0.83);
   var zoneY1 = _szY(seq.zoneTop), zoneY2 = _szY(seq.zoneBottom);
-  var silhouetteCx = (seq.batSide === 'L') ? 205 : 35; // right-handed -> left side of the diagram, left-handed -> right side (see note above)
+  // Right-handed -> left side of the diagram, left-handed -> right side
+  // (see the note above _pitchCallColor). `flip` mirrors the whole pose
+  // horizontally so the arms/bat reach toward the plate on whichever
+  // side the batter actually stands, rather than always reaching the
+  // same direction regardless of handedness.
+  var silhouetteCx = (seq.batSide === 'L') ? 205 : 35;
+  var flip = (seq.batSide === 'L');
+  var s = flip ? -1 : 1;
+  var batterSvg = '<g opacity="0.3" stroke="#fff" stroke-linecap="round" fill="none">' +
+    '<circle cx="' + silhouetteCx + '" cy="22" r="11" fill="#fff" stroke="none"/>' +
+    '<path d="M ' + silhouetteCx + ' 33 L ' + (silhouetteCx - 3) + ' 120" stroke-width="4"/>' +
+    '<path d="M ' + (silhouetteCx - 3) + ' 120 L ' + (silhouetteCx - 20) + ' 205" stroke-width="4"/>' +
+    '<path d="M ' + (silhouetteCx - 3) + ' 120 L ' + (silhouetteCx + 16) + ' 205" stroke-width="4"/>' +
+    '<path d="M ' + silhouetteCx + ' 60 L ' + (silhouetteCx + s * 20) + ' 85" stroke-width="4"/>' +
+    '<path d="M ' + (silhouetteCx + s * 20) + ' 85 L ' + (silhouetteCx - s * 8) + ' 15" stroke-width="6"/>' +
+    '<circle cx="' + (silhouetteCx - s * 8) + '" cy="15" r="3" fill="#fff" stroke="none"/>' +
+    '</g>';
 
   var svg = '<svg viewBox="0 0 240 280" width="120" height="140" style="flex-shrink:0">' +
-    '<g opacity="0.22"><circle cx="' + silhouetteCx + '" cy="35" r="14" fill="#fff"/>' +
-    '<path d="M ' + (silhouetteCx - 20) + ' 60 Q ' + silhouetteCx + ' 50 ' + (silhouetteCx + 20) + ' 60 L ' + (silhouetteCx + 16) + ' 220 Q ' + silhouetteCx + ' 230 ' + (silhouetteCx - 16) + ' 220 Z" fill="#fff"/></g>' +
+    batterSvg +
     '<rect x="0" y="0" width="240" height="280" fill="rgba(255,255,255,.03)" rx="8"/>' +
     '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>' +
     '<path d="M 95 210 L 145 210 L 145 222 L 120 234 L 95 222 Z" fill="rgba(255,255,255,.12)"/>';
@@ -10229,9 +10244,9 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
       '<div style="font-size:10px;color:' + subColor + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + _escapeHtml(box.status || 'Final') + '</div>' +
     '</div>' +
     (innings.length ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
+    strikeZoneHtml +
     situationHtml +
     matchupHtml +
-    strikeZoneHtml +
     playsHtml +
     boxScoreDetailHtml +
     (box.venue ? '<div style="font-size:11px;color:' + subColor + ';margin-top:10px">' + _escapeHtml(box.venue) + '</div>' : '') +
