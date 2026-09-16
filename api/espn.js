@@ -27,14 +27,17 @@ var LEAGUE_PATHS = {
   nba: 'basketball/nba',
   wnba: 'basketball/wnba',
   mls: 'soccer/usa.1',
-  nwsl: 'soccer/usa.nwsl'
+  nwsl: 'soccer/usa.nwsl',
+  // Team list only (team picker / favorites). NHL games themselves come
+  // from api/nhl.js + api/nhlgame.js, which use NHL game ids.
+  nhl: 'hockey/nhl'
 };
 
 module.exports = async function handler(req, res) {
   const league = req.query.league;
   const mode = req.query.mode;
   const path = LEAGUE_PATHS[league];
-  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, or nwsl' }); return; }
+  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
   try {
     if (mode === 'schedule') {
       const date = req.query.date;
@@ -55,6 +58,22 @@ module.exports = async function handler(req, res) {
       const data = await r.json();
       res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
       res.status(200).json(summarizeSummary(data, eventId, league));
+      return;
+    }
+    if (mode === 'gamecast') {
+      const eventId = req.query.eventId;
+      if (!eventId) { res.status(400).json({ error: 'Missing eventId' }); return; }
+      if (league === 'nhl') { res.status(400).json({ error: 'NHL gamecast lives in /api/nhlgame' }); return; }
+      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/summary?event=' + encodeURIComponent(eventId);
+      const r = await fetch(url);
+      const data = await r.json();
+      const model = summarizeGamecast(data, league, eventId);
+      if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
+        model.teamColors = await _gcTeamColors(path, league);
+      }
+      if (req.query.debug) model.debug = { topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
+      res.setHeader('Cache-Control', model.phase === 'live' ? 's-maxage=10, stale-while-revalidate' : 's-maxage=120, stale-while-revalidate');
+      res.status(200).json(model);
       return;
     }
     if (mode === 'pregame') {
@@ -146,7 +165,7 @@ module.exports = async function handler(req, res) {
       res.status(200).json({ teams: teams });
       return;
     }
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, or teams' });
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, gamecast, pregame, standings, or teams' });
   } catch (err) {
     res.status(500).json({ error: league.toUpperCase() + ' lookup failed' });
   }
@@ -570,4 +589,533 @@ function _nflTeamShortName(name) {
   if (!name) return '';
   var parts = name.trim().split(' ');
   return parts[parts.length - 1];
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// GAMECAST (v5.44.0) — one normalized model per game for the game-screen
+// hero (pre / live / final) + detail cards + box score, for football,
+// basketball and soccer. Same summary endpoint the boxscore mode already
+// uses. Shape notes: header/competitors/linescores, boxscore.players and
+// scoringPlays are the long-standing fields of this endpoint; plays
+// (basketball), keyEvents + rosters (soccer), lastFiveGames, leaders and
+// situation are standard but NOT confirmed against a live response in
+// this session. Every section degrades to empty instead of throwing —
+// hit this mode with &debug=1 to see the summary's top-level keys.
+// ══════════════════════════════════════════════════════════════════════
+function _num(v) {
+  if (v == null || v === '') return null;
+  var n = Number(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n;
+}
+function _hex(c) { return c ? ('#' + String(c).replace('#', '')) : null; }
+function _lastName(full) {
+  if (!full) return '';
+  var p = String(full).trim().split(/\s+/);
+  if (p.length < 2) return p[0];
+  var last = p[p.length - 1];
+  if (/^(Jr\.?|Sr\.?|II|III|IV)$/i.test(last) && p.length > 2) return p[p.length - 2] + ' ' + last;
+  return last;
+}
+// "5-12" → 41.7 · "28:14" → 1694 · "51.2" → 51.2 · "44%" → 44
+function _statNum(txt) {
+  if (txt == null) return null;
+  var s = String(txt);
+  var frac = s.match(/^(\d+)\s*[-\/]\s*(\d+)$/);
+  if (frac) return Number(frac[2]) ? Math.round((Number(frac[1]) / Number(frac[2])) * 1000) / 10 : 0;
+  var clock = s.match(/^(\d+):(\d{2})$/);
+  if (clock) return Number(clock[1]) * 60 + Number(clock[2]);
+  return _num(s);
+}
+function _gcSport(league) {
+  if (FOOTBALL_LEAGUES[league]) return 'football';
+  if (BASKETBALL_LEAGUES[league]) return 'basketball';
+  if (SOCCER_LEAGUES[league]) return 'soccer';
+  return 'other';
+}
+function _gcRecord(c) {
+  var recs = c.record || c.records || [];
+  if (!Array.isArray(recs)) return null;
+  var total = recs.filter(function (r) { return r && /total|overall|ytd/i.test(r.type || r.name || ''); })[0] || recs[0];
+  return total ? (total.summary || total.displayValue || null) : null;
+}
+function _gcSide(c) {
+  var t = c.team || {};
+  var rank = c.curatedRank && c.curatedRank.current;
+  return {
+    id: t.id || null,
+    name: t.displayName || t.name || null,
+    short: t.shortDisplayName || t.name || null,
+    abbr: t.abbreviation || null,
+    color: _hex(t.color),
+    alt: _hex(t.alternateColor),
+    score: _num(c.score),
+    record: _gcRecord(c),
+    standing: (rank && rank <= 25) ? 'No. ' + rank : null,
+    linescores: (c.linescores || []).map(function (l) { return _num(l.displayValue != null ? l.displayValue : l.value); })
+  };
+}
+function _gcPeriodTag(sport, n) {
+  if (!n) return '';
+  if (sport === 'soccer') return n === 1 ? '1H' : n === 2 ? '2H' : 'ET';
+  if (n <= 4) return 'Q' + n;
+  return n === 5 ? 'OT' : (n - 4) + 'OT';
+}
+function _gcTeamStat(teamsArr, teamId, names) {
+  var t = (teamsArr || []).filter(function (x) { return x.team && String(x.team.id) === String(teamId); })[0];
+  if (!t) return null;
+  var stats = t.statistics || [];
+  for (var i = 0; i < names.length; i++) {
+    var s = stats.filter(function (x) { return x.name === names[i] || x.abbreviation === names[i] || x.label === names[i]; })[0];
+    if (s) {
+      var txt = s.displayValue != null ? String(s.displayValue) : (s.value != null ? String(s.value) : null);
+      if (txt != null) return txt;
+    }
+  }
+  return null;
+}
+function _gcStatRows(data, away, home, defs) {
+  var teams = (data.boxscore && data.boxscore.teams) || [];
+  var rows = [];
+  defs.forEach(function (d) {
+    var a = _gcTeamStat(teams, away.id, d.names), h = _gcTeamStat(teams, home.id, d.names);
+    if (a == null || h == null) return;
+    var aTxt = d.fmt ? d.fmt(a) : a, hTxt = d.fmt ? d.fmt(h) : h;
+    rows.push([d.label, aTxt, hTxt, _statNum(a), _statNum(h), d.lower ? 1 : 0]);
+  });
+  return rows;
+}
+function _gcLeaders(data, away, home, cats) {
+  var out = [];
+  var byTeam = {};
+  (data.leaders || []).forEach(function (tl) {
+    if (tl && tl.team) byTeam[String(tl.team.id)] = tl.leaders || [];
+  });
+  cats.forEach(function (c) {
+    var pick = function (teamId) {
+      var cat = (byTeam[String(teamId)] || []).filter(function (x) { return x.name === c.name; })[0];
+      var top = cat && cat.leaders && cat.leaders[0];
+      if (!top || !top.athlete) return null;
+      return { name: top.athlete.displayName || top.athlete.shortName, id: top.athlete.id || null, line: top.displayValue || '', value: top.value != null ? Number(top.value) : _num(top.displayValue) };
+    };
+    var a = pick(away.id), h = pick(home.id);
+    if (a || h) out.push({ label: c.label, a: a, h: h });
+  });
+  return out;
+}
+function _gcForm(data, away, home) {
+  var out = { away: [], home: [] };
+  (data.lastFiveGames || []).forEach(function (tf) {
+    var key = tf.team && String(tf.team.id) === String(away.id) ? 'away' : (tf.team && String(tf.team.id) === String(home.id) ? 'home' : null);
+    if (!key) return;
+    var evs = (tf.events || []).slice();
+    if (evs.length && evs[0].gameDate) evs.sort(function (x, y) { return x.gameDate < y.gameDate ? -1 : 1; });
+    out[key] = evs.map(function (e) {
+      var res = String(e.gameResult || '').toUpperCase();
+      res = res === 'T' ? 'D' : res;
+      var opp = e.opponent || {};
+      return { opp: opp.abbreviation || '?', oppName: opp.displayName || null, res: res || '?', score: e.score || null, atVs: e.atVs || null, date: e.gameDate || null };
+    }).filter(function (g) { return /^[WLD]$/.test(g.res); });
+  });
+  return out;
+}
+function _gcPlayer(a) {
+  a = a || {};
+  return { name: a.displayName || a.shortName || '', id: a.id || null, pos: (a.position && a.position.abbreviation) || null };
+}
+
+// ── Football
+function _fbHead(p) {
+  var t = String(p.text || '');
+  var m;
+  if ((m = t.match(/^(.+?) (\d+) Ya?r?ds? Field Goal/i))) return _lastName(m[1]) + ' ' + m[2] + '-yd FG';
+  if ((m = t.match(/^(.+?) (\d+) Ya?r?ds? pass from (.+?)(?:\s*\(|,|$)/i))) return _lastName(m[1]) + ' ' + m[2] + '-yd TD catch';
+  if ((m = t.match(/^(.+?) (\d+) Ya?r?ds? (?:Run|Rush)/i))) return _lastName(m[1]) + ' ' + m[2] + '-yd TD run';
+  if ((m = t.match(/^(.+?) (\d+) Ya?r?ds? Interception Return/i))) return _lastName(m[1]) + ' pick-six';
+  if ((m = t.match(/^(.+?) (\d+) Ya?r?ds? Fumble Return/i))) return _lastName(m[1]) + ' fumble-return TD';
+  if (/safety/i.test(t)) return 'Safety';
+  return (p.type && p.type.text) || 'Score';
+}
+function _fbSituation(data, comp, away, home) {
+  var sit = (comp && comp.situation) || data.situation || null;
+  var drive = data.drives && data.drives.current;
+  var last = drive && drive.plays && drive.plays.length ? drive.plays[drive.plays.length - 1] : null;
+  var start = (last && (last.end || last.start)) || {};
+  var down = sit && sit.down != null ? sit.down : start.down;
+  var dist = sit && sit.distance != null ? sit.distance : start.distance;
+  var posText = (sit && sit.possessionText) || start.possessionText || null;
+  var ddText = (sit && (sit.downDistanceText || sit.shortDownDistanceText)) || start.downDistanceText || null;
+  var possId = sit && sit.possession ? String(sit.possession) : (drive && drive.team ? String(drive.team.id) : null);
+  var possSide = possId ? (possId === String(home.id) ? 'h' : (possId === String(away.id) ? 'a' : null)) : null;
+  if (!possSide && drive && drive.team && drive.team.abbreviation) possSide = drive.team.abbreviation === home.abbr ? 'h' : 'a';
+  if (down == null && !posText) return null;
+  // Absolute ball spot, 0 = home goal line (left), 100 = away goal line (right)
+  var spot = null;
+  var pm = posText && String(posText).match(/^([A-Z]{1,4})\s+(\d{1,2})$/);
+  if (pm && possSide) {
+    var possAbbr = possSide === 'h' ? home.abbr : away.abbr;
+    var fromOwn = pm[1] === possAbbr ? Number(pm[2]) : 100 - Number(pm[2]);
+    spot = possSide === 'h' ? fromOwn : 100 - fromOwn;
+  } else if (/^50$|midfield/i.test(String(posText || ''))) {
+    spot = 50;
+  }
+  var driveStart = null;
+  var fp = drive && drive.plays && drive.plays[0] && drive.plays[0].start;
+  var dm = fp && fp.possessionText && String(fp.possessionText).match(/^([A-Z]{1,4})\s+(\d{1,2})$/);
+  if (dm && possSide) {
+    var pa = possSide === 'h' ? home.abbr : away.abbr;
+    var own = dm[1] === pa ? Number(dm[2]) : 100 - Number(dm[2]);
+    driveStart = possSide === 'h' ? own : 100 - own;
+  }
+  var dir = possSide === 'h' ? 1 : -1;
+  return {
+    downText: ddText || (down != null ? (['', '1st', '2nd', '3rd', '4th'][down] || down + 'th') + ' & ' + (dist != null ? dist : '?') : ''),
+    posText: posText,
+    possSide: possSide,
+    spot: spot,
+    firstDown: (spot != null && dist != null && !/goal/i.test(ddText || '')) ? Math.max(0, Math.min(100, spot + dir * Number(dist))) : null,
+    driveStart: driveStart,
+    driveText: drive ? (drive.description || null) : null,
+    timeoutsA: sit && sit.awayTimeouts != null ? sit.awayTimeouts : null,
+    timeoutsH: sit && sit.homeTimeouts != null ? sit.homeTimeouts : null,
+    redZone: !!(sit && sit.isRedZone)
+  };
+}
+function _fbDrive(data, sport) {
+  var drive = data.drives && data.drives.current;
+  if (!drive) return null;
+  var plays = (drive.plays || []).slice(-4).reverse().map(function (p) {
+    var st = p.start || {};
+    return { tag: st.shortDownDistanceText || st.downDistanceText || _gcPeriodTag(sport, p.period && p.period.number), text: p.text || '' };
+  }).filter(function (p) { return p.text; });
+  return { team: drive.team ? (drive.team.abbreviation || drive.team.shortDisplayName) : null, summary: drive.description || null, plays: plays };
+}
+function _fbBox(data) {
+  var groups = [['passing', 'Passing'], ['rushing', 'Rushing'], ['receiving', 'Receiving'], ['defensive', 'Defense'], ['kicking', 'Kicking']];
+  var out = {};
+  ((data.boxscore && data.boxscore.players) || []).forEach(function (tp) {
+    var tid = tp.team && String(tp.team.id);
+    var sections = [];
+    groups.forEach(function (g) {
+      var st = (tp.statistics || []).filter(function (s) { return s.name === g[0]; })[0];
+      if (!st || !(st.athletes || []).length) return;
+      var n = Math.min((st.labels || []).length, 5);
+      sections.push({
+        title: g[1],
+        cols: (st.labels || []).slice(0, n),
+        rows: st.athletes.slice(0, 8).map(function (a) {
+          var p = _gcPlayer(a.athlete);
+          return { name: p.name, id: p.id, pos: null, cells: (a.stats || []).slice(0, n), sub: false };
+        })
+      });
+    });
+    out[tid] = { sections: sections };
+  });
+  return out;
+}
+
+// ── Basketball
+function _bbSecs(clock) {
+  var s = String(clock || '');
+  var m = s.match(/^(\d+):(\d+(?:\.\d+)?)$/);
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  var n = Number(s);
+  return isNaN(n) ? null : n;
+}
+function _bbShot(text) {
+  var t = String(text || '');
+  if (/three point|3-pt|three-point/i.test(t)) return '3-pointer';
+  if (/dunk/i.test(t)) return 'dunk';
+  if (/layup/i.test(t)) return 'layup';
+  if (/free throw/i.test(t)) return 'free throw';
+  if (/hook/i.test(t)) return 'hook shot';
+  if (/alley/i.test(t)) return 'alley-oop';
+  return 'bucket';
+}
+function _bbShooter(text) {
+  var m = String(text || '').match(/^(.+?) (makes|made|dunks|lays|hits)/i);
+  return m ? _lastName(m[1]) : '';
+}
+function _bbAnalyze(data, away, home) {
+  var raw = (data.plays || []).filter(function (p) { return p && p.text; });
+  var scoring = raw.filter(function (p) { return p.scoringPlay && p.awayScore != null && p.homeScore != null; });
+  var sideOf = function (p) { var id = p.team && String(p.team.id); return id === String(home.id) ? 'h' : (id === String(away.id) ? 'a' : null); };
+  var moments = {};
+  var add = function (p, reason, prio) {
+    var key = p.id || p.sequenceNumber || (p.period && p.period.number) + '-' + (p.clock && p.clock.displayValue) + '-' + p.text;
+    if (moments[key] && moments[key].prio >= prio) return;
+    moments[key] = { p: p, reason: reason, prio: prio };
+  };
+  var prevA = 0, prevH = 0, leadChanges = 0, prevLeader = 0;
+  var runSide = null, runPts = 0, runLast = null;
+  var closeRun = function () {
+    if (runLast && runPts >= 8) add(runLast, 'Caps a ' + runPts + '–0 run', 2);
+  };
+  scoring.forEach(function (p) {
+    var a = Number(p.awayScore), h = Number(p.homeScore);
+    var side = sideOf(p) || (a > prevA ? 'a' : 'h');
+    var pts = side === 'a' ? a - prevA : h - prevH;
+    var leader = a > h ? -1 : (h > a ? 1 : 0);
+    var per = (p.period && p.period.number) || 0;
+    var secs = _bbSecs(p.clock && p.clock.displayValue);
+    if (leader !== 0 && prevLeader !== 0 && leader !== prevLeader) leadChanges++;
+    var late = per >= 4 && secs != null && secs <= 300;
+    if (late && leader !== prevLeader) add(p, leader === 0 ? 'Ties it with ' + p.clock.displayValue + ' left' : 'Go-ahead with ' + p.clock.displayValue + ' left', 3);
+    if (secs != null && secs <= 1.5 && pts > 0) add(p, 'Beats the buzzer', 4);
+    if (pts === 3 && per >= 4 && secs != null && secs <= 120 && Math.abs(a - h) <= 5) add(p, 'Clutch three with ' + p.clock.displayValue + ' left', 2);
+    if (side === runSide) { runPts += pts; runLast = p; }
+    else { closeRun(); runSide = side; runPts = pts; runLast = p; }
+    if (leader !== 0) prevLeader = leader;
+    prevA = a; prevH = h;
+  });
+  closeRun();
+  var momentList = Object.keys(moments).map(function (k) { return moments[k]; })
+    .sort(function (x, y) { return scoring.indexOf(x.p) - scoring.indexOf(y.p); })
+    .slice(-10)
+    .map(function (m) {
+      var p = m.p;
+      var shooter = _bbShooter(p.text);
+      return {
+        tag: _gcPeriodTag('basketball', p.period && p.period.number), side: sideOf(p),
+        time: (p.clock && p.clock.displayValue) || '', head: (shooter ? shooter + ' ' : '') + _bbShot(p.text),
+        sub: m.reason, as: Number(p.awayScore), hs: Number(p.homeScore), id: String(p.id || '')
+      };
+    });
+  // Every scoring play + block, newest first
+  var feed = raw.filter(function (p) { return p.scoringPlay || /\bblocks?\b/i.test(p.text); }).slice(-150).reverse().map(function (p) {
+    var isBlock = !p.scoringPlay;
+    return {
+      tag: _gcPeriodTag('basketball', p.period && p.period.number), time: (p.clock && p.clock.displayValue) || '',
+      side: sideOf(p), text: p.text, kind: isBlock ? 'block' : 'score',
+      pts: p.scoreValue != null ? Number(p.scoreValue) : null,
+      as: isBlock ? null : Number(p.awayScore), hs: isBlock ? null : Number(p.homeScore)
+    };
+  });
+  // Momentum — points over the last 8 scoring plays
+  var tail = scoring.slice(-9);
+  var momA = 0, momH = 0;
+  for (var i = 1; i < tail.length; i++) {
+    momA += Number(tail[i].awayScore) - Number(tail[i - 1].awayScore);
+    momH += Number(tail[i].homeScore) - Number(tail[i - 1].homeScore);
+  }
+  return { moments: momentList, feed: feed, leadChanges: leadChanges, momA: momA, momH: momH, hasPlays: raw.length > 0 };
+}
+function _bbBox(data) {
+  var want = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG'];
+  var out = {};
+  ((data.boxscore && data.boxscore.players) || []).forEach(function (tp) {
+    var tid = tp.team && String(tp.team.id);
+    var st = (tp.statistics || [])[0];
+    if (!st) return;
+    var labels = st.labels || [];
+    var idx = want.map(function (w) { return labels.indexOf(w); });
+    var cols = want.filter(function (w, i) { return idx[i] !== -1; });
+    var toRow = function (a) {
+      var p = _gcPlayer(a.athlete);
+      var dnp = a.didNotPlay || !(a.stats || []).length;
+      return { name: p.name, id: p.id, pos: p.pos, cells: dnp ? cols.map(function (c, i) { return i === 0 ? 'DNP' : ''; }) : idx.filter(function (x) { return x !== -1; }).map(function (x) { return a.stats[x]; }), sub: false, dnp: dnp };
+    };
+    var athletes = st.athletes || [];
+    var starters = athletes.filter(function (a) { return a.starter; }).map(toRow);
+    var bench = athletes.filter(function (a) { return !a.starter; }).map(toRow).filter(function (r) { return !r.dnp; });
+    var sections = [];
+    if (starters.length) sections.push({ title: 'Starters', cols: cols, rows: starters });
+    if (bench.length) sections.push({ title: 'Bench', cols: cols, rows: bench });
+    if (!sections.length && athletes.length) sections.push({ title: 'Players', cols: cols, rows: athletes.map(toRow) });
+    out[tid] = { sections: sections };
+  });
+  return out;
+}
+
+// ── Soccer
+function _scStat(stats, names) {
+  for (var i = 0; i < names.length; i++) {
+    var s = (stats || []).filter(function (x) { return x.name === names[i] || x.abbreviation === names[i]; })[0];
+    if (s) return s.displayValue != null ? String(s.displayValue) : (s.value != null ? String(s.value) : '');
+  }
+  return '0';
+}
+function _scEvents(data, away, home) {
+  var goals = [], cards = [];
+  var a = 0, h = 0;
+  (data.keyEvents || []).forEach(function (e) {
+    var type = String((e.type && (e.type.text || e.type.type)) || '');
+    var side = e.team && (String(e.team.id) === String(home.id) || e.team.displayName === home.name) ? 'h' : 'a';
+    var who = (e.participants && e.participants[0] && e.participants[0].athlete && e.participants[0].athlete.displayName) || '';
+    var clock = (e.clock && e.clock.displayValue) || '';
+    var isGoal = e.scoringPlay || (/goal/i.test(type) && !/disallow|no goal|kick/i.test(type));
+    if (isGoal) {
+      if (side === 'h') h++; else a++;
+      var own = /own goal/i.test(type);
+      var pen = /penalty/i.test(type);
+      var assist = e.participants && e.participants[1] && e.participants[1].athlete ? 'Assist: ' + _lastName(e.participants[1].athlete.displayName) : '';
+      goals.push({ tag: clock, side: side, time: '', head: (who ? _lastName(who) + ' ' : '') + (own ? 'own goal' : pen ? 'penalty' : 'goal'), sub: assist || e.text || '', as: a, hs: h, scorer: who, own: own });
+    } else if (/red card/i.test(type)) {
+      cards.push({ tag: clock, side: side, time: '', head: (who ? _lastName(who) + ' ' : '') + 'sent off', sub: 'Red card', as: a, hs: h, red: true });
+    }
+  });
+  var all = goals.concat(cards).sort(function (x, y) { return (parseInt(x.tag, 10) || 0) - (parseInt(y.tag, 10) || 0); });
+  return { goals: goals, highlights: all };
+}
+function _scBox(data) {
+  var out = {};
+  var cols = ['G', 'A', 'SH', 'ST', 'FC', 'YC'];
+  (data.rosters || []).forEach(function (tr) {
+    var tid = tr.team && String(tr.team.id);
+    var toRow = function (r, isSub) {
+      var p = _gcPlayer(r.athlete);
+      var pos = (r.position && (r.position.abbreviation || r.position.displayName)) || p.pos;
+      var s = r.stats || [];
+      var gk = /^G(K)?$/.test(String(pos || ''));
+      return {
+        name: p.name, id: p.id, pos: pos, sub: isSub, gk: gk,
+        cells: gk
+          ? [_scStat(s, ['saves', 'SV']), _scStat(s, ['goalsConceded', 'GA']), '', '', _scStat(s, ['foulsCommitted', 'FC']), _scStat(s, ['yellowCards', 'YC'])]
+          : [_scStat(s, ['totalGoals', 'G']), _scStat(s, ['goalAssists', 'A']), _scStat(s, ['totalShots', 'SH']), _scStat(s, ['shotsOnTarget', 'ST']), _scStat(s, ['foulsCommitted', 'FC']), _scStat(s, ['yellowCards', 'YC'])]
+      };
+    };
+    var roster = tr.roster || [];
+    var starters = roster.filter(function (r) { return r.starter; }).map(function (r) { return toRow(r, false); });
+    var subs = roster.filter(function (r) { return !r.starter && r.subbedIn; }).map(function (r) { return toRow(r, true); });
+    var sections = [];
+    if (starters.length) sections.push({ title: 'Starters', cols: cols, rows: starters, note: 'Keepers: G = saves · A = goals allowed' });
+    if (subs.length) sections.push({ title: 'Substitutes', cols: cols, rows: subs });
+    out[tid] = { sections: sections };
+  });
+  return out;
+}
+
+function summarizeGamecast(data, league, eventId) {
+  var sport = _gcSport(league);
+  var header = data.header || {};
+  var comp = (header.competitions && header.competitions[0]) || {};
+  var competitors = comp.competitors || [];
+  var awayC = competitors.filter(function (c) { return c.homeAway === 'away'; })[0] || {};
+  var homeC = competitors.filter(function (c) { return c.homeAway === 'home'; })[0] || {};
+  var away = _gcSide(awayC), home = _gcSide(homeC);
+  var status = comp.status || {};
+  var stype = status.type || {};
+  var phase = stype.state === 'in' ? 'live' : (stype.state === 'post' ? 'final' : 'pre');
+  if (/postpon|cancel|suspend|delay/i.test(stype.description || '') && phase !== 'live') phase = 'off';
+  var model = {
+    sport: sport, league: league, gameId: String(header.id || eventId), phase: phase,
+    status: stype.description || null, statusDetail: stype.shortDetail || stype.detail || null,
+    startTime: comp.date || null,
+    venue: (data.gameInfo && data.gameInfo.venue && data.gameInfo.venue.fullName) || (comp.venue && comp.venue.fullName) || null,
+    period: status.period || null, clock: status.displayClock || null,
+    away: away, home: home,
+    highlights: [], feed: [], leaders: [], teamStats: [], form: { away: [], home: [] },
+    situation: null, drive: null, box: { away: { sections: [] }, home: { sections: [] } }, star: null, stars: null
+  };
+  var boxById = {};
+  try {
+    if (sport === 'football') {
+      model.highlights = (data.scoringPlays || []).map(function (p) {
+        var id = p.team && String(p.team.id);
+        return {
+          tag: _gcPeriodTag(sport, p.period && p.period.number), side: id === String(home.id) ? 'h' : 'a',
+          time: (p.clock && p.clock.displayValue) || '', head: _fbHead(p), sub: p.text || '',
+          as: _num(p.awayScore), hs: _num(p.homeScore)
+        };
+      });
+      model.leaders = _gcLeaders(data, away, home, [{ name: 'passingYards', label: 'PASS' }, { name: 'rushingYards', label: 'RUSH' }, { name: 'receivingYards', label: 'REC' }]);
+      model.teamStats = _gcStatRows(data, away, home, [
+        { label: 'Total yds', names: ['totalYards', 'Total Yards'] },
+        { label: 'Turnovers', names: ['turnovers', 'Turnovers'], lower: true },
+        { label: 'Possession', names: ['possessionTime', 'Possession'] },
+        { label: '3rd down', names: ['thirdDownEff', '3rd down efficiency'] }
+      ]);
+      if (phase === 'live') { model.situation = _fbSituation(data, comp, away, home); model.drive = _fbDrive(data, sport); }
+      boxById = _fbBox(data);
+    } else if (sport === 'basketball') {
+      var bb = _bbAnalyze(data, away, home);
+      model.highlights = bb.moments;
+      model.feed = bb.feed;
+      model.leadChanges = bb.leadChanges;
+      model.leaders = _gcLeaders(data, away, home, [{ name: 'points', label: 'PTS' }, { name: 'rebounds', label: 'REB' }, { name: 'assists', label: 'AST' }]);
+      model.teamStats = _gcStatRows(data, away, home, [
+        { label: 'FG%', names: ['fieldGoalPct', 'FG%'] },
+        { label: '3PT%', names: ['threePointFieldGoalPct', '3P%', 'threePointPct'] },
+        { label: 'Rebounds', names: ['totalRebounds', 'REB', 'rebounds'] },
+        { label: 'Turnovers', names: ['turnovers', 'totalTurnovers', 'TO'], lower: true }
+      ]);
+      if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH };
+      boxById = _bbBox(data);
+    } else if (sport === 'soccer') {
+      var sc = _scEvents(data, away, home);
+      model.highlights = sc.highlights;
+      model.teamStats = _gcStatRows(data, away, home, [
+        { label: 'Possession', names: ['possessionPct', 'Possession'], fmt: function (v) { return /%$/.test(v) ? v : v + '%'; } },
+        { label: 'Shots', names: ['totalShots', 'SHOTS'] },
+        { label: 'On target', names: ['shotsOnTarget', 'ON GOAL'] },
+        { label: 'Corners', names: ['wonCorners', 'Corner Kicks'] },
+        { label: 'Fouls', names: ['foulsCommitted', 'Fouls'], lower: true },
+        { label: 'Saves', names: ['saves', 'Saves'] }
+      ]);
+      if (phase === 'live') {
+        var poss = model.teamStats.filter(function (r) { return r[0] === 'Possession'; })[0];
+        model.situation = { possA: poss ? poss[3] : null, possH: poss ? poss[4] : null };
+      }
+      var goalsBy = {};
+      sc.goals.forEach(function (g) {
+        if (!g.scorer || g.own) return;
+        if (!goalsBy[g.scorer]) goalsBy[g.scorer] = { n: 0, side: g.side };
+        goalsBy[g.scorer].n++;
+      });
+      var topName = Object.keys(goalsBy).sort(function (x, y) { return goalsBy[y].n - goalsBy[x].n; })[0];
+      if (topName && phase === 'final') {
+        model.star = { title: 'Player of the match', name: topName, line: goalsBy[topName].n + (goalsBy[topName].n > 1 ? ' goals' : ' goal'), side: goalsBy[topName].side };
+      }
+      boxById = _scBox(data);
+    }
+    if (phase === 'pre') model.form = _gcForm(data, away, home);
+  } catch (e) {
+    model.parseError = String(e && e.message || e);
+  }
+  model.box = { away: boxById[String(away.id)] || { sections: [] }, home: boxById[String(home.id)] || { sections: [] } };
+
+  // Star of the game (football: winning side's passing leader; basketball: top scorer)
+  if (phase === 'final' && !model.star) {
+    try {
+      var winSide = (away.score || 0) > (home.score || 0) ? 'a' : 'h';
+      if (sport === 'football') {
+        var pass = model.leaders.filter(function (l) { return l.label === 'PASS'; })[0];
+        var pick = pass && (winSide === 'a' ? pass.a : pass.h);
+        if (pick) model.star = { title: 'Player of the game', name: pick.name, id: pick.id, line: pick.line, side: winSide };
+      } else if (sport === 'basketball') {
+        var best = null;
+        ['away', 'home'].forEach(function (k) {
+          (model.box[k].sections || []).forEach(function (sec) {
+            var pi = sec.cols.indexOf('PTS'), ri = sec.cols.indexOf('REB'), ai = sec.cols.indexOf('AST');
+            sec.rows.forEach(function (r) {
+              var pts = _num(r.cells[pi]);
+              if (pts != null && (!best || pts > best.pts)) best = { pts: pts, r: r, side: k === 'away' ? 'a' : 'h', reb: r.cells[ri], ast: r.cells[ai] };
+            });
+          });
+        });
+        if (best) model.star = { title: 'Top performer', name: best.r.name, id: best.r.id, line: best.pts + ' PTS · ' + (best.reb || 0) + ' REB · ' + (best.ast || 0) + ' AST', side: best.side };
+      }
+    } catch (e) { /* star is optional */ }
+  }
+  return model;
+}
+
+// Team colors by abbreviation for the pre-game form circles (opponents
+// only come with an abbreviation). Same teams endpoint the team picker
+// uses; failure just leaves the circles in the neutral fill.
+async function _gcTeamColors(path, league) {
+  try {
+    var cfb = league === 'cfb';
+    var url = 'https://' + (cfb ? 'site.web.api.espn.com' : 'site.api.espn.com') + '/apis/site/v2/sports/' + path + '/teams?limit=400' + (cfb ? '&groups=80&groupType=conference&enable=groups' : '');
+    var r = await fetch(url);
+    var data = await r.json();
+    var list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
+    var map = {};
+    (list.teams || []).forEach(function (t) {
+      var tm = t.team || {};
+      if (tm.abbreviation) map[tm.abbreviation] = { color: _hex(tm.color), alt: _hex(tm.alternateColor) };
+    });
+    return map;
+  } catch (e) {
+    return {};
+  }
 }
