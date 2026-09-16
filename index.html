@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.32.0-live-game-autorefresh';
+window.INNINGS_BUILD = 'v5.33.0-pitch-strikezone';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9975,6 +9975,71 @@ function _ordinalSuffix(n) {
   return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
 }
 
+// ── STRIKE ZONE — pitch-by-pitch for the current at-bat. Coordinates
+// (px, pz) are the same Statcast/Gameday plate-crossing data, viewed
+// from the catcher's/umpire's perspective — verified (not assumed)
+// against two independent sources: positive px is the first-base side,
+// and a right-handed batter stands on the third-base side (confirmed
+// separately by "negative px = inside pitch to a righty"). So on this
+// diagram, drawn with px increasing left-to-right same as that
+// convention: a RIGHT-handed batter's silhouette goes on the LEFT, a
+// LEFT-handed batter's on the RIGHT — the opposite of what might seem
+// intuitive, which is exactly why this was checked rather than guessed.
+function _pitchCallColor(call) {
+  if (!call) return 'rgba(255,255,255,.35)';
+  var c = call.toLowerCase();
+  if (c.indexOf('in play') !== -1) return '#6FA8DC';
+  if (c.indexOf('swinging strike') !== -1 || c.indexOf('foul tip') !== -1) return '#C23B3B';
+  if (c.indexOf('called strike') !== -1) return '#E8622C';
+  if (c.indexOf('foul') !== -1) return '#F2C869';
+  if (c.indexOf('hit by pitch') !== -1) return '#A89FE8';
+  if (c.indexOf('ball') !== -1) return '#7A9CC6';
+  return 'rgba(255,255,255,.35)';
+}
+function _szX(px) { return 10 + (px + 1.6) / 3.2 * 220; }
+function _szY(pz) { return 270 - (pz - 0.3) / 4.4 * 260; }
+
+function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
+  if (!seq || !seq.pitches || !seq.pitches.length) return '';
+  var zoneX1 = _szX(-0.83), zoneX2 = _szX(0.83);
+  var zoneY1 = _szY(seq.zoneTop), zoneY2 = _szY(seq.zoneBottom);
+  var silhouetteCx = (seq.batSide === 'L') ? 205 : 35; // right-handed -> left side of the diagram, left-handed -> right side (see note above)
+
+  var svg = '<svg viewBox="0 0 240 280" width="120" height="140" style="flex-shrink:0">' +
+    '<g opacity="0.22"><circle cx="' + silhouetteCx + '" cy="35" r="14" fill="#fff"/>' +
+    '<path d="M ' + (silhouetteCx - 20) + ' 60 Q ' + silhouetteCx + ' 50 ' + (silhouetteCx + 20) + ' 60 L ' + (silhouetteCx + 16) + ' 220 Q ' + silhouetteCx + ' 230 ' + (silhouetteCx - 16) + ' 220 Z" fill="#fff"/></g>' +
+    '<rect x="0" y="0" width="240" height="280" fill="rgba(255,255,255,.03)" rx="8"/>' +
+    '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>' +
+    '<path d="M 95 210 L 145 210 L 145 222 L 120 234 L 95 222 Z" fill="rgba(255,255,255,.12)"/>';
+  seq.pitches.forEach(function (p) {
+    var x = _szX(p.px), y = _szY(p.pz), pColor = _pitchCallColor(p.call);
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="10" fill="' + pColor + '"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
+  });
+  svg += '</svg>';
+
+  var list = seq.pitches.map(function (p) {
+    var descBits = [];
+    if (p.speed) descBits.push(p.speed + 'mph');
+    if (p.type) descBits.push(p.type);
+    if (p.call) descBits.push(p.call);
+    return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0"><div style="font-size:9px;color:' + subColor + ';width:12px;flex-shrink:0">' + p.num + '</div>' +
+      '<div style="width:9px;height:9px;border-radius:50%;background:' + _pitchCallColor(p.call) + ';flex-shrink:0"></div>' +
+      '<div style="font-size:11px;color:' + color + ';line-height:1.3">' + _escapeHtml(descBits.join(' · ')) + '</div></div>';
+  }).join('');
+
+  var legend = ['Ball', 'Called strike', 'Swinging strike', 'Foul', 'In play'].map(function (label) {
+    return '<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:' + subColor + '">' +
+      '<div style="width:7px;height:7px;border-radius:50%;background:' + _pitchCallColor(label) + '"></div>' + label + '</div>';
+  }).join('');
+
+  return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+    (seq.batter ? '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Pitches to ' + _escapeHtml(seq.batter) + '</div>' : '') +
+    '<div style="display:flex;gap:14px;align-items:flex-start">' + svg + '<div style="flex:1;min-width:0">' + list + '</div></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">' + legend + '</div>' +
+    '</div>';
+}
+
 function _boxScoreCardHtml(box, dark, allowPlayReply) {
   if (!box || !box.home) return '';
   var color = dark ? '#fff' : 'var(--black)';
@@ -10072,6 +10137,8 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
       '</div>';
   }
 
+  var strikeZoneHtml = _strikeZoneSectionHtml(box.pitchSequence, ruleColor, subColor, color);
+
   var playsHtml = '';
   if (box.recentPlays && box.recentPlays.length) {
     playsHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
@@ -10094,6 +10161,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
     (innings.length ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
     situationHtml +
     matchupHtml +
+    strikeZoneHtml +
     playsHtml +
     (box.venue ? '<div style="font-size:11px;color:' + subColor + ';margin-top:10px">' + _escapeHtml(box.venue) + '</div>' : '') +
     decisionLine +
