@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.37.1-zone-centered-batter-bigger';
+window.INNINGS_BUILD = 'v5.38.0-zone-shadow-anatomical';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10001,13 +10001,28 @@ function _pitchCallColor(call) {
 // per-foot scales for X and Y, which distorted the zone into a
 // squashed rectangle instead of the roughly-square shape a real strike
 // zone actually is.
-function _szX(px) { return 175 + px * 50; }
-function _szY(pz) { return 240 - (pz - 0.3) * 50; }
+// SCALE is bigger now (70px/ft, was 50) per the "make the strike zone
+// bigger" request. _szX centers on the canvas's true midpoint (250 of
+// 500 — the canvas had to widen from 350 to fit a properly-scaled
+// batter beside a bigger zone with margin on both sides, computed
+// below, not guessed). _szY keeps the same "feet at Y_GROUND" logic,
+// with Y_GROUND now derived from the anatomical calibration (see
+// _strikeZoneSectionHtml) rather than picked freely.
+var _SZ_SCALE = 70, _SZ_CENTER_X = 250, _SZ_Y_GROUND = 373.5217;
+function _szX(px) { return _SZ_CENTER_X + px * _SZ_SCALE; }
+function _szY(pz) { return _SZ_Y_GROUND - pz * _SZ_SCALE; }
 
 function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   if (!seq) return '';
   var zoneX1 = _szX(-0.83), zoneX2 = _szX(0.83);
   var zoneY1 = _szY(seq.zoneTop), zoneY2 = _szY(seq.zoneBottom);
+  // Shadow zone: the Statcast term for the band straddling the actual
+  // rule-book edge where borderline calls happen — roughly a ball's
+  // width (0.3ft) extended outward on every side of the heart zone.
+  var shadowMargin = 0.3 * _SZ_SCALE;
+  var shadowX1 = zoneX1 - shadowMargin, shadowX2 = zoneX2 + shadowMargin;
+  var shadowY1 = zoneY1 - shadowMargin, shadowY2 = zoneY2 + shadowMargin;
+
   // Right-handed -> left side of the diagram, left-handed -> right side
   // (see the note above _pitchCallColor). `flip` mirrors the whole pose
   // horizontally so the arms/bat reach toward the plate on whichever
@@ -10022,20 +10037,24 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
   // hands/grip point after that move left them behind; the bat's
   // barrel was brought down to shoulder height; the legs were scaled
   // narrower around the hip pivot; the bat was lengthened and
-  // thickened; scaled up 1.25x as a whole (the most this design's
-  // vertical extent can grow before it clips the canvas — computed,
-  // not assumed) and shifted down slightly to stay centered in that
-  // taller footprint. Positioned here by a plain translate, recomputed
-  // against the zone's now-corrected centered position (see _szX
-  // above — it was 25px off-center; the plate/zone move with it
-  // automatically since they're derived from the same function, but
-  // the batter's placement had to be resolved separately).
+  // thickened.
+  //
+  // The scale here is no longer a chosen constant — it's SOLVED so two
+  // corrected anatomical landmarks land exactly on the zone's edges:
+  // mid-torso (the rule's own "midpoint between the shoulders and the
+  // top of the uniform pants" — shoulder at local y=72, pants-top at
+  // local y=140, the torso path's actual max-y, not the y=94 mid-curve
+  // point mistakenly used in an earlier pass) lands on the zone's top
+  // edge, and the knee (the leg span's midpoint, local y=175) lands on
+  // the zone's bottom edge. The batter's feet position — and the plate,
+  // which sits at the same ground line — fall out of that calibration;
+  // they were never independently assumed.
   var flip = (seq.batSide === 'L');
-  var figureScale = 1.25;
-  var scalePivotX = 53, scalePivotY = 117.6;
-  var verticalShift = 10.4;
+  var MID_TORSO_LOCAL = 106.0, KNEE_LOCAL = 175.0;
+  var batterScale = (zoneY2 - zoneY1) / (KNEE_LOCAL - MID_TORSO_LOCAL);
+  var batterTy = zoneY1 - MID_TORSO_LOCAL * batterScale;
   var mirrorAxis = 53;
-  var figureOffsetX = flip ? 230 : 8;
+  var figureOffsetX = flip ? 372 : 20;
   var HEAD_TORSO =
     '<path d="M 45,55 C 45,46 52,40 60,40 C 67,40 72,46 72,53 C 72,56 68,59 65,59 C 68,61 70,66 67,70 C 64,74 58,74 54,71 L 45,55 Z"/>' +
     '<path d="M 68,48 L 84,52 L 82,56 L 68,52 Z"/>' +
@@ -10052,9 +10071,12 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
     '<circle cx="82" cy="64" r="6"/>' +
     '<path d="M 84.1,60.6 L 28.5,19.2 L 18.0,36.3 L 79.9,67.4 Z"/>';
   var batterInner = HEAD_TORSO + LEGS_NARROWED + ARMS_CONNECTED + GRIP_AND_BAT;
-  var batterScaled = '<g transform="translate(0,' + verticalShift + ') translate(' + scalePivotX + ',' + scalePivotY + ') scale(' + figureScale + ',' + figureScale + ') translate(' + (-scalePivotX) + ',' + (-scalePivotY) + ')">' + batterInner + '</g>';
+  var batterScaled = '<g transform="translate(' + (53 * (1 - batterScale)).toFixed(2) + ',' + batterTy.toFixed(2) + ') scale(' + batterScale.toFixed(4) + ',' + batterScale.toFixed(4) + ')">' + batterInner + '</g>';
   var batterMirrored = flip ? '<g transform="translate(' + (2 * mirrorAxis) + ',0) scale(-1,1)">' + batterScaled + '</g>' : batterScaled;
   var batterSvg = '<g opacity="0.35" fill="rgba(168,159,232,.55)" stroke="rgba(168,159,232,.8)" stroke-width="0.75" transform="translate(' + figureOffsetX + ',0)">' + batterMirrored + '</g>';
+  // Feet position derived from the same calibration, not assumed — the
+  // plate sits exactly at the batter's own ground line.
+  var groundY = batterTy + 216 * batterScale;
 
   // 3x3 zone grid, matching the classic broadcast strike-zone look.
   var gridSvg = '';
@@ -10065,24 +10087,28 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color) {
     gridSvg += '<line x1="' + zoneX1.toFixed(1) + '" y1="' + gy.toFixed(1) + '" x2="' + zoneX2.toFixed(1) + '" y2="' + gy.toFixed(1) + '" stroke="rgba(255,255,255,.22)" stroke-width="1"/>';
   }
 
-  // A proper home-plate pentagon, sized off the zone's own width so it
-  // scales sensibly with it, sitting just below.
-  var plateCx = (zoneX1 + zoneX2) / 2, plateW = (zoneX2 - zoneX1) * 1.15, plateY = zoneY2 + 14;
-  var plateSvg = '<path d="M ' + (plateCx - plateW / 2).toFixed(1) + ' ' + plateY.toFixed(1) +
-    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + plateY.toFixed(1) +
-    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + (plateY + 13).toFixed(1) +
-    ' L ' + plateCx.toFixed(1) + ' ' + (plateY + 25).toFixed(1) +
-    ' L ' + (plateCx - plateW / 2).toFixed(1) + ' ' + (plateY + 13).toFixed(1) + ' Z" fill="rgba(255,255,255,.14)"/>';
+  var shadowSvg = '<rect x="' + shadowX1.toFixed(1) + '" y="' + shadowY1.toFixed(1) + '" width="' + (shadowX2 - shadowX1).toFixed(1) + '" height="' + (shadowY2 - shadowY1).toFixed(1) + '" fill="rgba(168,159,232,.08)" stroke="rgba(168,159,232,.35)" stroke-width="1.5"/>';
 
-  var svg = '<svg viewBox="0 0 350 260" width="100%" height="150" style="display:block">' +
+  // Home plate, on the ground — same ground line the batter's feet are
+  // calibrated to, not a fixed offset below the zone with no relation
+  // to the batter.
+  var plateCx = (zoneX1 + zoneX2) / 2, plateW = (zoneX2 - zoneX1) * 1.15, plateDepth = 35;
+  var plateSvg = '<path d="M ' + (plateCx - plateW / 2).toFixed(1) + ' ' + groundY.toFixed(1) +
+    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + groundY.toFixed(1) +
+    ' L ' + (plateCx + plateW / 2).toFixed(1) + ' ' + (groundY + plateDepth * 0.5).toFixed(1) +
+    ' L ' + plateCx.toFixed(1) + ' ' + (groundY + plateDepth).toFixed(1) +
+    ' L ' + (plateCx - plateW / 2).toFixed(1) + ' ' + (groundY + plateDepth * 0.5).toFixed(1) + ' Z" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.3)" stroke-width="1"/>';
+
+  var svg = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
     batterSvg +
-    '<rect x="0" y="0" width="350" height="260" fill="rgba(255,255,255,.03)" rx="10"/>' +
-    '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>' +
+    '<rect x="0" y="0" width="500" height="386" fill="rgba(255,255,255,.03)" rx="10"/>' +
+    shadowSvg +
+    '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>' +
     gridSvg + plateSvg;
   seq.pitches.forEach(function (p) {
     var x = _szX(p.px), y = _szY(p.pz), pColor = _pitchCallColor(p.call);
-    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.5"/>' +
-      '<text x="' + x.toFixed(1) + '" y="' + (y + 4.5).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="17" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.5"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y + 5.5).toFixed(1) + '" text-anchor="middle" font-size="16" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
   });
   svg += '</svg>';
 
