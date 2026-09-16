@@ -154,6 +154,45 @@ function summarize(data, gamePk) {
     });
   }
 
+  // ── Pitch-by-pitch strike zone for the current at-bat — same Live
+  // gating as situation/matchup. Batter handedness and the batter's own
+  // strike-zone top/bottom come straight off the pitch event data
+  // itself (recorded fresh per at-bat by MLB, not looked up separately)
+  // — this is the same coordinate data Statcast/Gameday charts use,
+  // well-documented and not the kind of endpoint guesswork that's
+  // burned other parts of this app. Falls back to the most recently
+  // completed at-bat if there's no play currently in progress (between
+  // batters), so the diagram doesn't just go blank in the gap.
+  var pitchSequence = null;
+  if (abstractState === 'Live') {
+    var currentPlay = (liveData.plays && liveData.plays.currentPlay) || allPlays[allPlays.length - 1];
+    if (currentPlay && currentPlay.playEvents) {
+      var pitchEvents = currentPlay.playEvents.filter(function (e) { return e.isPitch && e.pitchData && e.pitchData.coordinates; });
+      var pitches = pitchEvents.map(function (e, i) {
+        var coords = e.pitchData.coordinates || {};
+        return {
+          num: e.pitchNumber || (i + 1),
+          px: coords.pX != null ? coords.pX : null,
+          pz: coords.pZ != null ? coords.pZ : null,
+          call: (e.details && e.details.call && e.details.call.description) || null,
+          type: (e.details && e.details.type && e.details.type.description) || null,
+          speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null
+        };
+      }).filter(function (p) { return p.px != null && p.pz != null; });
+      if (pitches.length) {
+        var lastEvent = pitchEvents[pitchEvents.length - 1];
+        pitchSequence = {
+          batter: (currentPlay.matchup && currentPlay.matchup.batter && currentPlay.matchup.batter.fullName) || null,
+          batSide: (currentPlay.matchup && currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
+          zoneTop: lastEvent.pitchData.strikeZoneTop != null ? lastEvent.pitchData.strikeZoneTop : 3.5,
+          zoneBottom: lastEvent.pitchData.strikeZoneBottom != null ? lastEvent.pitchData.strikeZoneBottom : 1.5,
+          pitches: pitches
+        };
+      }
+    }
+  }
+
+
   return {
     gamePk: (gameData.game && gameData.game.pk) || (gamePk ? Number(gamePk) : null),
     away: (teams.away && teams.away.name) || null,
@@ -170,7 +209,8 @@ function summarize(data, gamePk) {
     homeRuns: homeRuns.slice(0, 10),
     situation: situation,
     matchup: matchup,
-    recentPlays: recentPlays
+    recentPlays: recentPlays,
+    pitchSequence: pitchSequence
   };
 }
 
