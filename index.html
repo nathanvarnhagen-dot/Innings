@@ -635,6 +635,87 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gr-hl-icon{font-size:40px;margin-bottom:14px}
 .gr-hl-text{font-size:17px;font-weight:700;color:#fff;line-height:1.4;max-width:300px}
 .gr-decision-line{font-size:15px;color:var(--lav);font-weight:700;line-height:1.7;text-align:center}
+/* Game-state hero (v5.40.0) — top card on the game screen: pre-game
+   matchup, live highlights-so-far, final summary. Entry animations only
+   run when the card carries .gh-anim (first render of each phase), so the
+   15-second live refresh re-renders it static instead of replaying. */
+.gh{position:relative;overflow:hidden;border-radius:20px;padding:16px;margin-bottom:14px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2);color:#fff}
+.gh-orb{position:absolute;width:210px;height:210px;border-radius:50%;background:#3D3580;filter:blur(50px);opacity:.65;pointer-events:none;animation:ghDrift 14s ease-in-out infinite alternate}
+@keyframes ghDrift{from{transform:translate(0,0)}to{transform:translate(28px,36px)}}
+.gh-body{position:relative;display:flex;flex-direction:column;gap:14px}
+.gh-num{font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.02em}
+.gh-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B9B3E6}
+.gh-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gh-chip{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.12em;flex-shrink:0}
+.gh-chip.pre{background:rgba(168,159,232,.16);color:#D9D4FA}
+.gh-chip.live{background:rgba(255,122,107,.16);color:#FFC2BA}
+.gh-chip.final{background:rgba(168,159,232,.16);color:#D9D4FA}
+.gh-dot{width:7px;height:7px;border-radius:50%;display:block}
+.gh-dot.pre{background:#A89FE8;animation:ghPulseLav 1.6s ease-in-out infinite}
+.gh-dot.live{background:#FF7A6B;animation:ghPulseLive 1.2s ease-in-out infinite}
+@keyframes ghPulseLav{0%,100%{box-shadow:0 0 0 0 rgba(168,159,232,.6)}50%{box-shadow:0 0 0 6px rgba(168,159,232,0)}}
+@keyframes ghPulseLive{0%,100%{box-shadow:0 0 0 0 rgba(255,122,107,.7)}50%{box-shadow:0 0 0 6px rgba(255,122,107,0)}}
+.gh-meta{font-size:11.5px;color:#B9B3E6;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.gh-badge{border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;letter-spacing:.01em;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+.gh-panel{padding:9px 13px;border-radius:14px;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)}
+.gh-sub{font-size:11.5px;color:#B9B3E6}
+.gh-tag{font-size:11px;font-weight:800;padding:2px 6px;border-radius:6px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.gh-bar-track{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.07);display:flex;overflow:hidden}
+.gh-bar{height:6px;border-radius:3px}
+.gh-new{font-size:9.5px;font-weight:800;letter-spacing:.12em;padding:2px 6px;border-radius:999px;background:#A89FE8;color:#1A1640;flex-shrink:0}
+.gh-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gh-stage{position:relative;height:150px}
+.gh-stage > svg{position:absolute;left:0;top:0;width:100%;height:150px}
+.gh-teams{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between}
+.gh-team{width:104px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.gh-beam{animation:ghBeam 3.4s ease-in-out infinite}
+@keyframes ghBeam{0%,100%{opacity:.1}50%{opacity:.28}}
+.gh-bulb{animation:ghBulb 3.4s ease-in-out infinite}
+@keyframes ghBulb{0%,100%{opacity:.55}50%{opacity:1}}
+.gh-spin{animation:ghSpin 7s linear infinite}
+@keyframes ghSpin{to{transform:rotate(360deg)}}
+.gh-blink{animation:ghBlink 1s steps(1) infinite}
+@keyframes ghBlink{50%{opacity:.25}}
+.gh-runner{animation:ghRunner 1.4s ease-in-out infinite}
+@keyframes ghRunner{0%,100%{opacity:1}50%{opacity:.45}}
+.gh-glow{animation:ghGlow 2.6s ease-in-out infinite}
+@keyframes ghGlow{0%,100%{box-shadow:0 0 0 1px rgba(168,159,232,.25)}50%{box-shadow:0 0 0 1px rgba(168,159,232,.55),0 0 22px rgba(168,159,232,.18)}}
+.gh-fly{position:absolute;left:0;top:0;width:8px;height:8px;border-radius:50%;background:#F4F1FF;box-shadow:0 0 10px #F4F1FF;opacity:0;offset-path:path('M4 22 Q 80 -10 156 16');offset-rotate:0deg;animation:ghFly 2.8s cubic-bezier(.3,.1,.4,1) .8s infinite}
+@keyframes ghFly{0%{offset-distance:0%;opacity:0}8%{opacity:1}85%{opacity:1}100%{offset-distance:100%;opacity:0}}
+.gh-flash{animation:ghFlash 1.6s ease-out .2s 3}
+@keyframes ghFlash{0%{text-shadow:0 0 0 rgba(253,90,30,0)}30%{text-shadow:0 0 22px rgba(168,159,232,.95);color:#EDEAFF}100%{text-shadow:0 0 0 rgba(168,159,232,0)}}
+.gh-shimmer{position:relative;overflow:hidden}
+.gh-shimmer::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.13) 50%,rgba(255,255,255,0) 65%);transform:translateX(-110%);animation:ghSweep 3.6s ease-in-out 2s infinite;pointer-events:none}
+@keyframes ghSweep{0%{transform:translateX(-110%)}45%,100%{transform:translateX(110%)}}
+.gh-spark{position:absolute;width:5px;height:5px;border-radius:50%;opacity:0;animation:ghRise 3.2s ease-out infinite;pointer-events:none}
+@keyframes ghRise{0%{opacity:0;transform:translateY(30px) scale(.5)}25%{opacity:1}100%{opacity:0;transform:translateY(-70px) scale(1.1)}}
+.gh-stamp{padding:2px 8px;border:2px solid #A89FE8;border-radius:8px;transform:rotate(-4deg);font-size:15px;font-weight:800;letter-spacing:.14em;color:#E9E5FF}
+.gh-ls{display:grid;align-items:center;text-align:center;font-variant-numeric:tabular-nums}
+/* Entry animations — first render of a phase only */
+.gh-anim .gh-up,.gh-up-new{opacity:0;animation:ghUp .6s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes ghUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.gh-anim .gh-from-l{opacity:0;animation:ghFromL .7s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes ghFromL{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+.gh-anim .gh-from-r{opacity:0;animation:ghFromR .7s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes ghFromR{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.gh-anim .gh-draw{stroke-dasharray:520;stroke-dashoffset:520;animation:ghDraw 1.8s ease-out forwards}
+@keyframes ghDraw{to{stroke-dashoffset:0}}
+.gh-anim .gh-grow-l,.gh-anim .gh-grow-r{transform:scaleX(0);animation:ghGrow .9s cubic-bezier(.2,.8,.2,1) forwards}
+.gh-grow-l{transform-origin:right center}.gh-grow-r{transform-origin:left center}
+@keyframes ghGrow{to{transform:scaleX(1)}}
+.gh-anim .gh-pop{opacity:0;animation:ghPop .35s ease-out forwards}
+@keyframes ghPop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.gh-anim .gh-stamp-in{opacity:0;animation:ghStamp .55s cubic-bezier(.2,1.5,.4,1) .35s forwards}
+@keyframes ghStamp{from{opacity:0;transform:scale(1.9) rotate(-10deg)}to{opacity:1;transform:rotate(-4deg)}}
+.gh-anim .gh-win{opacity:0;animation:ghWin .7s cubic-bezier(.2,.8,.2,1) .6s forwards}
+@keyframes ghWin{from{opacity:0;transform:translateY(10px)}60%{text-shadow:0 0 28px rgba(168,159,232,.95)}to{opacity:1;transform:none;text-shadow:0 0 14px rgba(168,159,232,.35)}}
+@media (prefers-reduced-motion: reduce){
+  .gh *,.gh *::after{animation:none!important}
+  .gh .gh-up,.gh .gh-up-new,.gh .gh-from-l,.gh .gh-from-r,.gh .gh-pop,.gh .gh-stamp-in,.gh .gh-win{opacity:1!important}
+  .gh .gh-grow-l,.gh .gh-grow-r{transform:none!important}
+  .gh .gh-draw{stroke-dashoffset:0!important}
+  .gh .gh-spark,.gh .gh-fly{display:none}
+}
 /* Playoff Picture — bracket boxes, wild card race rows, interactive
    "play it out" pick pairs, division standings rows. Prefixed pp- to
    match the mockup this was built from. */
@@ -8352,7 +8433,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.39.0-play-reactions-mentions';
+window.INNINGS_BUILD = 'v5.40.0-game-state-hero';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10199,7 +10280,7 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
 // so toggling expand/side has to explicitly regenerate and re-render it.
 function _rerenderBoxScoreFromCache() {
   if (!window._lastLiveBox || !window._gdPregame) return;
-  var html = _boxScoreCardHtml(window._lastLiveBox, true, true);
+  var html = _boxScoreCardHtml(window._lastLiveBox, true, true, _gameScreenBoxOpts(window._lastLiveBox));
   if (!html) return;
   window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
   renderGameCheatSheet();
@@ -10213,8 +10294,13 @@ function setBoxScoreDetailSide(side) {
   _rerenderBoxScoreFromCache();
 }
 
-function _boxScoreCardHtml(box, dark, allowPlayReply) {
+function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
   if (!box || !box.home) return '';
+  // opts.hero ('live' | 'final') — set only on the game screen when the
+  // game-state hero card above already shows the score, situation, and
+  // (for final) linescore + decisions, so this card skips those pieces.
+  opts = opts || {};
+  var heroLive = opts.hero === 'live', heroFinal = opts.hero === 'final';
   var color = dark ? '#fff' : 'var(--black)';
   var subColor = dark ? 'rgba(255,255,255,0.65)' : 'var(--subtle)';
   var bg = dark ? 'rgba(255,255,255,0.14)' : 'var(--bg)';
@@ -10316,6 +10402,8 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
       '</div>';
   }
 
+  if (heroLive) situationHtml = '';
+  if (heroFinal) { decisionLine = ''; hrLines = ''; }
   var strikeZoneHtml = _strikeZoneSectionHtml(box.pitchSequence, ruleColor, subColor, color);
   var boxScoreDetailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, ruleColor, subColor, color);
 
@@ -10357,11 +10445,12 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
   }
 
   return '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">' +
+    (opts.hero ? '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:8px">' + (heroFinal ? 'Plays & box score' : 'Pitch by pitch') + '</div>' :
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
       '<div style="font-size:10px;color:' + subColor + ';text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0">' + _escapeHtml(box.status || 'Final') + '</div>' +
-    '</div>' +
-    (innings.length ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
+    '</div>') +
+    (innings.length && !heroFinal ? '<div style="display:flex;margin-bottom:2px">' + periodHeader + '</div><div style="display:flex;margin-bottom:2px">' + awayRow + '</div><div style="display:flex;margin-bottom:6px">' + homeRow + '</div>' : '') +
     strikeZoneHtml +
     situationHtml +
     matchupHtml +
@@ -17199,6 +17288,578 @@ function skipGameRecap() {
   _finishGameRecap();
 }
 
+// ── GAME-STATE HERO (v5.40.0) — the animated card at the top of the game
+// screen. Three phases, picked from whatever the game screen has loaded:
+//   pre   → /api/mlb?mode=pregame (probable pitchers, records, standings)
+//   live  → /api/mlb?mode=boxscore while Live (score, situation, scoring plays)
+//   final → the same boxscore once Final (linescore, decisions, star, recap)
+// MLB only for now. Each phase is built from a sport-neutral model
+// (_ghModelFromMlbPregame / _ghModelFromMlbBox) so other leagues only
+// need their own model builder later, not a new renderer.
+//
+// The card is a plain HTML string re-injected by renderGameCheatSheet on
+// every live refresh tick, so animation state lives in window._ghState:
+// entry animations run on the FIRST render of each phase only, a play
+// animates in (with a NEW tag) only when it wasn't in the previous
+// render, and a score only flashes when it changed since the last one.
+window._ghState = null;
+window._ghCountdownTimer = null;
+
+function _ghResetForGame(gamePk) {
+  window._ghState = { gamePk: gamePk, animated: {}, seenPlays: null, newAt: {}, lastScore: null, startCheckAt: 0 };
+  if (window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
+}
+
+// Primary / on-dark accent per MLB abbreviation (as the Stats API sends
+// it). bg+fg paint the badge; accent is the version that stays readable
+// on the dark card for bars, tags and text.
+var GH_MLB_COLORS = {
+  AZ: ['#A71930', '#fff', '#E3526A'], ARI: ['#A71930', '#fff', '#E3526A'], ATL: ['#CE1141', '#fff', '#F0567A'],
+  BAL: ['#DF4601', '#fff', '#FF8A4C'], BOS: ['#BD3039', '#fff', '#EE6A72'], CHC: ['#0E3386', '#fff', '#6F95E8'],
+  CWS: ['#27251F', '#fff', '#C4CED4'], CIN: ['#C6011F', '#fff', '#F2566B'], CLE: ['#E31937', '#fff', '#F2627A'],
+  COL: ['#333366', '#fff', '#A7A7E0'], DET: ['#0C2340', '#fff', '#FA8C4F'], HOU: ['#EB6E1F', '#1A1640', '#F59A5E'],
+  KC: ['#004687', '#fff', '#6FA8E8'], LAA: ['#BA0021', '#fff', '#EE5A70'], LAD: ['#005A9C', '#fff', '#4A8FD9'],
+  MIA: ['#00A3E0', '#1A1640', '#4CC4F0'], MIL: ['#12284B', '#FFC52F', '#FFC52F'], MIN: ['#002B5C', '#fff', '#E8557A'],
+  NYM: ['#002D72', '#fff', '#FF7A3D'], NYY: ['#0C2340', '#fff', '#AEB8C6'], ATH: ['#003831', '#EFB21E', '#EFB21E'],
+  OAK: ['#003831', '#EFB21E', '#EFB21E'], PHI: ['#E81828', '#fff', '#F5606B'], PIT: ['#FDB827', '#1A1640', '#FDC94F'],
+  SD: ['#2F241D', '#FFC425', '#FFC425'], SF: ['#FD5A1E', '#1A1640', '#FD7A48'], SEA: ['#0C2C56', '#fff', '#2BC4B8'],
+  STL: ['#C41E3A', '#fff', '#EE5E75'], TB: ['#092C5C', '#fff', '#8FBCE6'], TEX: ['#003278', '#fff', '#F0566A'],
+  TOR: ['#134A8E', '#fff', '#5B9BE8'], WSH: ['#AB0003', '#fff', '#EE5458']
+};
+function _ghTeamColors(abbr) {
+  var c = GH_MLB_COLORS[String(abbr || '').toUpperCase()];
+  return c ? { bg: c[0], fg: c[1], accent: c[2] } : { bg: '#3D3580', fg: '#fff', accent: '#A89FE8' };
+}
+function _ghHexAlpha(hex, a) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length !== 6) return 'rgba(168,159,232,' + a + ')';
+  return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+}
+function _ghAbbrFallback(name) {
+  var short = _teamShortName(name || '');
+  return short ? short.slice(0, 3).toUpperCase() : '—';
+}
+// "Patrick Bailey" → "Bailey", "Vladimir Guerrero Jr." → "Guerrero Jr."
+function _ghLastName(full) {
+  if (!full) return '';
+  var parts = String(full).trim().split(/\s+/);
+  if (parts.length < 2) return parts[0] || '';
+  var last = parts[parts.length - 1];
+  if (/^(Jr\.?|Sr\.?|II|III|IV)$/i.test(last) && parts.length > 2) return parts[parts.length - 2] + ' ' + last;
+  return last;
+}
+function _ghInitials(full) {
+  var parts = String(full || '').trim().split(/\s+/).filter(function (p) { return !/^(Jr\.?|Sr\.?|II|III|IV)$/i.test(p); });
+  if (!parts.length) return '?';
+  return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+function _ghShortInitialName(full) {
+  var parts = String(full || '').trim().split(/\s+/);
+  if (parts.length < 2) return full || '';
+  return parts[0][0] + '. ' + _ghLastName(full);
+}
+function _ghDelay(s) { return 'animation-delay:' + s.toFixed(2) + 's;'; }
+
+// "2-run homer", "RBI double", "sac fly", "wild pitch"…
+function _ghPlayLabel(p) {
+  var ev = String(p.event || '').toLowerCase();
+  var rbi = p.rbi || 0;
+  if (p.eventType === 'home_run' || ev === 'home run') {
+    if (rbi >= 4) return 'grand slam';
+    return rbi <= 1 ? 'solo homer' : rbi + '-run homer';
+  }
+  if (ev === 'sac fly') return 'sac fly';
+  if (ev === 'sac bunt') return 'sac bunt';
+  if (ev === 'walk' || ev === 'intent walk') return rbi ? 'bases-loaded walk' : 'walk';
+  if (ev === 'hit by pitch') return rbi ? 'bases-loaded HBP' : 'hit by pitch';
+  if (ev === 'grounded into dp') ev = 'double play';
+  if (ev === 'field error') ev = 'error';
+  if (ev === 'fielders choice' || ev === 'fielders choice out') ev = "fielder's choice";
+  if (!ev) ev = 'scoring play';
+  if (rbi >= 2) return rbi + '-run ' + ev;
+  if (rbi === 1) return 'RBI ' + ev;
+  return ev;
+}
+function _ghArticle(label) { return /^([aeiou]|RBI|8-|11-|18-)/i.test(label) ? 'an' : 'a'; }
+function _ghPlayHeadline(p) {
+  var label = _ghPlayLabel(p);
+  if (!p.rbi && p.eventType !== 'home_run') return label.charAt(0).toUpperCase() + label.slice(1);
+  return (p.batter ? _ghLastName(p.batter) + ' ' : '') + label;
+}
+function _ghScoreChip(p, awayAbbr, homeAbbr) {
+  if (p.awayScore == null || p.homeScore == null) return '';
+  if (p.awayScore === p.homeScore) return 'Tied ' + p.awayScore + '–' + p.homeScore;
+  return p.awayScore > p.homeScore
+    ? awayAbbr + ' ' + p.awayScore + '–' + p.homeScore
+    : homeAbbr + ' ' + p.homeScore + '–' + p.awayScore;
+}
+
+// ── MODELS ────────────────────────────────────────────────────────────
+function _ghSideFromPregame(s) {
+  var abbr = s.abbr || _ghAbbrFallback(s.name);
+  var st = s.standing || {};
+  var f = s.feat;
+  return {
+    name: s.name, short: _teamShortName(s.name), abbr: abbr, colors: _ghTeamColors(abbr),
+    record: s.record || null, divRank: st.divRank || null, divName: st.divName || null,
+    l10: st.l10 || null, streak: st.streak || null,
+    pitcher: f ? { name: f.name, hand: f.hand || null, stats: f.stats || null } : null
+  };
+}
+function _ghModelFromMlbPregame(data) {
+  if (!data || !data.away || !data.home) return null;
+  return { phase: 'pre', away: _ghSideFromPregame(data.away), home: _ghSideFromPregame(data.home), startTime: data.startTime || null, venue: data.venue || null };
+}
+function _ghModelFromMlbBox(box) {
+  if (!box || box.error || !box.home) return null;
+  var status = box.status || '';
+  var sl = String(status).toLowerCase();
+  if (sl.indexOf('postponed') !== -1 || sl.indexOf('cancel') !== -1) return null;
+  var phase = box.gameState === 'Final' || _isGameConcluded(status) ? 'final' : (_isGameStatusLive(status) ? 'live' : null);
+  if (!phase) return null;
+  var side = function (key) {
+    var name = box[key];
+    var abbr = box[key + 'Abbr'] || _ghAbbrFallback(name);
+    return {
+      name: name, short: _teamShortName(name), abbr: abbr, colors: _ghTeamColors(abbr),
+      score: box[key + 'Score'], hits: box[key + 'Hits'], errors: box[key + 'Errors'], record: box[key + 'Record'] || null
+    };
+  };
+  return {
+    phase: phase, status: status, venue: box.venue || null,
+    away: side('away'), home: side('home'),
+    innings: box.innings || [], situation: box.situation || null,
+    plays: (box.scoringPlays || []).slice(),
+    decisions: box.decisionsDetail || null,
+    fallbackDecisions: { w: box.winningPitcher, l: box.losingPitcher, s: box.savePitcher },
+    star: box.starOfGame || null
+  };
+}
+
+// ── SHARED PIECES ─────────────────────────────────────────────────────
+function _ghBadge(side, size) {
+  var fs = Math.round(size * (side.abbr.length > 2 ? 0.36 : 0.42));
+  return '<div class="gh-badge" style="width:' + size + 'px;height:' + size + 'px;background:' + side.colors.bg + ';color:' + side.colors.fg + ';font-size:' + fs + 'px;box-shadow:0 0 0 3px rgba(255,255,255,.08),0 8px 22px ' + _ghHexAlpha(side.colors.bg, .45) + '">' + _escapeHtml(side.abbr) + '</div>';
+}
+function _ghInningTag(half, inning, model) {
+  var team = half === 'top' ? model.away : model.home;
+  return '<span class="gh-tag" style="background:' + _ghHexAlpha(team.colors.accent, .2) + ';color:' + team.colors.accent + '">' + (half === 'top' ? 'T' : 'B') + (inning || '') + '</span>';
+}
+function _ghHeader(chipClass, chipInner, meta) {
+  return '<div class="gh-row"><span class="gh-chip ' + chipClass + '">' + chipInner + '</span>' +
+    (meta ? '<span class="gh-meta">' + _escapeHtml(meta) + '</span>' : '') + '</div>';
+}
+
+// ── PRE-GAME ──────────────────────────────────────────────────────────
+function _ghCountdownText(startIso) {
+  var t = startIso ? new Date(startIso).getTime() : NaN;
+  if (isNaN(t)) return null;
+  var diff = Math.floor((t - Date.now()) / 1000);
+  if (diff <= 0) return 'Any minute';
+  if (diff >= 86400) {
+    var d = new Date(t);
+    return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + (_formatGameTime(startIso) || '');
+  }
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  return pad(Math.floor(diff / 3600)) + ':' + pad(Math.floor((diff % 3600) / 60)) + ':' + pad(diff % 60);
+}
+
+// Keeps #gh-countdown ticking without re-rendering the card. Once first
+// pitch has passed it re-checks the box score once a minute, so a
+// pre-game screen left open flips itself to the live card.
+function _ghStartCountdown(startIso) {
+  if (window._ghCountdownTimer) clearInterval(window._ghCountdownTimer);
+  window._ghCountdownTimer = setInterval(function () {
+    var el = document.getElementById('gh-countdown');
+    var screenEl = document.getElementById('screen-game');
+    if (!el || !screenEl || !screenEl.classList.contains('active')) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; return; }
+    var txt = _ghCountdownText(startIso);
+    if (txt != null && el.textContent !== txt) el.textContent = txt;
+    var st = window._ghState;
+    var game = window._activeBrowseGame;
+    if (st && game && new Date(startIso).getTime() <= Date.now() && Date.now() - st.startCheckAt > 60000) {
+      st.startCheckAt = Date.now();
+      var pk = game.gamePk;
+      _refreshBoxScore(pk).then(function (isLive) {
+        if (isLive && window._activeBrowseGame && window._activeBrowseGame.gamePk == pk && !window._gameLiveRefreshTimer) _startGameLiveRefresh(pk);
+      });
+    }
+  }, 1000);
+}
+
+function _ghCompareRow(label, a, b, lowerBetter, delay) {
+  var na = parseFloat(a), nb = parseFloat(b);
+  if (isNaN(na) || isNaN(nb)) return '';
+  var pa, pb;
+  if (lowerBetter) { var mn = Math.max(Math.min(na, nb), 0.01); pa = mn / Math.max(na, 0.01); pb = mn / Math.max(nb, 0.01); }
+  else { var mx = Math.max(na, nb, 0.01); pa = na / mx; pb = nb / mx; }
+  var clamp = function (v) { return Math.max(14, Math.min(92, Math.round(v * 90))); };
+  var aBetter = lowerBetter ? na < nb : na > nb;
+  var bBetter = lowerBetter ? nb < na : nb > na;
+  var cA = this.away.colors.accent, cB = this.home.colors.accent;
+  return '<div style="display:flex;align-items:center;gap:8px;height:24px">' +
+    '<span class="gh-num" style="width:40px;font-size:16px;color:' + (aBetter ? '#fff' : '#B9B3E6') + '">' + _escapeHtml(String(a)) + '</span>' +
+    '<div class="gh-bar-track" style="justify-content:flex-end"><div class="gh-bar gh-grow-l" style="width:' + clamp(pa) + '%;background:' + cA + ';opacity:' + (aBetter ? 1 : .45) + ';' + _ghDelay(delay) + '"></div></div>' +
+    '<span style="width:42px;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#9C95D0">' + label + '</span>' +
+    '<div class="gh-bar-track"><div class="gh-bar gh-grow-r" style="width:' + clamp(pb) + '%;background:' + cB + ';opacity:' + (bBetter ? 1 : .45) + ';' + _ghDelay(delay) + '"></div></div>' +
+    '<span class="gh-num" style="width:40px;text-align:right;font-size:16px;color:' + (bBetter ? '#fff' : '#B9B3E6') + '">' + _escapeHtml(String(b)) + '</span>' +
+  '</div>';
+}
+
+function _ghPreHtml(m) {
+  var meta = [_formatGameTime(m.startTime), m.venue].filter(Boolean).join(' · ');
+  var h = _ghHeader('pre', '<span class="gh-dot pre"></span>PRE-GAME', meta);
+
+  var teamTile = function (s, cls, delay) {
+    var rec = s.record ? (s.record.w + '–' + s.record.l) : '—';
+    var place = (s.divRank && s.divName) ? _ordinalSuffix(s.divRank) + ' · ' + s.divName : '';
+    return '<div class="gh-team ' + cls + '" style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
+      '<div style="font-size:12.5px;font-weight:700;margin-top:4px;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(s.short) + '</div>' +
+      '<div class="gh-num" style="font-size:28px;line-height:1">' + rec + '</div>' +
+      (place ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(place) + '</div>' : '') + '</div>';
+  };
+  h += '<div class="gh-stage">' +
+    '<svg viewBox="0 0 314 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+      '<polygon class="gh-beam" points="8,0 34,0 146,150 114,150" fill="#A89FE8"/>' +
+      '<polygon class="gh-beam" points="280,0 306,0 200,150 168,150" fill="#A89FE8" style="animation-delay:-1.7s"/>' +
+      '<rect class="gh-bulb" x="6" y="0" width="30" height="5" rx="2" fill="#E9E5FF"/>' +
+      '<rect class="gh-bulb" x="278" y="0" width="30" height="5" rx="2" fill="#E9E5FF" style="animation-delay:-1.7s"/>' +
+      '<path class="gh-draw" d="M 47 112 Q 157 -18 267 112" fill="none" stroke="#A89FE8" stroke-width="1.5" style="opacity:.45"/>' +
+      '<path class="gh-draw" d="M157 144 L213 98 L157 52 L101 98 Z" fill="none" stroke="#A89FE8" stroke-width="1.5" style="opacity:.7;animation-delay:.4s"/>' +
+      '<circle cx="157" cy="100" r="4" fill="#A89FE8" style="opacity:.5"/>' +
+    '</svg>' +
+    '<div class="gh-teams">' +
+      teamTile(m.away, 'gh-from-l', .25) +
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:6px">' +
+        '<div class="gh-spin" style="width:34px;height:34px"><svg width="34" height="34" viewBox="0 0 36 36" style="display:block"><circle cx="18" cy="18" r="16" fill="#F4F1FF"/>' +
+        '<path d="M8 6 C 14 12, 14 24, 8 30" fill="none" stroke="#FF7A6B" stroke-width="1.6" stroke-dasharray="2.4 2.2"/>' +
+        '<path d="M28 6 C 22 12, 22 24, 28 30" fill="none" stroke="#FF7A6B" stroke-width="1.6" stroke-dasharray="2.4 2.2"/></svg></div>' +
+        '<div style="font-size:12px;letter-spacing:.2em;color:#B9B3E6;font-weight:800">VS</div>' +
+      '</div>' +
+      teamTile(m.home, 'gh-from-r', .35) +
+    '</div></div>';
+
+  var cd = _ghCountdownText(m.startTime);
+  if (cd) {
+    h += '<div class="gh-panel gh-up gh-row" style="' + _ghDelay(.55) + '">' +
+      '<span class="gh-eyebrow">First pitch</span>' +
+      '<span id="gh-countdown" class="gh-num" style="font-size:24px;line-height:1.15">' + _escapeHtml(cd) + '</span></div>';
+  }
+
+  var pa = m.away.pitcher, pb = m.home.pitcher;
+  h += '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<div class="gh-eyebrow gh-up" style="' + _ghDelay(.7) + '">Probable pitchers</div>';
+  var pitcherCell = function (p, side, alignRight, cls, delay) {
+    var sub = p && p.stats && p.stats.w != null ? ((p.hand ? p.hand + 'HP · ' : '') + p.stats.w + '–' + p.stats.l) : (p && p.hand ? p.hand + 'HP' : 'Not announced');
+    return '<div class="' + cls + '" style="' + _ghDelay(delay) + 'display:flex;align-items:center;gap:10px;min-width:0;' + (alignRight ? 'flex-direction:row-reverse;text-align:right' : '') + '">' +
+      '<div style="width:38px;height:38px;border-radius:50%;background:#2A2560;border:2px solid ' + side.colors.accent + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;font-size:13px;font-weight:800">' + (p ? _escapeHtml(_ghInitials(p.name)) : '?') + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:1px;min-width:0">' +
+        '<span style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p ? _escapeHtml(_ghShortInitialName(p.name)) : 'TBD') + '</span>' +
+        '<span class="gh-sub">' + _escapeHtml(sub) + '</span></div></div>';
+  };
+  h += '<div class="gh-row">' + pitcherCell(pa, m.away, false, 'gh-from-l', .8) + pitcherCell(pb, m.home, true, 'gh-from-r', .85) + '</div>';
+  if (pa && pb && pa.stats && pb.stats) {
+    var rows = _ghCompareRow.call(m, 'ERA', pa.stats.era, pb.stats.era, true, 1.0) +
+      _ghCompareRow.call(m, 'WHIP', pa.stats.whip, pb.stats.whip, true, 1.1) +
+      _ghCompareRow.call(m, 'K', pa.stats.so, pb.stats.so, false, 1.2);
+    if (rows) h += '<div style="display:flex;flex-direction:column;gap:3px">' + rows + '</div>';
+  }
+  h += '</div>';
+
+  if (m.away.l10 || m.home.l10) {
+    var formRow = function (s, delay) {
+      if (!s.l10) return '';
+      var pct = Math.round((s.l10.w / Math.max(1, s.l10.w + s.l10.l)) * 100);
+      var streak = s.streak ? '<span class="gh-tag" style="background:' + (/^W/.test(s.streak) ? 'rgba(124,242,156,.16);color:#9be8ac' : 'rgba(255,122,107,.16);color:#FFC2BA') + '">' + _escapeHtml(s.streak) + '</span>' : '';
+      return '<div style="display:flex;align-items:center;gap:10px">' +
+        '<span style="width:34px;font-size:12.5px;font-weight:800;color:' + s.colors.accent + '">' + _escapeHtml(s.abbr) + '</span>' +
+        '<div class="gh-bar-track"><div class="gh-bar gh-grow-r" style="width:' + pct + '%;background:' + s.colors.accent + ';' + _ghDelay(delay) + '"></div></div>' +
+        '<span class="gh-num" style="width:36px;text-align:right;font-size:15px">' + s.l10.w + '–' + s.l10.l + '</span>' + streak + '</div>';
+    };
+    h += '<div class="gh-up" style="' + _ghDelay(1.3) + 'display:flex;flex-direction:column;gap:8px">' +
+      '<div class="gh-eyebrow">Last 10</div>' + formRow(m.away, 1.4) + formRow(m.home, 1.5) + '</div>';
+  }
+  return h;
+}
+
+// ── LIVE ──────────────────────────────────────────────────────────────
+function _ghScoreboard(m, centerHtml, flash, finalMode) {
+  var a = m.away, b = m.home;
+  var aWin = finalMode && a.score > b.score, bWin = finalMode && b.score > a.score;
+  var scoreEl = function (s, isFlash, isWin, isLose) {
+    var cls = 'gh-num' + (isFlash ? ' gh-flash' : '') + (isWin ? ' gh-win' : '');
+    var color = isLose ? '#7F79B0' : ((finalMode && !isWin) || (!finalMode && s.score < (s === a ? b.score : a.score)) ? '#C4BFE8' : '#fff');
+    return '<span class="' + cls + '" style="font-size:52px;line-height:.95;color:' + color + '">' + (s.score != null ? s.score : '–') + '</span>';
+  };
+  var sideHtml = function (s, isRight, isFlash, isWin, isLose) {
+    var label = isWin ? '<span style="font-size:11.5px;font-weight:800;white-space:nowrap;color:' + s.colors.accent + '">' + _escapeHtml(s.short) + ' win</span>'
+      : '<span class="gh-sub" style="white-space:nowrap">' + _escapeHtml(s.short) + '</span>';
+    return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + (isLose ? ';opacity:.85' : '') + '">' +
+      _ghBadge(s, 42) +
+      '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' + label + scoreEl(s, isFlash, isWin, isLose) + '</div></div>';
+  };
+  return '<div class="gh-row gh-up" style="' + _ghDelay(.15) + '">' +
+    sideHtml(a, false, flash.away, aWin, bWin) + centerHtml + sideHtml(b, true, flash.home, bWin, aWin) + '</div>';
+}
+
+function _ghSituationStrip(s) {
+  var baseRect = function (x, y, on, delay) {
+    var cx = x + 6, cy = y + 6;
+    return on
+      ? '<rect class="gh-runner" x="' + x + '" y="' + y + '" width="12" height="12" fill="#A89FE8" transform="rotate(45 ' + cx + ' ' + cy + ')" style="animation-delay:' + delay + 's"/>'
+      : '<rect x="' + x + '" y="' + y + '" width="12" height="12" fill="none" stroke="#6E68A6" stroke-width="1.5" transform="rotate(45 ' + cx + ' ' + cy + ')"/>';
+  };
+  var b = s.bases || {};
+  var outs = s.outs != null ? s.outs : 0;
+  var dots = [0, 1, 2].map(function (i) {
+    return i < outs ? '<span style="width:10px;height:10px;border-radius:50%;background:#FF7A6B"></span>'
+      : '<span style="width:10px;height:10px;border-radius:50%;border:1.5px solid #6E68A6;box-sizing:border-box"></span>';
+  }).join('');
+  var runners = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
+  var runnerText = !runners.length ? 'Bases empty' : (runners.length === 3 ? 'Bases loaded' : 'On ' + runners.join(' & '));
+  return '<div class="gh-panel gh-up gh-row" style="' + _ghDelay(.3) + 'gap:14px">' +
+    '<svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label="' + runnerText + '" style="flex-shrink:0">' +
+      baseRect(22, 4, b.second, -.35) + baseRect(40, 22, b.first, 0) + baseRect(4, 22, b.third, -.7) +
+      '<rect x="24" y="42" width="8" height="8" fill="#6E68A6" transform="rotate(45 28 46)"/></svg>' +
+    '<div style="display:flex;flex-direction:column;gap:5px"><span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">Outs</span><div style="display:flex;gap:5px">' + dots + '</div></div>' +
+    '<div style="display:flex;flex-direction:column;gap:1px"><span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">Count</span>' +
+      '<span class="gh-num" style="font-size:20px;line-height:1">' + (s.balls != null ? s.balls : 0) + '–' + (s.strikes != null ? s.strikes : 0) + '</span></div>' +
+    '<div style="flex:1;text-align:right;font-size:12px;color:#D9D4FA">' + runnerText + '</div>' +
+  '</div>';
+}
+
+function _ghLiveHtml(m, st) {
+  var meta = (m.status && !/in progress/i.test(m.status)) ? m.status : (m.venue || '');
+  var h = _ghHeader('live', '<span class="gh-dot live"></span>LIVE', meta);
+  var s = m.situation || {};
+  var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
+    (s.inning ? '<div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 10 10">' +
+      (s.half === 'top' ? '<polygon points="5,1 9,8 1,8" fill="#A89FE8"/>' : '<polygon points="1,2 9,2 5,9" fill="#A89FE8"/>') +
+      '</svg><span class="gh-num" style="font-size:24px;line-height:1">' + s.inning + '</span></div>' +
+      '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + (s.half === 'top' ? 'Top' : 'Bot') + '</span>' : '<span class="gh-eyebrow">Live</span>') +
+    '</div>';
+  var prev = st.lastScore;
+  var flash = { away: !!(prev && prev.away !== m.away.score), home: !!(prev && prev.home !== m.home.score) };
+  h += _ghScoreboard(m, center, flash, false);
+  if (m.situation) h += _ghSituationStrip(s);
+
+  var plays = m.plays.slice().reverse();
+  h += '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<div class="gh-row gh-up" style="' + _ghDelay(.45) + 'align-items:baseline"><span class="gh-eyebrow">Highlights so far</span>' +
+    '<span style="font-size:11.5px;color:#9C95D0">' + (plays.length ? plays.length + (plays.length === 1 ? ' scoring play' : ' scoring plays') : '') + '</span></div>';
+  if (!plays.length) {
+    h += '<div class="gh-sub gh-up" style="' + _ghDelay(.6) + 'line-height:1.5">No runs yet. Scoring plays land here as they happen.</div>';
+  }
+  var seen = st.seenPlays;
+  var shown = plays.slice(0, 8);
+  shown.forEach(function (p, i) {
+    var key = String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text));
+    var justArrived = !!seen && !seen[key];
+    if (justArrived) st.newAt[key] = Date.now();
+    var isNew = !!st.newAt[key] && Date.now() - st.newAt[key] < 120000; // NEW tag holds for ~2 min of refreshes
+    var entry = justArrived ? 'gh-up-new' : 'gh-up';
+    var delay = justArrived ? .1 : .6 + i * .1;
+    var isTop = i === 0;
+    var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
+    var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
+    var last = i === shown.length - 1;
+    h += '<div class="' + entry + (isTop ? ' gh-glow' : '') + '" style="' + _ghDelay(delay) + 'display:flex;gap:12px;' + (isTop ? 'padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.08)' : 'padding:0 12px') + '">' +
+      '<div style="width:30px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
+        (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
+      '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;' + (!isTop && !last ? 'padding-bottom:8px' : '') + '">' +
+        '<div class="gh-row" style="gap:8px"><span style="font-size:13.5px;font-weight:700;min-width:0">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
+          (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#C4BFE8') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
+        (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
+        (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
+        (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
+      '</div></div>';
+  });
+  if (plays.length > shown.length) h += '<div class="gh-sub" style="padding-left:54px">+' + (plays.length - shown.length) + ' earlier</div>';
+  h += '</div>';
+  return h;
+}
+
+// ── FINAL ─────────────────────────────────────────────────────────────
+// Recap sentence built from the scoring plays: the play that put the
+// winner ahead for good, and the last insurance run after it.
+function _ghRecap(m) {
+  var a = m.away, b = m.home;
+  if (a.score == null || b.score == null || a.score === b.score) return '';
+  var winKey = a.score > b.score ? 'away' : 'home';
+  var W = winKey === 'away' ? a : b, L = winKey === 'away' ? b : a;
+  var plays = m.plays.filter(function (p) { return p.awayScore != null && p.homeScore != null; });
+  var lead = function (p) { return winKey === 'away' ? p.awayScore - p.homeScore : p.homeScore - p.awayScore; };
+  var decisive = -1;
+  for (var i = plays.length - 1; i >= 0; i--) {
+    if (lead(plays[i]) > 0) decisive = i; else break;
+  }
+  if (decisive < 0) return 'The ' + W.short + ' beat the ' + L.short + ' ' + W.score + '–' + L.score + '.';
+  var p = plays[decisive];
+  var before = decisive > 0 ? plays[decisive - 1] : { awayScore: 0, homeScore: 0 };
+  var wB = winKey === 'away' ? before.awayScore : before.homeScore;
+  var lB = winKey === 'away' ? before.homeScore : before.awayScore;
+  var who = p.batter && (p.rbi || p.eventType === 'home_run') ? _ghLastName(p.batter) + '\u2019s ' + _ghPlayLabel(p) : _ghArticle(_ghPlayLabel(p)) + ' ' + _ghPlayLabel(p);
+  var inn = 'the ' + _ordinalSuffix(p.inning);
+  var s1;
+  var walkoff = winKey === 'home' && p.half === 'bottom' && p.inning >= 9 && decisive === plays.length - 1;
+  if (walkoff) s1 = (p.batter ? _ghLastName(p.batter) : 'The ' + W.short) + ' walked it off with ' + _ghArticle(_ghPlayLabel(p)) + ' ' + _ghPlayLabel(p) + ' in ' + inn + '.';
+  else if (wB < lB) s1 = 'Down ' + lB + '–' + wB + ' in ' + inn + ', ' + who + ' flipped it.';
+  else if (wB === lB && wB > 0) s1 = 'Tied ' + wB + '–' + lB + ' in ' + inn + ', ' + who + ' put the ' + W.short + ' ahead for good.';
+  else s1 = who.charAt(0).toUpperCase() + who.slice(1) + ' in ' + inn + ' put the ' + W.short + ' ahead for good.';
+  var s2 = '';
+  for (var j = plays.length - 1; j > decisive; j--) {
+    var q = plays[j];
+    var scorer = q.half === 'top' ? 'away' : 'home';
+    if (scorer === winKey && q.batter && (q.rbi || q.eventType === 'home_run')) {
+      s2 = ' ' + _ghLastName(q.batter) + '\u2019s ' + _ghPlayLabel(q) + ' in the ' + _ordinalSuffix(q.inning) + ' added insurance.';
+      break;
+    }
+  }
+  return s1 + s2;
+}
+
+function _ghKeyMoments(m) {
+  var a = m.away, b = m.home;
+  var plays = m.plays;
+  if (!plays.length) return [];
+  var winKey = a.score > b.score ? 'away' : 'home';
+  var lead = function (p) { return winKey === 'away' ? p.awayScore - p.homeScore : p.homeScore - p.awayScore; };
+  var decisive = -1;
+  for (var i = plays.length - 1; i >= 0; i--) { if (lead(plays[i]) > 0) decisive = i; else break; }
+  var picks = {};
+  if (decisive >= 0) picks[decisive] = true;
+  var ranked = plays.map(function (p, idx) { return { idx: idx, w: (p.eventType === 'home_run' ? 3 : 0) + (p.rbi || 0) }; })
+    .sort(function (x, y) { return y.w - x.w || y.idx - x.idx; });
+  ranked.forEach(function (r) { if (Object.keys(picks).length < 3 && r.w >= 2) picks[r.idx] = true; });
+  if (Object.keys(picks).length < 3 && plays.length) picks[plays.length - 1] = true;
+  return Object.keys(picks).map(Number).sort(function (x, y) { return x - y; }).map(function (idx) { return plays[idx]; });
+}
+
+function _ghFinalHtml(m) {
+  var a = m.away, b = m.home;
+  var winner = a.score > b.score ? a : (b.score > a.score ? b : null);
+  var h = '';
+  if (winner) {
+    var sparkColors = [winner.colors.accent, '#A89FE8', '#E9E5FF'];
+    var winRight = winner === b;
+    [[.9, 0, 70], [1.4, 8, 84], [1.1, 16, 66], [1.8, 24, 90], [2.3, 12, 100], [2.7, 28, 60], [3.1, 4, 96], [3.5, 20, 78]].forEach(function (sp, i) {
+      h += '<span class="gh-spark" style="' + (winRight ? 'right:' : 'left:') + (6 + sp[1]) + '%;top:' + sp[2] + 'px;background:' + sparkColors[i % 3] + ';' + _ghDelay(sp[0]) + '"></span>';
+    });
+  }
+  h += _ghHeader('final', '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D9D4FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' + (/final|game over/i.test(m.status || 'final') ? 'GAME OVER' : _escapeHtml(String(m.status).toUpperCase())), m.venue || '');
+  var extra = m.innings.length > 9 ? '<span class="gh-sub" style="font-weight:700">' + m.innings.length + ' inn</span>' : '';
+  var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">FINAL</span>' + extra + '</div>';
+  h += _ghScoreboard(m, center, { away: false, home: false }, true);
+
+  var recap = _ghRecap(m);
+  if (recap) h += '<p class="gh-up" style="' + _ghDelay(.8) + 'margin:0;font-size:13.5px;line-height:1.5;color:#D9D4FA">' + _escapeHtml(recap) + '</p>';
+
+  if (m.innings.length) {
+    var n = m.innings.length;
+    var cols = 'grid-template-columns:34px repeat(' + n + ',minmax(0,1fr)) repeat(3,minmax(18px,1fr))';
+    var fs = n > 10 ? 13 : 15;
+    var cell = function (v, delay, bright, color, first) {
+      return '<span class="gh-pop" style="' + _ghDelay(delay) + (first ? 'border-left:1px solid rgba(168,159,232,.22);' : '') + (bright ? 'font-weight:800;color:' + (color || '#fff') : 'color:#9C95D0') + '">' + v + '</span>';
+    };
+    var row = function (s, key, offs) {
+      var out = '<span style="text-align:left;font-weight:800;color:' + s.colors.accent + '">' + _escapeHtml(s.abbr) + '</span>';
+      m.innings.forEach(function (inn, i) {
+        var v = inn[key];
+        var txt = v != null ? v : ((key === 'home' && i === n - 1 && b.score > a.score) ? 'x' : '');
+        out += cell(txt, .9 + i * .08 + offs, v > 0, v > 1 ? s.colors.accent : '#fff');
+      });
+      var d = .95 + n * .08 + offs;
+      out += cell(s.score != null ? s.score : '', d, true, '#fff', true) + cell(s.hits != null ? s.hits : '', d, s === winner, '#F4F1FF') + cell(s.errors != null ? s.errors : '', d, s === winner, '#F4F1FF');
+      return '<div class="gh-ls gh-num" style="' + cols + ';height:24px;font-size:' + fs + 'px">' + out + '</div>';
+    };
+    var head = '<span></span>' + m.innings.map(function (inn, i) { return '<span>' + (inn.num != null ? inn.num : i + 1) + '</span>'; }).join('') +
+      '<span style="color:#D9D4FA;border-left:1px solid rgba(168,159,232,.22)">R</span><span style="color:#D9D4FA">H</span><span style="color:#D9D4FA">E</span>';
+    h += '<div class="gh-panel gh-up" style="' + _ghDelay(.9) + 'padding:8px 12px;display:flex;flex-direction:column;gap:2px;overflow-x:auto">' +
+      '<div class="gh-ls gh-num" style="' + cols + ';height:18px;font-size:11.5px;color:#9C95D0">' + head + '</div>' +
+      row(a, 'away', 0) + row(b, 'home', .05) + '</div>';
+  }
+
+  var d = m.decisions;
+  var dec = function (letter, color, p, fallbackName, isSave) {
+    var name = p ? p.name : fallbackName;
+    if (!name) return '';
+    var rec = p && p.rec ? ' (' + p.rec + ')' : '';
+    return '<span style="white-space:nowrap"><span style="font-weight:800;color:' + color + '">' + letter + '</span> ' + _escapeHtml(_ghLastName(name) + rec) + '</span>';
+  };
+  var decHtml = [
+    dec('W', winner ? winner.colors.accent : '#A89FE8', d && d.winner, m.fallbackDecisions.w),
+    dec('L', '#9C95D0', d && d.loser, m.fallbackDecisions.l),
+    dec('S', '#A89FE8', d && d.save, m.fallbackDecisions.s, true)
+  ].filter(Boolean).join('');
+  if (decHtml) h += '<div class="gh-up" style="' + _ghDelay(1.1) + 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px">' + decHtml + '</div>';
+
+  if (m.star && m.star.name) {
+    var starSide = m.star.side === 'away' ? a : (m.star.side === 'home' ? b : (winner || b));
+    var c = starSide.colors;
+    h += '<div class="gh-up gh-shimmer" style="' + _ghDelay(1.25) + 'display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:' + _ghHexAlpha(c.accent, .1) + ';border:1px solid ' + _ghHexAlpha(c.accent, .3) + '">' +
+      '<div class="gh-badge" style="width:42px;height:42px;background:' + c.bg + ';color:' + c.fg + ';font-size:15px">' + _escapeHtml(_ghInitials(m.star.name)) + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">' +
+        '<span class="gh-eyebrow" style="font-size:9.5px;color:' + c.accent + '">Star of the game</span>' +
+        '<span style="font-size:14.5px;font-weight:700">' + _clickablePlayerNameHtml({ name: m.star.name, id: m.star.id }, 'mlb') + '</span>' +
+        (m.star.summary ? '<span style="font-size:12px;color:#D9D4FA">' + _escapeHtml(m.star.summary) + '</span>' : '') + '</div>' +
+      '<i class="ti ti-star" style="font-size:20px;color:' + c.accent + '"></i></div>';
+  }
+
+  var moments = _ghKeyMoments(m);
+  if (moments.length) {
+    h += '<div style="display:flex;flex-direction:column;gap:8px"><span class="gh-eyebrow gh-up" style="' + _ghDelay(1.4) + '">Moments that decided it</span>';
+    moments.forEach(function (p, i) {
+      h += '<div class="gh-up" style="' + _ghDelay(1.5 + i * .1) + 'display:flex;align-items:center;gap:10px">' + _ghInningTag(p.half, p.inning, m) +
+        '<span style="font-size:13.5px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
+        '<span class="gh-num" style="font-size:14.5px;white-space:nowrap">' + _escapeHtml(_ghScoreChip(p, a.abbr, b.abbr)) + '</span></div>';
+    });
+    h += '</div>';
+  }
+  return h;
+}
+
+// ── ENTRY POINT — called by renderGameCheatSheet on every render ──────
+function _ghHtmlForState(state) {
+  var game = window._activeBrowseGame;
+  if (!state || !game || (game.sport || 'mlb') !== 'mlb') return '';
+  var st = window._ghState;
+  if (!st || st.gamePk != game.gamePk) { _ghResetForGame(game.gamePk); st = window._ghState; }
+  var model = _ghModelFromMlbBox(state.heroBox) || _ghModelFromMlbPregame(state.data && (state.data.league || 'mlb') === 'mlb' ? state.data : null);
+  if (!model) return '';
+
+  var body;
+  try {
+    if (model.phase === 'pre') body = _ghPreHtml(model);
+    else if (model.phase === 'live') body = _ghLiveHtml(model, st);
+    else body = _ghFinalHtml(model);
+  } catch (err) {
+    console.error('[gh] hero render failed:', err);
+    return '';
+  }
+  var animate = !st.animated[model.phase];
+  st.animated[model.phase] = true;
+  if (model.phase !== 'pre' && window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
+  if (model.phase === 'pre' && model.startTime && !window._ghCountdownTimer) setTimeout(function () { _ghStartCountdown(model.startTime); }, 0);
+  if (model.phase !== 'pre') {
+    var seen = {};
+    (model.plays || []).forEach(function (p) { seen[String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text))] = true; });
+    st.seenPlays = seen;
+    st.lastScore = { away: model.away.score, home: model.home.score };
+  }
+  return '<div class="gh' + (animate ? ' gh-anim' : '') + '" data-phase="' + model.phase + '">' +
+    '<div class="gh-orb" style="' + (model.phase === 'live' ? 'right:-90px;top:-40px' : 'left:-80px;top:-30px') + '"></div>' +
+    '<div class="gh-body">' + body + '</div></div>';
+}
+
+// Box score card options on the game screen when the hero is showing —
+// hides the pieces the hero already covers so nothing is shown twice.
+function _gameScreenBoxOpts(box) {
+  var game = window._activeBrowseGame;
+  if (!game || (game.sport || 'mlb') !== 'mlb') return null;
+  var model = _ghModelFromMlbBox(box);
+  return model ? { hero: model.phase } : null;
+}
+
 // Returns a promise resolving to whether the game is currently live
 // (worth continuing to poll) — false for scheduled or concluded, which
 // the caller uses to decide whether to keep refreshing at all.
@@ -17212,12 +17873,15 @@ function _refreshBoxScore(gamePk) {
       var concluded = !!box && !box.error && _isGameConcluded(box.status);
       if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
       window._lastLiveBox = box; // cached so toggling the box score detail section can rebuild without a re-fetch
-      var html = _boxScoreCardHtml(box, true, true);
+      if (sport === 'mlb' && window._gdPregame) window._gdPregame.heroBox = box; // game-state hero reads this on the next render
+      var html = _boxScoreCardHtml(box, true, true, _gameScreenBoxOpts(box));
       if (html) {
         window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
         renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
       }
-      if (concluded) maybePlayGameRecap(box, sport, gamePk);
+      // MLB's final summary now lives in the hero card, so the full-screen
+      // recap overlay only plays for the other sports.
+      if (concluded && sport !== 'mlb') maybePlayGameRecap(box, sport, gamePk);
       return live;
     })
     .catch(function (err) { console.error('Load box score error:', err); return false; });
@@ -17246,7 +17910,8 @@ function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
-  window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk, boxScoreHtml: '' };
+  window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk, boxScoreHtml: '', heroBox: null };
+  _ghResetForGame(gamePk); // fresh hero animations per game open
   window._bsDetailState = { expanded: false, side: 'away' }; // fresh collapsed state each new game — don't carry an expanded table over from the last one
   window._lastLiveBox = null;
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
@@ -17333,7 +17998,7 @@ function renderGameCheatSheet() {
     // since the box score is all that's needed at that point. Either
     // way, show whatever box score HTML exists and stop — there's
     // nothing else to render without state.data.
-    if (state.boxScoreHtml) { el.innerHTML = state.boxScoreHtml; el.scrollTop = scrollPos; }
+    if (state.boxScoreHtml) { el.innerHTML = _ghHtmlForState(state) + state.boxScoreHtml; el.scrollTop = scrollPos; }
     return;
   }
   var data = state.data;
@@ -17341,7 +18006,7 @@ function renderGameCheatSheet() {
   if (!side) return;
   var league = data.league || 'mlb';
 
-  var h = state.boxScoreHtml || '';
+  var h = _ghHtmlForState(state) + (state.boxScoreHtml || '');
   h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
   ['away', 'home'].forEach(function (k) {
     var s = data[k];
