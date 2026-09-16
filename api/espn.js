@@ -263,14 +263,40 @@ function summarizeSummary(data, eventId, league) {
     savePitcher: null,
     homeRuns: [],
     highlights: extractHighlights(league, data),
-    situation: FOOTBALL_LEAGUES[league] ? extractFootballSituation(data, awayComp, homeComp) : null,
+    situation: FOOTBALL_LEAGUES[league] ? extractFootballSituation(data, awayComp, homeComp) : extractLiveSituation(league, comp),
     recentPlays: FOOTBALL_LEAGUES[league] ? extractFootballPlays(data) : []
   };
+}
+
+// ── BASKETBALL/SOCCER LIVE SITUATION (NBA, WNBA, MLS, NWSL) — much
+// simpler than football's: just the game clock and which period it's
+// in, since basketball and soccer don't have an equivalent to down/
+// distance or ball/strike counts. Pulled from comp.status, the same
+// object summarizeEvent already reads its status text from — moderate
+// confidence in displayClock/period specifically (common, documented
+// fields on this status object across ESPN's site API, but not tested
+// against a live in-progress response in this session, unlike the
+// status.type fields already proven by the existing status text).
+var BASKETBALL_LEAGUES = { nba: true, wnba: true };
+function extractLiveSituation(league, comp) {
+  if (!BASKETBALL_LEAGUES[league] && !SOCCER_LEAGUES[league]) return null;
+  var status = comp.status || {};
+  var period = status.period || null;
+  var clock = status.displayClock || null;
+  if (!period && !clock) return null;
+  var periodText;
+  if (BASKETBALL_LEAGUES[league]) {
+    periodText = period ? periodLabel(league, period - 1, period) : null;
+  } else {
+    periodText = period === 1 ? '1st Half' : period === 2 ? '2nd Half' : (period ? 'Period ' + period : null);
+  }
+  return { sportType: BASKETBALL_LEAGUES[league] ? 'basketball' : 'soccer', clock: clock, periodLabel: periodText };
 }
 
 // ── FOOTBALL FIELD POSITION + PLAY-BY-PLAY (NFL + CFB) — mirrors what
 // mlb.js does with balls/strikes/bases/recentPlays for baseball, using
 // whatever field-position data ESPN's summary endpoint carries for a
+// live or recently-finished game.
 // live or recently-finished game.
 //
 // Confidence note: this endpoint's `scoringPlays` (used by
