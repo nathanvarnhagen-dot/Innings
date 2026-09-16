@@ -762,6 +762,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gh-m-opening .gh-hlrow{opacity:0;animation:ghUp .35s cubic-bezier(.2,.8,.2,1) forwards}
 /* first open */
 .gh-m-intro .gh-hlrow{opacity:0;animation:ghUp .5s cubic-bezier(.2,.8,.2,1) forwards,ghRowAway .55s cubic-bezier(.55,0,.8,.2) forwards}
+.gh-m-intro .gh-hlrow{animation-delay:1.3s,3.84s}
 .gh-m-intro .gh-r0{animation-delay:.45s,3.40s}.gh-m-intro .gh-r1{animation-delay:.55s,3.46s}.gh-m-intro .gh-r2{animation-delay:.65s,3.52s}
 .gh-m-intro .gh-r3{animation-delay:.75s,3.58s}.gh-m-intro .gh-r4{animation-delay:.85s,3.64s}.gh-m-intro .gh-r5{animation-delay:.95s,3.70s}
 .gh-m-intro .gh-r6{animation-delay:1.05s,3.74s}.gh-m-intro .gh-r7{animation-delay:1.15s,3.78s}.gh-m-intro .gh-r8{animation-delay:1.25s,3.82s}
@@ -773,7 +774,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gh-m-intro .gh-mini{animation:ghMiniIn .4s ease-out 4.35s forwards}
 /* collapsing after the user closes it */
 .gh-m-closing .gh-hlrow{animation:ghRowAway .45s cubic-bezier(.55,0,.8,.2) forwards}
-.gh-m-closing .gh-r8,.gh-m-closing .gh-r7,.gh-m-closing .gh-r6{animation-delay:0s}
+.gh-m-closing .gh-r9,.gh-m-closing .gh-r8,.gh-m-closing .gh-r7,.gh-m-closing .gh-r6{animation-delay:0s}
 .gh-m-closing .gh-r5{animation-delay:.02s}.gh-m-closing .gh-r4{animation-delay:.05s}.gh-m-closing .gh-r3{animation-delay:.08s}
 .gh-m-closing .gh-r2{animation-delay:.12s}.gh-m-closing .gh-r1{animation-delay:.16s}.gh-m-closing .gh-r0{animation-delay:.2s}
 .gh-m-closing .gh-hl{animation:ghCollapse .45s cubic-bezier(.6,0,.3,1) .35s forwards}
@@ -8508,7 +8509,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.41.0-live-screen-condensed';
+window.INNINGS_BUILD = 'v5.42.0-final-highlights-lineup';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10313,13 +10314,24 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
   if (!detail || (!detail.away.batters.length && !detail.home.batters.length)) return '';
   var state = window._bsDetailState;
   var teamData = detail[state.side] || { batters: [], pitchers: [] };
-  var colHead = function (cols) {
+  var colHead = function (cols, withLead) {
     return '<div style="display:flex;gap:6px;padding:2px 0;font-size:9px;color:' + subColor + ';font-weight:700">' +
+      (withLead ? '<div style="width:14px;flex-shrink:0"></div>' : '') +
       '<div style="flex:1">Player</div>' + cols.map(function (c) { return '<div style="width:' + c.w + 'px;text-align:right">' + c.label + '</div>'; }).join('') + '</div>';
   };
-  var statRow = function (name, id, pos, cells) {
-    return '<div style="display:flex;gap:6px;padding:5px 0;border-top:0.5px solid ' + ruleColor + ';font-size:11px;color:' + color + '">' +
-      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml({ name: name, id: id }, 'mlb') + (pos ? ' <span style="color:' + subColor + ';font-size:9px">' + _escapeHtml(pos) + '</span>' : '') + '</div>' +
+  // lead: undefined → no order column (pitchers / older saved games);
+  // otherwise { slot, sub } — starters show their 1-9 spot, subs (pinch
+  // hitters/runners, defensive changes) sit indented under that spot.
+  var statRow = function (name, id, pos, cells, lead) {
+    var leadHtml = '';
+    var indent = '';
+    if (lead) {
+      var isSub = lead.sub > 0;
+      leadHtml = '<div style="width:14px;flex-shrink:0;text-align:right;color:' + subColor + ';font-weight:700">' + (isSub || !lead.slot ? '' : lead.slot) + '</div>';
+      if (isSub) indent = 'padding-left:10px;border-left:1.5px solid rgba(168,159,232,.35);margin-left:2px;';
+    }
+    return '<div style="display:flex;gap:6px;padding:5px 0;border-top:0.5px solid ' + ruleColor + ';font-size:11px;color:' + color + '">' + leadHtml +
+      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + indent + '">' + _clickablePlayerNameHtml({ name: name, id: id }, 'mlb') + (pos ? ' <span style="color:' + subColor + ';font-size:9px">' + _escapeHtml(pos) + '</span>' : '') + '</div>' +
       cells.map(function (v) { return '<div style="width:22px;text-align:right">' + v + '</div>'; }).join('') + '</div>';
   };
 
@@ -10338,8 +10350,16 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
 
     if (teamData.batters.length) {
       body += '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Batting</div>';
-      body += colHead([{ label: 'AB', w: 22 }, { label: 'R', w: 22 }, { label: 'H', w: 22 }, { label: 'RBI', w: 26 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }]);
-      body += teamData.batters.map(function (b) { return statRow(b.name, b.id, b.pos, [b.ab, b.r, b.h, b.rbi, b.bb, b.so]); }).join('');
+      var hasOrder = teamData.batters.some(function (b) { return b.slot; });
+      var batters = teamData.batters.slice();
+      if (hasOrder) {
+        batters.sort(function (x, y) {
+          var ox = x.slot ? x.slot * 100 + (x.sub || 0) : 99999, oy = y.slot ? y.slot * 100 + (y.sub || 0) : 99999;
+          return ox - oy;
+        });
+      }
+      body += colHead([{ label: 'AB', w: 22 }, { label: 'R', w: 22 }, { label: 'H', w: 22 }, { label: 'RBI', w: 26 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }], hasOrder);
+      body += batters.map(function (b) { return statRow(b.name, b.id, b.pos, [b.ab, b.r, b.h, b.rbi, b.bb, b.so], hasOrder ? { slot: b.slot || null, sub: b.sub || 0 } : undefined); }).join('');
     }
     if (teamData.pitchers.length) {
       body += '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px">Pitching</div>';
@@ -17396,7 +17416,7 @@ window._ghState = null;
 window._ghCountdownTimer = null;
 
 function _ghResetForGame(gamePk) {
-  if (window._ghState && window._ghState.liveModeTimer) clearTimeout(window._ghState.liveModeTimer);
+  if (window._ghState) { clearTimeout(window._ghState.liveModeTimer); clearTimeout(window._ghState.finalModeTimer); }
   window._ghState = { gamePk: gamePk, animated: {}, seenPlays: null, newAt: {}, lastScore: null, startCheckAt: 0 };
   if (window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
 }
@@ -17494,7 +17514,7 @@ function _ghSideFromPregame(s) {
     name: s.name, short: _teamShortName(s.name), abbr: abbr, colors: _ghTeamColors(abbr),
     record: s.record || null, divRank: st.divRank || null, divName: st.divName || null,
     l10: st.l10 || null, streak: st.streak || null,
-    pitcher: f ? { name: f.name, hand: f.hand || null, stats: f.stats || null } : null
+    pitcher: f ? { name: f.name, id: f.id || null, hand: f.hand || null, stats: f.stats || null } : null
   };
 }
 function _ghModelFromMlbPregame(data) {
@@ -17537,9 +17557,9 @@ function _ghInningTag(half, inning, model) {
   var team = half === 'top' ? model.away : model.home;
   return '<span class="gh-tag" style="background:' + _ghHexAlpha(team.colors.accent, .2) + ';color:' + team.colors.accent + '">' + (half === 'top' ? 'T' : 'B') + (inning || '') + '</span>';
 }
-function _ghHeader(chipClass, chipInner, meta) {
+function _ghHeader(chipClass, chipInner, meta, rightHtml) {
   return '<div class="gh-row"><span class="gh-chip ' + chipClass + '">' + chipInner + '</span>' +
-    (meta ? '<span class="gh-meta">' + _escapeHtml(meta) + '</span>' : '') + '</div>';
+    (rightHtml || (meta ? '<span class="gh-meta">' + _escapeHtml(meta) + '</span>' : '')) + '</div>';
 }
 
 // ── PRE-GAME ──────────────────────────────────────────────────────────
@@ -17643,10 +17663,14 @@ function _ghPreHtml(m) {
     '<div class="gh-eyebrow gh-up" style="' + _ghDelay(.7) + '">Probable pitchers</div>';
   var pitcherCell = function (p, side, alignRight, cls, delay) {
     var sub = p && p.stats && p.stats.w != null ? ((p.hand ? p.hand + 'HP · ' : '') + p.stats.w + '–' + p.stats.l) : (p && p.hand ? p.hand + 'HP' : 'Not announced');
-    return '<div class="' + cls + '" style="' + _ghDelay(delay) + 'display:flex;align-items:center;gap:10px;min-width:0;' + (alignRight ? 'flex-direction:row-reverse;text-align:right' : '') + '">' +
+    // Tapping an announced pitcher opens the same Savant / Reference link sheet as everywhere else
+    var linkAttrs = (p && p.id)
+      ? ' role="button" tabindex="0" aria-label="Player links for ' + _escapeHtml(p.name) + '" data-name="' + _escapeHtml(p.name) + '" data-id="' + _escapeHtml(String(p.id)) + '" data-league="mlb" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id,this.dataset.league)" onkeydown="if(event.key===\'Enter\')this.click()"'
+      : '';
+    return '<div class="' + cls + '"' + linkAttrs + ' style="' + _ghDelay(delay) + 'display:flex;align-items:center;gap:10px;min-width:0;min-height:44px;' + (p && p.id ? 'cursor:pointer;' : '') + (alignRight ? 'flex-direction:row-reverse;text-align:right' : '') + '">' +
       '<div style="width:38px;height:38px;border-radius:50%;background:#2A2560;border:2px solid ' + side.colors.accent + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;font-size:13px;font-weight:800">' + (p ? _escapeHtml(_ghInitials(p.name)) : '?') + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:1px;min-width:0">' +
-        '<span style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p ? _escapeHtml(_ghShortInitialName(p.name)) : 'TBD') + '</span>' +
+        '<span style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + (p && p.id ? 'text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:3px' : '') + '">' + (p ? _escapeHtml(_ghShortInitialName(p.name)) : 'TBD') + '</span>' +
         '<span class="gh-sub">' + _escapeHtml(sub) + '</span></div></div>';
   };
   h += '<div class="gh-row">' + pitcherCell(pa, m.away, false, 'gh-from-l', .8) + pitcherCell(pb, m.home, true, 'gh-from-r', .85) + '</div>';
@@ -17724,37 +17748,41 @@ function _ghReducedMotion() {
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 
-// Live hero mode. First live render of a game open → 'intro' (unless
-// reduced motion or there's nothing to show yet), which settles to
-// 'compact' once the fly-up finishes. Transitional modes re-render as
-// their settled version so a refresh never replays them.
-function _ghLiveMode(st, playCount) {
-  if (!st.liveMode) {
+// Highlights mode for the live and final cards (kept per phase in
+// _ghState). First render of a game open → 'intro' (unless reduced motion
+// or there's nothing to show): the list shows, then flies up and settles
+// to 'compact'. Transitional modes re-render as their settled version so a
+// refresh never replays them.
+function _ghPhaseMode(st, key, playCount) {
+  if (!st[key]) {
     var skipIntro = _ghReducedMotion() || !playCount;
-    st.liveMode = skipIntro ? 'compact' : 'intro';
+    st[key] = skipIntro ? 'compact' : 'intro';
     if (!skipIntro) {
-      clearTimeout(st.liveModeTimer);
-      st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'intro') st.liveMode = 'compact'; }, 4800);
+      clearTimeout(st[key + 'Timer']);
+      st[key + 'Timer'] = setTimeout(function () { if (st[key] === 'intro') st[key] = 'compact'; }, 4800);
     }
-    return st.liveMode;
+    return st[key];
   }
-  if (st.liveMode === 'opening') return 'open';
-  if (st.liveMode === 'closing') return 'compact';
-  return st.liveMode;
+  if (st[key] === 'opening') return 'open';
+  if (st[key] === 'closing') return 'compact';
+  return st[key];
 }
+function _ghLiveMode(st, playCount) { return _ghPhaseMode(st, 'liveMode', playCount); }
 
 function ghToggleHighlights() {
   var st = window._ghState;
   if (!st) return;
+  var el = document.querySelector('#game-sheet-panel .gh');
+  var phase = el ? el.getAttribute('data-phase') : 'live';
+  var key = phase === 'final' ? 'finalMode' : 'liveMode';
   var reduce = _ghReducedMotion();
-  var isOpen = st.liveMode === 'open' || st.liveMode === 'opening';
+  var isOpen = st[key] === 'open' || st[key] === 'opening';
   var next = isOpen ? (reduce ? 'compact' : 'closing') : (reduce ? 'open' : 'opening');
-  st.liveMode = next;
-  clearTimeout(st.liveModeTimer);
-  if (next === 'closing') st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'closing') st.liveMode = 'compact'; }, 1000);
-  if (next === 'opening') st.liveModeTimer = setTimeout(function () { if (st.liveMode === 'opening') st.liveMode = 'open'; }, 700);
+  st[key] = next;
+  clearTimeout(st[key + 'Timer']);
+  if (next === 'closing') st[key + 'Timer'] = setTimeout(function () { if (st[key] === 'closing') st[key] = 'compact'; }, 1000);
+  if (next === 'opening') st[key + 'Timer'] = setTimeout(function () { if (st[key] === 'opening') st[key] = 'open'; }, 700);
   st.newSeenAt = Date.now(); // opening the list counts as having seen new plays
-  var el = document.querySelector('#game-sheet-panel .gh[data-phase="live"]');
   if (!el) { if (typeof renderGameCheatSheet === 'function') renderGameCheatSheet(); return; }
   // Swap classes in place — no re-render, so only the highlight motion runs.
   el.className = el.className.replace(/\bgh-m-[a-z]+\b/, 'gh-m-' + next).replace(/\s*\bgh-anim\b/, '');
@@ -17763,6 +17791,11 @@ function ghToggleHighlights() {
     btn.setAttribute('aria-expanded', (next === 'open' || next === 'opening') ? 'true' : 'false');
     btn.classList.remove('gh-hl-btn-new');
   }
+}
+
+function _ghHlButtonHtml(count, expanded, pulse) {
+  return '<button class="gh-hl-btn' + (pulse && !expanded ? ' gh-hl-btn-new' : '') + '" onclick="ghToggleHighlights()" aria-expanded="' + expanded + '">Highlights<span class="gh-hl-count">' + count + '</span>' +
+    '<svg class="gh-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
 }
 
 function _ghPlayKey(p) { return String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text)); }
@@ -17783,8 +17816,7 @@ function _ghLiveHtml(m, st) {
   var expanded = mode === 'open';
   var h = '<div class="gh-row"><span class="gh-chip live"><span class="gh-dot live"></span>LIVE</span>' +
     (plays.length
-      ? '<button class="gh-hl-btn' + (recentNew && !expanded ? ' gh-hl-btn-new' : '') + '" onclick="ghToggleHighlights()" aria-expanded="' + expanded + '">Highlights<span class="gh-hl-count">' + plays.length + '</span>' +
-        '<svg class="gh-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+      ? _ghHlButtonHtml(plays.length, expanded, recentNew)
       : '<span class="gh-meta">' + _escapeHtml((m.status && !/in progress/i.test(m.status)) ? m.status : (m.venue || '')) + '</span>') +
     '</div>';
 
@@ -17827,34 +17859,41 @@ function _ghLiveHtml(m, st) {
       : _ghSituationStrip(s).replace('class="gh-panel gh-up gh-row"', 'class="gh-panel gh-strip gh-row"').replace(/animation-delay:[\d.]+s;/, ''); // inline delay would override the collapse timing
   }
 
-  // Highlights so far
-  if (plays.length) {
-    var shown = plays.slice(0, 8);
-    h += '<div class="gh-hl"><div class="gh-hlrow gh-hlhead gh-r0"><span class="gh-eyebrow">Highlights so far</span>' +
-      '<span style="font-size:11.5px;color:#9C95D0">' + plays.length + (plays.length === 1 ? ' scoring play' : ' scoring plays') + '</span></div>';
-    shown.forEach(function (p, i) {
-      var key = _ghPlayKey(p);
-      var t = st.newAt[key];
-      var isNew = !!t && Date.now() - t < 120000;
-      var isTop = i === 0;
-      var last = i === shown.length - 1;
-      var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
-      var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
-      h += '<div class="gh-hlrow gh-r' + (i + 1) + (isTop ? ' gh-first' : '') + '">' +
-        '<div style="width:32px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
-          (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
-        '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-bottom:6px">' +
-          '<div class="gh-row" style="gap:8px"><span style="font-size:13.5px;font-weight:700;min-width:0">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
-            (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#D9D4FA') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
-          (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
-          (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
-          (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
-        '</div></div>';
-    });
-    if (plays.length > shown.length) h += '<div class="gh-hlrow gh-sub" style="padding-left:56px">+' + (plays.length - shown.length) + ' earlier</div>';
-    h += '</div>';
-  }
+  h += _ghHighlightsListHtml(m, plays, st, { cap: 8, withNew: true });
   return h;
+}
+
+// Shared "Highlights so far" list (newest first) for the live and final
+// cards. cap limits rows (live shows 8 + "N earlier"); withNew turns on the
+// NEW tag for plays that arrived during this viewing.
+function _ghHighlightsListHtml(m, plays, st, opts) {
+  opts = opts || {};
+  if (!plays.length) return '';
+  var shown = opts.cap ? plays.slice(0, opts.cap) : plays;
+  // max-height is only the collapse animation's starting point — sized to the list so the fold starts right away
+  var h = '<div class="gh-hl" style="max-height:' + (60 + shown.length * 90) + 'px"><div class="gh-hlrow gh-hlhead gh-r0"><span class="gh-eyebrow">' + (opts.title || 'Highlights so far') + '</span>' +
+    '<span style="font-size:11.5px;color:#9C95D0">' + plays.length + (plays.length === 1 ? ' scoring play' : ' scoring plays') + '</span></div>';
+  shown.forEach(function (p, i) {
+    var key = _ghPlayKey(p);
+    var t = opts.withNew ? st.newAt[key] : null;
+    var isNew = !!t && Date.now() - t < 120000;
+    var isTop = i === 0;
+    var last = i === shown.length - 1;
+    var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
+    var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
+    h += '<div class="gh-hlrow gh-r' + Math.min(i + 1, 9) + (isTop ? ' gh-first' : '') + '">' +
+      '<div style="width:32px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
+        (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
+      '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-bottom:6px">' +
+        '<div class="gh-row" style="gap:8px"><span style="font-size:13.5px;font-weight:700;min-width:0">' + _escapeHtml(_ghPlayHeadline(p)) + '</span>' +
+          (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#D9D4FA') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
+        (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
+        (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
+        (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
+      '</div></div>';
+  });
+  if (plays.length > shown.length) h += '<div class="gh-hlrow gh-r9 gh-sub" style="padding-left:56px">+' + (plays.length - shown.length) + ' earlier</div>';
+  return h + '</div>';
 }
 
 // ── LIVE DETAIL — everything the old live box score card showed, in the
@@ -18033,8 +18072,11 @@ function _ghKeyMoments(m) {
   return Object.keys(picks).map(Number).sort(function (x, y) { return x - y; }).map(function (idx) { return plays[idx]; });
 }
 
-function _ghFinalHtml(m) {
+function _ghFinalHtml(m, st) {
   var a = m.away, b = m.home;
+  var allPlays = m.plays.slice().reverse();
+  var fMode = _ghPhaseMode(st, 'finalMode', allPlays.length);
+  st.finalRenderMode = fMode;
   var winner = a.score > b.score ? a : (b.score > a.score ? b : null);
   var h = '';
   if (winner) {
@@ -18044,10 +18086,12 @@ function _ghFinalHtml(m) {
       h += '<span class="gh-spark" style="' + (winRight ? 'right:' : 'left:') + (6 + sp[1]) + '%;top:' + sp[2] + 'px;background:' + sparkColors[i % 3] + ';' + _ghDelay(sp[0]) + '"></span>';
     });
   }
-  h += _ghHeader('final', '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D9D4FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' + (/final|game over/i.test(m.status || 'final') ? 'GAME OVER' : _escapeHtml(String(m.status).toUpperCase())), m.venue || '');
+  h += _ghHeader('final', '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D9D4FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' + (/final|game over/i.test(m.status || 'final') ? 'GAME OVER' : _escapeHtml(String(m.status).toUpperCase())), m.venue || '',
+    allPlays.length ? _ghHlButtonHtml(allPlays.length, fMode === 'open', false) : ''); // highlights button takes the venue's spot
   var extra = m.innings.length > 9 ? '<span class="gh-sub" style="font-weight:700">' + m.innings.length + ' inn</span>' : '';
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">FINAL</span>' + extra + '</div>';
   h += _ghScoreboard(m, center, { away: false, home: false }, true);
+  h += _ghHighlightsListHtml(m, allPlays, st, { title: 'Every scoring play' });
 
   var recap = _ghRecap(m);
   if (recap) h += '<p class="gh-up" style="' + _ghDelay(.8) + 'margin:0;font-size:13.5px;line-height:1.5;color:#D9D4FA">' + _escapeHtml(recap) + '</p>';
@@ -18129,7 +18173,7 @@ function _ghHtmlForState(state) {
   try {
     if (model.phase === 'pre') body = _ghPreHtml(model);
     else if (model.phase === 'live') body = _ghLiveHtml(model, st);
-    else body = _ghFinalHtml(model);
+    else body = _ghFinalHtml(model, st);
   } catch (err) {
     console.error('[gh] hero render failed:', err);
     return '';
@@ -18144,7 +18188,8 @@ function _ghHtmlForState(state) {
     st.seenPlays = seen;
     st.lastScore = { away: model.away.score, home: model.home.score };
   }
-  var modeCls = model.phase === 'live' ? ' gh-m-' + (st.renderMode || 'compact') : '';
+  var modeCls = model.phase === 'live' ? ' gh-m-' + (st.renderMode || 'compact')
+    : (model.phase === 'final' ? ' gh-m-' + (st.finalRenderMode || 'compact') : '');
   return '<div class="gh' + (animate ? ' gh-anim' : '') + modeCls + '" data-phase="' + model.phase + '">' +
     '<div class="gh-orb" style="' + (model.phase === 'live' ? 'right:-90px;top:-40px' : 'left:-80px;top:-30px') + '"></div>' +
     '<div class="gh-body">' + body + '</div></div>';
