@@ -8433,7 +8433,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.40.0-game-state-hero';
+window.INNINGS_BUILD = 'v5.40.1-game-over-status';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16392,7 +16392,10 @@ function _dowName(iso) {
 function _isGameConcluded(status) {
   if (!status) return false;
   var s = String(status).toLowerCase();
-  return s.indexOf('final') !== -1 || s.indexOf('postponed') !== -1 || s.indexOf('cancel') !== -1;
+  // 'game over' is MLB's detailedState between the last out and the game
+  // going official ("Final") — it can sit there a while, so it counts too.
+  return s.indexOf('final') !== -1 || s.indexOf('game over') !== -1 || s.indexOf('completed early') !== -1 ||
+    s.indexOf('postponed') !== -1 || s.indexOf('cancel') !== -1;
 }
 
 // Per-sport week state, so switching between NFL and CFB (and back)
@@ -17415,7 +17418,8 @@ function _ghModelFromMlbBox(box) {
   var status = box.status || '';
   var sl = String(status).toLowerCase();
   if (sl.indexOf('postponed') !== -1 || sl.indexOf('cancel') !== -1) return null;
-  var phase = box.gameState === 'Final' || _isGameConcluded(status) ? 'final' : (_isGameStatusLive(status) ? 'live' : null);
+  var phase = box.gameState === 'Final' || _isGameConcluded(status) ? 'final'
+    : ((box.gameState === 'Live' || (box.gameState !== 'Preview' && _isGameStatusLive(status))) ? 'live' : null);
   if (!phase) return null;
   var side = function (key) {
     var name = box[key];
@@ -17869,8 +17873,11 @@ function _refreshBoxScore(gamePk) {
     .then(function (r) { return r.json(); })
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
-      var live = !!box && !box.error && _isGameStatusLive(box.status);
-      var concluded = !!box && !box.error && _isGameConcluded(box.status);
+      // MLB boxes also carry abstractGameState (gameState) — trusted over the
+      // detailed status text, which has in-between values like "Game Over".
+      var gs = box && box.gameState;
+      var concluded = !!box && !box.error && (gs === 'Final' || _isGameConcluded(box.status));
+      var live = !!box && !box.error && !concluded && (gs === 'Live' || (gs !== 'Preview' && _isGameStatusLive(box.status)));
       if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
       window._lastLiveBox = box; // cached so toggling the box score detail section can rebuild without a re-fetch
       if (sport === 'mlb' && window._gdPregame) window._gdPregame.heroBox = box; // game-state hero reads this on the next render
