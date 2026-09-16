@@ -455,12 +455,18 @@ async function summarizePregame(data) {
   var probable = gameData.probablePitchers || {};
   var season = (gameData.game && gameData.game.season) || null;
 
+  var officialDate = (gameData.datetime && gameData.datetime.officialDate) || null;
+  var thisPk = gameData.game && gameData.game.pk;
   var results = await Promise.all([
     _pregameSide(teams.away, boxTeams.away, probable.away, season, gameData.players),
     _pregameSide(teams.home, boxTeams.home, probable.home, season, gameData.players),
-    _standingsByTeam(season)
+    _standingsByTeam(season),
+    _lastTenGames(teams.away && teams.away.id, officialDate, thisPk),
+    _lastTenGames(teams.home && teams.home.id, officialDate, thisPk)
   ]);
   var away = results[0], home = results[1], standings = results[2];
+  if (away) away.last10 = results[3];
+  if (home) home.last10 = results[4];
 
   if (!away || !home) return { error: 'No pregame data available' };
   [[away, teams.away], [home, teams.home]].forEach(function (pair) {
@@ -476,6 +482,58 @@ async function summarizePregame(data) {
     startTime: (gameData.datetime && gameData.datetime.dateTime) || null,
     venue: (gameData.venue && gameData.venue.name) || null
   };
+}
+
+// Last 10 completed regular-season games for a team, oldest first, from
+// the schedule endpoint (45-day window ending on this game's date, this
+// game itself excluded). hydrate=team supplies abbreviations; the static
+// id map covers them if that hydration ever comes back without one.
+// Postponed/cancelled games are skipped. Returns [] on any failure so the
+// hero falls back to the standings last-10 bar.
+var _MLB_ABBR_BY_ID = { 108: 'LAA', 109: 'AZ', 110: 'BAL', 111: 'BOS', 112: 'CHC', 113: 'CIN', 114: 'CLE', 115: 'COL', 116: 'DET', 117: 'HOU',
+  118: 'KC', 119: 'LAD', 120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD', 136: 'SEA', 137: 'SF', 138: 'STL', 139: 'TB',
+  140: 'TEX', 141: 'TOR', 142: 'MIN', 143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL' };
+function _isoDay(d) { return d.toISOString().slice(0, 10); }
+async function _lastTenGames(teamId, endDate, excludePk) {
+  if (!teamId) return [];
+  try {
+    var end = endDate ? new Date(endDate + 'T12:00:00Z') : new Date();
+    var start = new Date(end.getTime() - 45 * 86400000);
+    var url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&gameType=R&hydrate=team&teamId=' + encodeURIComponent(teamId) +
+      '&startDate=' + _isoDay(start) + '&endDate=' + _isoDay(end);
+    var r = await fetch(url);
+    var data = await r.json();
+    var games = [];
+    (data.dates || []).forEach(function (d) {
+      (d.games || []).forEach(function (g) {
+        var st = g.status || {};
+        if (st.abstractGameState !== 'Final') return;
+        if (/postponed|cancel/i.test(st.detailedState || '')) return;
+        if (excludePk && g.gamePk === excludePk) return;
+        var home = g.teams && g.teams.home, away = g.teams && g.teams.away;
+        if (!home || !away || home.score == null || away.score == null) return;
+        var isHome = home.team && home.team.id === teamId;
+        var me = isHome ? home : away, opp = isHome ? away : home;
+        if (me.score === opp.score) return;
+        var oppTeam = opp.team || {};
+        games.push({
+          opp: oppTeam.abbreviation || _MLB_ABBR_BY_ID[oppTeam.id] || null,
+          oppName: oppTeam.teamName || oppTeam.name || null,
+          res: me.score > opp.score ? 'W' : 'L',
+          us: me.score,
+          them: opp.score,
+          home: !!isHome,
+          date: d.date || g.officialDate || null,
+          t: g.gameDate || '',
+          n: g.gameNumber || 1
+        });
+      });
+    });
+    games.sort(function (a, b) { return a.t < b.t ? -1 : a.t > b.t ? 1 : a.n - b.n; });
+    return games.slice(-10).map(function (g) { delete g.t; delete g.n; return g; });
+  } catch (e) {
+    return [];
+  }
 }
 
 // Division place, last-10 and streak per team id for the pregame hero —
