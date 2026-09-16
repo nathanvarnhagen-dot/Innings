@@ -2156,7 +2156,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div id="game-chat-input-zone" class="input-zone" style="display:none;flex-direction:column;align-items:stretch;gap:8px">
     <div id="game-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGameMessage();}">
+      <input id="game-chat-field" class="msg-input" placeholder="Message..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendGameMessage();}">
       <button class="send-btn" onclick="sendGameMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
@@ -2246,7 +2246,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div style="position:relative;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 14px 24px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
     <div id="feedback-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="feedback-chat-field" placeholder="Share a pro..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
+      <input id="feedback-chat-field" placeholder="Share a pro..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendFeedbackMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:18px;padding:10px 15px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
       <button onclick="sendFeedbackMessage()" aria-label="Send" style="width:32px;height:32px;border-radius:50%;background:var(--indigo);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
@@ -2847,7 +2847,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   <div id="osl2-chat-input" style="display:none;position:relative;background:#150F30;border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="osl-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
+      <input id="osl-chat-field" placeholder="Message Outside Lands 2026..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendOslMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
       <button class="send-btn" onclick="sendOslMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -3100,7 +3100,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     <div id="act-detail-composer" style="position:relative;z-index:2;background:var(--card);border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
       <div id="act-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
       <div style="display:flex;gap:10px;align-items:center">
-        <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendActMessage();}">
+        <input id="act-detail-chat-field" class="msg-input" placeholder="Share the hype..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendActMessage();}">
         <button class="send-btn" onclick="sendActMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
       </div>
     </div>
@@ -4782,7 +4782,7 @@ function renderBirthdayChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -4798,7 +4798,7 @@ function renderBirthdayChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
@@ -5091,7 +5091,7 @@ function renderBdayStopChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -5107,7 +5107,7 @@ function renderBdayStopChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'birthdayStopChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, true);
@@ -5866,7 +5866,7 @@ function renderActChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -5882,7 +5882,7 @@ function renderActChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'actChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, true);
@@ -7407,7 +7407,7 @@ function _runOslPreviewSequence() {
   <div id="bday2-chat-input" style="display:none;position:relative;background:#150F30;border-top:0.5px solid rgba(255,255,255,0.12);padding:10px 16px 28px;flex-shrink:0;flex-direction:column;gap:8px">
     <div id="bday-reply-preview" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="bday-chat-field" placeholder="Message everyone..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendBirthdayMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
+      <input id="bday-chat-field" placeholder="Message everyone..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendBirthdayMessage();}" style="flex:1;font-size:14px;border:0.5px solid rgba(255,255,255,0.35);border-radius:22px;padding:10px 14px;outline:none;font-family:inherit;color:#fff;-webkit-text-fill-color:#fff;caret-color:#fff;background:rgba(255,255,255,0.18);-webkit-appearance:none;appearance:none">
       <button class="send-btn" onclick="sendBirthdayMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -7510,7 +7510,7 @@ function _runOslPreviewSequence() {
     <div id="bday-stop-composer" style="position:relative;z-index:2;background:var(--card);border-top:0.5px solid var(--rule);padding:10px 16px 28px;flex-shrink:0;display:flex;flex-direction:column;gap:8px">
       <div id="bday-stop-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
       <div style="display:flex;gap:10px;align-items:center">
-        <input id="bday-stop-chat-field" class="msg-input" placeholder="Share the hype..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendBdayStopMessage();}">
+        <input id="bday-stop-chat-field" class="msg-input" placeholder="Share the hype..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendBdayStopMessage();}">
         <button class="send-btn" onclick="sendBdayStopMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
       </div>
     </div>
@@ -7683,7 +7683,7 @@ function _runOslPreviewSequence() {
   <div class="input-zone" id="gd-chat-input" style="display:none;flex-direction:column;align-items:stretch;gap:8px">
     <div id="group-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
     <div style="display:flex;gap:10px;align-items:center">
-      <input id="group-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupMessage();}">
+      <input id="group-chat-field" class="msg-input" placeholder="Message..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendGroupMessage();}">
       <button class="send-btn" onclick="sendGroupMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
@@ -7734,7 +7734,7 @@ function _runOslPreviewSequence() {
     <div class="input-zone" style="flex-direction:column;align-items:stretch;gap:8px">
       <div id="group-game-reply-preview" style="display:none;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:8px 10px"></div>
       <div style="display:flex;gap:10px;align-items:center">
-        <input id="gd-game-chat-field" class="msg-input" placeholder="Message..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupGameMessage();}">
+        <input id="gd-game-chat-field" class="msg-input" placeholder="Message..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendGroupGameMessage();}">
         <button class="send-btn" onclick="sendGroupGameMessage()"><i class="ti ti-send"></i></button>
       </div>
     </div>
@@ -8098,7 +8098,7 @@ function _runOslPreviewSequence() {
       <button onclick="showCreatePollModal('future', window._openFutureId)" aria-label="Create a poll" style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:0.5px solid var(--rule);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
-      <input id="fd-chat-field" class="msg-input" placeholder="Message the group..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendFutureMomentMessage();}">
+      <input id="fd-chat-field" class="msg-input" placeholder="Message the group..." oninput="_handleMentionInput(this)" onblur="_handleMentionBlur()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(!_mentionEnterIntercept())sendFutureMomentMessage();}">
       <button class="send-btn" onclick="sendFutureMomentMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -8330,6 +8330,12 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 
+<!-- Shared @mention autocomplete — one dropdown reused by every chat
+     input's oninput handler, positioned above whichever input is
+     currently focused rather than one instance per chat surface. -->
+<div id="mention-dropdown" style="display:none;position:fixed;z-index:400;background:var(--card);border:0.5px solid var(--rule);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.3);max-height:180px;overflow-y:auto;min-width:180px"></div>
+
+
 <!-- ═══ EDIT MESSAGE — shared by every chat surface (OSL, Feedback, Artist, Future Plan, Group) ═══ -->
 <div id="edit-message-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:flex-end">
   <div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column">
@@ -8346,7 +8352,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.38.0-zone-shadow-anatomical';
+window.INNINGS_BUILD = 'v5.39.0-play-reactions-mentions';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10314,17 +10320,40 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
   var boxScoreDetailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, ruleColor, subColor, color);
 
   var playsHtml = '';
+  var playIdsForReactions = [];
   if (box.recentPlays && box.recentPlays.length) {
     playsHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
-      box.recentPlays.map(function (p) {
+      box.recentPlays.map(function (p, idx) {
         var tag = p.tag != null ? p.tag : ((p.half === 'top' ? 'T' : 'B') + (p.inning || ''));
         var tagWidth = p.tag != null ? '48px' : '24px';
         var replyBtn = allowPlayReply
-          ? '<span data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="_replyToPlay(this.dataset.tag,this.dataset.text)" title="Reply to this play" style="flex-shrink:0;color:' + subColor + ';font-size:13px;cursor:pointer;padding:0 2px">↩</span>'
+          ? '<span data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)" title="Reply to this play" style="flex-shrink:0;color:' + subColor + ';font-size:13px;cursor:pointer;padding:0 2px">↩</span>'
           : '';
-        return '<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:7px"><div style="flex-shrink:0;width:' + tagWidth + ';font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
-          '<div style="flex:1;font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div>' + replyBtn + '</div>';
+        // Stable per-play key for reactions: atBatIndex (baseball) or
+        // playId (football, from ESPN's own play id) when present —
+        // both are real fields on the source data, not invented here —
+        // falling back to the array position so reactions still work
+        // (just less precisely stable across refreshes) on any sport
+        // that has neither.
+        var idPart = p.atBatIndex != null ? p.atBatIndex : (p.playId != null ? p.playId : ('idx' + idx));
+        var playId = (allowPlayReply && box.gamePk != null) ? (box.gamePk + '_' + idPart) : null;
+        if (playId) playIdsForReactions.push(playId);
+        var reactBadges = playId ? '<div id="play-react-' + _escapeHtml(playId) + '" style="margin-left:57px"></div>' : '';
+        var rowAttrs = playId ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '" style="cursor:pointer"' : '';
+        return '<div' + rowAttrs + '>' +
+          '<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:2px"><div style="flex-shrink:0;width:' + tagWidth + ';font-size:9px;font-weight:800;color:' + subColor + '">' + _escapeHtml(tag) + '</div>' +
+          '<div style="flex:1;font-size:11.5px;color:' + color + ';line-height:1.5">' + _escapeHtml(p.text) + '</div>' + replyBtn + '</div>' +
+          reactBadges + '<div style="margin-bottom:5px"></div>' +
+          '</div>';
       }).join('') + '</div>';
+  }
+  // Reaction badges need an async Firestore read, but this function
+  // returns a plain HTML string the caller injects synchronously right
+  // after — deferring one tick lets that injection happen first, so the
+  // #play-react-<id> containers this fetch targets actually exist in
+  // the DOM by the time it resolves.
+  if (playIdsForReactions.length) {
+    setTimeout(function () { _loadPlayReactions(playIdsForReactions); }, 0);
   }
 
   return '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">' +
@@ -11957,7 +11986,7 @@ function renderFutureMomentChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -11973,7 +12002,7 @@ function renderFutureMomentChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'futureMomentChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
@@ -13974,8 +14003,41 @@ function _msgDoubleTap(el, collection, msgId, isMine) {
   }
 }
 
-function openReactionSheet(collection, msgId, canDelete) {
-  window._reactionSheetTarget = { collection: collection, msgId: msgId };
+// Same double-tap gesture as messages, pointed at a dedicated
+// gamePlayReactions collection instead of a chat message — plays from
+// the live feed aren't Firestore documents themselves (they're
+// re-derived from the API on every poll), so they can't share a
+// message's {collection, msgId} the way replies-as-new-messages do.
+// canDelete is always false: there's no message here to edit or
+// delete, only a reactions map. onDone refreshes just this play's own
+// badge immediately, instead of waiting for the next 15-second poll.
+function _playDoubleTap(el, playId, tag, text) {
+  var now = Date.now();
+  if (el._lastTapTs && (now - el._lastTapTs) < 400) {
+    el._lastTapTs = 0;
+    openReactionSheet('gamePlayReactions', playId, false, function () { _loadPlayReactions([playId]); }, { tag: tag, text: text });
+  } else {
+    el._lastTapTs = now;
+  }
+}
+
+// Batched fetch for however many plays are currently on screen (capped
+// at 5 by the recentPlays extraction itself, well under Firestore's
+// 10-item 'in' query limit) — one read instead of one per play.
+function _loadPlayReactions(playIds) {
+  if (!playIds || !playIds.length || !window.db || typeof firebase === 'undefined') return;
+  window.db.collection('gamePlayReactions').where(firebase.firestore.FieldPath.documentId(), 'in', playIds).get().then(function (snap) {
+    var byId = {};
+    snap.forEach(function (doc) { byId[doc.id] = (doc.data() && doc.data().reactions) || {}; });
+    playIds.forEach(function (id) {
+      var el = document.getElementById('play-react-' + id);
+      if (el) el.innerHTML = _reactionBadgesHtml(byId[id] || {}, true);
+    });
+  }).catch(function (err) { console.error('Load play reactions error:', err); });
+}
+
+function openReactionSheet(collection, msgId, canDelete, onDone, playContext) {
+  window._reactionSheetTarget = { collection: collection, msgId: msgId, onDone: onDone, playContext: playContext };
   var box = document.getElementById('msg-reaction-emojis');
   if (box) {
     box.innerHTML = REACTION_EMOJIS.map(function(e){
@@ -14008,7 +14070,14 @@ function _pickReaction(emoji) {
     var update = {};
     var key = 'reactions.' + user.uid;
     update[key] = (current[user.uid] === emoji) ? firebase.firestore.FieldValue.delete() : emoji;
-    return ref.update(update);
+    // set+merge instead of update: identical behavior for an existing
+    // message doc, but also correctly CREATES the doc when it doesn't
+    // exist yet — which is the normal case for a play reaction, since
+    // nothing else ever creates that document first the way sending a
+    // message does for chat reactions.
+    return ref.set(update, { merge: true });
+  }).then(function(){
+    if (typeof target.onDone === 'function') target.onDone();
   }).catch(function(err){ console.error('React error:', err); if (typeof ib_toast==='function') ib_toast('Could not react — try again'); });
 }
 
@@ -14079,6 +14148,15 @@ function _reactionSheetReply() {
   var target = window._reactionSheetTarget;
   closeReactionSheet();
   if (!target || !window.db) return;
+  // A play reaction's msgId is a playId into gamePlayReactions, not a
+  // real chat message — that document only ever has a reactions map,
+  // no author/text, so the generic lookup below would both fetch the
+  // wrong thing and reply into the wrong collection. Route through the
+  // same tag/text-based path the existing ↩ reply icon already uses.
+  if (target.collection === 'gamePlayReactions' && target.playContext) {
+    _replyToPlay(target.playContext.tag, target.playContext.text);
+    return;
+  }
   window.db.collection(target.collection).doc(target.msgId).get().then(function(doc){
     if (!doc.exists) { if (typeof ib_toast==='function') ib_toast('Message no longer exists'); return; }
     var d = doc.data() || {};
@@ -14163,7 +14241,12 @@ function _consumeReplyForSend(collection) {
 // (white/card, dark text) consistently across every surface.
 function _replyQuoteHtml(replyTo, isMine) {
   if (!replyTo) return '';
-  var preview = (replyTo.text || '').length > 80 ? replyTo.text.slice(0, 80) + '…' : (replyTo.text || '');
+  // Strip mention markup to plain "@Name" BEFORE truncating by raw
+  // character count — truncating first risks slicing a
+  // @[Name](uid)-style tag in half and showing broken markup instead
+  // of a name.
+  var plainText = _stripMentionMarkup(replyTo.text || '');
+  var preview = plainText.length > 80 ? plainText.slice(0, 80) + '…' : plainText;
   var borderColor = isMine ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.15)';
   var textColor = isMine ? 'rgba(255,255,255,0.75)' : 'var(--subtle)';
   var authorColor = isMine ? 'rgba(255,255,255,0.95)' : 'var(--mid)';
@@ -14209,6 +14292,126 @@ function _reactionBadgesHtml(reactions, dark) {
       return '<div style="background:' + bg + ';border:' + border + ';border-radius:10px;padding:2px 7px;font-size:11px;color:' + color + '">' + e + (counts[e] > 1 ? ' ' + counts[e] : '') + '</div>';
     }).join('') +
     '</div>';
+}
+
+// ── @MENTIONS — works the same way across every chat surface: a
+// mention is stored inline in the message's own text field as
+// @[Name](uid), not a separate array to keep in sync. That keeps the
+// write path identical to a plain message everywhere it already
+// exists, and keeps rendering simple: parse the one pattern, render
+// everything else as before.
+var MENTION_PATTERN = /@\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/g;
+
+// isMine picks a mention color that's actually readable against that
+// bubble's background — "me" bubbles are solid indigo (var(--indigo)
+// text would vanish into it), "them" bubbles are light.
+function _renderMessageTextWithMentions(text, isMine) {
+  text = text || '';
+  var mentionColor = isMine ? '#CECBF6' : 'var(--indigo)';
+  var out = '', lastIndex = 0, m;
+  MENTION_PATTERN.lastIndex = 0;
+  while ((m = MENTION_PATTERN.exec(text)) !== null) {
+    out += _escapeHtml(text.slice(lastIndex, m.index));
+    out += '<span onclick="event.stopPropagation();openUserProfile(\'' + m[2] + '\')" style="color:' + mentionColor + ';font-weight:700;cursor:pointer">@' + _escapeHtml(m[1]) + '</span>';
+    lastIndex = MENTION_PATTERN.lastIndex;
+  }
+  out += _escapeHtml(text.slice(lastIndex));
+  return out;
+}
+
+// Plain "@Name" for contexts that truncate by raw character count (reply
+// previews, notification lines) — rendering the full clickable markup
+// there risks slicing a mention in half mid-tag.
+function _stripMentionMarkup(text) {
+  return String(text || '').replace(MENTION_PATTERN, function (full, name) { return '@' + name; });
+}
+
+// Autocomplete: one shared dropdown element and match cache reused by
+// every chat input, rather than one per surface.
+window._mentionContext = null;
+window._mentionMatches = [];
+
+function _handleMentionInput(inputEl) {
+  var value = inputEl.value;
+  var caret = inputEl.selectionStart != null ? inputEl.selectionStart : value.length;
+  var uptoCaret = value.slice(0, caret);
+  var atIndex = uptoCaret.lastIndexOf('@');
+  // Only trigger at the start of the input or right after whitespace —
+  // not mid-word, so something like an email address never fires this.
+  if (atIndex === -1 || (atIndex > 0 && !/\s/.test(uptoCaret[atIndex - 1]))) { _closeMentionDropdown(); return; }
+  var query = uptoCaret.slice(atIndex + 1);
+  if (/\s/.test(query)) { _closeMentionDropdown(); return; }
+  window._mentionContext = { inputEl: inputEl, atIndex: atIndex };
+  _ensureMyFriendsLoaded(function (profiles) {
+    // The friends fetch only actually takes time on the first mention
+    // typed in a session (cached after); guard against the input having
+    // moved on by the time it resolves.
+    if (!window._mentionContext || window._mentionContext.inputEl !== inputEl) return;
+    var q = query.toLowerCase();
+    var matches = Object.keys(profiles).filter(function (uid) {
+      return profiles[uid].toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 6).map(function (uid) { return { uid: uid, name: profiles[uid] }; });
+    if (!matches.length) { _closeMentionDropdown(); return; }
+    _showMentionDropdown(inputEl, matches);
+  });
+}
+
+function _showMentionDropdown(inputEl, matches) {
+  var box = document.getElementById('mention-dropdown');
+  if (!box) return;
+  window._mentionMatches = matches;
+  box.innerHTML = matches.map(function (f, i) {
+    return '<div onmousedown="event.preventDefault();_pickMention(' + i + ')" style="padding:10px 14px;font-size:14px;color:var(--black);cursor:pointer;border-bottom:0.5px solid var(--rule)">' + _escapeHtml(f.name) + '</div>';
+  }).join('');
+  var rect = inputEl.getBoundingClientRect();
+  box.style.left = rect.left + 'px';
+  box.style.width = Math.max(180, rect.width) + 'px';
+  box.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  box.style.display = 'block';
+}
+
+function _closeMentionDropdown() {
+  var box = document.getElementById('mention-dropdown');
+  if (box) box.style.display = 'none';
+  window._mentionContext = null;
+}
+
+// Fires on blur too (tapping away without picking a suggestion) — the
+// delay is so a tap ON a dropdown item registers first; onmousedown
+// above (rather than onclick) is the other half of that same race,
+// firing before the input's blur does.
+function _handleMentionBlur() {
+  setTimeout(_closeMentionDropdown, 200);
+}
+
+function _pickMention(index) {
+  var match = window._mentionMatches[index];
+  var ctx = window._mentionContext;
+  if (!match || !ctx) return;
+  var inputEl = ctx.inputEl;
+  var value = inputEl.value;
+  var caret = inputEl.selectionStart != null ? inputEl.selectionStart : value.length;
+  var safeName = String(match.name || 'Friend').replace(/[\[\]()]/g, '');
+  var mentionMarkup = '@[' + safeName + '](' + match.uid + ') ';
+  inputEl.value = value.slice(0, ctx.atIndex) + mentionMarkup + value.slice(caret);
+  var newCaret = ctx.atIndex + mentionMarkup.length;
+  inputEl.focus();
+  if (inputEl.setSelectionRange) inputEl.setSelectionRange(newCaret, newCaret);
+  _closeMentionDropdown();
+}
+
+// Called from inside each input's existing Enter-to-send handler,
+// before it sends: if the dropdown is open, Enter picks the first
+// suggestion instead of sending — same convention as every other
+// @mention autocomplete. Returns true when it intercepted the keypress
+// (caller should NOT also send in that case).
+function _mentionEnterIntercept() {
+  var box = document.getElementById('mention-dropdown');
+  if (box && box.style.display === 'block' && window._mentionMatches && window._mentionMatches.length) {
+    _pickMention(0);
+    return true;
+  }
+  return false;
 }
 
 function deleteOslMessage(msgId) {
@@ -14300,7 +14503,7 @@ function renderOslChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer;background:linear-gradient(135deg,var(--indigo),#4E3F9E);box-shadow:0 4px 14px rgba(61,53,128,0.25)">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer;background:linear-gradient(135deg,var(--indigo),#4E3F9E);box-shadow:0 4px 14px rgba(61,53,128,0.25)">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -14316,7 +14519,7 @@ function renderOslChat(msgs) {
     return '<div class="msg"><div class="m-av av-b"' + theirAvAttrs + '>' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer;background:var(--card);border:0.5px solid rgba(255,255,255,0.08)">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'oslChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer;background:var(--card);border:0.5px solid rgba(255,255,255,0.08)">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, 'osl');
@@ -14344,7 +14547,7 @@ function _oslFeedNoticeHtml(c) {
     icon = '🎵';
     onclick = "_jumpToActFromFeed('" + (c.actName || '').replace(/'/g, "\\'") + "')";
     headline = _escapeHtml(c.author) + ' added a song';
-    detail = _escapeHtml(c.text) + ' · ' + _escapeHtml(c.actName || '');
+    detail = _escapeHtml(_stripMentionMarkup(c.text)) + ' · ' + _escapeHtml(c.actName || '');
   } else if (c.systemType === 'photo') {
     icon = '📷';
     onclick = "_jumpToOslPhotosFromFeed()";
@@ -14358,7 +14561,7 @@ function _oslFeedNoticeHtml(c) {
     icon = '💬';
     onclick = "_jumpToActFromFeed('" + (c.actName || '').replace(/'/g, "\\'") + "')";
     headline = _escapeHtml(c.author) + ' in ' + _escapeHtml(c.actName || '');
-    detail = _escapeHtml(c.text);
+    detail = _escapeHtml(_stripMentionMarkup(c.text));
   } else if (c.systemType === 'join') {
     icon = '👋';
     onclick = c.uid ? "openUserProfile('" + c.uid.replace(/'/g, "\\'") + "')" : '';
@@ -14500,7 +14703,7 @@ function renderFeedbackChat(category, msgs) {
         lpHtml +
         (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',true)" style="max-width:78%;background:var(--indigo);color:#fff;border-radius:18px 18px 4px 18px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' +
         _replyQuoteHtml(c.replyTo, true) +
-        '<div class="b-txt" style="color:#fff">' + _escapeHtml(c.text) + '</div>' +
+        '<div class="b-txt" style="color:#fff">' + _renderMessageTextWithMentions(c.text, true) + '</div>' +
         '<div class="b-t" style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:3px">' + _escapeHtml(tsLabel) + '</div>' +
         '</div>') +
         (linkOnly ? '<div style="font-size:10px;color:rgba(255,255,255,0.5)">' + _escapeHtml(tsLabel) + '</div>' : '') +
@@ -14511,7 +14714,7 @@ function renderFeedbackChat(category, msgs) {
       '<div style="max-width:74%">' +
         '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 3px 4px">' + _escapeHtml(c.author) + '</div>' +
         lpHtml +
-        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:#1A1640;border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + _escapeHtml(c.text) + '</div>') +
+        (linkOnly ? '' : '<div onclick="_msgDoubleTap(this,\'feedbackChat\',\'' + c._id + '\',false)" style="background:rgba(255,255,255,0.94);color:#1A1640;border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14.5px;line-height:1.5;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + _renderMessageTextWithMentions(c.text, false) + '</div>') +
         badges +
       '</div></div>';
   }, true);
@@ -15513,7 +15716,7 @@ function renderGroupChat(msgs) {
         '<div style="font-size:20px;flex-shrink:0">⚾</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:11px;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.author) + ' in ' + _escapeHtml(c.gameLabel || 'a game') + '</div>' +
-          '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(c.text) + '</div>' +
+          '<div style="font-size:13px;color:var(--black);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_stripMentionMarkup(c.text)) + '</div>' +
         '</div>' +
         '<svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="1 1 6 6 1 11"/></svg>' +
       '</div>';
@@ -15538,7 +15741,7 @@ function renderGroupChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _escapeHtml(tsLabel) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -15554,7 +15757,7 @@ function renderGroupChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   });
@@ -17503,13 +17706,13 @@ function renderGameChat(msgs) {
     var badges = _reactionBadgesHtml(c.reactions, true);
     if (mine) {
       return '<div class="msg" style="justify-content:flex-end"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
-        '<div class="bubble me" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble me" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
         '</div></div>';
     }
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
-      '<div class="bubble them" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+      '<div class="bubble them" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
       badges +
       '</div></div>';
   }).join('');
@@ -17613,7 +17816,7 @@ function renderGroupGameChat(msgs) {
       return '<div class="msg mine"><div class="m-av av-a">' + _escapeHtml(_initials(c.author)) + '</div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0">' +
           lpHtml +
-          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+          '<div class="bubble me" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',true)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, true) + '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, true) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
           badges +
         '</div></div>';
     }
@@ -17629,7 +17832,7 @@ function renderGroupGameChat(msgs) {
     return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0">' +
         lpHtml +
-        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _escapeHtml(c.text) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
+        '<div class="bubble them" onclick="_msgDoubleTap(this,\'groupGameChat\',\'' + c._id + '\',false)" style="max-width:100%;cursor:pointer">' + _replyQuoteHtml(c.replyTo, false) + '<div class="b-who">' + _escapeHtml(c.author) + '</div><div class="b-txt">' + _renderMessageTextWithMentions(c.text, false) + '</div><div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div></div>' +
         badges +
       '</div></div>';
   }, true);
@@ -18681,6 +18884,39 @@ function loadMyFriendsList() {
     _renderFriendChips(listEl, uids, true);
   }).catch(function(err){
     console.error('Load my friends error:', err);
+  });
+}
+
+// Lightweight version of the same friendRequests lookup, but for @mention
+// autocomplete rather than the profile screen's friend-chip list: no DOM
+// requirement (works from any chat, whether or not the person has ever
+// opened their own profile in this session), and caches {uid: name} pairs
+// since autocomplete needs to filter and display names, not just render
+// chips someone taps individually. Safe to call repeatedly — resolves
+// immediately from cache after the first successful load.
+window._myFriendProfiles = null;
+function _ensureMyFriendsLoaded(callback) {
+  if (window._myFriendProfiles) { callback(window._myFriendProfiles); return; }
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) { callback({}); return; }
+  Promise.all([
+    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
+    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
+  ]).then(function(results){
+    var uids = [];
+    results[0].forEach(function(d){ uids.push(d.data().toUid); });
+    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
+    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
+    if (!uids.length) { window._myFriendProfiles = {}; callback({}); return; }
+    return Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
+      var profiles = {};
+      docs.forEach(function(doc){ if (doc.exists) profiles[doc.id] = (doc.data() && doc.data().name) || 'Innings User'; });
+      window._myFriendProfiles = profiles;
+      callback(profiles);
+    });
+  }).catch(function(err){
+    console.error('Load friend profiles for mentions error:', err);
+    callback({});
   });
 }
 
