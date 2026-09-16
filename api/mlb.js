@@ -183,6 +183,7 @@ function summarize(data, gamePk) {
         var lastEvent = pitchEvents[pitchEvents.length - 1];
         pitchSequence = {
           batter: (currentPlay.matchup && currentPlay.matchup.batter && currentPlay.matchup.batter.fullName) || null,
+          batterId: (currentPlay.matchup && currentPlay.matchup.batter && currentPlay.matchup.batter.id) || null,
           batSide: (currentPlay.matchup && currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
           zoneTop: lastEvent.pitchData.strikeZoneTop != null ? lastEvent.pitchData.strikeZoneTop : 3.5,
           zoneBottom: lastEvent.pitchData.strikeZoneBottom != null ? lastEvent.pitchData.strikeZoneBottom : 1.5,
@@ -192,6 +193,21 @@ function summarize(data, gamePk) {
     }
   }
 
+  // ── Full traditional box score — every batter's and pitcher's actual
+  // game line (not season stats, which is what the matchup section
+  // above already shows). Same liveData.boxscore.teams structure this
+  // file already reads for season stats, just pulling .stats (this
+  // game) instead of .seasonStats. `batters`/`pitchers` arrays on each
+  // team give the display order (batting order, pitching appearance
+  // order); entries with no at-bat yet (bench, hasn't come in) are
+  // filtered out rather than shown as a blank line.
+  var boxScoreDetail = null;
+  if (abstractState === 'Live' || abstractState === 'Final') {
+    boxScoreDetail = {
+      away: _extractTeamBoxScore(liveData.boxscore && liveData.boxscore.teams && liveData.boxscore.teams.away),
+      home: _extractTeamBoxScore(liveData.boxscore && liveData.boxscore.teams && liveData.boxscore.teams.home)
+    };
+  }
 
   return {
     gamePk: (gameData.game && gameData.game.pk) || (gamePk ? Number(gamePk) : null),
@@ -210,8 +226,46 @@ function summarize(data, gamePk) {
     situation: situation,
     matchup: matchup,
     recentPlays: recentPlays,
-    pitchSequence: pitchSequence
+    pitchSequence: pitchSequence,
+    boxScoreDetail: boxScoreDetail
   };
+}
+
+function _extractTeamBoxScore(teamData) {
+  if (!teamData) return { batters: [], pitchers: [] };
+  var players = teamData.players || {};
+  var batters = (teamData.batters || []).map(function (pid) {
+    var p = players['ID' + pid];
+    var b = p && p.stats && p.stats.batting;
+    if (!p || !b || (b.atBats == null && b.plateAppearances == null)) return null; // hasn't actually batted yet
+    return {
+      name: p.person.fullName,
+      id: p.person.id,
+      pos: (p.position && p.position.abbreviation) || null,
+      ab: b.atBats != null ? b.atBats : 0,
+      r: b.runs != null ? b.runs : 0,
+      h: b.hits != null ? b.hits : 0,
+      rbi: b.rbi != null ? b.rbi : 0,
+      bb: b.baseOnBalls != null ? b.baseOnBalls : 0,
+      so: b.strikeOuts != null ? b.strikeOuts : 0
+    };
+  }).filter(Boolean);
+  var pitchers = (teamData.pitchers || []).map(function (pid) {
+    var p = players['ID' + pid];
+    var s = p && p.stats && p.stats.pitching;
+    if (!p || !s) return null;
+    return {
+      name: p.person.fullName,
+      id: p.person.id,
+      ip: s.inningsPitched != null ? s.inningsPitched : '0.0',
+      h: s.hits != null ? s.hits : 0,
+      r: s.runs != null ? s.runs : 0,
+      er: s.earnedRuns != null ? s.earnedRuns : 0,
+      bb: s.baseOnBalls != null ? s.baseOnBalls : 0,
+      so: s.strikeOuts != null ? s.strikeOuts : 0
+    };
+  }).filter(Boolean);
+  return { batters: batters, pitchers: pitchers };
 }
 
 function _liveParticipant(person, boxTeams, group) {
