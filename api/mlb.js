@@ -305,7 +305,13 @@ function _extractTeamBoxScore(teamData) {
     var p = players['ID' + pid];
     var b = p && p.stats && p.stats.batting;
     if (!p || !b || (b.atBats == null && b.plateAppearances == null)) return null; // hasn't actually batted yet
+    // battingOrder is MLB's lineup code: "300" = 3rd spot starter,
+    // "301"/"302" = the 1st/2nd player to take over that spot (pinch
+    // hitter/runner or defensive change). slot = spot, sub = sequence.
+    var bo = p.battingOrder != null ? Number(p.battingOrder) : NaN;
     return {
+      slot: isNaN(bo) ? null : Math.floor(bo / 100),
+      sub: isNaN(bo) ? null : bo % 100,
       name: p.person.fullName,
       id: p.person.id,
       pos: (p.position && p.position.abbreviation) || null,
@@ -318,6 +324,11 @@ function _extractTeamBoxScore(teamData) {
       so: b.strikeOuts != null ? b.strikeOuts : 0
     };
   }).filter(Boolean);
+  // Lineup order with each sub directly under the spot they took over
+  batters.sort(function (a, b) {
+    var oa = a.slot ? a.slot * 100 + (a.sub || 0) : 99999, ob = b.slot ? b.slot * 100 + (b.sub || 0) : 99999;
+    return oa - ob;
+  });
   var pitchers = (teamData.pitchers || []).map(function (pid) {
     var p = players['ID' + pid];
     var s = p && p.stats && p.stats.pitching;
