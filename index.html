@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.31.1-spotlight-day-prefix';
+window.INNINGS_BUILD = 'v5.32.0-live-game-autorefresh';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16716,28 +16716,56 @@ function skipGameRecap() {
   _finishGameRecap();
 }
 
+// Returns a promise resolving to whether the game is currently live
+// (worth continuing to poll) — false for scheduled or concluded, which
+// the caller uses to decide whether to keep refreshing at all.
+function _refreshBoxScore(gamePk) {
+  var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
+  return fetch(_bsModalBoxscoreUrl(sport, gamePk))
+    .then(function (r) { return r.json(); })
+    .then(function (box) {
+      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
+      var live = !!box && !box.error && _isGameStatusLive(box.status);
+      var concluded = !!box && !box.error && _isGameConcluded(box.status);
+      if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
+      var html = _boxScoreCardHtml(box, true, true);
+      if (html) {
+        window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
+        renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
+      }
+      if (concluded) maybePlayGameRecap(box, sport, gamePk);
+      return live;
+    })
+    .catch(function (err) { console.error('Load box score error:', err); return false; });
+}
+
+// Polls only while a game is actually live AND its screen is the one
+// currently on-screen — checked fresh on every tick, so navigating
+// away or the game going final both stop it within one interval rather
+// than needing an explicit teardown at every possible exit point.
+window._gameLiveRefreshTimer = null;
+function _startGameLiveRefresh(gamePk) {
+  _stopGameLiveRefresh();
+  window._gameLiveRefreshTimer = setInterval(function () {
+    var screenEl = document.getElementById('screen-game');
+    var stillOnThisGame = window._activeBrowseGame && window._activeBrowseGame.gamePk == gamePk;
+    var stillVisible = screenEl && screenEl.classList.contains('active');
+    if (!stillOnThisGame || !stillVisible) { _stopGameLiveRefresh(); return; }
+    _refreshBoxScore(gamePk).then(function (isLive) { if (!isLive) _stopGameLiveRefresh(); });
+  }, 15000);
+}
+function _stopGameLiveRefresh() {
+  if (window._gameLiveRefreshTimer) { clearInterval(window._gameLiveRefreshTimer); window._gameLiveRefreshTimer = null; }
+}
+
 function loadGameCheatSheet(gamePk) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   window._gdPregame = { side: 'away', expand: false, data: null, loadedForGamePk: gamePk, boxScoreHtml: '' };
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
-
-  fetch(_bsModalBoxscoreUrl(sport, gamePk))
-    .then(function (r) { return r.json(); })
-    .then(function (box) {
-      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
-      var live = !!box && !box.error && _isGameStatusLive(box.status);
-      var concluded = !!box && !box.error && _isGameConcluded(box.status);
-      if (!live && !concluded) return; // not started yet — cheat sheet alone is correct, nothing to prepend
-      var html = _boxScoreCardHtml(box, true, true);
-      if (!html) return;
-      window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
-      renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
-      if (concluded) maybePlayGameRecap(box, sport, gamePk);
-    })
-    .catch(function (err) { console.error('Load box score error:', err); });
-
+  _stopGameLiveRefresh();
+  _refreshBoxScore(gamePk).then(function (isLive) { if (isLive) _startGameLiveRefresh(gamePk); });
   _loadPregameSheet(gamePk, sport);
 }
 
@@ -16801,6 +16829,7 @@ function renderGameCheatSheet() {
   var el = document.getElementById('game-sheet-panel');
   var state = window._gdPregame;
   if (!el || !state || !state.data) return;
+  var scrollPos = el.scrollTop; // preserved across the innerHTML replace below — otherwise every live-refresh tick would jump the reader back to the top mid-read
   var data = state.data;
   var side = data[state.side];
   if (!side) return;
@@ -16870,6 +16899,7 @@ function renderGameCheatSheet() {
   h += '<div style="color:rgba(255,255,255,.45);font-size:11.5px;line-height:1.6;padding:12px 2px">Lavender chips go straight to the player page. Faded chips run a name search instead.</div>';
 
   el.innerHTML = h;
+  el.scrollTop = scrollPos;
 }
 
 // ── WATCHING + LIVE FEED — a per-user, per-game flag stored at
