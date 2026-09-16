@@ -8346,7 +8346,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.34.1-strikezone-reorder-batter-figure';
+window.INNINGS_BUILD = 'v5.35.0-nba-wnba-mls-nwsl-live';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -10204,6 +10204,12 @@ function _boxScoreCardHtml(box, dark, allowPlayReply) {
       (fs.possessionText ? ' at ' + _escapeHtml(fs.possessionText) : '') +
       (teamAbbr ? ' — <span style="color:' + teamColor + '">' + _escapeHtml(teamAbbr) + ' ball</span>' : '') + '</div>' +
       '<div style="border-radius:8px;overflow:hidden">' + fieldSvg + '</div>' +
+      '</div>';
+  } else if (box.situation && box.situation.sportType) {
+    var ls = box.situation;
+    situationHtml = '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid ' + ruleColor + '">' +
+      '<div style="font-size:16px;font-weight:800;color:' + color + '">' + _escapeHtml(ls.clock || '') + '</div>' +
+      '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin-top:2px">' + _escapeHtml(ls.periodLabel || '') + '</div>' +
       '</div>';
   }
 
@@ -15674,6 +15680,46 @@ function _footballRefLinks(name, espnId, sport) {
   return out;
 }
 
+// Basketball-Reference is the same Sports-Reference family as PFR/CFB
+// Ref above and shares the identical search.fcgi pattern already
+// confirmed working for those — high confidence. It covers both NBA
+// and WNBA under one site, so this is shared by both leagues. The ESPN
+// site-path segment (nba/wnba) is a lower-confidence guess, not tested
+// against a live page.
+function _basketballRefLinks(name, espnId, league) {
+  var out = [{ label: 'BBRef', exact: false, url: 'https://www.basketball-reference.com/search/search.fcgi?search=' + encodeURIComponent(name) }];
+  if (espnId) {
+    out.push({ label: 'ESPN', exact: true, url: 'https://www.espn.com/' + league + '/player/_/id/' + espnId + '/' + _pregameSlug(name) });
+  }
+  return out;
+}
+
+// FBref is also part of the Sports-Reference family and covers both MLS
+// and NWSL (and most other soccer leagues) under one search — same
+// confidence reasoning as Basketball-Reference above. ESPN's public
+// site groups all soccer under one 'soccer' path rather than separate
+// per-league paths, unlike the other sports here — also unverified.
+function _soccerRefLinks(name, espnId) {
+  var out = [{ label: 'FBref', exact: false, url: 'https://fbref.com/en/search/search.fcgi?search=' + encodeURIComponent(name) }];
+  if (espnId) {
+    out.push({ label: 'ESPN', exact: true, url: 'https://www.espn.com/soccer/player/_/id/' + espnId + '/' + _pregameSlug(name) });
+  }
+  return out;
+}
+
+// Single dispatch point for every sport's reference-link pair, used by
+// both the cheat sheet's inline chips and the player-link bottom sheet
+// — previously each had its own copy of this branch, which is exactly
+// the kind of duplication that lets two call sites quietly drift out of
+// sync (as happened here: neither one had a basketball/soccer branch,
+// so those sports were silently falling through to baseball links).
+function _refLinksForLeague(name, id, league) {
+  if (league === 'nfl' || league === 'cfb') return _footballRefLinks(name, id, league);
+  if (league === 'nba' || league === 'wnba') return _basketballRefLinks(name, id, league);
+  if (league === 'mls' || league === 'nwsl') return _soccerRefLinks(name, id);
+  return _pregameLinks(name, id);
+}
+
 function _refChipsHtml(links) {
   return links.map(function (l) {
     return '<a href="' + _escapeHtml(l.url) + '" target="_blank" rel="noopener" style="font-size:10px;font-weight:700;padding:6px 9px;border-radius:8px;flex-shrink:0;text-decoration:none;' +
@@ -15687,17 +15733,14 @@ function _footballLinkChips(name, espnId, sport) { return _refChipsHtml(_footbal
 
 // Dispatches to the right reference-site pair for whichever sport's
 // cheat sheet is currently open.
-function _cheatSheetLinkChips(name, id, league) {
-  if (league === 'nfl' || league === 'cfb') return _footballLinkChips(name, id, league);
-  return _pregameLinkChips(name, id);
-}
+function _cheatSheetLinkChips(name, id, league) { return _refChipsHtml(_refLinksForLeague(name, id, league)); }
 
 // Full-name labels here (vs the compact "BR"/"Savant"/"PFR" used on the
 // small inline chips) since this sheet has room for it and the person
 // tapped a name specifically to find out where it goes.
-var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', ESPN: 'ESPN Player Page' };
+var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', BBRef: 'Basketball Reference', FBref: 'FBref', ESPN: 'ESPN Player Page' };
 function openPlayerLinkSheet(name, id, league) {
-  var links = (league === 'nfl' || league === 'cfb') ? _footballRefLinks(name, id, league) : _pregameLinks(name, id);
+  var links = _refLinksForLeague(name, id, league);
   var nameEl = document.getElementById('player-link-name');
   var rowsEl = document.getElementById('player-link-rows');
   if (nameEl) nameEl.textContent = name;
@@ -16122,11 +16165,11 @@ var GAMES_SPORTS = [
   { key:'mlb', name:'MLB', emoji:'⚾', live:true },
   { key:'nfl', name:'NFL', emoji:'🏈', live:true, banner:'fb' },
   { key:'cfb', name:'College football', emoji:'🏈', live:true, banner:'fb' },
-  { key:'nba', name:'NBA', emoji:'🏀', live:false, banner:'bk' },
-  { key:'wnba', name:'WNBA', emoji:'🏀', live:false, banner:'bk' },
+  { key:'nba', name:'NBA', emoji:'🏀', live:true, banner:'bk' },
+  { key:'wnba', name:'WNBA', emoji:'🏀', live:true, banner:'bk' },
   { key:'nhl', name:'NHL', emoji:'🏒', live:false, banner:'hk' },
-  { key:'mls', name:'MLS', emoji:'⚽', live:false, banner:'sc' },
-  { key:'nwsl', name:'NWSL', emoji:'⚽', live:false, banner:'sc' }
+  { key:'mls', name:'MLS', emoji:'⚽', live:true, banner:'sc' },
+  { key:'nwsl', name:'NWSL', emoji:'⚽', live:true, banner:'sc' }
 ];
 
 function renderGamesSportGrid() {
@@ -16930,7 +16973,7 @@ function _loadPregameSheet(gamePk, sport) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
 
-  if (sport === 'nfl' || sport === 'cfb') {
+  if (sport !== 'mlb') {
     el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading rosters…</div>';
     fetch('/api/espn?league=' + encodeURIComponent(sport) + '&mode=pregame&eventId=' + encodeURIComponent(gamePk))
       .then(function (r) { return r.json(); })
