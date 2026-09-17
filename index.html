@@ -987,6 +987,12 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   100%{opacity:1;transform:scale(1) translateY(0)}
 }
 
+/* ── games-list "glance" detail (v5.46.0) — a small ball-bob used on the
+   NFL/CFB schedule-card field strip so a live game's possession marker
+   reads as "in play" without a full replay-style animation. */
+.glance-ball{animation:glanceBallBob 1.7s ease-in-out infinite}
+@keyframes glanceBallBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
 /* ── basketball banner (NBA + WNBA coming-soon screen) — one ball, both
    hoops keep visible white netting, only the right one ripples since
    that's the only hoop the ball actually reaches. Evenly-spaced points
@@ -8522,7 +8528,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.45.0-multisport-hero';
+window.INNINGS_BUILD = 'v5.46.0-live-glance';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16359,6 +16365,17 @@ function _splitSpotlight(games, favTeams) {
   return { spotlight: spotlight, rest: rest };
 }
 
+// Same idea as the football week view's own upcoming/concluded split
+// (_renderFootballWeekHtml below), pulled out so the single-day MLB list
+// can use it too: games already pulled into "Your teams" by
+// _splitSpotlight are exempt, since a followed team's game stays visible
+// up top win or lose — this only ever sorts what's left.
+function _splitConcluded(games) {
+  var upcoming = [], concluded = [];
+  games.forEach(function (g) { (_isGameConcluded(g.status) ? concluded : upcoming).push(g); });
+  return { upcoming: upcoming, concluded: concluded };
+}
+
 function _formatGameTime(iso) {
   if (!iso) return null;
   var d = new Date(iso);
@@ -16391,6 +16408,92 @@ function _gameBadgeHtml(g, dayPrefix) {
   return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);flex-shrink:0">' + _escapeHtml(prefix + timeLabel) + '</div>';
 }
 
+// ── LIVE GLANCE DETAIL (v5.46.0) — a schedule-list card only gets this
+// extra section once it's actually live AND its box score has come back;
+// scheduled and concluded games keep the plain row above untouched. Reuses
+// the same box.situation/box.matchup shapes _boxScoreCardHtml already
+// renders elsewhere (bases/outs green-and-orange fill, matchup row), just
+// laid out compactly for a list card instead of the full game screen.
+function _glanceBaseballDetailHtml(box) {
+  var s = box.situation;
+  if (!s || (s.outs == null && !s.bases)) return '';
+  var baseFill = function (on) { return on ? '#7CF29C' : 'rgba(255,255,255,.18)'; };
+  var basesSvg = '<svg width="28" height="28" viewBox="0 0 60 60" style="flex-shrink:0">' +
+    '<polygon points="30,10 50,30 30,50 10,30" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2"/>' +
+    '<circle cx="30" cy="10" r="5" fill="' + baseFill(s.bases && s.bases.second) + '"/>' +
+    '<circle cx="10" cy="30" r="5" fill="' + baseFill(s.bases && s.bases.third) + '"/>' +
+    '<circle cx="50" cy="30" r="5" fill="' + baseFill(s.bases && s.bases.first) + '"/>' +
+    '</svg>';
+  var outsDots = [0, 1, 2].map(function (i) {
+    return '<span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;background:' + (s.outs != null && i < s.outs ? '#E8622C' : 'rgba(255,255,255,.18)') + '"></span>';
+  }).join('');
+  var inningLabel = s.inning != null ? ((s.half === 'top' ? '▲ Top ' : '▼ Bottom ') + _ordinalSuffix(s.inning)) : '';
+  var row1 = '<div style="display:flex;align-items:center;justify-content:space-between">' +
+    (inningLabel ? '<span style="font-size:12px;font-weight:700;color:#A89FE8">' + _escapeHtml(inningLabel) + '</span>' : '<span></span>') +
+    '<div style="display:flex;align-items:center;gap:8px">' + basesSvg + '<div style="display:flex;align-items:center">' + outsDots + '</div></div>' +
+    '</div>';
+  var matchup = '';
+  if (box.matchup && (box.matchup.pitcher || box.matchup.batter)) {
+    var mp = box.matchup.pitcher, mb = box.matchup.batter;
+    matchup = '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' +
+      '<span style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;flex-shrink:0">P</span>' +
+      '<span onclick="event.stopPropagation()" style="font-size:12.5px;font-weight:600;color:#fff;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml(mp, 'mlb') + '</span>' +
+      '<span onclick="event.stopPropagation()" style="font-size:12.5px;font-weight:600;color:#fff;flex:1;min-width:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _clickablePlayerNameHtml(mb, 'mlb') + '</span>' +
+      '<span style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;flex-shrink:0">AB</span>' +
+      '</div>';
+  }
+  return '<div class="glance-detail" style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">' + row1 + matchup + '</div>';
+}
+
+// yardLine is 0–100 from the possessing team's own goal line — flipped for
+// the home team so it still maps left-to-right on a field where home's own
+// goal sits on the right, same convention _boxScoreCardHtml's fuller field
+// SVG already uses.
+function _glanceFootballDetailHtml(box) {
+  var fs = box.situation;
+  if (!fs || (fs.down == null && !fs.possessionText)) return '';
+  var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  var downText = fs.down != null ? (downLabels[fs.down] || (fs.down + 'th')) + ' & ' + (fs.distance != null ? fs.distance : '?') : '';
+  var teamColor = (fs.team && fs.team.color) || '#A89FE8';
+  var yardLine = fs.yardLine != null ? fs.yardLine : 50;
+  var pct = fs.homeAway === 'home' ? (100 - yardLine) : yardLine;
+  var field = '<div style="position:relative;flex:1;height:26px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);background-image:repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0px, rgba(255,255,255,.08) 1px, transparent 1px, transparent 10%);overflow:hidden">' +
+    '<div style="position:absolute;top:50%;left:' + pct + '%;transform:translate(-50%,-50%)">' +
+    '<div class="glance-ball" style="width:11px;height:7px;border-radius:50%;background:' + teamColor + '"></div></div></div>';
+  return '<div class="glance-detail" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">' +
+    (box.awayScore != null ? '<span style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + box.awayScore + '</span>' : '') +
+    field +
+    (box.homeScore != null ? '<span style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + box.homeScore + '</span>' : '') +
+    '</div>' +
+    (downText ? '<div class="glance-detail" style="font-size:11px;font-weight:700;color:' + teamColor + ';text-align:center;margin-top:4px">' + _escapeHtml(downText) + '</div>' : '');
+}
+
+function _glanceDetailHtml(box, sport) {
+  if (!box || box.error) return '';
+  if (sport === 'mlb') return _glanceBaseballDetailHtml(box);
+  if (sport === 'nfl' || sport === 'cfb') return _glanceFootballDetailHtml(box);
+  return '';
+}
+
+// Only live games are worth the extra fetch — scheduled and concluded rows
+// stay on the plain card the list already rendered. `stillValidFn` is
+// checked again once each fetch resolves, since by then the person may
+// have paged to a different day/week or switched sport entirely.
+function _upgradeLiveGlanceCards(games, sport, stillValidFn) {
+  games.forEach(function (g) {
+    if (_isGameConcluded(g.status) || !_isGameStatusLive(g.status) || !g.gamePk) return;
+    var idx = window._gamesListCache.indexOf(g);
+    if (idx < 0) return;
+    fetch(_bsModalBoxscoreUrl(sport, g.gamePk)).then(function (r) { return r.json(); }).then(function (box) {
+      if (!stillValidFn() || window._gamesListCache[idx] !== g) return; // superseded
+      var detail = _glanceDetailHtml(box, sport);
+      if (!detail) return;
+      var cardEl = document.getElementById('glist-card-' + idx);
+      if (cardEl && !cardEl.querySelector('.glance-detail')) cardEl.insertAdjacentHTML('beforeend', detail);
+    }).catch(function (err) { console.error('Glance detail fetch error:', err); });
+  });
+}
+
 // Short weekday abbreviation ("Thu", "Sun") for contexts where a card
 // sits outside its normal day-grouped section — the football week
 // view's own day headers make this redundant on every other card, but
@@ -16411,11 +16514,17 @@ function loadGamesList(date) {
   if (labelEl) labelEl.textContent = requestedDate === today ? 'Today' : _formatMomentDate(requestedDate);
   if (todayLinkEl) { todayLinkEl.textContent = 'Jump to today'; todayLinkEl.style.display = requestedDate === today ? 'none' : 'block'; }
   if (!listEl) return;
-  listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
-  Promise.all([
+  // A flourish prefetch only ever exists for MLB, today's browse-in path.
+  // Consumed once here — a later date/sport change always falls through to
+  // a fresh fetch below rather than reusing stale data.
+  var prefetch = (requestedSport === 'mlb' && window._mlbFlourishPrefetch && window._mlbFlourishPrefetch.date === requestedDate)
+    ? window._mlbFlourishPrefetch.promise : null;
+  window._mlbFlourishPrefetch = null;
+  if (!prefetch) listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
+  (prefetch || Promise.all([
     fetch(_bsModalScheduleUrl(requestedSport, requestedDate)).then(function (r) { return r.json(); }),
     _loadFavTeams(requestedSport)
-  ]).then(function (results) {
+  ])).then(function (results) {
     var data = results[0], favTeams = results[1];
     if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return; // superseded
     var games = data.games || [];
@@ -16428,13 +16537,22 @@ function loadGamesList(date) {
       return;
     }
     var split = _splitSpotlight(games, favTeams);
+    // Followed-team games stay in "Your teams" no matter their status;
+    // whatever's left sinks its concluded games to their own section below,
+    // the same treatment the NFL/CFB week view already gives finished games.
+    var restSplit = _splitConcluded(split.rest);
     var html = '';
     if (split.spotlight.length) {
       html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">Your teams</div>';
       html += split.spotlight.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
     }
-    html += split.rest.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    html += restSplit.upcoming.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    if (restSplit.concluded.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;padding:16px 2px 8px">Concluded games</div>';
+      html += restSplit.concluded.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    }
     listEl.innerHTML = html;
+    _upgradeLiveGlanceCards(games, requestedSport, function () { return window._gamesSport === requestedSport && window._gamesDate === requestedDate; });
   }).catch(function (err) {
     if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return;
     console.error('Load games list error:', err);
@@ -16443,10 +16561,11 @@ function loadGamesList(date) {
 
   function _gamesListCardHtml(g, i) {
     var favTeams = window._favTeamsCache[requestedSport] || { favorite: null, following: [] };
-    return '<div onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">' +
+    return '<div id="glist-card-' + i + '" onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between">' +
       '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
       '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-      _gameBadgeHtml(g) + '</div>';
+      _gameBadgeHtml(g) + '</div></div>';
   }
 }
 
@@ -16575,6 +16694,7 @@ function loadFootballWeek(sport, tuesdayIso) {
     }
     html += _renderFootballWeekHtml(split.rest, favTeams);
     listEl.innerHTML = html;
+    _upgradeLiveGlanceCards(allGames, sport, function () { return window._gamesSport === requestedSport && window._footballWeekTuesday[sport] === requestedWeek; });
   });
 }
 
@@ -16602,10 +16722,11 @@ function _footballGameCardHtml(g, favTeams, withMargin, showDay) {
   var idx = window._gamesListCache.indexOf(g);
   var badge = favTeams ? _spotlightBadgeHtml(g, favTeams) : '';
   var dayPrefix = (showDay && g._dateIso) ? _shortDowName(g._dateIso) : null;
-  return '<div onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer' + (withMargin ? ';margin-bottom:8px' : '') + '">' +
+  return '<div id="glist-card-' + idx + '" onclick="openGameFromList(' + idx + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer' + (withMargin ? ';margin-bottom:8px' : '') + '">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between">' +
     '<div><div style="font-size:14px;font-weight:700;color:#fff">' + badge + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
     '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-    _gameBadgeHtml(g, dayPrefix) + '</div>';
+    _gameBadgeHtml(g, dayPrefix) + '</div></div>';
 }
 
 function _footballDayGroupedHtml(games, favTeams) {
@@ -16755,6 +16876,13 @@ function _restartFootballBanner(bannerEl) {
 // caption has been fully in for ~1s by then. Reduced motion shows the lit
 // end state briefly instead. Tap anywhere to skip straight to the schedule.
 window._mlbFlourishTimer = null;
+// Warmed while the flourish plays so the schedule underneath is already
+// populated the instant the lights come up — otherwise loadGamesList's own
+// fetch only starts once nav('games') actually runs, and the first thing
+// anyone sees after the animation is a bare "Loading games…" line. One-shot:
+// loadGamesList consumes and clears it, so it's never reused for a later
+// date change.
+window._mlbFlourishPrefetch = null;
 function playMlbFlourish() {
   var overlay = document.getElementById('mlb-flourish');
   if (!overlay) { nav('games'); return; }
@@ -16766,15 +16894,28 @@ function playMlbFlourish() {
     stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
   }
   requestAnimationFrame(function () { overlay.style.opacity = '1'; });
+  var prefetchDate = window._gamesDate || _todayLocal();
+  window._mlbFlourishPrefetch = {
+    date: prefetchDate,
+    promise: Promise.all([
+      fetch(_bsModalScheduleUrl('mlb', prefetchDate)).then(function (r) { return r.json(); }),
+      _loadFavTeams('mlb')
+    ])
+  };
   window._mlbFlourishTimer = setTimeout(finishMlbFlourish, _ghReducedMotion() ? 2200 : 7000);
 }
 function finishMlbFlourish() {
   var overlay = document.getElementById('mlb-flourish');
   if (!overlay) { nav('games'); return; }
+  // nav('games') fires right away so the schedule screen's own 0.22s fade-in
+  // (screen.active's CSS transition) runs underneath the flourish's 0.3s
+  // fade-out at the same time, instead of only starting once the flourish
+  // had already fully disappeared — which used to leave the previous
+  // sport-picker screen visible for a beat in between the two.
+  nav('games');
   overlay.style.opacity = '0';
   setTimeout(function () {
     overlay.style.display = 'none';
-    nav('games');
   }, 300);
 }
 function skipMlbFlourish() {
