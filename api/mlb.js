@@ -1,5 +1,5 @@
 // Vercel Serverless Function — GET /api/mlb?mode=schedule&date=YYYY-MM-DD
-//                               GET /api/mlb?mode=boxscore&gamePk=<id>
+//                               GET /api/mlb?mode=boxscore&gamePk=<id>[&plays=all]
 // Proxies the public MLB Stats API (statsapi.mlb.com, no key required) so
 // the browser doesn't have to fetch it directly, and trims the response
 // down to what a memory card actually needs.
@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
       const r = await fetch(url);
       const data = await r.json();
       res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
-      res.status(200).json(summarize(data, gamePk));
+      res.status(200).json(summarize(data, gamePk, req.query.plays === 'all'));
       return;
     }
 
@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function summarize(data, gamePk) {
+function summarize(data, gamePk, wantAllPlays) {
   var gameData = data.gameData || {};
   var liveData = data.liveData || {};
   var linescore = liveData.linescore || {};
@@ -155,6 +155,32 @@ function summarize(data, gamePk) {
         // a specific play can be reacted to across refreshes without its
         // identity shifting as new plays are added to the feed.
         atBatIndex: (p.about && p.about.atBatIndex != null) ? p.about.atBatIndex : null
+      };
+    });
+  }
+
+  // ── Every play, for the game screen's inning-by-inning list. Opt-in
+  // via &plays=all rather than always-on: this same boxscore payload gets
+  // sanitized and written to Firestore every time someone attaches a game
+  // to a memory, and ~75 plays of description has no business riding
+  // along in that document. Only the game screen asks for it.
+  //
+  // Left oldest-first, the way the game was played (recentPlays is
+  // reversed for its own newest-first list, so the two aren't the same
+  // order). result.awayScore/homeScore are standard fields on every
+  // completed play — the same ones the scoringPlays block below reads —
+  // so the running score after each play comes along for free.
+  var fullPlays = null;
+  if (wantAllPlays && (abstractState === 'Live' || abstractState === 'Final')) {
+    fullPlays = allPlays.filter(function (p) { return p.result && p.result.description; }).map(function (p) {
+      var about = p.about || {}, result = p.result || {};
+      return {
+        inning: about.inning != null ? about.inning : null,
+        half: about.isTopInning ? 'top' : 'bottom',
+        text: result.description,
+        atBatIndex: about.atBatIndex != null ? about.atBatIndex : null,
+        awayScore: result.awayScore != null ? result.awayScore : null,
+        homeScore: result.homeScore != null ? result.homeScore : null
       };
     });
   }
@@ -293,6 +319,7 @@ function summarize(data, gamePk) {
     situation: situation,
     matchup: matchup,
     recentPlays: recentPlays,
+    allPlays: fullPlays,
     pitchSequence: pitchSequence,
     boxScoreDetail: boxScoreDetail
   };
@@ -517,6 +544,10 @@ async function _lastTenGames(teamId, endDate, excludePk) {
         if (me.score === opp.score) return;
         var oppTeam = opp.team || {};
         games.push({
+          // The schedule row this came from already knows the game's id —
+          // carrying it means tapping one of these circles can open that
+          // game straight away, and doubleheaders can't be confused.
+          gamePk: g.gamePk != null ? g.gamePk : null,
           opp: oppTeam.abbreviation || _MLB_ABBR_BY_ID[oppTeam.id] || null,
           oppName: oppTeam.teamName || oppTeam.name || null,
           res: me.score > opp.score ? 'W' : 'L',
