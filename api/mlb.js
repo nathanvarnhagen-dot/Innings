@@ -774,7 +774,9 @@ function summarizeStandings(data) {
     var chasers = nonWinners.slice(3, 5);
     var wcNames = {}; wildCards.forEach(function (t) { wcNames[t.name] = true; });
 
-    var seeds = divWinners.map(function (t, i) { return { seed: i + 1, team: _teamShortName(t.name), rec: t.w + '-' + t.l, bye: i < 2 }; })
+    // division is carried through so the bracket can say which one a top
+    // seed actually won — it was computed just above and then dropped.
+    var seeds = divWinners.map(function (t, i) { return { seed: i + 1, team: _teamShortName(t.name), rec: t.w + '-' + t.l, bye: i < 2, division: t.division || null }; })
       .concat(wildCards.map(function (t, i) { return { seed: i + 4, team: _teamShortName(t.name), rec: t.w + '-' + t.l }; }));
 
     result[leagueKey] = {
