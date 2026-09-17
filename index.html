@@ -797,8 +797,11 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gh-l10-dot.loss{filter:saturate(.55) brightness(.75)}
 .gh-l10-dot.sel{outline:2px solid rgba(255,255,255,.75);outline-offset:3px}
 .gh-l10-wl{width:28px;text-align:center;font-size:9px;font-weight:800;flex-shrink:0}
-.gh-l10-detail{display:none;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(13,8,32,.5);border:1px solid rgba(168,159,232,.14);font-size:12px}
+.gh-l10-detail{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(13,8,32,.5);border:1px solid rgba(168,159,232,.14);font-size:12px}
 .gh-l10-detail.on{display:flex;animation:ghFadeIn .25s ease-out}
+.gh-l10-line{display:flex;align-items:center;gap:8px}
+.gh-l10-open{width:100%;min-height:38px;padding:8px 10px;border:0;border-radius:10px;background:rgba(168,159,232,.16);color:#E9E5FF;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.gh-l10-open:disabled{opacity:.6;cursor:default}
 @keyframes ghFadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .gh-anim .gh-l10-pop{opacity:0;animation:ghL10Pop .38s cubic-bezier(.2,1.6,.4,1) forwards}
 @keyframes ghL10Pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
@@ -9390,7 +9393,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.48.0-sports-hub';
+window.INNINGS_BUILD = 'v5.50.0-plays-by-inning';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11423,6 +11426,15 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
           '</div>';
       }).join('') + '</div>';
   }
+  // Final MLB on the game screen: same inning-grouped list the live card
+  // uses, so the play-by-play reads the same way before and after the
+  // last out. Its rows carry their own reaction ids, so the flat list's
+  // are dropped rather than fetched for elements that no longer exist.
+  if (heroFinal && typeof _ghPlaysByInningHtml === 'function') {
+    var groupedPlays = _ghPlaysByInningHtml(box, true);
+    if (groupedPlays) { playsHtml = groupedPlays; playIdsForReactions = []; }
+  }
+
   // Reaction badges need an async Firestore read, but this function
   // returns a plain HTML string the caller injects synchronously right
   // after — deferring one tick lets that injection happen first, so the
@@ -15098,10 +15110,15 @@ function _playDoubleTap(el, playId, tag, text) {
   }
 }
 
-// Batched fetch for however many plays are currently on screen (capped
-// at 5 by the recentPlays extraction itself, well under Firestore's
-// 10-item 'in' query limit) — one read instead of one per play.
+// Batched fetch for however many plays are currently on screen. A whole
+// game's play list runs well past Firestore's 10-item 'in' query limit,
+// so it goes up in chunks of ten — still far fewer reads than one per
+// play, and nothing past the tenth gets silently dropped.
 function _loadPlayReactions(playIds) {
+  if (!playIds || !playIds.length) return;
+  for (var i = 0; i < playIds.length; i += 10) _loadPlayReactionsChunk(playIds.slice(i, i + 10));
+}
+function _loadPlayReactionsChunk(playIds) {
   if (!playIds || !playIds.length || !window.db || typeof firebase === 'undefined') return;
   window.db.collection('gamePlayReactions').where(firebase.firestore.FieldPath.documentId(), 'in', playIds).get().then(function (snap) {
     var byId = {};
@@ -18573,6 +18590,7 @@ window._ghCountdownTimer = null;
 function _ghResetForGame(gamePk) {
   if (window._ghState) { clearTimeout(window._ghState.liveModeTimer); clearTimeout(window._ghState.finalModeTimer); }
   window._ghState = { gamePk: gamePk, animated: {}, seenPlays: null, newAt: {}, lastScore: null, startCheckAt: 0 };
+  window._ghInningOpen = {}; // which half-innings the reader has open, cleared per game
   if (window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
 }
 
@@ -18877,11 +18895,65 @@ function _ghL10DateLabel(iso) {
   var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
-function _ghL10DetailInner(g) {
+function _ghL10DetailInner(g, key, i) {
   var win = g.res === 'W';
-  return '<span class="gh-tag" style="font-size:11px;' + (win ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + g.res + ' ' + g.us + '–' + g.them + '</span>' +
+  var line = '<div class="gh-l10-line">' +
+    '<span class="gh-tag" style="font-size:11px;' + (win ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + g.res + ' ' + g.us + '–' + g.them + '</span>' +
     '<span style="font-weight:700">' + (g.home ? 'vs ' : 'at ') + _escapeHtml(_teamShortName(g.oppName || '') || g.opp || '') + '</span>' +
-    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml(_ghL10DateLabel(g.date)) + '</span>';
+    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml(_ghL10DateLabel(g.date)) + '</span></div>';
+  if (key == null || (!g.gamePk && !g.date)) return line; // nothing to find that game by
+  return line + '<button class="gh-l10-open" onclick="ghL10Open(\'' + key + '\',' + i + ',this)">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>Open this game</button>';
+}
+
+// Tapping a circle shows the score; the button under it goes to that
+// game's own screen. The pregame payload carries no id for those older
+// games, so one is found the way a stale attached box score already heals
+// itself — pull that day's schedule and match on the two team names.
+function _ghSameTeamName(a, b) {
+  a = String(a || '').toLowerCase().trim();
+  b = String(b || '').toLowerCase().trim();
+  if (!a || !b) return false;
+  return a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+}
+function _ghL10OpenFailed(btn) {
+  if (!btn) return;
+  btn.disabled = false;
+  btn.textContent = 'That game isn\'t available — tap to try again';
+}
+function ghL10Open(key, i, btn) {
+  var data = window._gdPregame && window._gdPregame.data;
+  var side = data && data[key];
+  var g = side && side.last10 && side.last10[i];
+  if (!g) return;
+  var teamName = side.name || '';
+  var oppName = g.oppName || g.opp || '';
+  var away = g.home ? oppName : teamName;
+  var home = g.home ? teamName : oppName;
+  var go = function (gamePk) { openGameScreen(gamePk, away, home, 'mlb', g.date || null); };
+  if (g.gamePk) { go(g.gamePk); return; }
+  if (!g.date) { _ghL10OpenFailed(btn); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Finding that game…'; }
+  fetch('/api/mlb?mode=schedule&date=' + encodeURIComponent(g.date))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var hits = ((d && d.games) || []).filter(function (x) {
+        return _ghSameTeamName(x.away, away) && _ghSameTeamName(x.home, home);
+      });
+      // A doubleheader puts the same matchup on one date twice — the
+      // score is what tells the two apart.
+      if (hits.length > 1) {
+        var byScore = hits.filter(function (x) {
+          var us = g.home ? x.homeScore : x.awayScore;
+          var them = g.home ? x.awayScore : x.homeScore;
+          return us != null && them != null && String(us) === String(g.us) && String(them) === String(g.them);
+        });
+        if (byScore.length) hits = byScore;
+      }
+      if (!hits.length || hits[0].gamePk == null) { _ghL10OpenFailed(btn); return; }
+      go(hits[0].gamePk);
+    })
+    .catch(function (err) { console.error('Open past game error:', err); _ghL10OpenFailed(btn); });
 }
 function _ghLast10Html(m, st, animating) {
   var sel = st && st.l10Sel;
@@ -18915,7 +18987,7 @@ function _ghLast10Html(m, st, animating) {
       h += '<span class="gh-l10-wl gh-l10-pop" style="' + _ghDelay(base + i * 0.11 + 0.05) + 'color:' + (g.res === 'W' ? '#7CF29C' : '#FF9A8E') + '">' + g.res + '</span>';
     });
     var selGame = sel && sel.side === key ? games[sel.i] : null;
-    h += '</div><div id="gh-l10-detail-' + key + '" class="gh-l10-detail' + (selGame ? ' on' : '') + '">' + (selGame ? _ghL10DetailInner(selGame) : '') + '</div></div>';
+    h += '</div><div id="gh-l10-detail-' + key + '" class="gh-l10-detail' + (selGame ? ' on' : '') + '">' + (selGame ? _ghL10DetailInner(selGame, key, sel.i) : '') + '</div></div>';
     if (animating) _ghL10CountUp(key, games, base);
   });
   return h + '</div>';
@@ -18945,7 +19017,7 @@ function ghL10Pick(btn) {
     if (!d) return;
     var show = st.l10Sel && st.l10Sel.side === k;
     d.className = 'gh-l10-detail' + (show ? ' on' : '');
-    d.innerHTML = show ? _ghL10DetailInner(games[i]) : '';
+    d.innerHTML = show ? _ghL10DetailInner(games[i], key, i) : '';
   });
   if (!same) { btn.classList.add('sel'); btn.setAttribute('aria-pressed', 'true'); }
 }
@@ -19233,31 +19305,8 @@ function _ghLiveDetailHtml(box) {
       teamRow(m.away, 'away') + teamRow(m.home, 'home') + '</div></div></div>';
   }
 
-  // Play by play — same play ids, reply + double-tap reaction handlers as the old card
-  var playIds = [];
-  if (box.recentPlays && box.recentPlays.length) {
-    out += '<div class="gh-card" style="padding-bottom:10px"><div class="gh-card-head" style="margin-bottom:6px"><span class="gh-eyebrow">Play by play</span><span style="font-size:11px;color:#9C95D0">Double-tap a play to react</span></div>';
-    box.recentPlays.forEach(function (p, idx) {
-      var tag = p.tag != null ? p.tag : ((p.half === 'top' ? 'T' : 'B') + (p.inning || ''));
-      var idPart = p.atBatIndex != null ? p.atBatIndex : (p.playId != null ? p.playId : ('idx' + idx));
-      var playId = box.gamePk != null ? (box.gamePk + '_' + idPart) : null;
-      if (playId) playIds.push(playId);
-      var rowAttrs = playId
-        ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"'
-        : '';
-      out += '<div class="gh-plays-row"' + rowAttrs + ' style="' + (idx === 0 ? 'border-top:0' : '') + '">' +
-        '<div style="display:flex;gap:10px;align-items:flex-start">' +
-          (p.inning ? _ghInningTag(p.half, p.inning, m).replace('style="', 'style="margin-top:1px;') : '<span class="gh-tag" style="margin-top:1px;background:rgba(168,159,232,.16);color:#D9D4FA">' + _escapeHtml(tag) + '</span>') +
-          '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(p.text) + '</span>' +
-          '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
-            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
-        '</div>' +
-        (playId ? '<div id="play-react-' + _escapeHtml(playId) + '" style="margin-left:44px"></div>' : '') +
-        '</div>';
-    });
-    out += '</div>';
-  }
-  if (playIds.length) setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+  // Play by play, grouped into half-innings (v5.49.0)
+  out += _ghPlaysByInningHtml(box);
 
   // Full box score (same expand/team-toggle state as before)
   var detailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, 'rgba(255,255,255,.08)', sub, '#fff', true);
@@ -19267,6 +19316,139 @@ function _ghLiveDetailHtml(box) {
     out += '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9C95D0;padding:0 4px"><i class="ti ti-map-pin"></i>' + _escapeHtml(box.venue) + '</div>';
   }
   return out + '</div>';
+}
+
+// ── PLAY BY PLAY, BY INNING (v5.49.0) ─────────────────────────────────
+// Every play the box score carries, grouped into half-innings and left in
+// the order the game was played. Each half-inning is a row you can open;
+// the one the game is in (or ended on) starts open, and whatever the
+// reader opens after that is remembered across live-refresh ticks.
+//
+// Runs come off the linescore rather than off the plays, so a header is
+// right even for a half-inning whose plays aren't in this payload.
+//
+// Reads box.allPlays when the API sends the full game and falls back to
+// box.recentPlays, which only carries the last handful. On that fallback
+// only the half-innings actually covered are listed, so a finished game
+// shows five plays in two innings rather than eighteen empty rows.
+function _ghHalfLabel(half, inning) {
+  return (half === 'top' ? 'Top ' : 'Bottom ') + _ordinalSuffix(inning);
+}
+function _ghPlaysByInningHtml(box, bare) {
+  var m = _ghModelFromMlbBox(box);
+  if (!m) return '';
+  var full = !!(box.allPlays && box.allPlays.length);
+  var plays = full ? box.allPlays : (box.recentPlays || []);
+  if (!plays.length) return '';
+  var innings = box.innings || [];
+  var groups = {}, keys = [];
+  var group = function (inning, half) {
+    var k = inning + (half === 'top' ? 'T' : 'B');
+    if (!groups[k]) { groups[k] = { inning: inning, half: half, plays: [] }; keys.push(k); }
+    return groups[k];
+  };
+  if (full) {
+    innings.forEach(function (inn, idx) {
+      var num = inn.num != null ? inn.num : idx + 1;
+      group(num, 'top');
+      if (inn.home != null) group(num, 'bottom'); // a walk-off home half never gets played
+    });
+  }
+  plays.forEach(function (pl) {
+    if (!pl.inning) return;
+    group(pl.inning, pl.half === 'top' ? 'top' : 'bottom').plays.push(pl);
+  });
+  if (!keys.length) return '';
+  keys.sort(function (a, b) {
+    var A = groups[a], B = groups[b];
+    return (A.inning - B.inning) || ((A.half === 'top' ? 0 : 1) - (B.half === 'top' ? 0 : 1));
+  });
+  var runsIn = function (inning, half) {
+    for (var i = 0; i < innings.length; i++) {
+      var num = innings[i].num != null ? innings[i].num : i + 1;
+      if (num === inning) return half === 'top' ? innings[i].away : innings[i].home;
+    }
+    return null;
+  };
+  var sit = box.situation || {};
+  var liveKey = sit.inning ? (sit.inning + (sit.half === 'top' ? 'T' : 'B')) : null;
+  var startOpen = (liveKey && groups[liveKey]) ? liveKey : keys[keys.length - 1];
+  var open = window._ghInningOpen = window._ghInningOpen || {};
+  var playIds = [];
+  var rows = '';
+
+  keys.forEach(function (k) {
+    var grp = groups[k];
+    var batting = grp.half === 'top' ? m.away : m.home;
+    var runs = runsIn(grp.inning, grp.half);
+    var isOpen = open[k] != null ? !!open[k] : (k === startOpen);
+    rows += '<div style="border-top:.5px solid rgba(255,255,255,.07)">' +
+      '<button onclick="ghInningToggle(\'' + k + '\',this)" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="gh-inn-' + k + '" ' +
+        'style="width:100%;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;background:none;border:0;color:#fff;font-family:inherit;text-align:left;cursor:pointer">' +
+        '<svg data-chev width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B9B3E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;transition:transform .18s ease' + (isOpen ? ';transform:rotate(90deg)' : '') + '"><polyline points="9 5 16 12 9 19"/></svg>' +
+        '<span class="gh-tag" style="background:' + _ghHexAlpha(batting.colors.accent, .2) + ';color:' + batting.colors.accent + '">' + (grp.half === 'top' ? 'T' : 'B') + grp.inning + '</span>' +
+        '<span style="flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_ghHalfLabel(grp.half, grp.inning)) +
+          '<span class="gh-sub" style="font-weight:400"> · ' + _escapeHtml(batting.short || batting.abbr) + '</span></span>' +
+        (runs > 0 ? '<span class="gh-tag" style="background:rgba(124,242,156,.16);color:#9be8ac">' + runs + (runs === 1 ? ' run' : ' runs') + '</span>' : '') +
+      '</button>' +
+      '<div id="gh-inn-' + k + '" style="display:' + (isOpen ? 'flex' : 'none') + ';flex-direction:column;padding-bottom:6px">';
+
+    var ordered = grp.plays.slice();
+    // atBatIndex is the game's own play order — only trust it to sort when
+    // every play in the half-inning carries one.
+    if (ordered.length && ordered.every(function (pl) { return pl.atBatIndex != null; })) {
+      ordered.sort(function (a, b) { return a.atBatIndex - b.atBatIndex; });
+    }
+    if (!ordered.length) rows += '<div class="gh-sub" style="padding:2px 0 8px 21px">No plays yet.</div>';
+    ordered.forEach(function (pl, idx) {
+      var tag = pl.tag != null ? pl.tag : ((pl.half === 'top' ? 'T' : 'B') + (pl.inning || ''));
+      var idPart = pl.atBatIndex != null ? pl.atBatIndex : (pl.playId != null ? pl.playId : (k + '_' + idx));
+      var playId = box.gamePk != null ? (box.gamePk + '_' + idPart) : null;
+      if (playId && isOpen) playIds.push(playId); // only what's on screen gets a read
+      var chip = (pl.awayScore != null && pl.homeScore != null) ? _ghScoreChip(pl, m.away.abbr, m.home.abbr) : '';
+      var rowAttrs = playId
+        ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(pl.text) + '"'
+        : '';
+      rows += '<div class="gh-plays-row"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' +
+        '<div style="display:flex;gap:10px;align-items:flex-start">' +
+          '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(pl.text) + '</span>' +
+          (chip ? '<span class="gh-num" style="font-size:12px;color:#D9D4FA;flex-shrink:0;white-space:nowrap">' + _escapeHtml(chip) + '</span>' : '') +
+          '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(pl.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
+        '</div>' +
+        (playId ? '<div id="play-react-' + _escapeHtml(playId) + '"></div>' : '') +
+        '</div>';
+    });
+    rows += '</div></div>';
+  });
+
+  if (playIds.length) setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+  var head = '<div class="gh-card-head" style="margin-bottom:2px"><span class="gh-eyebrow">Play by play</span>' +
+    '<span style="font-size:11px;color:#9C95D0">' + (full ? 'Double-tap a play to react' : 'Latest plays only') + '</span></div>';
+  if (bare) return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.1)">' + head + rows + '</div>';
+  return '<div class="gh-card" style="padding-bottom:10px">' + head + rows + '</div>';
+}
+
+// Opened and closed in the DOM rather than through a re-render, so a live
+// tick mid-read can't collapse what someone is looking at.
+function ghInningToggle(key, btn) {
+  var body = document.getElementById('gh-inn-' + key);
+  if (!body || !btn) return;
+  var wasOpen = body.style.display !== 'none';
+  body.style.display = wasOpen ? 'none' : 'flex';
+  btn.setAttribute('aria-expanded', wasOpen ? 'false' : 'true');
+  var chev = btn.querySelector('[data-chev]');
+  if (chev) chev.style.transform = wasOpen ? '' : 'rotate(90deg)';
+  (window._ghInningOpen = window._ghInningOpen || {})[key] = !wasOpen;
+  // Reactions are only fetched for what's on screen, so a half-inning
+  // opened for the first time has to ask for its own.
+  if (!wasOpen) {
+    var ids = [];
+    body.querySelectorAll('[id^="play-react-"]').forEach(function (el) {
+      if (!el.innerHTML) ids.push(el.id.slice('play-react-'.length));
+    });
+    if (ids.length) _loadPlayReactions(ids);
+  }
 }
 
 // ── FINAL ─────────────────────────────────────────────────────────────
@@ -19645,6 +19827,17 @@ function _gxBallIcon(sport) {
 }
 
 // ── PRE-GAME ───────────────────────────────────────────────────────────
+// How many games a team has already played this season, read straight off
+// the record it carries into this game ("1-1", "1-1-1", "5-2-1" — every
+// number in a record is a game played, so ties and OT losses count too).
+// Only the leading run of numbers is used, since some leagues append a
+// conference record ("2-0, 1-0 Big Ten") that would otherwise be counted.
+function _gxGamesPlayed(record) {
+  var head = String(record || '').trim().match(/^\d+(?:[-\u2013]\d+)*/);
+  if (!head) return null;
+  return head[0].split(/[-\u2013]/).reduce(function (t, p) { return t + Number(p); }, 0);
+}
+
 function _gxFormHtml(m, st) {
   var form = m.form || {};
   if (!(form.away && form.away.length) && !(form.home && form.home.length)) return '';
@@ -19653,35 +19846,64 @@ function _gxFormHtml(m, st) {
   var letter = { W: '#7CF29C', L: '#FF9A8E', OT: '#F2C869', D: '#B9B3E6' };
   var word = { W: 'Beat', L: 'Lost to', OT: 'Lost in overtime to', D: 'Drew with' };
   var n = Math.max((form.away || []).length, (form.home || []).length);
+  var sides = [['away', m.away], ['home', m.home]];
+  // In week 2 of a season the last five games run back across the
+  // offseason, and a record counted over that break describes nothing a
+  // fan cares about. The record entering the game says how many of these
+  // belong to this season; everything older sits left of a season line
+  // and is left out of the count.
+  var priorOf = function (side, games) {
+    var played = _gxGamesPlayed(side && side.record);
+    if (played == null || played >= games.length) return 0;
+    return games.length - played;
+  };
+  var split = sides.some(function (pair) {
+    var games = form[pair[0]] || [];
+    return games.length > 0 && priorOf(pair[1], games) > 0;
+  });
   var title = m.sport === 'soccer' ? 'Form · last ' + n : 'Last ' + n;
   var h = '<div class="gh-up" style="' + _ghDelay(1.3) + 'display:flex;flex-direction:column;gap:12px">' +
     '<div class="gh-row" style="align-items:baseline"><span class="gh-eyebrow">' + title + '</span><span style="font-size:11px;color:#9C95D0">oldest → latest</span></div>';
-  [['away', m.away], ['home', m.home]].forEach(function (pair, ti) {
+  if (split) {
+    h += '<div class="gh-sub" style="margin-top:-6px;line-height:1.45">Records count this season only. Games left of the line are from last season.</div>';
+  }
+  sides.forEach(function (pair, ti) {
     var games = form[pair[0]] || [];
     if (!games.length) return;
     var s = pair[1];
-    var cnt = function (r) { return games.filter(function (g) { return g.res === r; }).length; };
+    var prior = priorOf(s, games);
+    var counted = games.slice(prior);
+    var cnt = function (r) { return counted.filter(function (g) { return g.res === r; }).length; };
     var rec = m.sport === 'soccer' ? cnt('W') + '–' + cnt('D') + '–' + cnt('L') : cnt('W') + '–' + cnt('L') + (m.sport === 'hockey' ? '–' + cnt('OT') : '');
-    var last = games[games.length - 1].res, k = 0;
-    for (var i = games.length - 1; i >= 0 && games[i].res === last; i--) k++;
-    var streak = (last === 'OT' ? 'OTL' : last) + k;
-    var streakStyle = last === 'W' ? 'background:rgba(124,242,156,.16);color:#9be8ac' : last === 'D' ? 'background:rgba(255,255,255,.08);color:#D9D4FA' : last === 'OT' ? 'background:rgba(242,200,105,.16);color:#F2C869' : 'background:rgba(255,122,107,.16);color:#FFC2BA';
+    // A streak that reaches back past the season line isn't this season's
+    // streak, so it's counted over the same games as the record.
+    var streak = '', streakStyle = '';
+    if (counted.length) {
+      var last = counted[counted.length - 1].res, k = 0;
+      for (var i = counted.length - 1; i >= 0 && counted[i].res === last; i--) k++;
+      streak = (last === 'OT' ? 'OTL' : last) + k;
+      streakStyle = last === 'W' ? 'background:rgba(124,242,156,.16);color:#9be8ac' : last === 'D' ? 'background:rgba(255,255,255,.08);color:#D9D4FA' : last === 'OT' ? 'background:rgba(242,200,105,.16);color:#F2C869' : 'background:rgba(255,122,107,.16);color:#FFC2BA';
+    }
     var size = games.length > 5 ? 28 : 38;
     var base = 1.45 + ti * 0.08;
+    var seasonLine = '<span aria-hidden="true" style="width:1px;align-self:stretch;background:rgba(168,159,232,.45);flex-shrink:0"></span>';
     h += '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';width:42px">' + _escapeHtml(s.abbr) + '</span>' +
       '<span class="gh-sub" style="flex:1">' + _escapeHtml(s.short || '') + '</span><span class="gh-num" style="font-size:17px">' + rec + '</span>' +
-      '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + streakStyle + '">' + streak + '</span></div>' +
+      (streak ? '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + streakStyle + '">' + streak + '</span>' : '') + '</div>' +
       '<div style="display:flex;justify-content:space-between;gap:2px">';
     games.forEach(function (g, i) {
+      if (prior > 0 && i === prior) h += seasonLine;
       var oc = m.league === 'nhl' ? _gxColors('nhl', g.opp) : _gxColors(m.league, g.opp, colors[g.opp] && colors[g.opp].color, colors[g.opp] && colors[g.opp].alt);
       var fs = (games.length > 5 ? 8.5 : 10.5) - (String(g.opp).length > 3 ? 1.5 : 0);
-      h += '<span class="gh-l10-dot gh-l10-pop' + (g.res === 'W' ? '' : ' loss') + '" role="img" aria-label="' + _escapeHtml(word[g.res] + ' ' + (g.oppName || g.opp) + (g.score ? ' ' + g.score : '')) + '" style="' + _ghDelay(base + i * 0.11) +
-        'width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;cursor:default;background:' + oc.bg + ';color:' + oc.fg + ';box-shadow:0 0 0 2px ' + ring[g.res] + '">' + _escapeHtml(g.opp) + '</span>';
+      var older = i < prior;
+      h += '<span class="gh-l10-dot gh-l10-pop' + (g.res === 'W' ? '' : ' loss') + '" role="img" aria-label="' + _escapeHtml(word[g.res] + ' ' + (g.oppName || g.opp) + (g.score ? ' ' + g.score : '') + (older ? ' (last season)' : '')) + '" style="' + _ghDelay(base + i * 0.11) +
+        'width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;cursor:default;' + (older ? 'opacity:.45;' : '') + 'background:' + oc.bg + ';color:' + oc.fg + ';box-shadow:0 0 0 2px ' + ring[g.res] + '">' + _escapeHtml(g.opp) + '</span>';
     });
     h += '</div><div style="display:flex;justify-content:space-between;gap:2px;margin-top:-4px" aria-hidden="true">';
     games.forEach(function (g, i) {
-      h += '<span class="gh-l10-wl gh-l10-pop" style="' + _ghDelay(base + i * 0.11 + 0.05) + 'width:' + size + 'px;color:' + letter[g.res] + '">' + g.res + '</span>';
+      if (prior > 0 && i === prior) h += '<span style="width:1px;flex-shrink:0"></span>';
+      h += '<span class="gh-l10-wl gh-l10-pop" style="' + _ghDelay(base + i * 0.11 + 0.05) + 'width:' + size + 'px;' + (i < prior ? 'opacity:.45;' : '') + 'color:' + letter[g.res] + '">' + g.res + '</span>';
     });
     h += '</div></div>';
   });
@@ -20224,7 +20446,12 @@ function _refreshBoxScore(gamePk) {
 }
 function _refreshBoxScoreLegacy(gamePk) {
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
-  return fetch(_bsModalBoxscoreUrl(sport, gamePk))
+  // Only the game screen asks MLB for the whole play list (&plays=all).
+  // Every other caller of this endpoint ends up sanitizing the response
+  // into a Firestore doc when a game gets attached to a memory, and a
+  // full game's plays have no business being stored there.
+  var url = _bsModalBoxscoreUrl(sport, gamePk) + (sport === 'mlb' ? '&plays=all' : '');
+  return fetch(url)
     .then(function (r) { return r.json(); })
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
