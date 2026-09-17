@@ -1745,11 +1745,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- LIVE FEED — games the person has marked Watching from the Games screen.
-         Hidden entirely when the list is empty; see renderLiveFeed(). -->
+    <!-- WATCHING — every game that either the person or one of their
+         friends has marked Watching, live ones first and games about to
+         start underneath. Hidden entirely when nothing qualifies; see
+         renderLiveFeed(). -->
     <div id="feed-live-feed-section" style="display:none;flex-direction:column;gap:8px">
       <div class="imm-section" style="padding:8px 2px 0">
-        <div class="imm-eyebrow">Live feed</div>
+        <div class="imm-eyebrow">Watching</div>
       </div>
       <div id="feed-live-feed-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
@@ -9393,7 +9395,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.50.0-plays-by-inning';
+window.INNINGS_BUILD = 'v5.51.0-friends-watching';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -20718,6 +20720,7 @@ function toggleGameWatching() {
       gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, date: g.date || null, addedAt: Date.now()
     }).then(function () {
       _setWatchButtonState(true);
+      window._friendsWatchingCache.at = 0; // my own change shouldn't wait out the poll
       _notifyFriendsAlreadyWatching(g);
     });
   }).catch(function (err) {
@@ -20758,6 +20761,13 @@ function _notifyFriendsAlreadyWatching(g) {
 window._watchingStarted = false;
 window._watchingList = [];
 window._liveFeedCache = [];
+// uid -> first name, so a 30-second render tick doesn't re-read the same
+// handful of user docs over and over just to label the avatars.
+window._friendNameCache = {};
+// Friends' watching lists, refreshed on a timer rather than with a live
+// listener per friend: one listener per friend would mean N open sockets
+// for something that only needs to feel fresh within half a minute.
+window._friendsWatchingCache = { at: 0, byGame: {} };
 
 function startWatchingList() {
   if (window._watchingStarted) return;
@@ -20773,49 +20783,150 @@ function startWatchingList() {
     console.error('Watching list error:', err);
     window._watchingStarted = false;
   });
+  renderLiveFeed(); // friends' games shouldn't wait on my own list arriving
   if (!window._liveFeedInterval) window._liveFeedInterval = setInterval(renderLiveFeed, 30000);
 }
 
+// My accepted friends, both directions of the friendRequests edge.
+// Deliberately re-queried rather than read off window._myFriendUids: that
+// shared cache has no invalidation, so once set it never picks up a
+// friendship accepted later in the same session.
+function _loadFriendUids() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return Promise.resolve([]);
+  return Promise.all([
+    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
+    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
+  ]).then(function (results) {
+    var uids = [];
+    results[0].forEach(function (d) { uids.push(d.data().toUid); });
+    results[1].forEach(function (d) { uids.push(d.data().fromUid); });
+    uids = uids.filter(function (v, i) { return v && uids.indexOf(v) === i; });
+    window._myFriendUids = uids; // still populated for other consumers (loadMyFriendsList, etc.)
+    return uids;
+  }).catch(function (err) { console.error('Load friends list error:', err); return []; });
+}
+
+// Everything my friends are watching, keyed by gamePk. This LISTS each
+// friend's users/{uid}/watching subcollection rather than reading one doc
+// out of it, so the Firestore rule covering that path has to allow list,
+// not just get — if this logs permission-denied, that's the first thing
+// to check.
+function _loadFriendsWatching(force) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return Promise.resolve({});
+  var now = Date.now();
+  var cached = window._friendsWatchingCache;
+  if (!force && cached.at && (now - cached.at) < 25000) return Promise.resolve(cached.byGame);
+  return _loadFriendUids().then(function (uids) {
+    if (!uids.length) { window._friendsWatchingCache = { at: now, byGame: {} }; return {}; }
+    return Promise.all(uids.map(function (uid) {
+      return window.db.collection('users').doc(uid).collection('watching').get()
+        .then(function (snap) { return { uid: uid, snap: snap }; })
+        .catch(function (err) { console.error('Read friend watching list error for', uid, err); return null; });
+    })).then(function (results) {
+      var byGame = {};
+      results.filter(Boolean).forEach(function (r) {
+        r.snap.forEach(function (doc) {
+          var d = doc.data() || {};
+          var pk = d.gamePk != null ? d.gamePk : doc.id;
+          var key = String(pk);
+          if (!byGame[key]) {
+            byGame[key] = { g: { gamePk: pk, sport: d.sport || 'mlb', away: d.away || null, home: d.home || null, date: d.date || null }, uids: [] };
+          }
+          if (byGame[key].uids.indexOf(r.uid) === -1) byGame[key].uids.push(r.uid);
+        });
+      });
+      window._friendsWatchingCache = { at: Date.now(), byGame: byGame };
+      return byGame;
+    });
+  }).catch(function (err) { console.error('Friends watching lookup error:', err); return {}; });
+}
+
+// First names for the avatar stack, fetched once per uid per session.
+function _friendDisplayNames(uids) {
+  var missing = uids.filter(function (u) { return !window._friendNameCache[u]; });
+  if (!missing.length || !window.db) return Promise.resolve();
+  return Promise.all(missing.map(function (u) {
+    return window.db.collection('users').doc(u).get()
+      .then(function (d) { window._friendNameCache[u] = (((d.data() || {}).name) || 'A friend').split(' ')[0]; })
+      .catch(function (err) { console.error('Load friend name error for', u, err); window._friendNameCache[u] = 'A friend'; });
+  })).then(function () {});
+}
+
+// 'live' | 'soon' | null. A finished game drops off the feed, and an
+// upcoming one only earns a slot once it's close enough to be worth
+// planning around — otherwise a friend marking next Sunday's game would
+// sit at the top of the feed all week.
+var LIVE_FEED_SOON_MINUTES = 12 * 60;
+function _liveFeedState(box) {
+  if (!box || box.error) return null;
+  var status = box.status || '';
+  if (_isGameStatusLive(status)) return 'live';
+  if (_isGameConcluded(status)) return null;
+  var s = String(status).toLowerCase();
+  if (s.indexOf('postponed') !== -1 || s.indexOf('cancel') !== -1 || s.indexOf('suspended') !== -1) return null;
+  var t = box.startTime ? Date.parse(box.startTime) : NaN;
+  if (isNaN(t)) return null;
+  var mins = (t - Date.now()) / 60000;
+  return (mins <= LIVE_FEED_SOON_MINUTES && mins >= -60) ? 'soon' : null;
+}
+
+// One card per game that either I or a friend has marked Watching. Mine
+// and theirs are merged on gamePk first, so a game we're both watching is
+// one card that says so rather than two.
 function renderLiveFeed() {
   var section = document.getElementById('feed-live-feed-section');
   var list = document.getElementById('feed-live-feed-list');
   if (!section || !list) return;
-  var games = window._watchingList || [];
-  if (!games.length) { section.style.display = 'none'; window._liveFeedCache = []; return; }
-  Promise.all(games.map(function (g) {
-    return fetch(_bsModalBoxscoreUrl(g.sport || 'mlb', g.gamePk))
-      .then(function (r) { return r.json(); })
-      .then(function (box) { return { g: g, box: box }; })
-      .catch(function () { return { g: g, box: null }; });
-  })).then(function (results) {
-    // Only games actually in progress belong here — Pre-Game and Final
-    // used to render with the exact same green "live" dot, which was
-    // misleading regardless of what the status text next to it said.
-    var live = results.filter(function (r) { return _isGameStatusLive(r.box && r.box.status); });
-    window._liveFeedCache = live;
-    if (!live.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
-    section.style.display = 'flex';
-    list.innerHTML = live.map(function (r, i) { return _liveFeedCardHtml(r, i); }).join('');
-    live.forEach(function (r, i) {
-      _friendsWatchingGame(r.g.gamePk).then(function (uids) {
-        if (!uids.length) return;
-        Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
-          .then(function (docs) {
-            var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
-            var rowEl = document.getElementById('live-feed-friends-' + i);
-            var avatarsEl = document.getElementById('live-feed-avatars-' + i);
-            var textEl = document.getElementById('live-feed-friends-text-' + i);
-            if (!rowEl) return;
-            if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
-            if (textEl) textEl.textContent = _friendsWatchingLabel(names);
-            rowEl.style.display = 'flex';
-          }).catch(function (err) { console.error('Load friends-watching names error:', err); });
-      }).catch(function (err) { console.error('Friends watching lookup error:', err); });
+  var hide = function () { section.style.display = 'none'; list.innerHTML = ''; window._liveFeedCache = []; };
+
+  _loadFriendsWatching().then(function (byGame) {
+    var merged = {};
+    (window._watchingList || []).forEach(function (g) {
+      merged[String(g.gamePk)] = { g: g, mine: true, uids: [] };
     });
-  });
+    Object.keys(byGame).forEach(function (key) {
+      if (merged[key]) merged[key].uids = byGame[key].uids.slice();
+      else merged[key] = { g: byGame[key].g, mine: false, uids: byGame[key].uids.slice() };
+    });
+    var entries = Object.keys(merged).map(function (k) { return merged[k]; });
+    if (!entries.length) { hide(); return; }
+
+    return Promise.all(entries.map(function (e) {
+      return fetch(_bsModalBoxscoreUrl(e.g.sport || 'mlb', e.g.gamePk))
+        .then(function (r) { return r.json(); })
+        .then(function (box) { return Object.assign({ box: box }, e); })
+        .catch(function () { return Object.assign({ box: null }, e); });
+    })).then(function (results) {
+      var shown = [];
+      results.forEach(function (r) {
+        var state = _liveFeedState(r.box);
+        if (state) { r.state = state; shown.push(r); }
+      });
+      // Live before upcoming, my own before a friend's, then by start time.
+      shown.sort(function (a, b) {
+        if (a.state !== b.state) return a.state === 'live' ? -1 : 1;
+        if (a.mine !== b.mine) return a.mine ? -1 : 1;
+        var at = (a.box && a.box.startTime) ? Date.parse(a.box.startTime) : 0;
+        var bt = (b.box && b.box.startTime) ? Date.parse(b.box.startTime) : 0;
+        return (at || 0) - (bt || 0);
+      });
+      window._liveFeedCache = shown;
+      if (!shown.length) { hide(); return; }
+      var allUids = [];
+      shown.forEach(function (r) {
+        r.uids.forEach(function (u) { if (allUids.indexOf(u) === -1) allUids.push(u); });
+      });
+      return _friendDisplayNames(allUids).then(function () {
+        section.style.display = 'flex';
+        list.innerHTML = shown.map(function (r, i) { return _liveFeedCardHtml(r, i); }).join('');
+      });
+    });
+  }).catch(function (err) { console.error('Live feed render error:', err); });
 }
 
-// Substring/case-insensitive rather than an exact-match list — MLB and
+// Substring/case-insensitive rather than an exact-match list// Substring/case-insensitive rather than an exact-match list — MLB and
 // ESPN (NFL/CFB/etc.) don't use identical status strings (e.g. ESPN's
 // "Final/OT" vs MLB's plain "Final", or "Canceled" vs "Cancelled"), so
 // matching on the not-live SIGNAL WORDS covers both without needing a
@@ -20829,18 +20940,28 @@ function _isGameStatusLive(status) {
 
 function _liveFeedCardHtml(r, i) {
   var box = r.box;
+  var live = r.state === 'live';
   var away = (box && box.away) || r.g.away || '?';
   var home = (box && box.home) || r.g.home || '?';
-  var status = (box && box.status) || 'In Progress';
-  var scoreLabel = (box && box.awayScore != null && box.homeScore != null) ? (box.awayScore + '–' + box.homeScore) : '';
-  return '<div onclick="openLiveFeedGame(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(124,242,156,.28);border-radius:16px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">' +
-    '<span style="width:7px;height:7px;border-radius:50%;background:#7CF29C;flex-shrink:0;box-shadow:0 0 6px 1px rgba(124,242,156,.6);margin-top:6px"></span>' +
+  var accent = live ? '#7CF29C' : '#A89FE8';
+  var border = live ? 'rgba(124,242,156,.28)' : 'rgba(168,159,232,.28)';
+  var meta = live
+    ? ((box && box.status) || 'In Progress')
+    : (((box && box.startTime && _formatGameTime(box.startTime)) || 'Starting soon'));
+  var scoreLabel = (live && box && box.awayScore != null && box.homeScore != null) ? (box.awayScore + '–' + box.homeScore) : '';
+  var names = r.uids.map(function (u) { return window._friendNameCache[u] || 'A friend'; });
+  var watchers = '';
+  if (names.length) {
+    watchers = '<div style="display:flex;align-items:center;gap:7px;margin-top:6px">' +
+      '<div class="wa-stack" style="display:flex;align-items:center">' + _watchingAvatarsHtml(names, 2) + '</div>' +
+      '<div style="font-size:11px;color:#A89FE8;font-weight:600">' +
+      _escapeHtml(r.mine ? _friendsWatchingLabel(names) : _friendsOnlyWatchingLabel(names)) + '</div></div>';
+  }
+  return '<div onclick="openLiveFeedGame(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid ' + border + ';border-radius:16px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px;cursor:pointer">' +
+    '<span style="width:7px;height:7px;border-radius:50%;background:' + accent + ';flex-shrink:0;' + (live ? 'box-shadow:0 0 6px 1px rgba(124,242,156,.6);' : '') + 'margin-top:6px"></span>' +
     '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#fff">' + _escapeHtml(away) + ' @ ' + _escapeHtml(home) + '</div>' +
-    '<div style="font-size:11px;color:#9be8ac;margin-top:2px;font-weight:600">' + _escapeHtml(status) + '</div>' +
-    '<div id="live-feed-friends-' + i + '" style="display:none;align-items:center;gap:7px;margin-top:6px">' +
-    '<div id="live-feed-avatars-' + i + '" class="wa-stack" style="display:flex;align-items:center"></div>' +
-    '<div id="live-feed-friends-text-' + i + '" style="font-size:11px;color:#A89FE8;font-weight:600"></div>' +
-    '</div></div>' +
+    '<div style="font-size:11px;color:' + (live ? '#9be8ac' : '#B9B3E6') + ';margin-top:2px;font-weight:600">' + _escapeHtml(meta) + '</div>' +
+    watchers + '</div>' +
     (scoreLabel ? '<div style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px">' + _escapeHtml(scoreLabel) + '</div>' : '') +
     '</div>';
 }
@@ -20860,30 +20981,12 @@ function _watchingAvatarsHtml(names, max) {
   return html;
 }
 
-// Which of my accepted friends also have this exact game marked Watching.
-// Firestore rules make any signed-in user's users/{uid}/watching readable,
-// so this is a direct per-friend existence check rather than a Cloud
-// Function — fine at this beta's scale (small trusted friend groups).
-//
-// Deliberately does NOT reuse window._myFriendUids even when it's already
-// populated — that shared cache has no invalidation, so once set it
-// never picks up a friendship accepted later in the same session.
+// Which of my accepted friends have this exact game marked Watching —
+// a direct per-friend existence check, used by the game screen's header
+// row and the watch-joined notification. The feed uses _loadFriendsWatching
+// instead, which reads each friend's whole list in one go.
 function _friendsWatchingGame(gamePk) {
-  var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) return Promise.resolve([]);
-  var uidsPromise = Promise.all([
-    window.db.collection('friendRequests').where('fromUid', '==', user.uid).where('status', '==', 'accepted').get(),
-    window.db.collection('friendRequests').where('toUid', '==', user.uid).where('status', '==', 'accepted').get()
-  ]).then(function (results) {
-    var uids = [];
-    results[0].forEach(function (d) { uids.push(d.data().toUid); });
-    results[1].forEach(function (d) { uids.push(d.data().fromUid); });
-    uids = uids.filter(function (v, idx) { return uids.indexOf(v) === idx; });
-    window._myFriendUids = uids; // still populate the shared cache for other consumers (loadMyFriendsList, etc.)
-    return uids;
-  }).catch(function (err) { console.error('Load friends list for watching check error:', err); return []; });
-
-  return uidsPromise.then(function (uids) {
+  return _loadFriendUids().then(function (uids) {
     if (!uids.length) return [];
     return Promise.all(uids.map(function (uid) {
       return window.db.collection('users').doc(uid).collection('watching').doc(String(gamePk)).get()
@@ -20891,6 +20994,14 @@ function _friendsWatchingGame(gamePk) {
         .catch(function (err) { console.error('Check friend watching doc error for', uid, err); return null; });
     }));
   }).then(function (results) { return results.filter(Boolean); });
+}
+
+// "…is watching too" is for a game I'm in as well; this one is for a game
+// only they are on, which is most of what the feed now shows.
+function _friendsOnlyWatchingLabel(names) {
+  if (names.length === 1) return names[0] + ' is watching';
+  if (names.length === 2) return names[0] + ' and ' + names[1] + ' are watching';
+  return names[0] + ' and ' + (names.length - 1) + ' others are watching';
 }
 
 function _friendsWatchingLabel(names) {
