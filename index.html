@@ -678,6 +678,38 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   #mlb-flourish .mlbf-ball-vis,#mlb-flourish .mlbf-contact,#mlb-flourish .mlbf-contact-dot,#mlb-flourish .mlbf-flare,#mlb-flourish .mlbf-spark,#mlb-flourish .mlbf-mote{opacity:0!important}
   #mlb-flourish .mlbf-trail-fade{opacity:.35!important}
 }
+/* ── ALL-SPORTS FLOURISH (v5.47.0) — "similar vibe" full-screen opens for
+   every other league, reusing the exact 8s lighting-rig timeline the MLB
+   "Lights on" flourish already proved out (.mlbf-* keyframes above are
+   already coordinate-agnostic — they only animate opacity/scale/stroke-
+   dashoffset/offset-distance — so nothing there needed to change). Each
+   sport only supplies its own ground art, contact-point origin, and ball
+   offset-path/skin below. */
+#nfl-flourish,#cfb-flourish,#nba-flourish,#wnba-flourish,#nhl-flourish,#mls-flourish,#nwsl-flourish,#sports-hub-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310;overflow:hidden}
+.sf-skip{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:12px;color:rgba(237,234,255,.58)}
+.sh-cap{position:absolute;left:0;right:0;top:337px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;z-index:1;pointer-events:none}
+.sh-title{font-family:'Instrument Serif',Georgia,serif;font-size:46px;font-weight:400;letter-spacing:.03em;color:#F5F3FF;line-height:1}
+.sh-sub{font-size:12px;font-weight:500;color:#B9B3E6}
+.sf-contact-nfl{transform-origin:195px 780px}
+.sf-ball-nfl{position:absolute;left:0;top:0;width:16px;height:10px;border-radius:50%;background:#7A4A2E;box-shadow:0 0 10px 2px rgba(122,74,46,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 780 Q 255 420 195 150');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-cfb{transform-origin:195px 780px}
+.sf-ball-cfb{position:absolute;left:0;top:0;width:16px;height:10px;border-radius:50%;background:#8A6A2E;box-shadow:0 0 10px 2px rgba(200,164,60,.7),0 0 30px 7px rgba(232,196,104,.3);offset-path:path('M 195 780 Q 255 420 195 150');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-nba{transform-origin:195px 700px}
+.sf-ball-nba{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#F2A75E,#D9762C 70%);box-shadow:0 0 12px 3px rgba(217,118,44,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 700 Q 250 450 195 206');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-wnba{transform-origin:195px 700px}
+.sf-ball-wnba{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#F2A75E,#D9762C 70%);box-shadow:0 0 12px 3px rgba(217,118,44,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 700 Q 250 450 195 206');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-nhl{transform-origin:195px 690px}
+.sf-ball-nhl{position:absolute;left:0;top:0;width:15px;height:8px;border-radius:50%;background:#141414;box-shadow:0 0 8px 2px rgba(191,227,255,.6),0 0 24px 5px rgba(168,159,232,.3);offset-path:path('M 195 690 Q 225 460 195 211');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-mls{transform-origin:195px 690px}
+.sf-ball-mls{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#DCD9F0 70%);box-shadow:0 0 12px 3px rgba(212,205,250,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 690 C 130 520 270 460 195 211');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+.sf-contact-nwsl{transform-origin:195px 690px}
+.sf-ball-nwsl{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#DCD9F0 70%);box-shadow:0 0 12px 3px rgba(212,205,250,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 690 C 130 520 270 460 195 211');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+@media (prefers-reduced-motion: reduce){
+  #nfl-flourish .mlbf-stage *,#cfb-flourish .mlbf-stage *,#nba-flourish .mlbf-stage *,#wnba-flourish .mlbf-stage *,#nhl-flourish .mlbf-stage *,#mls-flourish .mlbf-stage *,#nwsl-flourish .mlbf-stage *,#sports-hub-flourish .mlbf-stage *{animation:none!important}
+  #nfl-flourish .mlbf-line,#nfl-flourish .mlbf-arc,#nfl-flourish .mlbf-trail,#cfb-flourish .mlbf-line,#cfb-flourish .mlbf-arc,#cfb-flourish .mlbf-trail,#nba-flourish .mlbf-line,#nba-flourish .mlbf-arc,#nba-flourish .mlbf-trail,#wnba-flourish .mlbf-line,#wnba-flourish .mlbf-arc,#wnba-flourish .mlbf-trail,#nhl-flourish .mlbf-line,#nhl-flourish .mlbf-arc,#nhl-flourish .mlbf-trail,#mls-flourish .mlbf-line,#mls-flourish .mlbf-arc,#mls-flourish .mlbf-trail,#nwsl-flourish .mlbf-line,#nwsl-flourish .mlbf-arc,#nwsl-flourish .mlbf-trail{stroke-dashoffset:0!important}
+  #nfl-flourish .mlbf-ball-vis,#nfl-flourish .mlbf-contact,#nfl-flourish .mlbf-contact-dot,#nfl-flourish .mlbf-wall-hi,#nfl-flourish .mlbf-spark,#nfl-flourish .mlbf-mote,#cfb-flourish .mlbf-ball-vis,#cfb-flourish .mlbf-contact,#cfb-flourish .mlbf-contact-dot,#cfb-flourish .mlbf-wall-hi,#cfb-flourish .mlbf-spark,#cfb-flourish .mlbf-mote,#nba-flourish .mlbf-ball-vis,#nba-flourish .mlbf-contact,#nba-flourish .mlbf-contact-dot,#nba-flourish .mlbf-wall-hi,#nba-flourish .mlbf-spark,#nba-flourish .mlbf-mote,#wnba-flourish .mlbf-ball-vis,#wnba-flourish .mlbf-contact,#wnba-flourish .mlbf-contact-dot,#wnba-flourish .mlbf-wall-hi,#wnba-flourish .mlbf-spark,#wnba-flourish .mlbf-mote,#nhl-flourish .mlbf-ball-vis,#nhl-flourish .mlbf-contact,#nhl-flourish .mlbf-contact-dot,#nhl-flourish .mlbf-wall-hi,#nhl-flourish .mlbf-spark,#nhl-flourish .mlbf-mote,#mls-flourish .mlbf-ball-vis,#mls-flourish .mlbf-contact,#mls-flourish .mlbf-contact-dot,#mls-flourish .mlbf-wall-hi,#mls-flourish .mlbf-spark,#mls-flourish .mlbf-mote,#nwsl-flourish .mlbf-ball-vis,#nwsl-flourish .mlbf-contact,#nwsl-flourish .mlbf-contact-dot,#nwsl-flourish .mlbf-wall-hi,#nwsl-flourish .mlbf-spark,#nwsl-flourish .mlbf-mote{opacity:0!important}
+}
+}
 /* Watching-together avatar stack — same 2-letter-initials treatment as
    the friends list elsewhere, just sized down to sit inline in the Live
    Feed card and the game detail header. */
@@ -1699,7 +1731,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
 
     <!-- GAMES BANNER — entry point into the sport→game→cheat sheet browser -->
-    <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'games-picker')">
+    <div class="banner-pop-card imm-row" onclick="openGamesFromBanner(this)">
       <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
         <div class="banner-pop-glow" style="position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(168,159,232,0.55),transparent 70%);transform:scale(0);opacity:0"></div>
         <div class="banner-pop-icon" style="position:relative;font-size:19px">⚾</div>
@@ -1927,6 +1959,836 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
     </div>
   </div>
   <div id="mlb-flourish-skip">Tap to skip</div>
+</div>
+
+<!-- ═══ ALL-SPORTS FLOURISH (v5.48.0) — updated per-sport ground art (real
+     aerial field/court/rink/pitch outlines, not the earlier isometric
+     diamond) and the new SPORTS hub screen that plays before the sport
+     picker grid. Same .mlbf-* rig/timing as MLB throughout; only ground
+     art, contact point, and ball path differ per sport. Triggered by
+     playSportFlourish(key) from pickGamesSport(); the hub is triggered by
+     openGamesFromBanner() before the picker itself. ═══ -->
+<div id="nfl-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_nfl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_nfl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_nfl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_nfl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_nfl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_nfl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_nfl" gradientUnits="userSpaceOnUse" x1="195" y1="780" x2="255" y2="420">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_nfl)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="240" rx="200" ry="140" fill="url(#sfHaze_nfl)"></ellipse>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_nfl)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_nfl)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_nfl)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_nfl)"></polygon>
+    <g class="mlbf-flare">
+    <polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_nfl)"></polygon>
+    <polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_nfl)"></polygon>
+    <polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_nfl)"></polygon>
+    <polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_nfl)"></polygon>
+    </g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_nfl)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_nfl)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_nfl)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_nfl)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <path d="M 20 195 Q 195 130 370 195 L 370 175 Q 195 112 20 175 Z" fill="#0B0822"></path>
+
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 10.0 820.0 L 50.0 180.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 380.0 820.0 L 340.0 180.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 10.0 820.0 L 380.0 820.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 14.0 756.0 L 376.0 756.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 18.0 692.0 L 372.0 692.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 22.0 628.0 L 368.0 628.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 26.0 564.0 L 364.0 564.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 30.0 500.0 L 360.0 500.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 34.0 436.0 L 356.0 436.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 38.0 372.0 L 352.0 372.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 42.0 308.0 L 348.0 308.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 46.0 244.0 L 344.0 244.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 50.0 180.0 L 340.0 180.0" pathLength="100"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="3.52" stroke-linecap="round">
+    <path d="M 195.0 820.0 L 195.0 870.6"></path>
+    <path d="M 161.0 870.6 L 229.0 870.6"></path>
+    <path d="M 161.0 870.6 L 161.0 908.0"></path>
+    <path d="M 229.0 870.6 L 229.0 908.0"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.92" stroke-linecap="round">
+    <path d="M 195.0 180.0 L 195.0 152.4"></path>
+    <path d="M 175.0 152.4 L 215.0 152.4"></path>
+    <path d="M 175.0 152.4 L 175.0 132.0"></path>
+    <path d="M 215.0 152.4 L 215.0 132.0"></path>
+    </g>
+    <circle class="mlbf-contact sf-contact-nfl" cx="195" cy="780" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="780" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 780 Q 255 420 195 150" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 780 Q 255 420 195 150" pathLength="100" stroke="url(#sfTrail_nfl)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="150" r="40" fill="url(#sfGlow_nfl)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="146" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="158" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="164" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="182" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="154" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="172" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-nfl"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Kickoff</div>
+      <div class="mlbf-cap-sub">This week's games</div>
+    </div>
+  </div>
+  <div id="nfl-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="cfb-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_cfb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_cfb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_cfb" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_cfb" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_cfb" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_cfb" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_cfb" gradientUnits="userSpaceOnUse" x1="195" y1="780" x2="255" y2="420">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_cfb)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="240" rx="200" ry="140" fill="url(#sfHaze_cfb)"></ellipse>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_cfb)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_cfb)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_cfb)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_cfb)"></polygon>
+    <g class="mlbf-flare">
+    <polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_cfb)"></polygon>
+    <polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_cfb)"></polygon>
+    <polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_cfb)"></polygon>
+    <polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_cfb)"></polygon>
+    </g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_cfb)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_cfb)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_cfb)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_cfb)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <path d="M 20 195 Q 195 130 370 195 L 370 175 Q 195 112 20 175 Z" fill="#0B0822"></path>
+
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 10.0 820.0 L 50.0 180.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 380.0 820.0 L 340.0 180.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 10.0 820.0 L 380.0 820.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 14.0 756.0 L 376.0 756.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 18.0 692.0 L 372.0 692.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 22.0 628.0 L 368.0 628.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 26.0 564.0 L 364.0 564.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 30.0 500.0 L 360.0 500.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 34.0 436.0 L 356.0 436.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 38.0 372.0 L 352.0 372.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 42.0 308.0 L 348.0 308.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 46.0 244.0 L 344.0 244.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 50.0 180.0 L 340.0 180.0" pathLength="100"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="3.52" stroke-linecap="round">
+    <path d="M 195.0 820.0 L 195.0 870.6"></path>
+    <path d="M 161.0 870.6 L 229.0 870.6"></path>
+    <path d="M 161.0 870.6 L 161.0 908.0"></path>
+    <path d="M 229.0 870.6 L 229.0 908.0"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.92" stroke-linecap="round">
+    <path d="M 195.0 180.0 L 195.0 152.4"></path>
+    <path d="M 175.0 152.4 L 215.0 152.4"></path>
+    <path d="M 175.0 152.4 L 175.0 132.0"></path>
+    <path d="M 215.0 152.4 L 215.0 132.0"></path>
+    </g>
+    <circle class="mlbf-contact sf-contact-cfb" cx="195" cy="780" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="780" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 780 Q 255 420 195 150" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 780 Q 255 420 195 150" pathLength="100" stroke="url(#sfTrail_cfb)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="150" r="40" fill="url(#sfGlow_cfb)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="146" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="158" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="164" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="182" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="154" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="172" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-cfb"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Saturday's here</div>
+      <div class="mlbf-cap-sub">This week's games</div>
+    </div>
+  </div>
+  <div id="cfb-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="nba-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_nba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_nba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_nba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_nba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_nba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_nba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_nba" gradientUnits="userSpaceOnUse" x1="195" y1="700" x2="250" y2="450">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_nba)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="260" rx="190" ry="150" fill="url(#sfHaze_nba)"></ellipse>
+    <path d="M 20 205 Q 195 140 370 205 L 370 185 Q 195 122 20 185 Z" fill="#0B0822"></path>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_nba)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_nba)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_nba)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_nba)"></polygon>
+    <g class="mlbf-flare"><polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_nba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_nba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_nba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_nba)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_nba)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_nba)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_nba)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_nba)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 30.0 820.0 L 70.0 200.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 360.0 820.0 L 320.0 200.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 50.0 510.0 L 340.0 510.0" pathLength="100"></path>
+    </g>
+    <path class="mlbf-bases" d="M 122.4 820.0 L 122.4 714.6 L 267.6 714.6 L 267.6 820.0" fill="none" stroke="#F5F3FF" stroke-opacity=".7" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 135.0 200.0 L 135.0 305.4 L 255.0 305.4 L 255.0 200.0" fill="none" stroke="#F5F3FF" stroke-opacity=".7" stroke-width="1.3"></path>
+    <ellipse class="mlbf-arc" cx="195" cy="510.0" rx="42" ry="20" fill="none" stroke="#D9D4FA" stroke-opacity=".45" stroke-width="1.2" pathLength="100"></ellipse>
+    <path class="mlbf-arc" d="M 48.0 820.0 Q 195 649.5 342.0 820.0" pathLength="100" fill="none" stroke="#D9D4FA" stroke-opacity=".4" stroke-width="1.1"></path>
+    <path class="mlbf-arc" d="M 84.0 200.0 Q 195 370.5 306.0 200.0" pathLength="100" fill="none" stroke="#D9D4FA" stroke-opacity=".4" stroke-width="1.1"></path>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="2.86">
+    <path d="M 195.0 820.0 L 195.0 789.2" stroke-linecap="round"></path>
+    <path d="M 168.6 789.2 L 221.4 789.2"></path>
+    <ellipse cx="195.0" cy="781.5" rx="14.3" ry="4.4" stroke="#E8622C" stroke-width="2.42"></ellipse>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.43">
+    <path d="M 195.0 200.0 L 195.0 215.4" stroke-linecap="round"></path>
+    <path d="M 181.8 215.4 L 208.2 215.4"></path>
+    <ellipse cx="195.0" cy="219.2" rx="7.2" ry="2.2" stroke="#E8622C" stroke-width="1.21"></ellipse>
+    </g>
+    <circle class="mlbf-contact sf-contact-nba" cx="195" cy="700" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="700" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 700 Q 250 450 195 206" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 700 Q 250 450 195 206" pathLength="100" stroke="url(#sfTrail_nba)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="206" r="36" fill="url(#sfGlow_nba)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="202" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="214" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="220" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="238" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="210" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="228" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-nba"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Tip-off</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
+  <div id="nba-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="wnba-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_wnba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_wnba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_wnba" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_wnba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_wnba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_wnba" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_wnba" gradientUnits="userSpaceOnUse" x1="195" y1="700" x2="250" y2="450">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_wnba)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="260" rx="190" ry="150" fill="url(#sfHaze_wnba)"></ellipse>
+    <path d="M 20 205 Q 195 140 370 205 L 370 185 Q 195 122 20 185 Z" fill="#0B0822"></path>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_wnba)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_wnba)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_wnba)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_wnba)"></polygon>
+    <g class="mlbf-flare"><polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_wnba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_wnba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_wnba)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_wnba)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_wnba)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_wnba)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_wnba)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_wnba)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 30.0 820.0 L 70.0 200.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 360.0 820.0 L 320.0 200.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 50.0 510.0 L 340.0 510.0" pathLength="100"></path>
+    </g>
+    <path class="mlbf-bases" d="M 122.4 820.0 L 122.4 714.6 L 267.6 714.6 L 267.6 820.0" fill="none" stroke="#F5F3FF" stroke-opacity=".7" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 135.0 200.0 L 135.0 305.4 L 255.0 305.4 L 255.0 200.0" fill="none" stroke="#F5F3FF" stroke-opacity=".7" stroke-width="1.3"></path>
+    <ellipse class="mlbf-arc" cx="195" cy="510.0" rx="42" ry="20" fill="none" stroke="#D9D4FA" stroke-opacity=".45" stroke-width="1.2" pathLength="100"></ellipse>
+    <path class="mlbf-arc" d="M 48.0 820.0 Q 195 649.5 342.0 820.0" pathLength="100" fill="none" stroke="#D9D4FA" stroke-opacity=".4" stroke-width="1.1"></path>
+    <path class="mlbf-arc" d="M 84.0 200.0 Q 195 370.5 306.0 200.0" pathLength="100" fill="none" stroke="#D9D4FA" stroke-opacity=".4" stroke-width="1.1"></path>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="2.86">
+    <path d="M 195.0 820.0 L 195.0 789.2" stroke-linecap="round"></path>
+    <path d="M 168.6 789.2 L 221.4 789.2"></path>
+    <ellipse cx="195.0" cy="781.5" rx="14.3" ry="4.4" stroke="#E8622C" stroke-width="2.42"></ellipse>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.43">
+    <path d="M 195.0 200.0 L 195.0 215.4" stroke-linecap="round"></path>
+    <path d="M 181.8 215.4 L 208.2 215.4"></path>
+    <ellipse cx="195.0" cy="219.2" rx="7.2" ry="2.2" stroke="#E8622C" stroke-width="1.21"></ellipse>
+    </g>
+    <circle class="mlbf-contact sf-contact-wnba" cx="195" cy="700" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="700" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 700 Q 250 450 195 206" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 700 Q 250 450 195 206" pathLength="100" stroke="url(#sfTrail_wnba)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="206" r="36" fill="url(#sfGlow_wnba)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="202" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="214" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="220" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="238" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="210" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="228" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-wnba"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Ball's up</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
+  <div id="wnba-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="nhl-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_nhl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_nhl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_nhl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_nhl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_nhl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_nhl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_nhl" gradientUnits="userSpaceOnUse" x1="195" y1="700" x2="225" y2="470">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_nhl)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="260" rx="190" ry="150" fill="url(#sfHaze_nhl)"></ellipse>
+    <path d="M 20 205 Q 195 140 370 205 L 370 185 Q 195 122 20 185 Z" fill="#0B0822"></path>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_nhl)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_nhl)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_nhl)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_nhl)"></polygon>
+    <g class="mlbf-flare"><polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_nhl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_nhl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_nhl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_nhl)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_nhl)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_nhl)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_nhl)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_nhl)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 25.0 785.0 L 65.0 235.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 365.0 785.0 L 325.0 235.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 25.0 785.0 Q 25.0 815.0 55.0 815.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 335.0 815.0 Q 365.0 815.0 365.0 785.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 65.0 235.0 Q 65.0 205.0 95.0 205.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 295.0 205.0 Q 325.0 205.0 325.0 235.0" pathLength="100"></path>
+    </g>
+    <path class="mlbf-line" d="M 36.2 644.2 L 353.8 644.2" pathLength="100" stroke="#5B8FD9" stroke-opacity=".6" stroke-width="2.4"></path>
+    <path class="mlbf-line" d="M 53.8 375.8 L 336.2 375.8" pathLength="100" stroke="#5B8FD9" stroke-opacity=".6" stroke-width="2.4"></path>
+    <path class="mlbf-line" d="M 45.0 510.0 L 345.0 510.0" pathLength="100" stroke="#D9707A" stroke-opacity=".55" stroke-width="1.6"></path>
+    <ellipse class="mlbf-arc" cx="195" cy="510.0" rx="34" ry="16" fill="none" stroke="#D9707A" stroke-opacity=".45" stroke-width="1.2" pathLength="100"></ellipse>
+    <ellipse class="mlbf-bases" cx="112.8" cy="729.6" rx="22" ry="10" fill="none" stroke="#D9707A" stroke-opacity=".4" stroke-width="1"></ellipse>
+    <ellipse class="mlbf-bases" cx="277.2" cy="729.6" rx="22" ry="10" fill="none" stroke="#D9707A" stroke-opacity=".4" stroke-width="1"></ellipse>
+    <ellipse class="mlbf-bases" cx="127.2" cy="290.4" rx="22" ry="10" fill="none" stroke="#D9707A" stroke-opacity=".4" stroke-width="1"></ellipse>
+    <ellipse class="mlbf-bases" cx="262.8" cy="290.4" rx="22" ry="10" fill="none" stroke="#D9707A" stroke-opacity=".4" stroke-width="1"></ellipse>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="2.73">
+    <path d="M 163.5 815.0 L 163.5 794.0 L 226.5 794.0 L 226.5 815.0 Z"></path>
+    <path d="M 179.2 813.0 L 185.6 797.1 M 210.8 813.0 L 204.4 797.1" stroke-width="1.09" stroke-opacity=".5"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.56">
+    <path d="M 177.0 205.0 L 177.0 217.0 L 213.0 217.0 L 213.0 205.0 Z"></path>
+    <path d="M 186.0 207.0 L 189.6 215.2 M 204.0 207.0 L 200.4 215.2" stroke-width="0.62" stroke-opacity=".5"></path>
+    </g>
+    <circle class="mlbf-contact sf-contact-nhl" cx="195" cy="690" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="690" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 690 Q 225 460 195 211" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 690 Q 225 460 195 211" pathLength="100" stroke="url(#sfTrail_nhl)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="211" r="34" fill="url(#sfGlow_nhl)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="207" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="219" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="225" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="243" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="215" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="233" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-nhl"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Puck drop</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
+  <div id="nhl-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="mls-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_mls" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_mls" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_mls" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_mls" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_mls" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_mls" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_mls" gradientUnits="userSpaceOnUse" x1="195" y1="700" x2="230" y2="470">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_mls)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="260" rx="190" ry="150" fill="url(#sfHaze_mls)"></ellipse>
+    <path d="M 20 205 Q 195 140 370 205 L 370 185 Q 195 122 20 185 Z" fill="#0B0822"></path>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_mls)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_mls)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_mls)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_mls)"></polygon>
+    <g class="mlbf-flare"><polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_mls)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_mls)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_mls)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_mls)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_mls)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_mls)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_mls)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_mls)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 25.0 815.0 L 65.0 205.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 365.0 815.0 L 325.0 205.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 25.0 815.0 L 365.0 815.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 65.0 205.0 L 325.0 205.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 25.0 797.0 A 18 18 0 0 1 43.0 815.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 347.0 815.0 A 18 18 0 0 0 365.0 797.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 65.0 223.0 A 18 18 0 0 0 83.0 205.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 307.0 205.0 A 18 18 0 0 1 325.0 223.0" pathLength="100"></path>
+    </g>
+    <path class="mlbf-line" d="M 45.0 510.0 L 345.0 510.0" pathLength="100"></path>
+    <ellipse class="mlbf-arc" cx="195" cy="510.0" rx="32" ry="15" fill="none" stroke="#D9D4FA" stroke-opacity=".45" stroke-width="1.2" pathLength="100"></ellipse>
+    <path class="mlbf-bases" d="M 45.4 815.0 L 53.9 717.4 L 336.1 717.4 L 344.6 815.0" fill="none" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 127.0 815.0 L 129.5 772.3 L 260.5 772.3 L 263.0 815.0" fill="none" stroke="#F5F3FF" stroke-opacity=".8" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 80.6 205.0 L 77.4 302.6 L 312.6 302.6 L 309.4 205.0" fill="none" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 143.0 205.0 L 142.9 247.7 L 247.1 247.7 L 247.0 205.0" fill="none" stroke="#F5F3FF" stroke-opacity=".8" stroke-width="1.3"></path>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="2.73">
+    <path d="M 167.7 815.0 L 167.7 800.3 L 222.3 800.3 L 222.3 815.0 Z"></path>
+    <path d="M 184.1 814.0 L 188.2 801.8 M 205.9 814.0 L 201.8 801.8" stroke-width="0.96" stroke-opacity=".45"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.56">
+    <path d="M 179.4 205.0 L 179.4 213.4 L 210.6 213.4 L 210.6 205.0 Z"></path>
+    <path d="M 188.8 206.0 L 191.1 212.6 M 201.2 206.0 L 198.9 212.6" stroke-width="0.55" stroke-opacity=".45"></path>
+    </g>
+    <circle class="mlbf-contact sf-contact-mls" cx="195" cy="690" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="690" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 690 C 130 520 270 460 195 211" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 690 C 130 520 270 460 195 211" pathLength="100" stroke="url(#sfTrail_mls)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="211" r="34" fill="url(#sfGlow_mls)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="207" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="219" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="225" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="243" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="215" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="233" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-mls"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">Kickoff</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
+  <div id="mls-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="nwsl-flourish" onclick="skipSportFlourish()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_nwsl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_nwsl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_nwsl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_nwsl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_nwsl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfGlow_nwsl" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity=".65"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="sfTrail_nwsl" gradientUnits="userSpaceOnUse" x1="195" y1="700" x2="230" y2="470">
+    <stop offset="0%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".5"></stop>
+    <stop offset="100%" stop-color="#F5F3FF" stop-opacity=".95"></stop>
+    </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_nwsl)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="260" rx="190" ry="150" fill="url(#sfHaze_nwsl)"></ellipse>
+    <path d="M 20 205 Q 195 140 370 205 L 370 185 Q 195 122 20 185 Z" fill="#0B0822"></path>
+    <polygon class="mlbf-beam1" points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfBeam_nwsl)"></polygon>
+    <polygon class="mlbf-beam2" points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfBeam_nwsl)"></polygon>
+    <polygon class="mlbf-beam3" points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfBeam_nwsl)"></polygon>
+    <polygon class="mlbf-beam4" points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfBeam_nwsl)"></polygon>
+    <g class="mlbf-flare"><polygon points="37.0,152.0 53.0,152.0 185.0,420.0 -5.0,420.0" fill="url(#sfFlare_nwsl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="337.0,152.0 353.0,152.0 395.0,420.0 205.0,420.0" fill="url(#sfFlare_nwsl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="114.0,107.0 126.0,107.0 235.0,350.0 85.0,350.0" fill="url(#sfFlare_nwsl)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="264.0,107.0 276.0,107.0 305.0,350.0 155.0,350.0" fill="url(#sfFlare_nwsl)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="24" fill="url(#sfHalo_nwsl)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="24" fill="url(#sfHalo_nwsl)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="20" fill="url(#sfHalo_nwsl)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="20" fill="url(#sfHalo_nwsl)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="14" width="2" height="40" fill="#1A1640"></rect><rect x="-14" y="0" width="28" height="14" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-9" cy="5.5" r="1.8"></circle><circle cx="-3" cy="5.5" r="1.8"></circle><circle cx="3" cy="5.5" r="1.8"></circle><circle cx="9" cy="5.5" r="1.8"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="12" width="2" height="32" fill="#1A1640"></rect><rect x="-12" y="0" width="24" height="12" rx="2.5" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-7.5" cy="5" r="1.5"></circle><circle cx="-2.5" cy="5" r="1.5"></circle><circle cx="2.5" cy="5" r="1.5"></circle><circle cx="7.5" cy="5" r="1.5"></circle></g></g>
+<g fill="none" stroke="#D9D4FA" stroke-opacity=".55" stroke-width="1.3">
+    <path class="mlbf-line" d="M 25.0 815.0 L 65.0 205.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 365.0 815.0 L 325.0 205.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 25.0 815.0 L 365.0 815.0" pathLength="100"></path>
+    <path class="mlbf-line" d="M 65.0 205.0 L 325.0 205.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 25.0 797.0 A 18 18 0 0 1 43.0 815.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 347.0 815.0 A 18 18 0 0 0 365.0 797.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 65.0 223.0 A 18 18 0 0 0 83.0 205.0" pathLength="100"></path>
+    <path class="mlbf-arc" d="M 307.0 205.0 A 18 18 0 0 1 325.0 223.0" pathLength="100"></path>
+    </g>
+    <path class="mlbf-line" d="M 45.0 510.0 L 345.0 510.0" pathLength="100"></path>
+    <ellipse class="mlbf-arc" cx="195" cy="510.0" rx="32" ry="15" fill="none" stroke="#D9D4FA" stroke-opacity=".45" stroke-width="1.2" pathLength="100"></ellipse>
+    <path class="mlbf-bases" d="M 45.4 815.0 L 53.9 717.4 L 336.1 717.4 L 344.6 815.0" fill="none" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 127.0 815.0 L 129.5 772.3 L 260.5 772.3 L 263.0 815.0" fill="none" stroke="#F5F3FF" stroke-opacity=".8" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 80.6 205.0 L 77.4 302.6 L 312.6 302.6 L 309.4 205.0" fill="none" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.3"></path>
+    <path class="mlbf-bases" d="M 143.0 205.0 L 142.9 247.7 L 247.1 247.7 L 247.0 205.0" fill="none" stroke="#F5F3FF" stroke-opacity=".8" stroke-width="1.3"></path>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="2.73">
+    <path d="M 167.7 815.0 L 167.7 800.3 L 222.3 800.3 L 222.3 815.0 Z"></path>
+    <path d="M 184.1 814.0 L 188.2 801.8 M 205.9 814.0 L 201.8 801.8" stroke-width="0.96" stroke-opacity=".45"></path>
+    </g>
+    <g class="mlbf-bases" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.56">
+    <path d="M 179.4 205.0 L 179.4 213.4 L 210.6 213.4 L 210.6 205.0 Z"></path>
+    <path d="M 188.8 206.0 L 191.1 212.6 M 201.2 206.0 L 198.9 212.6" stroke-width="0.55" stroke-opacity=".45"></path>
+    </g>
+    <circle class="mlbf-contact sf-contact-nwsl" cx="195" cy="690" r="7" fill="none" stroke="#F5F3FF" stroke-width="1.3"></circle>
+    <circle class="mlbf-contact-dot" cx="195" cy="690" r="10" fill="#EDEAFF" fill-opacity=".45"></circle>
+    <g class="mlbf-trail-fade" fill="none" stroke-linecap="round">
+    <path class="mlbf-trail" d="M 195 690 C 130 520 270 460 195 211" pathLength="100" stroke="#A89FE8" stroke-opacity=".14" stroke-width="8"></path>
+    <path class="mlbf-trail" d="M 195 690 C 130 520 270 460 195 211" pathLength="100" stroke="url(#sfTrail_nwsl)" stroke-width="1.8"></path>
+    </g>
+    <circle class="mlbf-wall-hi" cx="195" cy="211" r="34" fill="url(#sfGlow_nwsl)"></circle>
+    <g fill="#F5F3FF">
+    <circle class="mlbf-spark" cx="176" cy="207" r="1.6" style="animation-delay:0s"></circle>
+    <circle class="mlbf-spark" cx="202" cy="219" r="1.4" style="animation-delay:0.18s"></circle>
+    <circle class="mlbf-spark" cx="162" cy="225" r="1.3" style="animation-delay:0.36s"></circle>
+    <circle class="mlbf-spark" cx="214" cy="243" r="1.6" style="animation-delay:0.5s"></circle>
+    <circle class="mlbf-spark" cx="146" cy="215" r="1.2" style="animation-delay:0.7s"></circle>
+    <circle class="mlbf-spark" cx="190" cy="233" r="1.5" style="animation-delay:0.86s"></circle>
+    </g>
+    </svg>
+    <div class="mlbf-ball-vis"><div class="sf-ball-nwsl"></div></div>
+    <div class="mlbf-cap">
+      <div class="mlbf-cap-title">First whistle</div>
+      <div class="mlbf-cap-sub">Today's games</div>
+    </div>
+  </div>
+  <div id="nwsl-flourish-skip" class="sf-skip">Tap to skip</div>
+</div>
+<div id="sports-hub-flourish" onclick="skipSportsHub()">
+  <div class="mlbf-stage">
+    <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+    <linearGradient id="sfSky_sh2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050310"></stop>
+    <stop offset="100%" stop-color="#0E0A2C"></stop>
+    </linearGradient>
+    <linearGradient id="sfBeam_sh2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#E4E0FF" stop-opacity=".42"></stop>
+    <stop offset="55%" stop-color="#A89FE8" stop-opacity=".09"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sfFlare_sh2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"></stop>
+    <stop offset="60%" stop-color="#C9C2F5" stop-opacity=".08"></stop>
+    <stop offset="100%" stop-color="#C9C2F5" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="sfHaze_sh2" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#3D3580" stop-opacity=".85"></stop>
+    <stop offset="100%" stop-color="#3D3580" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="sfHalo_sh2" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D9D4FA" stop-opacity=".55"></stop>
+    <stop offset="100%" stop-color="#A89FE8" stop-opacity="0"></stop>
+    </radialGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="url(#sfSky_sh2)"></rect>
+    <ellipse class="mlbf-haze" cx="195" cy="420" rx="220" ry="220" fill="url(#sfHaze_sh2)"></ellipse>
+    <polygon class="mlbf-beam1" points="36.0,156.0 54.0,156.0 200.0,450.0 -20.0,450.0" fill="url(#sfBeam_sh2)"></polygon>
+    <polygon class="mlbf-beam2" points="336.0,156.0 354.0,156.0 410.0,450.0 190.0,450.0" fill="url(#sfBeam_sh2)"></polygon>
+    <polygon class="mlbf-beam3" points="113.0,111.0 127.0,111.0 250.0,400.0 70.0,400.0" fill="url(#sfBeam_sh2)"></polygon>
+    <polygon class="mlbf-beam4" points="263.0,111.0 277.0,111.0 320.0,400.0 140.0,400.0" fill="url(#sfBeam_sh2)"></polygon>
+    <g class="mlbf-flare"><polygon points="36.0,156.0 54.0,156.0 200.0,450.0 -20.0,450.0" fill="url(#sfFlare_sh2)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="336.0,156.0 354.0,156.0 410.0,450.0 190.0,450.0" fill="url(#sfFlare_sh2)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="113.0,111.0 127.0,111.0 250.0,400.0 70.0,400.0" fill="url(#sfFlare_sh2)"></polygon></g>
+    <g class="mlbf-flare"><polygon points="263.0,111.0 277.0,111.0 320.0,400.0 140.0,400.0" fill="url(#sfFlare_sh2)"></polygon></g>
+    <circle class="mlbf-beam1" cx="45" cy="140" r="30" fill="url(#sfHalo_sh2)"></circle>
+    <circle class="mlbf-beam2" cx="345" cy="140" r="30" fill="url(#sfHalo_sh2)"></circle>
+    <circle class="mlbf-beam3" cx="120" cy="95" r="24" fill="url(#sfHalo_sh2)"></circle>
+    <circle class="mlbf-beam4" cx="270" cy="95" r="24" fill="url(#sfHalo_sh2)"></circle>
+    <g transform="translate(45,140)"><rect x="-1" y="22" width="2" height="90" fill="#1A1640"></rect><rect x="-18" y="0" width="36" height="20" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb1" fill="#F5F3FF"><circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle><circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle></g></g>
+    <g transform="translate(345,140)"><rect x="-1" y="22" width="2" height="90" fill="#1A1640"></rect><rect x="-18" y="0" width="36" height="20" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb2" fill="#F5F3FF"><circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle><circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle></g></g>
+    <g transform="translate(120,95)"><rect x="-1" y="22" width="2" height="65" fill="#1A1640"></rect><rect x="-18" y="0" width="36" height="20" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb3" fill="#F5F3FF"><circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle><circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle></g></g>
+    <g transform="translate(270,95)"><rect x="-1" y="22" width="2" height="65" fill="#1A1640"></rect><rect x="-18" y="0" width="36" height="20" rx="3" fill="#0D0A26" stroke="#2A2466" stroke-width="1"></rect><g class="mlbf-bulb4" fill="#F5F3FF"><circle cx="-13.5" cy="7" r="2.4"></circle><circle cx="-4.5" cy="7" r="2.4"></circle><circle cx="4.5" cy="7" r="2.4"></circle><circle cx="13.5" cy="7" r="2.4"></circle><circle cx="-13.5" cy="15" r="2.4"></circle><circle cx="-4.5" cy="15" r="2.4"></circle><circle cx="4.5" cy="15" r="2.4"></circle><circle cx="13.5" cy="15" r="2.4"></circle></g></g>
+    <g fill="#EDEAFF">
+    <circle class="mlbf-mote" cx="150" cy="560" r="1.2" style="animation-delay:.4s"></circle>
+    <circle class="mlbf-mote" cx="260" cy="520" r="1" style="animation-delay:1.5s"></circle>
+    <circle class="mlbf-mote" cx="110" cy="460" r="1" style="animation-delay:2.3s"></circle>
+    <circle class="mlbf-mote" cx="290" cy="600" r="1.2" style="animation-delay:3.1s"></circle>
+    <circle class="mlbf-mote" cx="195" cy="640" r="1" style="animation-delay:1s"></circle>
+    <circle class="mlbf-mote" cx="80" cy="580" r="1" style="animation-delay:3.8s"></circle>
+    </g>
+
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0s" fill="freeze"></animate>
+      <animateMotion id="sportshub-b0-fall" path="M 40.0,40.0 Q 146.3,112.8 195.0,232.0" dur="1.6s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"></animateMotion>
+      <animateMotion path="M 195.0,232.0 A 105.0,105.0 0 1,1 195.0,442.0 A 105.0,105.0 0 1,1 195.0,232.0" dur="13s" begin="sportshub-b0-fall.end" repeatCount="indefinite"></animateMotion>
+      <svg x="-23" y="-23" width="46" height="46" viewBox="-23 -23 46 46"><circle r="20" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.6"></circle><path d="M 0,-16.40 Q -12.40,0 0,16.40" stroke="#D9707A" stroke-opacity=".85" stroke-width="1.3" fill="none"></path><path d="M 0,-16.40 Q 12.40,0 0,16.40" stroke="#D9707A" stroke-opacity=".85" stroke-width="1.3" fill="none"></path><path d="M -0.66 -10.98 L -7.86 -7.38 M -2.60 -1.80 L -9.80 1.80 M -0.66 7.38 L -7.86 10.98 M 0.66 -10.98 L 7.86 -7.38 M 2.60 -1.80 L 9.80 1.80 M 0.66 7.38 L 7.86 10.98" stroke="#D9707A" stroke-opacity=".75" stroke-width="1"></path></svg>
+    </g>
+
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0s" fill="freeze"></animate>
+      <animateMotion id="sportshub-b1-fall" path="M 75.0,20.0 Q 227.6,129.3 294.9,304.6" dur="1.6s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"></animateMotion>
+      <animateMotion path="M 294.9,304.6 A 105.0,105.0 0 1,1 95.1,369.4 A 105.0,105.0 0 1,1 294.9,304.6" dur="13s" begin="sportshub-b1-fall.end" repeatCount="indefinite"></animateMotion>
+      <svg x="-28" y="-28" width="56" height="56" viewBox="-28 -28 56 56"><ellipse rx="25" ry="16" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.6"></ellipse><path d="M -13.75 0 L 13.75 0" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.1"></path><path d="M -3.5 -3.5 L -3.5 3.5 M 0 -4 L 0 4 M 3.5 -3.5 L 3.5 3.5" stroke="#F5F3FF" stroke-opacity=".75" stroke-width=".9"></path></svg>
+    </g>
+
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0s" fill="freeze"></animate>
+      <animateMotion id="sportshub-b2-fall" path="M 30.0,95.0 Q 192.4,224.5 256.7,421.9" dur="1.6s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"></animateMotion>
+      <animateMotion path="M 256.7,421.9 A 105.0,105.0 0 1,1 133.3,252.1 A 105.0,105.0 0 1,1 256.7,421.9" dur="13s" begin="sportshub-b2-fall.end" repeatCount="indefinite"></animateMotion>
+      <svg x="-24" y="-24" width="48" height="48" viewBox="-24 -24 48 48"><circle r="21" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.6"></circle><path d="M 0 -21 L 0 21 M -21 0 L 21 0" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.1"></path><path d="M -15.75 -15.75 Q 0 0 -15.75 15.75" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.1" fill="none"></path><path d="M 15.75 -15.75 Q 0 0 15.75 15.75" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.1" fill="none"></path></svg>
+    </g>
+
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0s" fill="freeze"></animate>
+      <animateMotion id="sportshub-b3-fall" path="M 60.0,60.0 Q 150.9,230.0 133.3,421.9" dur="1.6s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"></animateMotion>
+      <animateMotion path="M 133.3,421.9 A 105.0,105.0 0 1,1 256.7,252.1 A 105.0,105.0 0 1,1 133.3,421.9" dur="13s" begin="sportshub-b3-fall.end" repeatCount="indefinite"></animateMotion>
+      <svg x="-25" y="-25" width="50" height="50" viewBox="-25 -25 50 50"><ellipse rx="22" ry="11" fill="none" stroke="#F5F3FF" stroke-opacity=".9" stroke-width="1.6"></ellipse></svg>
+    </g>
+
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0s" fill="freeze"></animate>
+      <animateMotion id="sportshub-b4-fall" path="M 18.0,115.0 Q 85.0,198.2 95.1,304.6" dur="1.6s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"></animateMotion>
+      <animateMotion path="M 95.1,304.6 A 105.0,105.0 0 1,1 294.9,369.4 A 105.0,105.0 0 1,1 95.1,304.6" dur="13s" begin="sportshub-b4-fall.end" repeatCount="indefinite"></animateMotion>
+      <svg x="-23" y="-23" width="46" height="46" viewBox="-23 -23 46 46"><circle r="20" fill="none" stroke="#F5F3FF" stroke-opacity=".95" stroke-width="1.6"></circle><path d="M 0 -10 L -8.4 -3 L -5.6 8 L 0 9.6 L 5.6 8 L 8.4 -3 Z" fill="none" stroke="#F5F3FF" stroke-opacity=".75" stroke-width="1.1"></path></svg>
+    </g>
+
+    </svg>
+    <div class="sh-cap">
+      <div class="sh-title">SPORTS</div>
+      <div class="sh-sub">Pick your sport</div>
+    </div>
+  </div>
+  <div id="sports-hub-flourish-skip" class="sf-skip">Tap to skip</div>
 </div>
 
 <!-- ═══ GAMES BROWSER — today's MLB schedule, browsable by day or by
@@ -8528,7 +9390,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.46.0-live-glance';
+window.INNINGS_BUILD = 'v5.48.0-sports-hub';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -16514,12 +17376,17 @@ function loadGamesList(date) {
   if (labelEl) labelEl.textContent = requestedDate === today ? 'Today' : _formatMomentDate(requestedDate);
   if (todayLinkEl) { todayLinkEl.textContent = 'Jump to today'; todayLinkEl.style.display = requestedDate === today ? 'none' : 'block'; }
   if (!listEl) return;
-  // A flourish prefetch only ever exists for MLB, today's browse-in path.
-  // Consumed once here — a later date/sport change always falls through to
-  // a fresh fetch below rather than reusing stale data.
-  var prefetch = (requestedSport === 'mlb' && window._mlbFlourishPrefetch && window._mlbFlourishPrefetch.date === requestedDate)
-    ? window._mlbFlourishPrefetch.promise : null;
-  window._mlbFlourishPrefetch = null;
+  // Two possible prefetches: MLB's own (unchanged from v5.46.0) or, for any
+  // other single-day sport (nba/wnba/nhl/mls/nwsl), the generic one
+  // playSportFlourish stashed. Only one can ever match a given request.
+  var prefetch = null;
+  if (requestedSport === 'mlb' && window._mlbFlourishPrefetch && window._mlbFlourishPrefetch.date === requestedDate) {
+    prefetch = window._mlbFlourishPrefetch.promise;
+    window._mlbFlourishPrefetch = null;
+  } else if (window._dayFlourishPrefetch && window._dayFlourishPrefetch.sport === requestedSport && window._dayFlourishPrefetch.date === requestedDate) {
+    prefetch = window._dayFlourishPrefetch.promise;
+    window._dayFlourishPrefetch = null;
+  }
   if (!prefetch) listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
   (prefetch || Promise.all([
     fetch(_bsModalScheduleUrl(requestedSport, requestedDate)).then(function (r) { return r.json(); }),
@@ -16661,8 +17528,11 @@ function loadFootballWeek(sport, tuesdayIso) {
   }
   if (!listEl) return;
   var dates = _footballWeekDates(requestedWeek);
-  listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
-  Promise.all([
+  var prefetch = (window._footballFlourishPrefetch && window._footballFlourishPrefetch.sport === sport && window._footballFlourishPrefetch.week === requestedWeek)
+    ? window._footballFlourishPrefetch.promise : null;
+  window._footballFlourishPrefetch = null;
+  if (!prefetch) listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
+  (prefetch || Promise.all([
     Promise.all(dates.map(function (iso) {
       return fetch(_bsModalScheduleUrl(sport, iso))
         .then(function (r) { return r.json(); })
@@ -16674,7 +17544,7 @@ function loadFootballWeek(sport, tuesdayIso) {
         .catch(function () { return []; });
     })),
     _loadFavTeams(sport)
-  ]).then(function (outer) {
+  ])).then(function (outer) {
     var results = outer[0], favTeams = outer[1];
     if (window._gamesSport !== requestedSport || window._footballWeekTuesday[sport] !== requestedWeek) return; // superseded
     var allGames = [].concat.apply([], results);
@@ -16817,25 +17687,12 @@ function pickGamesSport(key) {
   var s = GAMES_SPORTS.filter(function (x) { return x.key === key; })[0];
   if (!s) return;
   if (!s.live) { window._gamesSoonSport = s; nav('games-soon'); return; }
-  if (s.key === 'mlb') {
-    window._gamesSport = 'mlb';
-    window._gamesDate = null;
-    _refreshPlayoffBtnVisibility();
-    var bannerElMlb = document.getElementById('games-fb-banner');
-    if (bannerElMlb) { clearTimeout(window._gamesFbBannerTimer); bannerElMlb.style.display = 'none'; }
-    playMlbFlourish();
-    return;
-  }
   window._gamesSport = key;
   _refreshPlayoffBtnVisibility();
   if (key === 'nfl' || key === 'cfb') { window._footballWeekTuesday[key] = null; } // reset to current week
-  else { window._gamesDate = null; } // reset so the new sport defaults to today, not carrying over MLB's date
-  var bannerEl = document.getElementById('games-fb-banner');
-  if (bannerEl) {
-    if (s.banner === 'fb') { _restartFootballBanner(bannerEl); }
-    else { clearTimeout(window._gamesFbBannerTimer); bannerEl.style.display = 'none'; }
-  }
-  nav('games');
+  else { window._gamesDate = null; } // reset so the new sport defaults to today, not carrying over the last sport's date
+  if (key === 'mlb') { playMlbFlourish(); return; }
+  playSportFlourish(key);
 }
 
 // The ball flight + "Touchdown!" caption are single-play (animation-
@@ -16921,6 +17778,136 @@ function finishMlbFlourish() {
 function skipMlbFlourish() {
   clearTimeout(window._mlbFlourishTimer);
   finishMlbFlourish();
+}
+
+// ── ALL-SPORTS FLOURISH (v5.47.0) — the same "lights on" vibe for NFL, CFB,
+// NBA, WNBA, NHL, MLS and NWSL, each its own overlay (#<key>-flourish) built
+// from the shared .mlbf-* rig (see the CSS comment near those keyframes).
+// Deliberately a parallel system rather than folding MLB into it — MLB's
+// own playMlbFlourish/finishMlbFlourish above are untouched and still own
+// #mlb-flourish exactly as before.
+//
+// Prefetching splits in two, matching the two ways the schedule screen
+// itself browses: NFL/CFB browse by week (loadFootballWeek), so their
+// prefetch fetches the whole week and is stashed on
+// window._footballFlourishPrefetch; every other sport browses by single day
+// (loadGamesList, the same path MLB uses) and is stashed on
+// window._dayFlourishPrefetch, tagged with which sport it's for since it's
+// no longer MLB-only. Both are one-shot — consumed and cleared by whichever
+// loader picks them up.
+window._sportFlourishTimer = null;
+window._sportFlourishActiveKey = null;
+window._dayFlourishPrefetch = null; // {sport, date, promise}
+window._footballFlourishPrefetch = null; // {sport, week, promise}
+function playSportFlourish(key) {
+  var overlay = document.getElementById(key + '-flourish');
+  if (!overlay) { nav('games'); return; }
+  window._sportFlourishActiveKey = key;
+  clearTimeout(window._sportFlourishTimer);
+  overlay.style.display = 'block';
+  var stage = overlay.querySelector('.mlbf-stage');
+  if (stage) {
+    var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
+    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+  }
+  requestAnimationFrame(function () { overlay.style.opacity = '1'; });
+  if (key === 'nfl' || key === 'cfb') {
+    window._footballWeekTuesday[key] = window._footballWeekTuesday[key] || FOOTBALL_CURRENT_WEEK_TUESDAY;
+    var week = window._footballWeekTuesday[key];
+    window._footballFlourishPrefetch = {
+      sport: key, week: week,
+      promise: Promise.all([
+        Promise.all(_footballWeekDates(week).map(function (iso) {
+          return fetch(_bsModalScheduleUrl(key, iso)).then(function (r) { return r.json(); }).then(function (data) {
+            var games = data.games || [];
+            games.forEach(function (g) { g._dateIso = iso; });
+            return games;
+          }).catch(function () { return []; });
+        })),
+        _loadFavTeams(key)
+      ])
+    };
+  } else {
+    var d = window._gamesDate || _todayLocal();
+    window._dayFlourishPrefetch = {
+      sport: key, date: d,
+      promise: Promise.all([
+        fetch(_bsModalScheduleUrl(key, d)).then(function (r) { return r.json(); }),
+        _loadFavTeams(key)
+      ])
+    };
+  }
+  window._sportFlourishTimer = setTimeout(finishSportFlourish, _ghReducedMotion() ? 2200 : 7000);
+}
+function finishSportFlourish() {
+  var key = window._sportFlourishActiveKey;
+  var overlay = key && document.getElementById(key + '-flourish');
+  if (!overlay) { nav('games'); return; }
+  // Same overlap fix as finishMlbFlourish: nav('games') fires as the
+  // flourish starts fading, not after, so the schedule crossfades in
+  // underneath instead of the sport-picker screen flashing in between.
+  nav('games');
+  overlay.style.opacity = '0';
+  setTimeout(function () {
+    overlay.style.display = 'none';
+  }, 300);
+}
+function skipSportFlourish() {
+  clearTimeout(window._sportFlourishTimer);
+  finishSportFlourish();
+}
+
+// ── SPORTS HUB SCREEN (v5.48.0) — the "lights on" moment that plays once
+// when Games is opened from the feed banner, before the sport picker grid
+// itself: same rig as every other flourish, with one outline ball per
+// sport falling in from the upper-left and settling into a ring around
+// "SPORTS" that keeps slowly circling until the screen dismisses. Built
+// entirely with native SVG animateMotion (no JS-driven transforms), so
+// there's nothing here to keep in sync — the browser just plays the path.
+window._sportsHubTimer = null;
+function playSportsHub() {
+  var overlay = document.getElementById('sports-hub-flourish');
+  if (!overlay) { nav('games-picker'); return; }
+  clearTimeout(window._sportsHubTimer);
+  overlay.style.display = 'block';
+  var stage = overlay.querySelector('.mlbf-stage');
+  if (stage) {
+    var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
+    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+  }
+  requestAnimationFrame(function () { overlay.style.opacity = '1'; });
+  window._sportsHubTimer = setTimeout(finishSportsHub, _ghReducedMotion() ? 1500 : 6500);
+}
+function finishSportsHub() {
+  var overlay = document.getElementById('sports-hub-flourish');
+  if (!overlay) { nav('games-picker'); return; }
+  nav('games-picker');
+  overlay.style.opacity = '0';
+  setTimeout(function () {
+    overlay.style.display = 'none';
+  }, 300);
+}
+function skipSportsHub() {
+  clearTimeout(window._sportsHubTimer);
+  finishSportsHub();
+}
+// Same little icon-pop as bannerNavWithPop, just handing off to the hub
+// flourish instead of navigating straight to the picker.
+function openGamesFromBanner(bannerEl) {
+  var icon = bannerEl.querySelector('.banner-pop-icon');
+  var glow = bannerEl.querySelector('.banner-pop-glow');
+  if (!icon) { playSportsHub(); return; }
+  bannerEl.classList.add('popping');
+  icon.classList.add('popping');
+  if (glow) glow.classList.add('popping');
+  setTimeout(function () {
+    playSportsHub();
+    setTimeout(function () {
+      bannerEl.classList.remove('popping');
+      icon.classList.remove('popping');
+      if (glow) glow.classList.remove('popping');
+    }, 300);
+  }, 260);
 }
 
 function renderGamesSoon() {
