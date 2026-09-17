@@ -1745,17 +1745,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       </div>
     </div>
 
-    <!-- WATCHING — every game that either the person or one of their
-         friends has marked Watching, live ones first and games about to
-         start underneath. Hidden entirely when nothing qualifies; see
-         renderLiveFeed(). -->
-    <div id="feed-live-feed-section" style="display:none;flex-direction:column;gap:8px">
-      <div class="imm-section" style="padding:8px 2px 0">
-        <div class="imm-eyebrow">Watching</div>
-      </div>
-      <div id="feed-live-feed-list" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
-
     <!-- FEEDBACK BANNER -->
     <div class="banner-pop-card imm-row" onclick="bannerNavWithPop(this,'feedback-group')">
       <div style="position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0" class="imm-row-icon">
@@ -1766,6 +1755,17 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
         <div class="imm-row-title">Feedback</div>
         <div class="imm-row-sub">Tell Nate what's working (and what's not) · Tap to open →</div>
       </div>
+    </div>
+
+    <!-- WATCHING — every game that either the person or one of their
+         friends has marked Watching, live ones first and games about to
+         start underneath. Hidden entirely when nothing qualifies; see
+         renderLiveFeed(). -->
+    <div id="feed-live-feed-section" style="display:none;flex-direction:column;gap:8px">
+      <div class="imm-section" style="padding:8px 2px 0">
+        <div class="imm-eyebrow">Watching</div>
+      </div>
+      <div id="feed-live-feed-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
     <div class="imm-section" style="padding:8px 2px 0">
@@ -12777,6 +12777,16 @@ function _heroZoomToFuture(cardEl, momentId) {
   }, 280);
 }
 
+// A plan belongs to whoever posted it. Everyone else on it can RSVP and
+// chat, but the edit form (and the Delete inside it) is the owner's.
+function _futureIsMine(m) {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  return !!(user && m && m.ownerUid === user.uid);
+}
+function _futureOwnerFirstName(m) {
+  return String((m && m.ownerName) || 'the person who posted this').split(' ')[0];
+}
+
 function openFutureDetail(momentId) {
   var m = _findFutureMoment(momentId);
   if (!m) return;
@@ -12794,11 +12804,20 @@ function _showFutureHeader(mode) {
   if (v) v.style.display = mode === 'view' ? 'flex' : 'none';
   if (e) e.style.display = mode === 'edit' ? 'flex' : 'none';
   if (c) c.style.display = mode === 'view' ? 'flex' : 'none';
+  // Edit used to show on every plan, including ones posted by someone
+  // else — which is how a guest reached an edit form whose Save and
+  // Delete the Firestore rules were always going to refuse.
+  var editBtn = document.getElementById('fd-edit-btn');
+  if (editBtn) editBtn.style.display = _futureIsMine((window._futureMomentsCache || {})[window._openFutureId]) ? 'block' : 'none';
 }
 
 function enterFutureEdit() {
   var m = (window._futureMomentsCache || {})[window._openFutureId];
   if (!m) return;
+  if (!_futureIsMine(m)) {
+    if (typeof ib_toast === 'function') ib_toast('Only ' + _futureOwnerFirstName(m) + ' can change this plan');
+    return;
+  }
   window._futureDetailMode = 'edit';
   _showFutureHeader('edit');
   renderFutureEdit(m);
@@ -13473,6 +13492,10 @@ function _syncFdOtherVibe() {
 function futureDetailSave() {
   var id = window._openFutureId;
   if (!id || !window.db) return;
+  if (!_futureIsMine((window._futureMomentsCache || {})[id])) {
+    if (typeof ib_toast === 'function') ib_toast('Only the person who posted this can change it');
+    return;
+  }
   var t = document.getElementById('fd-title');
   var d = document.getElementById('fd-date');
   var tm = document.getElementById('fd-time');
@@ -13523,6 +13546,13 @@ function futureDetailDelete() {
   var id = window._openFutureId;
   var m = (window._futureMomentsCache || {})[id];
   if (!id || !window.db) return;
+  // Deleting someone else's plan is refused by the Firestore rules, and
+  // "try again" is the wrong thing to tell someone about a request that
+  // is never going to succeed.
+  if (!_futureIsMine(m)) {
+    if (typeof ib_toast === 'function') ib_toast('Only ' + _futureOwnerFirstName(m) + ' can delete this plan');
+    return;
+  }
   if (!confirm('Delete "' + (m && m.title ? m.title : 'this plan') + '"? This can\'t be undone.')) return;
   window.db.collection('futureMoments').doc(id).delete()
     .then(function(){
@@ -13532,7 +13562,8 @@ function futureDetailDelete() {
       nav('feed');
     }).catch(function(err){
       console.error('Delete future moment error:', err);
-      if (typeof ib_toast === 'function') ib_toast('Could not delete — try again');
+      var denied = !!(err && (err.code === 'permission-denied' || /permission/i.test(err.message || '')));
+      if (typeof ib_toast === 'function') ib_toast(denied ? 'Firestore rules blocked that delete' : 'Could not delete — try again');
     });
 }
 
