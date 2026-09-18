@@ -329,6 +329,20 @@ function extractLiveSituation(league, comp) {
 // live for an in-progress game, and (2) whether `yardLine` is already a
 // plain 0–100 number (assumed here) or needs different normalization.
 // Everything here degrades to null/empty rather than guessing wrong.
+// ESPN reports down as 0 or -1 on anything that isn't a scrimmage down —
+// kickoffs, extra points, the gap between drives. Those aren't downs, and
+// formatting them produced "-1th & 0" on the game cards.
+var _FB_DOWNS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+function _fbDown(down) {
+  var n = Number(down);
+  return (Number.isFinite(n) && n >= 1 && n <= 4) ? n : null;
+}
+function _fbDownText(down, dist) {
+  var d = _fbDown(down);
+  if (d == null) return null;
+  return _FB_DOWNS[d] + ' & ' + (dist === 0 ? 'Goal' : (dist != null ? dist : '?'));
+}
+
 function extractFootballSituation(data, awayComp, homeComp) {
   var comp = null;
   try {
@@ -355,20 +369,48 @@ function extractFootballSituation(data, awayComp, homeComp) {
     if (currentDrive.team) possessionTeamAbbr = currentDrive.team.abbreviation || null;
   }
 
+  down = _fbDown(down);
+  if (down == null) distance = null; // a distance without a down means nothing
+
   if (down == null && !possessionText) return null;
 
   var homeAbbr = (homeComp.team && homeComp.team.abbreviation) || null;
   var isHomeBall = possessionTeamAbbr && homeAbbr && possessionTeamAbbr === homeAbbr;
+  var hex = function (c) { var h = String(c || '').replace('#', ''); return /^[0-9a-fA-F]{6}$/.test(h) ? '#' + h : null; };
+
+  // Where this drive began, so a card can draw how far it has come.
+  var driveStart = null;
+  if (currentDrive && currentDrive.plays && currentDrive.plays.length) {
+    var first = currentDrive.plays[0];
+    if (first && first.start && first.start.yardLine != null) driveStart = first.start.yardLine;
+  }
+
+  var status = null;
+  try {
+    var hdr = data.header || {};
+    var c0 = (hdr.competitions && hdr.competitions[0]) || {};
+    status = c0.status || null;
+  } catch (e) { status = null; }
 
   return {
-    down: down != null ? down : null,
+    down: down,
     distance: distance != null ? distance : null,
+    downText: _fbDownText(down, distance),
     possessionText: possessionText || null,
     yardLine: yardLine != null ? yardLine : null,
+    driveStart: driveStart,
+    driveText: (currentDrive && currentDrive.description) || null,
+    redZone: !!(sit && sit.isRedZone),
+    period: status && status.period != null ? status.period : null,
+    clock: (status && status.displayClock) || null,
     homeAway: possessionTeamAbbr ? (isHomeBall ? 'home' : 'away') : null,
+    awayAbbr: (awayComp.team && awayComp.team.abbreviation) || null,
+    homeAbbr: homeAbbr,
+    awayColor: hex(awayComp.team && awayComp.team.color),
+    homeColor: hex(homeComp.team && homeComp.team.color),
     team: possessionTeamAbbr ? {
       abbreviation: possessionTeamAbbr,
-      color: (currentDrive && currentDrive.team && currentDrive.team.color) ? ('#' + currentDrive.team.color) : null
+      color: hex(currentDrive && currentDrive.team && currentDrive.team.color)
     } : null
   };
 }
@@ -381,7 +423,6 @@ function extractFootballPlays(data) {
       if (Array.isArray(data.drives.previous)) drives = drives.concat(data.drives.previous.slice().reverse());
     }
   } catch (e) { return []; }
-  var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
   var plays = [];
   drives.forEach(function (drive) {
     if (plays.length >= 5) return;
@@ -389,9 +430,8 @@ function extractFootballPlays(data) {
       if (plays.length >= 5 || !p || !p.text) return;
       var tag = '';
       if (p.period && p.period.number) tag += 'Q' + p.period.number + ' ';
-      if (p.start && p.start.down != null && p.start.distance != null) {
-        tag += (downLabels[p.start.down] || (p.start.down + 'th')) + '&' + p.start.distance;
-      }
+      var dt = p.start ? _fbDownText(p.start.down, p.start.distance) : null;
+      if (dt) tag += dt.replace(' & ', '&');
       plays.push({ tag: tag.trim(), text: p.text, playId: p.id || null });
     });
   });
@@ -768,7 +808,7 @@ function _fbSituation(data, comp, away, home) {
   }
   var dir = possSide === 'h' ? 1 : -1;
   return {
-    downText: ddText || (down != null ? (['', '1st', '2nd', '3rd', '4th'][down] || down + 'th') + ' & ' + (dist != null ? dist : '?') : ''),
+    downText: ddText || _fbDownText(down, dist) || '',
     posText: posText,
     possSide: possSide,
     spot: spot,
