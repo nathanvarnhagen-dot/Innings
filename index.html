@@ -9410,7 +9410,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.57.0-play-arc';
+window.INNINGS_BUILD = 'v5.58.0-one-field';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -17381,85 +17381,133 @@ function _fbDownText(down, distance) {
   return labels[n] + ' & ' + (distance === 0 ? 'Goal' : (distance != null ? distance : '?'));
 }
 
-// A field drawn the way a football field looks: green turf, ten-yard
-// bands, both end zones in their team's color, a yellow first-down
-// marker, and the last play drawn across it — arced for a throw or a
-// kick, flat along the ground for a run.
+// ── ONE FOOTBALL FIELD, drawn the same on the game card and the game
+// screen, just bigger on the screen. Everything upstream normalizes into
+// the same view object so there is a single place that draws turf.
 //
-// yardLine is 0–100 from the possessing team's own goal line, so the away
-// end zone sits on the left and the home end zone on the right, and the
-// offense advances left-to-right when the away team has the ball. Play
-// yard lines come from the same field as the situation's own yardLine,
-// so they share that frame.
-window._fbPinSeq = 0;
-function _fbFieldSvg(fs, away, home) {
-  if (!fs || fs.yardLine == null) return '';
+// Both sources put the AWAY end zone on the left and the HOME end zone on
+// the right, which means the offense advances left-to-right when the away
+// team has the ball. The two sources disagree about their own units — the
+// game card counts from the possessing team's own goal, the game screen
+// counts absolutely from the home goal — so each adapter converts to a
+// single left-to-right percentage before anything is drawn.
+
+// The ball already sits where the last play ended, so a signed yardage is
+// enough to find where that play began. That sidesteps having to assume a
+// play's own yard line shares a frame with the situation's.
+function _fbPlayGeom(lp, endPct, dir) {
+  if (!lp) return null;
+  var g = { kind: lp.kind, label: lp.label, endPct: endPct, startPct: null };
+  if (lp.yards != null && Number(lp.yards) !== 0) g.startPct = endPct - dir * Number(lp.yards);
+  return g;
+}
+
+function _fbViewFromBox(fs, awayAbbr, homeAbbr) {
+  if (!fs || fs.yardLine == null) return null;
   var isHome = fs.homeAway === 'home';
   var toPct = function (yl) { return isHome ? (100 - yl) : yl; };
-  var X = function (pct) { return 26 + Math.max(0, Math.min(100, pct)) * 2.68; };
-  var n1 = function (v) { return v.toFixed(1); };
-
   var pct = toPct(fs.yardLine);
-  var ballX = X(pct);
-  var firstX = fs.distance != null ? X(toPct(fs.yardLine + fs.distance)) : null;
-  var possColor = (fs.team && fs.team.color) || '#A89FE8';
-  window._fbPinSeq = (window._fbPinSeq || 0) + 1; // ids must stay unique across every card on screen
+  return {
+    pct: pct,
+    firstPct: fs.distance != null ? toPct(fs.yardLine + fs.distance) : null,
+    lastPlay: _fbPlayGeom(fs.lastPlay, pct, isHome ? -1 : 1),
+    awayColor: fs.awayColor, homeColor: fs.homeColor,
+    awayAbbr: awayAbbr, homeAbbr: homeAbbr,
+    logo: isHome ? fs.homeLogo : fs.awayLogo,
+    possColor: (fs.team && fs.team.color) || '#A89FE8',
+    possAbbr: (fs.team && fs.team.abbreviation) || '',
+    aria: (fs.downText || _fbDownText(fs.down, fs.distance) || 'Field position') + (fs.possessionText ? ' at ' + fs.possessionText : '')
+  };
+}
+
+function _fbViewFromGx(m) {
+  var s = m && m.situation;
+  if (!s || s.spot == null) return null;
+  var isHome = s.possSide === 'h';
+  var toPct = function (spot) { return 100 - spot; }; // spot counts from the home goal
+  var pct = toPct(s.spot);
+  var poss = isHome ? m.home : (s.possSide === 'a' ? m.away : null);
+  return {
+    pct: pct,
+    firstPct: s.firstDown != null ? toPct(s.firstDown) : null,
+    lastPlay: _fbPlayGeom(s.lastPlay, pct, isHome ? -1 : 1),
+    awayColor: m.away.colors.bg, homeColor: m.home.colors.bg,
+    awayAbbr: m.away.abbr, homeAbbr: m.home.abbr,
+    logo: poss ? poss.logo : null,
+    possColor: poss ? poss.colors.bg : '#A89FE8',
+    possAbbr: poss ? poss.abbr : '',
+    aria: (s.downText || 'Field position') + (s.posText ? ' at ' + s.posText : '')
+  };
+}
+
+function _fbFieldSvg(v, big) {
+  if (!v || v.pct == null) return '';
+  var FT = big ? 30 : 22, FH = big ? 88 : 58, TOT = big ? 140 : 98;
+  var mid = FT + FH / 2;
+  var pinR = big ? 10 : 6.8, pinDrop = FH * 0.345;
+  var chipH = big ? 22 : 17, chipFont = big ? 12 : 10, nameFont = big ? 12 : 10;
+  var X = function (pct) { return 26 + Math.max(0, Math.min(100, pct)) * 2.68; };
+  var n1 = function (x) { return x.toFixed(1); };
+  window._fbPinSeq = (window._fbPinSeq || 0) + 1; // ids must stay unique across every field on screen
   var pin = 'fbpin' + window._fbPinSeq;
+  var ballX = X(v.pct);
 
   var bands = '';
-  [79.4, 133, 186.6, 240.2].forEach(function (x) { bands += '<rect x="' + x + '" y="22" width="26.8" height="58" fill="#1E4230"/>'; });
+  [79.4, 133, 186.6, 240.2].forEach(function (x) { bands += '<rect x="' + x + '" y="' + FT + '" width="26.8" height="' + FH + '" fill="#1E4230"/>'; });
   var lines = '';
-  for (var k = 1; k <= 9; k++) lines += 'M' + n1(26 + k * 26.8) + ' 22V80';
+  for (var k = 1; k <= 9; k++) lines += 'M' + n1(26 + k * 26.8) + ' ' + FT + 'V' + (FT + FH);
+  var hash = '';
+  [40, 93, 146, 200, 253].forEach(function (x) {
+    hash += 'M' + x + ' ' + n1(FT + FH * 0.24) + 'h6M' + x + ' ' + n1(FT + FH * 0.76) + 'h6';
+  });
 
-  var h = '<svg viewBox="0 0 320 98" width="100%" height="98" style="display:block" role="img" aria-label="' +
-    _escapeHtml((fs.downText || _fbDownText(fs.down, fs.distance) || 'Field position') +
-      (fs.possessionText ? ' at ' + fs.possessionText : '') +
-      (fs.lastPlay && fs.lastPlay.label ? '. Last play ' + fs.lastPlay.label : '')) + '">' +
-    '<defs><clipPath id="' + pin + '"><circle cx="' + n1(ballX) + '" cy="38" r="6.8"/></clipPath></defs>' +
-    '<rect x="0" y="22" width="320" height="58" rx="7" fill="#24523A"/>' + bands +
-    '<path d="M0 29a7 7 0 0 1 7-7h19v58H7a7 7 0 0 1-7-7z" fill="' + (fs.awayColor || '#2A2460') + '"/>' +
-    '<path d="M294 22h19a7 7 0 0 1 7 7v44a7 7 0 0 1-7 7h-19z" fill="' + (fs.homeColor || '#2A2460') + '"/>' +
+  var h = '<svg viewBox="0 0 320 ' + TOT + '" width="100%" height="' + TOT + '" style="display:block" role="img" aria-label="' +
+    _escapeHtml(v.aria || 'Field position') + '">' +
+    '<defs><clipPath id="' + pin + '"><circle cx="' + n1(ballX) + '" cy="' + n1(mid - pinDrop) + '" r="' + pinR + '"/></clipPath></defs>' +
+    '<rect x="0" y="' + FT + '" width="320" height="' + FH + '" rx="7" fill="#24523A"/>' + bands +
+    '<path d="M0 ' + (FT + 7) + 'a7 7 0 0 1 7-7h19v' + FH + 'H7a7 7 0 0 1-7-7z" fill="' + (v.awayColor || '#2A2460') + '"/>' +
+    '<path d="M294 ' + FT + 'h19a7 7 0 0 1 7 7v' + (FH - 14) + 'a7 7 0 0 1-7 7h-19z" fill="' + (v.homeColor || '#2A2460') + '"/>' +
     '<g stroke="rgba(255,255,255,.26)" stroke-width="1"><path d="' + lines + '"/></g>' +
-    '<g stroke="rgba(255,255,255,.28)" stroke-width="1"><path d="M40 36h6M93 36h6M146 36h6M200 36h6M253 36h6M40 66h6M93 66h6M146 66h6M200 66h6M253 66h6"/></g>';
+    '<g stroke="rgba(255,255,255,.28)" stroke-width="1"><path d="' + hash + '"/></g>';
 
-  if (firstX != null) h += '<rect x="' + n1(firstX - 1.3) + '" y="22" width="2.6" height="58" fill="#F2C869"/>';
+  if (v.firstPct != null) h += '<rect x="' + n1(X(v.firstPct) - 1.3) + '" y="' + FT + '" width="2.6" height="' + FH + '" fill="#F2C869"/>';
 
-  // The last play. A throw or a kick arcs; a run runs along the ground.
-  // Nothing is drawn when the ball didn't move (an incompletion, a
-  // timeout) — there'd be no line to draw.
-  var lp = fs.lastPlay;
-  if (lp && lp.kind !== 'other' && lp.start != null && lp.end != null) {
-    var sx = X(toPct(lp.start)), ex = X(toPct(lp.end));
+  // A throw or a kick arcs through the air; a run travels along the
+  // ground. Nothing is drawn when the ball didn't move.
+  var lp = v.lastPlay;
+  if (lp && lp.kind !== 'other' && lp.startPct != null) {
+    var sx = X(lp.startPct), ex = X(lp.endPct);
     if (Math.abs(sx - ex) > 3) {
+      var groundY = n1(FT + FH * 0.69);
       if (lp.kind === 'rush') {
-        h += '<path d="M' + n1(sx) + ' 62 H' + n1(ex) + '" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+        h += '<path d="M' + n1(sx) + ' ' + groundY + ' H' + n1(ex) + '" stroke="#fff" stroke-width="' + (big ? 2.8 : 2.2) + '" fill="none" stroke-linecap="round"/>';
       } else {
-        h += '<path d="M' + n1(sx) + ' 62 Q' + n1((sx + ex) / 2) + ' 32 ' + n1(ex) + ' 56" stroke="#fff" stroke-width="2" stroke-dasharray="3 4" fill="none" stroke-linecap="round"/>';
+        h += '<path d="M' + n1(sx) + ' ' + groundY + ' Q' + n1((sx + ex) / 2) + ' ' + n1(FT + FH * 0.17) + ' ' + n1(ex) + ' ' + n1(FT + FH * 0.59) + '" stroke="#fff" stroke-width="' + (big ? 2.4 : 2) + '" stroke-dasharray="3 4" fill="none" stroke-linecap="round"/>';
       }
-      h += '<circle cx="' + n1(sx) + '" cy="62" r="3" fill="#fff"/>';
+      h += '<circle cx="' + n1(sx) + '" cy="' + groundY + '" r="' + (big ? 4 : 3) + '" fill="#fff"/>';
     }
   }
 
   if (lp && lp.label) {
-    var w = Math.max(48, lp.label.length * 6.2 + 16);
-    var cx = Math.max(6 + w / 2, Math.min(314 - w / 2, (lp.start != null && lp.end != null) ? (X(toPct(lp.start)) + X(toPct(lp.end))) / 2 : ballX));
-    h += '<rect x="' + n1(cx - w / 2) + '" y="24" width="' + n1(w) + '" height="17" rx="8.5" fill="#0D0820" opacity=".82"/>' +
-      '<text x="' + n1(cx) + '" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(lp.label) + '</text>';
+    var w = Math.max(big ? 58 : 48, lp.label.length * (big ? 7.4 : 6.2) + 16);
+    var anchor = lp.startPct != null ? (X(lp.startPct) + X(lp.endPct)) / 2 : ballX;
+    var cx = Math.max(6 + w / 2, Math.min(314 - w / 2, anchor));
+    h += '<rect x="' + n1(cx - w / 2) + '" y="' + (FT + 2) + '" width="' + n1(w) + '" height="' + chipH + '" rx="' + (chipH / 2) + '" fill="#0D0820" opacity=".82"/>' +
+      '<text x="' + n1(cx) + '" y="' + n1(FT + 2 + chipH * 0.72) + '" text-anchor="middle" font-size="' + chipFont + '" font-weight="700" fill="#fff" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(lp.label) + '</text>';
   }
 
-  // The pin. The logo paints over the abbreviation, so a logo that 404s
-  // or hasn't loaded leaves the abbreviation showing rather than a hole.
-  var logo = isHome ? fs.homeLogo : fs.awayLogo;
-  h += '<path d="M' + n1(ballX) + ' 58 l-8 -12 a10 10 0 1 1 16 0 z" fill="' + possColor + '" stroke="#fff" stroke-width="1.6"/>' +
-    '<circle cx="' + n1(ballX) + '" cy="38" r="6.8" fill="#fff"/>' +
-    '<text x="' + n1(ballX) + '" y="41.5" text-anchor="middle" font-size="10" font-weight="800" fill="' + possColor + '" font-family="-apple-system,Helvetica,sans-serif">' +
-    _escapeHtml(String((fs.team && fs.team.abbreviation) || '').slice(0, 1)) + '</text>' +
-    (logo ? '<image href="' + _escapeHtml(logo) + '" x="' + n1(ballX - 6.8) + '" y="31.2" width="13.6" height="13.6" clip-path="url(#' + pin + ')" preserveAspectRatio="xMidYMid meet"/>' : '');
+  // The logo paints over the abbreviation, so a logo that 404s or hasn't
+  // loaded leaves the letter showing rather than a hole in the pin.
+  var tipY = mid, cy = mid - pinDrop;
+  h += '<path d="M' + n1(ballX) + ' ' + n1(tipY) + ' l' + n1(-pinR * 0.8) + ' ' + n1(-(pinDrop - pinR * 0.55)) + ' a' + pinR + ' ' + pinR + ' 0 1 1 ' + n1(pinR * 1.6) + ' 0 z" fill="' + v.possColor + '" stroke="#fff" stroke-width="1.6"/>' +
+    '<circle cx="' + n1(ballX) + '" cy="' + n1(cy) + '" r="' + pinR + '" fill="#fff"/>' +
+    '<text x="' + n1(ballX) + '" y="' + n1(cy + pinR * 0.38) + '" text-anchor="middle" font-size="' + (big ? 12 : 10) + '" font-weight="800" fill="' + v.possColor + '" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(String(v.possAbbr || '').slice(0, 1)) + '</text>' +
+    (v.logo ? '<image href="' + _escapeHtml(v.logo) + '" x="' + n1(ballX - pinR) + '" y="' + n1(cy - pinR) + '" width="' + n1(pinR * 2) + '" height="' + n1(pinR * 2) + '" clip-path="url(#' + pin + ')" preserveAspectRatio="xMidYMid meet"/>' : '');
 
-  h += '<text x="13" y="55" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" font-family="-apple-system,Helvetica,sans-serif" transform="rotate(-90 13 51)">' + _escapeHtml(away || '') + '</text>' +
-    '<text x="307" y="55" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" font-family="-apple-system,Helvetica,sans-serif" transform="rotate(90 307 51)">' + _escapeHtml(home || '') + '</text>' +
-    '<g font-size="10" fill="#7A73A8" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif">' +
-    '<text x="79.4" y="94">20</text><text x="159.8" y="94">50</text><text x="240.2" y="94">20</text></g>';
+  h += '<text x="13" y="' + n1(mid + 4) + '" text-anchor="middle" font-size="' + nameFont + '" font-weight="800" fill="#fff" font-family="-apple-system,Helvetica,sans-serif" transform="rotate(-90 13 ' + n1(mid) + ')">' + _escapeHtml(v.awayAbbr || '') + '</text>' +
+    '<text x="307" y="' + n1(mid + 4) + '" text-anchor="middle" font-size="' + nameFont + '" font-weight="800" fill="#fff" font-family="-apple-system,Helvetica,sans-serif" transform="rotate(90 307 ' + n1(mid) + ')">' + _escapeHtml(v.homeAbbr || '') + '</text>' +
+    '<g font-size="' + nameFont + '" fill="#7A73A8" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif">' +
+    '<text x="79.4" y="' + (TOT - 4) + '">20</text><text x="159.8" y="' + (TOT - 4) + '">50</text><text x="240.2" y="' + (TOT - 4) + '">20</text></g>';
   return h + '</svg>';
 }
 
@@ -17471,7 +17519,7 @@ function _glanceFootballDetailHtml(box) {
   var possAbbr = (fs.team && fs.team.abbreviation) || '';
   var awayAbbr = fs.awayAbbr || _ghAbbrFallback(box.away || '');
   var homeAbbr = fs.homeAbbr || _ghAbbrFallback(box.home || '');
-  var field = _fbFieldSvg(fs, awayAbbr, homeAbbr);
+  var field = _fbFieldSvg(_fbViewFromBox(fs, awayAbbr, homeAbbr), false);
 
   // Top line: the down, where the ball is, and who has it. When there's
   // no down — a kickoff, an extra point — the spot alone still reads fine.
@@ -18759,6 +18807,7 @@ function _ghResetForGame(gamePk) {
   if (window._ghState) { clearTimeout(window._ghState.liveModeTimer); clearTimeout(window._ghState.finalModeTimer); }
   window._ghState = { gamePk: gamePk, animated: {}, seenPlays: null, newAt: {}, lastScore: null, startCheckAt: 0 };
   window._ghInningOpen = {}; // which half-innings the reader has open, cleared per game
+  window._gxDriveOpen = {}; // same, for football drives
   if (window._ghCountdownTimer) { clearInterval(window._ghCountdownTimer); window._ghCountdownTimer = null; }
 }
 
@@ -20139,16 +20188,9 @@ function _gxStripHtml(m) {
   if (m.sport === 'football') {
     if (!s) return '';
     var possT = s.possSide === 'h' ? m.home : (s.possSide === 'a' ? m.away : null);
-    var x = function (spot) { return (20 + spot * 2.6).toFixed(1); };
     var dots = function (n) { if (n == null) return ''; var o = ''; for (var i = 0; i < 3; i++) o += '<span style="width:6px;height:6px;border-radius:50%;display:inline-block;margin-left:3px;' + (i < n ? 'background:#F2C869' : 'border:1px solid #6E68A6;box-sizing:border-box') + '"></span>'; return o; };
-    var field = '<svg width="100%" height="34" viewBox="0 0 300 34" preserveAspectRatio="none" role="img" aria-label="' + _escapeHtml(s.downText || '') + '" style="display:block">' +
-      '<rect width="300" height="34" rx="6" fill="#1E4230"/>' +
-      '<rect x="0" y="0" width="20" height="34" fill="' + m.home.colors.bg + '" opacity=".8"/><rect x="280" y="0" width="20" height="34" fill="' + m.away.colors.bg + '" opacity=".8"/>' +
-      '<path d="M46 0V34 M72 0V34 M98 0V34 M124 0V34 M150 0V34 M176 0V34 M202 0V34 M228 0V34 M254 0V34" stroke="rgba(255,255,255,.2)"/>' +
-      (s.spot != null && s.driveStart != null ? '<rect x="' + Math.min(x(s.spot), x(s.driveStart)) + '" y="15" width="' + Math.max(2, Math.abs(x(s.spot) - x(s.driveStart))).toFixed(1) + '" height="4" rx="2" fill="#A89FE8" opacity=".75"/>' : '') +
-      (s.firstDown != null ? '<rect x="' + (x(s.firstDown) - 1.2) + '" y="0" width="2.5" height="34" fill="#F2C869"/>' : '') +
-      (s.spot != null ? '<ellipse class="gh-runner" cx="' + x(s.spot) + '" cy="17" rx="6" ry="4" fill="#8B4A2B" stroke="#fff" stroke-width="1"/>' : '') +
-      '</svg>';
+    // Same field the game card draws, at the larger size (v5.58.0).
+    var field = _fbFieldSvg(_fbViewFromGx(m), true);
     return '<div class="gh-panel gh-strip" style="display:flex;flex-direction:column;gap:8px">' +
       '<div class="gh-row"><span style="font-size:13.5px;font-weight:700">' + _escapeHtml(s.downText || '') + (s.redZone ? ' <span class="gh-tag" style="background:rgba(255,122,107,.18);color:#FFC2BA;margin-left:4px">RED ZONE</span>' : '') + '</span>' +
       '<span class="gh-sub" style="white-space:nowrap">' + (possT ? _escapeHtml(possT.abbr) + ' ball' : '') + '</span></div>' + field +
@@ -20466,18 +20508,96 @@ function _gxBoxHtml(m) {
   });
   return '<div class="gh-card gh-up" style="' + _ghDelay(.6) + '">' + head + body + '</div>';
 }
+// A football play row, same affordances as a baseball one: tap the arrow
+// to quote it into the chat, double-tap the row to react. playId keys the
+// reaction doc, so it has to be stable — ESPN's own play id, namespaced by
+// the game.
+function _gxPlayRowHtml(m, p, first, indent) {
+  var playId = (p.id != null && m.gameId != null) ? (m.gameId + '_' + p.id) : null;
+  var tag = p.tag || '';
+  var attrs = playId
+    ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"'
+    : '';
+  return '<div class="gh-plays-row"' + attrs + ' style="' + (first ? 'border-top:0;' : '') + 'padding:7px 0 7px ' + (indent || 0) + 'px">' +
+    '<div style="display:flex;gap:10px;align-items:flex-start">' +
+      (tag ? '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:#D9D4FA;min-width:58px;text-align:center;margin-top:1px;flex-shrink:0">' + _escapeHtml(tag) + '</span>' : '') +
+      '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(p.text) + (p.scoring ? ' <span class="gh-tag" style="background:rgba(124,242,156,.16);color:#9be8ac">Score</span>' : '') + '</span>' +
+      '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
+    '</div>' +
+    (playId ? '<div id="play-react-' + _escapeHtml(playId) + '"></div>' : '') +
+    '</div>';
+}
+
+// Every drive of the game, oldest first, each one collapsible. The drive
+// in progress starts open; whatever the reader opens after that survives
+// the live refresh. Only present when the gamecast was asked for the full
+// play list (&plays=all), so an old cached payload simply omits it.
+function _gxAllDrivesHtml(m) {
+  var drives = m.allDrives || [];
+  if (!drives.length) return '';
+  var open = window._gxDriveOpen = window._gxDriveOpen || {};
+  var playIds = [];
+  var rows = '';
+  drives.forEach(function (d, i) {
+    var key = 'd' + i;
+    var isOpen = open[key] != null ? !!open[key] : (i === drives.length - 1);
+    var side = d.side === 'h' ? m.home : (d.side === 'a' ? m.away : null);
+    var accent = side ? side.colors.accent : '#A89FE8';
+    rows += '<div style="border-top:.5px solid rgba(255,255,255,.07)">' +
+      '<button onclick="gxDriveToggle(\'' + key + '\',this)" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="gx-drive-' + key + '" ' +
+        'style="width:100%;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;background:none;border:0;color:#fff;font-family:inherit;text-align:left;cursor:pointer">' +
+        '<svg data-chev width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B9B3E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;transition:transform .18s ease' + (isOpen ? ';transform:rotate(90deg)' : '') + '"><polyline points="9 5 16 12 9 19"/></svg>' +
+        '<span class="gh-tag" style="background:' + _ghHexAlpha(accent, .2) + ';color:' + accent + ';flex-shrink:0">' + _escapeHtml(d.team || '—') + '</span>' +
+        '<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(d.result || d.summary || 'Drive') +
+          (d.summary && d.result ? '<span class="gh-sub" style="font-weight:400"> · ' + _escapeHtml(d.summary) + '</span>' : '') + '</span>' +
+        (d.period ? '<span class="gh-sub" style="flex-shrink:0">Q' + d.period + '</span>' : '') +
+      '</button>' +
+      '<div id="gx-drive-' + key + '" style="display:' + (isOpen ? 'flex' : 'none') + ';flex-direction:column;padding-bottom:6px">';
+    d.plays.forEach(function (pl, j) {
+      if (isOpen && pl.id != null && m.gameId != null) playIds.push(m.gameId + '_' + pl.id);
+      rows += _gxPlayRowHtml(m, pl, j === 0, 21);
+    });
+    rows += '</div></div>';
+  });
+  if (playIds.length) setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+  return _gxCard('Every play', drives.length + ' drives', rows, .55);
+}
+
+// Opened in the DOM rather than through a re-render, so a live tick can't
+// collapse what someone is reading.
+function gxDriveToggle(key, btn) {
+  var body = document.getElementById('gx-drive-' + key);
+  if (!body || !btn) return;
+  var wasOpen = body.style.display !== 'none';
+  body.style.display = wasOpen ? 'none' : 'flex';
+  btn.setAttribute('aria-expanded', wasOpen ? 'false' : 'true');
+  var chev = btn.querySelector('[data-chev]');
+  if (chev) chev.style.transform = wasOpen ? '' : 'rotate(90deg)';
+  (window._gxDriveOpen = window._gxDriveOpen || {})[key] = !wasOpen;
+  if (!wasOpen) {
+    var ids = [];
+    body.querySelectorAll('[id^="play-react-"]').forEach(function (el) {
+      if (!el.innerHTML) ids.push(el.id.slice('play-react-'.length));
+    });
+    if (ids.length) _loadPlayReactions(ids);
+  }
+}
+
 function _gxDetailHtml(m) {
   var out = '';
   if (m.phase === 'live') {
     if (m.sport === 'football') {
       if (m.drive && m.drive.plays && m.drive.plays.length) {
-        out += _gxCard('Current drive', [m.drive.team, m.drive.summary].filter(Boolean).join(' · '),
-          m.drive.plays.map(function (p, i) {
-            return '<div style="display:flex;gap:10px;align-items:center;padding:7px 0;' + (i ? 'border-top:.5px solid rgba(255,255,255,.07)' : '') + '">' +
-              '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:#D9D4FA;min-width:58px;text-align:center">' + _escapeHtml(p.tag || '') + '</span>' +
-              '<span style="font-size:13px;line-height:1.4">' + _escapeHtml(p.text) + '</span></div>';
-          }).join(''), .4);
+        var drivePlayIds = [];
+        var driveRows = m.drive.plays.map(function (p, i) {
+          if (p.id != null && m.gameId != null) drivePlayIds.push(m.gameId + '_' + p.id);
+          return _gxPlayRowHtml(m, p, i === 0, 0);
+        }).join('');
+        if (drivePlayIds.length) setTimeout(function () { _loadPlayReactions(drivePlayIds); }, 0);
+        out += _gxCard('Current drive', [m.drive.team, m.drive.summary].filter(Boolean).join(' · '), driveRows, .4);
       }
+      out += _gxAllDrivesHtml(m);
       if (m.leaders && m.leaders.length) out += _gxCard('Leaders', '', _gxLeaderCompareHtml(m, m.leaders.map(function (l) { return { label: l.label, a: l.a && Object.assign({}, l.a, { value: null }), h: l.h && Object.assign({}, l.h, { value: null }) }; }), .5), .5);
     } else if (m.sport === 'basketball') {
       if (m.leaders && m.leaders.length) out += _gxCard('Leaders', '', _gxLeaderCompareHtml(m, m.leaders, .5) + (m.teamStats.length ? '<div style="margin-top:10px">' + _gxStatBarsHtml(m, m.teamStats, .6) + '</div>' : ''), .4);
@@ -20546,7 +20666,10 @@ function _gxHtmlForState(state) {
 
 function _gxUrl(sport, gamePk) {
   if (sport === 'nhl') return '/api/nhlgame?mode=gamecast&gameId=' + encodeURIComponent(gamePk);
-  return '/api/espn?league=' + encodeURIComponent(sport) + '&mode=gamecast&eventId=' + encodeURIComponent(gamePk);
+  // Football carries every drive's plays for the "Every play" card; the
+  // other sports have no equivalent, so they don't pay for it.
+  var all = (sport === 'nfl' || sport === 'cfb') ? '&plays=all' : '';
+  return '/api/espn?league=' + encodeURIComponent(sport) + '&mode=gamecast&eventId=' + encodeURIComponent(gamePk) + all;
 }
 // Returns a promise → whether the game is live (keeps the 15s poll going).
 // Any failure falls back to the old box score card for that game.
