@@ -67,7 +67,7 @@ module.exports = async function handler(req, res) {
       const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/summary?event=' + encodeURIComponent(eventId);
       const r = await fetch(url);
       const data = await r.json();
-      const model = summarizeGamecast(data, league, eventId);
+      const model = summarizeGamecast(data, league, eventId, req.query.plays === 'all');
       if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
         model.teamColors = await _gcTeamColors(path, league);
       }
@@ -370,18 +370,49 @@ function _fbLastPlay(drive) {
   if (!plays || !plays.length) return null;
   var p = plays[plays.length - 1];
   if (!p) return null;
-  var st = p.start || {}, en = p.end || {};
-  if (st.yardLine == null && en.yardLine == null) return null;
   var typeText = (p.type && (p.type.text || p.type.type)) || '';
   var kind = _fbPlayKind(typeText || p.text);
   var yards = p.statYardage != null ? Number(p.statYardage) : null;
-  return {
-    start: st.yardLine != null ? st.yardLine : en.yardLine,
-    end: en.yardLine != null ? en.yardLine : st.yardLine,
-    kind: kind,
-    yards: yards,
-    label: _fbPlayLabel(typeText, yards, kind)
-  };
+  if (!isFinite(yards)) yards = null;
+  return { kind: kind, yards: yards, label: _fbPlayLabel(typeText, yards, kind), text: p.text || null };
+}
+
+// Every drive of the game, oldest first, each with all of its plays.
+// Opt-in via &plays=all: a finished game is ~150 plays and the live
+// gamecast is polled every ten seconds, so it isn't worth sending to a
+// card that only shows the current drive.
+function _fbAllDrives(data, homeId) {
+  var list = [];
+  try {
+    if (data.drives) {
+      if (Array.isArray(data.drives.previous)) list = data.drives.previous.slice();
+      if (data.drives.current) list.push(data.drives.current);
+    }
+  } catch (e) { return []; }
+  var out = [];
+  list.forEach(function (d) {
+    var plays = (d.plays || []).filter(function (p) { return p && p.text; }).map(function (p) {
+      var st = p.start || {};
+      var dt = _fbDownText(st.down, st.distance);
+      return {
+        id: p.id != null ? String(p.id) : null,
+        tag: dt ? dt.replace(' & ', ' & ') : ((p.period && p.period.number) ? 'Q' + p.period.number : ''),
+        text: p.text,
+        scoring: !!p.scoringPlay
+      };
+    });
+    if (!plays.length) return;
+    var teamId = d.team && d.team.id != null ? String(d.team.id) : null;
+    out.push({
+      team: (d.team && (d.team.abbreviation || d.team.shortDisplayName)) || null,
+      side: teamId ? (teamId === String(homeId) ? 'h' : 'a') : null,
+      summary: d.description || null,
+      result: d.displayResult || d.result || null,
+      period: (d.start && d.start.period && d.start.period.number) || null,
+      plays: plays
+    });
+  });
+  return out;
 }
 
 function extractFootballSituation(data, awayComp, homeComp) {
@@ -730,6 +761,7 @@ function _gcSide(c) {
     name: t.displayName || t.name || null,
     short: t.shortDisplayName || t.name || null,
     abbr: t.abbreviation || null,
+    logo: t.logo || null,
     color: _hex(t.color),
     alt: _hex(t.alternateColor),
     score: _num(c.score),
@@ -859,6 +891,7 @@ function _fbSituation(data, comp, away, home) {
     firstDown: (spot != null && dist != null && !/goal/i.test(ddText || '')) ? Math.max(0, Math.min(100, spot + dir * Number(dist))) : null,
     driveStart: driveStart,
     driveText: drive ? (drive.description || null) : null,
+    lastPlay: _fbLastPlay(drive),
     timeoutsA: sit && sit.awayTimeouts != null ? sit.awayTimeouts : null,
     timeoutsH: sit && sit.homeTimeouts != null ? sit.homeTimeouts : null,
     redZone: !!(sit && sit.isRedZone)
@@ -869,7 +902,7 @@ function _fbDrive(data, sport) {
   if (!drive) return null;
   var plays = (drive.plays || []).slice(-4).reverse().map(function (p) {
     var st = p.start || {};
-    return { tag: st.shortDownDistanceText || st.downDistanceText || _gcPeriodTag(sport, p.period && p.period.number), text: p.text || '' };
+    return { id: p.id != null ? String(p.id) : null, tag: st.shortDownDistanceText || st.downDistanceText || _gcPeriodTag(sport, p.period && p.period.number), text: p.text || '', scoring: !!p.scoringPlay };
   }).filter(function (p) { return p.text; });
   return { team: drive.team ? (drive.team.abbreviation || drive.team.shortDisplayName) : null, summary: drive.description || null, plays: plays };
 }
@@ -1068,7 +1101,7 @@ function _scBox(data) {
   return out;
 }
 
-function summarizeGamecast(data, league, eventId) {
+function summarizeGamecast(data, league, eventId, wantAllPlays) {
   var sport = _gcSport(league);
   var header = data.header || {};
   var comp = (header.competitions && header.competitions[0]) || {};
@@ -1109,6 +1142,7 @@ function summarizeGamecast(data, league, eventId) {
         { label: '3rd down', names: ['thirdDownEff', '3rd down efficiency'] }
       ]);
       if (phase === 'live') { model.situation = _fbSituation(data, comp, away, home); model.drive = _fbDrive(data, sport); }
+      if (wantAllPlays) model.allDrives = _fbAllDrives(data, home.id);
       boxById = _fbBox(data);
     } else if (sport === 'basketball') {
       var bb = _bbAnalyze(data, away, home);
