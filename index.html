@@ -9410,7 +9410,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.55.0-finals-bracket';
+window.INNINGS_BUILD = 'v5.56.0-field-preview';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11361,8 +11361,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
       '</div>';
   } else if (box.situation && (box.situation.down != null || box.situation.possessionText)) {
     var fs = box.situation;
-    var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-    var downText = fs.down != null ? (downLabels[fs.down] || (fs.down + 'th')) + ' & ' + (fs.distance != null ? fs.distance : '?') : '';
+    var downText = fs.downText || _fbDownText(fs.down, fs.distance);
     var teamAbbr = (fs.team && fs.team.abbreviation) || '';
     var teamColor = (fs.team && fs.team.color) || '#E31837';
     // yardLine is assumed 0–100 from the possessing team's own goal line;
@@ -17372,27 +17371,101 @@ function _glanceBaseballDetailHtml(box) {
   return '<div class="glance-detail" style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">' + row1 + matchup + '</div>';
 }
 
-// yardLine is 0–100 from the possessing team's own goal line — flipped for
-// the home team so it still maps left-to-right on a field where home's own
-// goal sits on the right, same convention _boxScoreCardHtml's fuller field
-// SVG already uses.
+// ESPN reports down 0 or -1 on kickoffs, extra points and between drives.
+// The API now nulls those out, but responses cached before that fix can
+// still carry one, which is what rendered "-1th & 0" on a live card.
+function _fbDownText(down, distance) {
+  var labels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  var n = Number(down);
+  if (!isFinite(n) || n < 1 || n > 4) return '';
+  return labels[n] + ' & ' + (distance === 0 ? 'Goal' : (distance != null ? distance : '?'));
+}
+
+// A field drawn the way a football field looks: green turf, ten-yard
+// bands, both end zones in their team's color, the first-down marker in
+// yellow and an arrow showing how far this drive has come.
+//
+// yardLine is 0–100 from the possessing team's own goal line, so the away
+// end zone sits on the left and the home end zone on the right, and the
+// offense advances left-to-right when the away team has the ball.
+function _fbFieldSvg(fs, awayAbbr, homeAbbr) {
+  if (!fs || fs.yardLine == null) return '';
+  var home = fs.homeAway === 'home';
+  var toPct = function (yl) { return home ? (100 - yl) : yl; };
+  var dir = home ? -1 : 1;
+  var X = function (pct) { return (26 + Math.max(0, Math.min(100, pct)) * 2.68).toFixed(1); };
+
+  var pct = toPct(fs.yardLine);
+  var firstPct = fs.distance != null ? toPct(fs.yardLine + fs.distance) : null;
+  var startPct = fs.driveStart != null ? toPct(fs.driveStart) : null;
+  var ballColor = (fs.team && fs.team.color) || '#A89FE8';
+  var awayEnd = fs.awayColor || '#2A2460';
+  var homeEnd = fs.homeColor || '#2A2460';
+  // The end zone being attacked lights up in the red zone.
+  var hotLeft = fs.redZone && home, hotRight = fs.redZone && !home;
+
+  var bands = '';
+  [79.4, 133, 186.6, 240.2].forEach(function (x) {
+    bands += '<rect x="' + x + '" y="0" width="26.8" height="36" fill="#1E4230"/>';
+  });
+  var lines = '';
+  for (var k = 1; k <= 9; k++) lines += 'M' + (26 + k * 26.8).toFixed(1) + ' 0V36';
+
+  var h = '<svg viewBox="0 0 320 50" width="100%" height="50" style="display:block" role="img" aria-label="' +
+    _escapeHtml((fs.downText || _fbDownText(fs.down, fs.distance) || 'Field position') + (fs.possessionText ? ' at ' + fs.possessionText : '')) + '">' +
+    '<rect x="0" y="0" width="320" height="36" rx="6" fill="#24523A"/>' + bands +
+    '<path d="M0 6a6 6 0 0 1 6-6h20v36H6a6 6 0 0 1-6-6z" fill="' + awayEnd + '"' + (hotLeft ? ' opacity=".95"' : '') + '/>' +
+    '<path d="M294 0h20a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6h-20z" fill="' + homeEnd + '"' + (hotRight ? ' opacity=".95"' : '') + '/>' +
+    '<g stroke="rgba(255,255,255,.22)" stroke-width="1"><path d="' + lines + '"/></g>' +
+    '<g stroke="rgba(255,255,255,.28)" stroke-width="1"><path d="M40 11h5M66 11h5M93 11h5M120 11h5M146 11h5M173 11h5M200 11h5M226 11h5M253 11h5M40 25h5M66 25h5M93 25h5M120 25h5M146 25h5M173 25h5M200 25h5M226 25h5M253 25h5"/></g>';
+
+  if (startPct != null && Math.abs(pct - startPct) > 1) {
+    var tip = Number(X(pct)) - dir * 9;
+    h += '<path d="M' + X(startPct) + ' 18 H' + tip.toFixed(1) + '" stroke="#fff" stroke-width="2.2" fill="none" opacity=".85"/>' +
+      '<path d="M' + tip.toFixed(1) + ' 18 l' + (-dir * 6.5) + ' -4 v8 z" fill="#fff" opacity=".85"/>';
+  }
+  if (firstPct != null) h += '<rect x="' + (Number(X(firstPct)) - 1.2).toFixed(1) + '" y="0" width="2.4" height="36" fill="#F2C869"/>';
+  h += '<ellipse class="glance-ball" cx="' + X(pct) + '" cy="18" rx="7" ry="5" fill="' + ballColor + '" stroke="#fff" stroke-width="1.4"/>';
+  h += '<g font-size="9" fill="#7A73A8" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif">' +
+    '<text x="13" y="47">' + _escapeHtml(awayAbbr || '') + '</text>' +
+    '<text x="79.4" y="47">20</text><text x="159.8" y="47">50</text><text x="240.2" y="47">20</text>' +
+    '<text x="307" y="47">' + _escapeHtml(homeAbbr || '') + '</text></g>';
+  return h + '</svg>';
+}
+
 function _glanceFootballDetailHtml(box) {
   var fs = box.situation;
   if (!fs || (fs.down == null && !fs.possessionText)) return '';
-  var downLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-  var downText = fs.down != null ? (downLabels[fs.down] || (fs.down + 'th')) + ' & ' + (fs.distance != null ? fs.distance : '?') : '';
+  var downText = fs.downText || _fbDownText(fs.down, fs.distance);
   var teamColor = (fs.team && fs.team.color) || '#A89FE8';
-  var yardLine = fs.yardLine != null ? fs.yardLine : 50;
-  var pct = fs.homeAway === 'home' ? (100 - yardLine) : yardLine;
-  var field = '<div style="position:relative;flex:1;height:26px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);background-image:repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0px, rgba(255,255,255,.08) 1px, transparent 1px, transparent 10%);overflow:hidden">' +
-    '<div style="position:absolute;top:50%;left:' + pct + '%;transform:translate(-50%,-50%)">' +
-    '<div class="glance-ball" style="width:11px;height:7px;border-radius:50%;background:' + teamColor + '"></div></div></div>';
-  return '<div class="glance-detail" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">' +
-    (box.awayScore != null ? '<span style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + box.awayScore + '</span>' : '') +
-    field +
-    (box.homeScore != null ? '<span style="font-size:15px;font-weight:800;color:#fff;flex-shrink:0">' + box.homeScore + '</span>' : '') +
-    '</div>' +
-    (downText ? '<div class="glance-detail" style="font-size:11px;font-weight:700;color:' + teamColor + ';text-align:center;margin-top:4px">' + _escapeHtml(downText) + '</div>' : '');
+  var possAbbr = (fs.team && fs.team.abbreviation) || '';
+  var awayAbbr = fs.awayAbbr || _ghAbbrFallback(box.away || '');
+  var homeAbbr = fs.homeAbbr || _ghAbbrFallback(box.home || '');
+  var field = _fbFieldSvg(fs, awayAbbr, homeAbbr);
+
+  // Top line: the down, where the ball is, and who has it. When there's
+  // no down — a kickoff, an extra point — the spot alone still reads fine.
+  var left = downText || (fs.possessionText ? 'Ball on' : '');
+  if (fs.possessionText) left += (left ? ' at ' : '') + fs.possessionText;
+  var clock = '';
+  if (fs.period) clock = 'Q' + fs.period + (fs.clock ? ' · ' + fs.clock : '');
+
+  var h = '<div class="glance-detail" style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">';
+  h += '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:7px">' +
+    (left ? '<span style="font-size:12px;font-weight:700;color:#fff;flex:1;min-width:0">' + _escapeHtml(left) + '</span>' : '<span style="flex:1"></span>') +
+    (possAbbr ? '<span style="font-size:11px;font-weight:700;color:' + teamColor + ';flex-shrink:0">' + _escapeHtml(possAbbr) + ' ball</span>' : '') +
+    '</div>';
+  h += field;
+  var foot = [];
+  if (fs.redZone) foot.push('<span style="color:#FFC2BA;font-weight:700">Red zone</span>');
+  if (fs.driveText) foot.push(_escapeHtml(fs.driveText));
+  if (foot.length || clock) {
+    h += '<div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;font-size:11px;color:#B9B3E6">' +
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + foot.join(' · ') + '</span>' +
+      (clock ? '<span style="flex-shrink:0;font-weight:700;color:#D9D4FA">' + _escapeHtml(clock) + '</span>' : '') +
+      '</div>';
+  }
+  return h + '</div>';
 }
 
 function _glanceDetailHtml(box, sport) {
