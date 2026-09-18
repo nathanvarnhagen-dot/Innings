@@ -3203,6 +3203,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
   <div id="game-sheet-panel" class="scroll-bare" style="display:block;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px 24px"></div>
   <div id="game-chat-panel" class="scroll-bare" style="display:none;flex:1;overflow-y:auto;background:var(--bg);padding:14px 16px;flex-direction:column;gap:10px">
+    <div id="game-chat-watchers" style="display:none;flex-direction:column;gap:8px;padding:2px 0 10px;border-bottom:0.5px solid rgba(255,255,255,.08)">
+      <div id="game-chat-watchers-label" style="font-size:11.5px;font-weight:700;color:#9be8ac"></div>
+      <div id="game-chat-watchers-row" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:2px"></div>
+    </div>
     <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0">Open to anyone with the link — no group needed for the beta.</div>
     <div id="game-chat-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:32px 24px">
       <div style="font-size:30px">⚾</div>
@@ -9410,7 +9414,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.61.0-field-size';
+window.INNINGS_BUILD = 'v5.63.0-break-field';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -17392,6 +17396,59 @@ function _fbDownText(down, distance) {
 // counts absolutely from the home goal — so each adapter converts to a
 // single left-to-right percentage before anything is drawn.
 
+// ── BETWEEN PERIODS ──────────────────────────────────────────────────
+// Football stops for a while four times a game, and ESPN empties
+// `situation` while it does — no down, no possession, no ball spot. That
+// used to leave a hole where the field was. Now the field stays and
+// carries what there is to say: the score, which break it is, and who has
+// been the best player on each side so far.
+
+// ESPN writes these as "Halftime", "End of 1st Quarter", "End of
+// Regulation". Read from the same string _gxPeriodText uses for the
+// clock, so the field and the clock can't contradict each other.
+function _fbBreakLabelFrom(detail, tied) {
+  var d = String(detail || '');
+  if (/halftime|half time/i.test(d)) return 'HALFTIME';
+  if (/end of regulation/i.test(d)) return tied ? 'END OF REGULATION' : 'FINAL';
+  var m = d.match(/end of (?:the )?(\d)(?:st|nd|rd|th)/i);
+  if (m) {
+    var q = Number(m[1]);
+    if (q === 2) return 'HALFTIME';
+    // The fourth ending is only a break if it's still level; otherwise
+    // the game is over and "End of 4th" is the wrong thing to say.
+    if (q >= 4) return tied ? 'END OF REGULATION' : 'FINAL';
+    return 'END OF ' + q + (q === 1 ? 'ST' : q === 3 ? 'RD' : 'TH');
+  }
+  if (/intermission/i.test(d)) return 'INTERMISSION';
+  return null;
+}
+
+// A full game's worth of each category, used to judge one player's line
+// against another's. Comparing raw numbers instead would pick the
+// quarterback every single time, because passing yards dwarf everything
+// else — a back with 80 on the ground has had a bigger day than a passer
+// with 140, and this is what says so.
+var FB_CATEGORY_BENCHMARK = { PASS: 250, RUSH: 80, REC: 80 };
+
+function _fbShortName(name) {
+  var parts = String(name || '').trim().split(/\s+/);
+  if (parts.length < 2) return parts[0] || '';
+  return parts[0].charAt(0) + '. ' + parts.slice(1).join(' ');
+}
+
+function _fbTopPlayer(leaders, side) {
+  var best = null;
+  (leaders || []).forEach(function (row) {
+    var p = row && row[side];
+    if (!p || p.value == null || !isFinite(Number(p.value))) return;
+    var bench = FB_CATEGORY_BENCHMARK[row.label] || 100;
+    var rating = Number(p.value) / bench;
+    if (!best || rating > best.rating) best = { rating: rating, name: p.name, line: p.line || '' };
+  });
+  if (!best) return null;
+  return _fbShortName(best.name) + (best.line ? ' · ' + String(best.line).toLowerCase() : '');
+}
+
 // The ball already sits where the last play ended, so a signed yardage is
 // enough to find where that play began. That sidesteps having to assume a
 // play's own yard line shares a frame with the situation's.
@@ -17437,6 +17494,30 @@ function _fbViewFromGx(m) {
     possColor: poss ? poss.colors.bg : '#A89FE8',
     possAbbr: poss ? poss.abbr : '',
     aria: (s.downText || 'Field position') + (s.posText ? ' at ' + s.posText : '')
+  };
+}
+
+function _fbBreakLabel(m) {
+  if (!m || m.sport !== 'football') return null;
+  var tied = m.away && m.home && m.away.score != null && m.away.score === m.home.score;
+  if (m.phase === 'final') return 'FINAL';
+  if (m.phase !== 'live') return null;
+  return _fbBreakLabelFrom(m.statusDetail || m.status, tied);
+}
+
+function _fbBreakView(m, label) {
+  var a = m.away, h = m.home;
+  return {
+    pct: null,
+    breakLabel: label,
+    score: { awayAbbr: a.abbr, away: a.score, homeAbbr: h.abbr, home: h.score },
+    players: [
+      a.abbr && _fbTopPlayer(m.leaders, 'a') ? a.abbr + ' · ' + _fbTopPlayer(m.leaders, 'a') : null,
+      h.abbr && _fbTopPlayer(m.leaders, 'h') ? h.abbr + ' · ' + _fbTopPlayer(m.leaders, 'h') : null
+    ].filter(Boolean),
+    awayColor: a.colors.bg, homeColor: h.colors.bg,
+    awayAbbr: a.abbr, homeAbbr: h.abbr,
+    aria: label.toLowerCase() + '. ' + a.abbr + ' ' + a.score + ', ' + h.abbr + ' ' + h.score
   };
 }
 
@@ -17498,6 +17579,28 @@ function _fbFieldSvg(v, big) {
       '<text x="' + n1(cx) + '" y="' + n1(chipY + chipH * 0.72) + '" text-anchor="middle" font-size="' + chipFont + '" font-weight="700" fill="#fff" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(lp.label) + '</text>';
   }
 
+  // Between periods the turf is a backdrop: dimmed, with the score, the
+  // break, and each side's best player stacked on it. Nothing else is
+  // drawn, so none of it can be covered.
+  if (v.breakLabel) {
+    var sc = v.score || {};
+    var long = v.breakLabel.length > 12;
+    var labelSize = big ? (long ? 17 : 22) : (long ? 13 : 18);
+    var scoreY = FT + FH * 0.23, labelY = FT + FH * 0.55;
+    h += '<rect x="0" y="' + FT + '" width="320" height="' + FH + '" rx="7" fill="#0D0820" opacity=".66"/>';
+    if (sc.away != null && sc.home != null) {
+      var dim = function (mine, theirs) { return (mine < theirs) ? '#7A73A8' : '#fff'; };
+      h += '<text x="160" y="' + n1(scoreY) + '" text-anchor="middle" font-size="' + (big ? 15 : 12) + '" font-weight="800" letter-spacing="1" font-family="-apple-system,Helvetica,sans-serif">' +
+        '<tspan fill="#B9B3E6">' + _escapeHtml(sc.awayAbbr || '') + ' </tspan><tspan fill="' + dim(sc.away, sc.home) + '">' + sc.away + '</tspan>' +
+        '<tspan fill="#7A73A8">  ·  </tspan>' +
+        '<tspan fill="#B9B3E6">' + _escapeHtml(sc.homeAbbr || '') + ' </tspan><tspan fill="' + dim(sc.home, sc.away) + '">' + sc.home + '</tspan></text>';
+    }
+    h += '<text x="160" y="' + n1(labelY) + '" text-anchor="middle" font-size="' + labelSize + '" font-weight="800" fill="#fff" letter-spacing="' + (long ? 2 : 3) + '" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(v.breakLabel) + '</text>';
+    (v.players || []).slice(0, 2).forEach(function (line, i) {
+      h += '<text x="160" y="' + n1(FT + FH * (i === 0 ? 0.76 : 0.92)) + '" text-anchor="middle" font-size="' + (big ? 11 : 10) + '" font-weight="600" fill="#B9B3E6" font-family="-apple-system,Helvetica,sans-serif">' + _escapeHtml(line) + '</text>';
+    });
+  }
+
   // The logo paints over the abbreviation, so a logo that 404s or hasn't
   // loaded leaves the letter showing rather than a hole in the pin.
   var tipY = mid, cy = mid - pinDrop;
@@ -17515,7 +17618,22 @@ function _fbFieldSvg(v, big) {
 
 function _glanceFootballDetailHtml(box) {
   var fs = box.situation;
-  if (!fs || (fs.down == null && !fs.possessionText)) return '';
+  // A game stopped between periods has no situation at all, which used to
+  // leave the card with nothing under the score. The boxscore payload
+  // carries no leaders, so this shows the score and the break only.
+  if (!fs || (fs.down == null && !fs.possessionText)) {
+    var tiedNow = box.awayScore != null && box.awayScore === box.homeScore;
+    var brkLabel = _isGameConcluded(box.status) ? null : _fbBreakLabelFrom(box.statusDetail || box.status, tiedNow);
+    if (!brkLabel) return '';
+    var awayA = _ghAbbrFallback(box.away || ''), homeA = _ghAbbrFallback(box.home || '');
+    return '<div class="glance-detail" style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.09)">' +
+      _fbFieldSvg({
+        pct: null, breakLabel: brkLabel,
+        score: { awayAbbr: awayA, away: box.awayScore, homeAbbr: homeA, home: box.homeScore },
+        players: [], awayColor: null, homeColor: null, awayAbbr: awayA, homeAbbr: homeA,
+        aria: brkLabel.toLowerCase()
+      }, false) + '</div>';
+  }
   var downText = fs.downText || _fbDownText(fs.down, fs.distance);
   var teamColor = (fs.team && fs.team.color) || '#A89FE8';
   var possAbbr = (fs.team && fs.team.abbreviation) || '';
@@ -18644,6 +18762,10 @@ function openGameScreen(gamePk, away, home, sport, date) {
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
   var rowEl = document.getElementById('game-watching-with-row');
   if (rowEl) rowEl.style.display = 'none'; // hide until (if) this game's watchers resolve, rather than show stale data from the last game
+  window._gameWatchers = { gamePk: gamePk, people: [] };
+  _renderChatTabCount(0);
+  var stripEl = document.getElementById('game-chat-watchers');
+  if (stripEl) stripEl.style.display = 'none';
   if (typeof skipGameRecap === 'function') skipGameRecap(); // don't let a still-playing recap from the last game bleed into this one
   nav('game');
   gameDetailTab('sheet');
@@ -18668,7 +18790,10 @@ function gameDetailTab(key) {
     if (chatPanel) chatPanel.style.display = 'flex';
     if (inputZone) inputZone.style.display = 'flex';
     var gamePk = window._activeBrowseGame && window._activeBrowseGame.gamePk;
-    if (gamePk) startGameChat(gamePk);
+    if (gamePk) {
+      startGameChat(gamePk);
+      _loadWatchingWithRow(gamePk); // friends come and go; re-check on open
+    }
   } else {
     sheetBtn.style.cssText = onStyle;
     chatBtn.style.cssText = offStyle;
@@ -20188,6 +20313,13 @@ function _gxMiniText(m) {
 function _gxStripHtml(m) {
   var s = m.situation;
   if (m.sport === 'football') {
+    // Between periods there's no down, no possession and no drive, so the
+    // usual rows above and below the field would all be blank.
+    var brk = _fbBreakLabel(m);
+    if (brk) {
+      return '<div class="gh-panel gh-strip" style="display:flex;flex-direction:column;gap:8px">' +
+        _fbFieldSvg(_fbBreakView(m, brk), true) + '</div>';
+    }
     if (!s) return '';
     var possT = s.possSide === 'h' ? m.home : (s.possSide === 'a' ? m.away : null);
     var dots = function (n) { if (n == null) return ''; var o = ''; for (var i = 0; i < 3; i++) o += '<span style="width:6px;height:6px;border-radius:50%;display:inline-block;margin-left:3px;' + (i < n ? 'background:#F2C869' : 'border:1px solid #6E68A6;box-sizing:border-box') + '"></span>'; return o; };
@@ -21320,23 +21452,79 @@ function _watchingWithLabel(names) {
   return names[0] + ', ' + names[1] + ' +' + (names.length - 2) + ' more also watching';
 }
 
+// Which friends are on this game, for every surface that says so: the row
+// under the title, the count on the Chat tab, and the faces at the top of
+// the chat. One lookup, three renderers — they were going to disagree
+// otherwise, and it's the same two Firestore round trips either way.
+// Works for any sport, since a watching doc is keyed by gamePk whatever
+// league it came from.
+window._gameWatchers = { gamePk: null, people: [] };
+
 function _loadWatchingWithRow(gamePk) {
   _friendsWatchingGame(gamePk).then(function (uids) {
     if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return; // superseded
-    var rowEl = document.getElementById('game-watching-with-row');
-    if (!rowEl) return;
-    if (!uids.length) { rowEl.style.display = 'none'; return; }
+    if (!uids.length) {
+      window._gameWatchers = { gamePk: gamePk, people: [] };
+      _renderGameWatchers(gamePk);
+      return;
+    }
     Promise.all(uids.map(function (uid) { return window.db.collection('users').doc(uid).get(); }))
       .then(function (docs) {
         if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
-        var names = docs.map(function (d) { return ((d.data() || {}).name || 'A friend').split(' ')[0]; });
-        var avatarsEl = document.getElementById('game-watching-with-avatars');
-        var textEl = document.getElementById('game-watching-with-text');
-        if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
-        if (textEl) textEl.textContent = _watchingWithLabel(names);
-        rowEl.style.display = 'flex';
+        window._gameWatchers = {
+          gamePk: gamePk,
+          people: docs.map(function (d) {
+            var data = d.data() || {};
+            return { uid: d.id, name: data.name || 'A friend', first: String(data.name || 'A friend').split(' ')[0] };
+          })
+        };
+        _renderGameWatchers(gamePk);
       }).catch(function (err) { console.error('Load watching-with names error:', err); });
   }).catch(function (err) { console.error('Watching-with lookup error:', err); });
+}
+
+function _renderGameWatchers(gamePk) {
+  if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
+  var people = (window._gameWatchers && window._gameWatchers.gamePk == gamePk) ? window._gameWatchers.people : [];
+  var names = people.map(function (p) { return p.first; });
+
+  var rowEl = document.getElementById('game-watching-with-row');
+  if (rowEl) {
+    if (!people.length) rowEl.style.display = 'none';
+    else {
+      var avatarsEl = document.getElementById('game-watching-with-avatars');
+      var textEl = document.getElementById('game-watching-with-text');
+      if (avatarsEl) avatarsEl.innerHTML = _watchingAvatarsHtml(names, 2);
+      if (textEl) textEl.textContent = _watchingWithLabel(names);
+      rowEl.style.display = 'flex';
+    }
+  }
+  _renderChatTabCount(people.length);
+
+  var strip = document.getElementById('game-chat-watchers');
+  var label = document.getElementById('game-chat-watchers-label');
+  var faces = document.getElementById('game-chat-watchers-row');
+  if (!strip || !label || !faces) return;
+  if (!people.length) { strip.style.display = 'none'; faces.innerHTML = ''; return; }
+  label.textContent = people.length === 1 ? '1 friend watching' : people.length + ' friends watching';
+  faces.innerHTML = people.map(function (p) {
+    return '<div onclick="openUserProfile(\'' + String(p.uid).replace(/'/g, "\\'") + '\')" style="display:flex;flex-direction:column;align-items:center;gap:5px;width:56px;flex-shrink:0;cursor:pointer">' +
+      '<div style="width:40px;height:40px;border-radius:50%;background:rgba(168,159,232,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#CECBF6">' + _escapeHtml(_initials(p.name)) + '</div>' +
+      '<div style="font-size:11px;font-weight:600;color:var(--mid);text-align:center;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:56px">' + _escapeHtml(p.first) + '</div>' +
+      '</div>';
+  }).join('');
+  strip.style.display = 'flex';
+}
+
+// The Chat tab carries the count so you can see friends are in there
+// without opening it. cssText gets reassigned on every tab switch, so the
+// count lives in the button's content rather than in a style.
+function _renderChatTabCount(n) {
+  var btn = document.getElementById('game-tab-chat');
+  if (!btn) return;
+  btn.innerHTML = 'Chat' + (n > 0
+    ? '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 5px;margin-left:6px;border-radius:9px;background:rgba(124,242,156,.2);color:#9be8ac;font-size:10.5px;font-weight:800;vertical-align:1px">' + n + '</span>'
+    : '');
 }
 
 function openLiveFeedGame(i) {
