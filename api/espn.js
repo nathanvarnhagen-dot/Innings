@@ -343,6 +343,47 @@ function _fbDownText(down, dist) {
   return _FB_DOWNS[d] + ' & ' + (dist === 0 ? 'Goal' : (dist != null ? dist : '?'));
 }
 
+// What the last play was, so the field can draw it: a throw and a kick
+// arc through the air, a run travels along the ground. ESPN gives the
+// two yard lines but no air-yards or target point, so the height of an
+// arc is presentation, not data — only its two ends are real.
+function _fbPlayKind(typeText) {
+  var t = String(typeText || '').toLowerCase();
+  if (/timeout|end of|end period|penalty|coin toss|two-minute/.test(t)) return 'other';
+  if (/punt|kickoff|field goal|extra point/.test(t)) return 'kick';
+  if (/pass|sack|interception/.test(t)) return 'pass';
+  if (/rush|run|scramble|fumble|kneel/.test(t)) return 'rush';
+  return 'other';
+}
+function _fbPlayLabel(typeText, yards, kind) {
+  var t = String(typeText || '');
+  if (/incompletion/i.test(t)) return 'Incomplete';
+  if (/interception/i.test(t)) return 'Intercepted';
+  if (/touchdown/i.test(t)) return 'Touchdown';
+  if (/sack/i.test(t)) return yards != null ? 'Sack ' + yards : 'Sack';
+  if (kind === 'kick') return t || 'Kick';
+  if (yards == null) return t || '';
+  return (yards >= 0 ? '+' : '') + yards + ' ' + (kind === 'pass' ? 'pass' : kind === 'rush' ? 'run' : 'yds');
+}
+function _fbLastPlay(drive) {
+  var plays = drive && drive.plays;
+  if (!plays || !plays.length) return null;
+  var p = plays[plays.length - 1];
+  if (!p) return null;
+  var st = p.start || {}, en = p.end || {};
+  if (st.yardLine == null && en.yardLine == null) return null;
+  var typeText = (p.type && (p.type.text || p.type.type)) || '';
+  var kind = _fbPlayKind(typeText || p.text);
+  var yards = p.statYardage != null ? Number(p.statYardage) : null;
+  return {
+    start: st.yardLine != null ? st.yardLine : en.yardLine,
+    end: en.yardLine != null ? en.yardLine : st.yardLine,
+    kind: kind,
+    yards: yards,
+    label: _fbPlayLabel(typeText, yards, kind)
+  };
+}
+
 function extractFootballSituation(data, awayComp, homeComp) {
   var comp = null;
   try {
@@ -408,6 +449,9 @@ function extractFootballSituation(data, awayComp, homeComp) {
     homeAbbr: homeAbbr,
     awayColor: hex(awayComp.team && awayComp.team.color),
     homeColor: hex(homeComp.team && homeComp.team.color),
+    awayLogo: (awayComp.team && awayComp.team.logo) || null,
+    homeLogo: (homeComp.team && homeComp.team.logo) || null,
+    lastPlay: _fbLastPlay(currentDrive),
     team: possessionTeamAbbr ? {
       abbreviation: possessionTeamAbbr,
       color: hex(currentDrive && currentDrive.team && currentDrive.team.color)
