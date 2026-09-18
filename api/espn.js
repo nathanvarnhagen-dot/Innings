@@ -72,7 +72,10 @@ module.exports = async function handler(req, res) {
         model.teamColors = await _gcTeamColors(path, league);
       }
       if (req.query.debug) model.debug = { topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
-      res.setHeader('Cache-Control', model.phase === 'live' ? 's-maxage=10, stale-while-revalidate' : 's-maxage=120, stale-while-revalidate');
+      // A live football score can change on one snap, so the edge holds it
+      // for five seconds rather than ten. stale-while-revalidate still
+      // serves instantly while the refresh happens behind it.
+      res.setHeader('Cache-Control', model.phase === 'live' ? 's-maxage=5, stale-while-revalidate' : 's-maxage=120, stale-while-revalidate');
       res.status(200).json(model);
       return;
     }
