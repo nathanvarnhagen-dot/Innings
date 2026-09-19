@@ -671,7 +671,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
    instead, since a CSS transform on an element that also carries a
    transform attribute replaces the attribute outright rather than
    combining with it. */
-.sport-banner{width:100%;height:150px;border-radius:16px;overflow:hidden;position:relative;background:#0A0620}
+.sport-banner{width:100%;max-width:560px;margin-left:auto;margin-right:auto;height:150px;border-radius:16px;overflow:hidden;position:relative;background:#0A0620}
 /* Full-screen, one-shot version of the baseball scene — plays once when
    MLB is picked from the sport picker, then dismisses into the schedule.
    Separate overlay from the ambient/looping .sport-banner treatment used
@@ -9512,7 +9512,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.64.3-ipad-full-bleed';
+window.INNINGS_BUILD = 'v5.64.4-ipad-flourish-scale-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -18190,6 +18190,22 @@ window._mlbFlourishTimer = null;
 // loadGamesList consumes and clears it, so it's never reused for a later
 // date change.
 window._mlbFlourishPrefetch = null;
+// Shared cover-vs-contain scale for the phone-shaped 390×844 flourish
+// stage (used by playMlbFlourish, playSportFlourish, and playSportsHub).
+// "Cover" (scale by whichever axis needs more) is the right call when the
+// container is itself portrait-ish, like every phone — the sliver it
+// crops off one edge is unnoticeable. On a landscape container (the iPad
+// sidebar layout's full-bleed .app, w > h) that same cover math forces a
+// scale big enough to cover the width alone, and because the design is
+// roughly twice as tall as it is wide, that blows the height way past
+// the container and crops most of the scene — the light rig and title
+// stay put but the ball's flight and the wall it clears end up above or
+// below the visible area. Switch to "contain" whenever the container
+// itself is landscape, so the whole scene stays visible and correctly
+// proportioned (small letterboxing left/right) instead of chopped off.
+function _mlbfScale(w, h) {
+  return w > h ? Math.min(w / 390, h / 844) : Math.max(w / 390, h / 844);
+}
 function playMlbFlourish() {
   var overlay = document.getElementById('mlb-flourish');
   if (!overlay) { nav('games'); return; }
@@ -18198,7 +18214,7 @@ function playMlbFlourish() {
   var stage = overlay.querySelector('.mlbf-stage');
   if (stage) {
     var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
-    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+    stage.style.setProperty('--mlbf-s', _mlbfScale(w, h).toFixed(4));
   }
   requestAnimationFrame(function () { overlay.style.opacity = '1'; });
   var prefetchDate = window._gamesDate || _todayLocal();
@@ -18258,7 +18274,7 @@ function playSportFlourish(key) {
   var stage = overlay.querySelector('.mlbf-stage');
   if (stage) {
     var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
-    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+    stage.style.setProperty('--mlbf-s', _mlbfScale(w, h).toFixed(4));
   }
   requestAnimationFrame(function () { overlay.style.opacity = '1'; });
   if (key === 'nfl' || key === 'cfb') {
@@ -18323,7 +18339,7 @@ function playSportsHub() {
   var stage = overlay.querySelector('.mlbf-stage');
   if (stage) {
     var w = overlay.clientWidth || 390, h = overlay.clientHeight || 844;
-    stage.style.setProperty('--mlbf-s', Math.max(w / 390, h / 844).toFixed(4));
+    stage.style.setProperty('--mlbf-s', _mlbfScale(w, h).toFixed(4));
   }
   requestAnimationFrame(function () { overlay.style.opacity = '1'; });
   window._sportsHubTimer = setTimeout(finishSportsHub, _ghReducedMotion() ? 1500 : 6500);
