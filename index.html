@@ -58,7 +58,14 @@
   --win:#2D6A4F;--win-bg:#E8F2EB;--loss:#993C1D;--loss-bg:#FAECE7;
 }
 html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;background:#1A0A2E;overflow:hidden}
-.app{width:100%;height:100%;max-width:430px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column}
+/* transform:translateZ(0) here is load-bearing, not decorative: it makes
+   .app a containing block for every position:fixed element inside it
+   (all the bottom sheets/modals throughout the file use fixed+inset:0).
+   Without it they center on the whole browser window instead of on
+   .app's own box — invisible on phone where the two are the same
+   width, but on the iPad sidebar layout .app is no longer full-width,
+   so every sheet would pop up off-center from the screen it belongs to. */
+.app{width:100%;height:100%;max-width:430px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;transform:translateZ(0)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.22s ease;background:var(--bg)}
 .screen.active{opacity:1;pointer-events:all}
 
@@ -621,14 +628,20 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
    At/above it, .bottom-nav (all 6 copies, one per top-level screen) is
    hidden and this single persistent sidebar takes over — it lives
    outside .app entirely, so it stays put across every screen, including
-   pushed detail screens that never carried a bottom nav on phone. body
-   becomes the flex row; .app keeps its existing 430px phone-width column
-   and just recenters in the leftover space via its own margin:0 auto. */
+   pushed detail screens that never carried a bottom nav on phone.
+   .app itself stays the same phone-width column internally (no screen
+   was redesigned) but is now presented as a framed card floating on a
+   canvas — rounded, shadowed, inset on all four sides — rather than a
+   bare rectangle stretched edge-to-edge with dead space on either side.
+   body becomes the flex row that holds sidebar + card side by side. */
 .ipad-sidenav{display:none}
 @media (orientation:landscape){
-  html.is-tablet body{display:flex}
+  html.is-tablet body{display:flex;background:radial-gradient(ellipse 900px 700px at 20% -10%,#241C4A 0%,#120A28 55%,#0D0820 100%)}
   html.is-tablet .bottom-nav{display:none!important}
-  html.is-tablet .app{margin:0 auto;flex-shrink:0}
+  html.is-tablet .app{
+    margin:28px auto;flex-shrink:0;height:calc(100% - 56px);max-width:480px;
+    border-radius:28px;box-shadow:0 12px 40px rgba(0,0,0,0.45),0 2px 8px rgba(0,0,0,0.3);
+  }
   html.is-tablet .ipad-sidenav{
     display:flex;flex-direction:column;flex-shrink:0;width:232px;height:100%;
     background:#0D0820;border-right:0.5px solid var(--rule);
@@ -9499,7 +9512,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.64.1-ipad-sidenav-device-detect';
+window.INNINGS_BUILD = 'v5.64.2-ipad-card-frame-fixed-ctx';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -23178,3 +23191,4 @@ function _renderMutualFriendsList(theirUid) {
 </script>
 </body>
 </html>
+
