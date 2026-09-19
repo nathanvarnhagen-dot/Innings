@@ -17,7 +17,7 @@
 <meta name="twitter:description" content="A private space for memories with the people that matter.">
 <meta name="twitter:image" content="https://innings-zeta.vercel.app/og-image.png">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSI0MCIgZmlsbD0iIzFBMTY0MCIvPgogIDx0ZXh0IHg9IjIyIiB5PSIxMjIiIGZvbnQtZmFtaWx5PSItYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsIEhlbHZldGljYSBOZXVlLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9Ijg4IiBmaWxsPSJ3aGl0ZSIgbGV0dGVyLXNwYWNpbmc9Ii0yIj5JPC90ZXh0PgogIDx0ZXh0IHg9Ijc4IiB5PSIxMjIiIGZvbnQtZmFtaWx5PSItYXBwbGUtc3lzdGVtLCBCbGlua01hY1N5c3RlbUZvbnQsIEhlbHZldGljYSBOZXVlLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9Ijg4IiBmaWxsPSIjQTg5RkU4IiBsZXR0ZXItc3BhY2luZz0iLTIiPk48L3RleHQ+Cjwvc3ZnPg==">
-<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIklubmluZ3MiLAogICJzaG9ydF9uYW1lIjogIklubmluZ3MiLAogICJkZXNjcmlwdGlvbiI6ICJMaWZlLCBQZW9wbGUsIGFuZCBNb21lbnRzIiwKICAic3RhcnRfdXJsIjogIi8iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxQTBBMkUiLAogICJ0aGVtZV9jb2xvciI6ICIjMUEwQTJFIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiCn0K">
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIklubmluZ3MiLAogICJzaG9ydF9uYW1lIjogIklubmluZ3MiLAogICJkZXNjcmlwdGlvbiI6ICJMaWZlLCBQZW9wbGUsIGFuZCBNb21lbnRzIiwKICAic3RhcnRfdXJsIjogIi8iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxQTBBMkUiLAogICJ0aGVtZV9jb2xvciI6ICIjMUEwQTJFIiwKICAib3JpZW50YXRpb24iOiAiYW55Igp9Cg==">
 <style>
   @media (prefers-color-scheme: dark) { :root { background: #1A1640; } }
 </style>
@@ -595,6 +595,38 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 .nav-pill span{font-size:13px;font-weight:600;color:var(--indigo);letter-spacing:-0.2px}
 
+/* ═══ IPAD LANDSCAPE — LEFT SIDEBAR NAV ═══
+   Below the breakpoint this is inert (display:none, .app untouched).
+   At/above it, .bottom-nav (all 6 copies, one per top-level screen) is
+   hidden and this single persistent sidebar takes over — it lives
+   outside .app entirely, so it stays put across every screen, including
+   pushed detail screens that never carried a bottom nav on phone. body
+   becomes the flex row; .app keeps its existing 430px phone-width column
+   and just recenters in the leftover space via its own margin:0 auto. */
+.ipad-sidenav{display:none}
+@media (min-width:900px) and (min-height:700px) and (orientation:landscape){
+  body{display:flex}
+  .bottom-nav{display:none!important}
+  .app{margin:0 auto;flex-shrink:0}
+  .ipad-sidenav{
+    display:flex;flex-direction:column;flex-shrink:0;width:232px;height:100%;
+    background:#0D0820;border-right:0.5px solid var(--rule);
+    padding:calc(env(safe-area-inset-top,0px) + 22px) 14px 22px;
+  }
+  .ipad-brand{display:flex;align-items:center;gap:9px;padding:0 10px;margin-bottom:28px}
+  .ipad-brand-mark{width:30px;height:30px;border-radius:9px;background:var(--indigo-deep);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0}
+  .ipad-brand-mark span{color:#A89FE8}
+  .ipad-brand-name{font-size:16px;font-weight:800;color:white;letter-spacing:-0.3px}
+  .ipad-nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;color:rgba(255,255,255,0.55);margin-bottom:2px}
+  .ipad-nav-item svg{flex-shrink:0;color:rgba(255,255,255,0.5)}
+  .ipad-nav-item span{font-size:14.5px;font-weight:600;letter-spacing:-0.1px}
+  .ipad-nav-item.active{background:rgba(168,159,232,0.16)}
+  .ipad-nav-item.active svg,.ipad-nav-item.active span{color:#A89FE8}
+  .ipad-nav-new{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;text-align:left;background:#A89FE8;color:#0D0820;margin:6px 0 18px;font-size:14.5px;font-weight:700}
+  .ipad-nav-new svg{flex-shrink:0}
+  .ipad-sidenav-spacer{flex:1}
+}
+
 /* ── GAMES SPORT BANNERS — animated SVG scene shown atop the Games
    screen once a league is picked from the sport picker. Baseball
    (Oracle Park / McCovey Cove) and football (shared by NFL + college)
@@ -1153,6 +1185,38 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 </style>
 </head>
 <body>
+<!-- ═══ IPAD LANDSCAPE SIDEBAR — hidden below the tablet-landscape
+     breakpoint (see .ipad-sidenav CSS); lives outside .app so it
+     persists across every screen. Buttons reuse nav(), same as the
+     phone bottom-nav; active state kept in sync by _syncIpadNav()
+     from inside _navApplyScreen(). ═══ -->
+<nav class="ipad-sidenav" id="ipad-sidenav">
+  <div class="ipad-brand">
+    <div class="ipad-brand-mark">I<span>N</span></div>
+    <div class="ipad-brand-name">Innings</div>
+  </div>
+  <button class="ipad-nav-item active" id="ipad-nav-feed" onclick="nav('feed')" aria-label="Feed">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg>
+    <span>Feed</span>
+  </button>
+  <button class="ipad-nav-item" id="ipad-nav-calendar" onclick="nav('calendar')" aria-label="Calendar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg>
+    <span>Calendar</span>
+  </button>
+  <button class="ipad-nav-item" id="ipad-nav-memories" onclick="nav('memories')" aria-label="Memories">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    <span>Memories</span>
+  </button>
+  <button class="ipad-nav-item" id="ipad-nav-profile" onclick="nav('profile')" aria-label="Profile">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
+  </button>
+  <div class="ipad-sidenav-spacer"></div>
+  <button class="ipad-nav-new" onclick="nav('create-group')" aria-label="Create">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span>New</span>
+  </button>
+</nav>
 <div class="app">
 
 <!-- ═══ LOGIN SPLASH ═══ -->
@@ -9414,7 +9478,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.63.0-break-field';
+window.INNINGS_BUILD = 'v5.64.0-ipad-landscape-sidenav';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9433,7 +9497,23 @@ document.addEventListener('DOMContentLoaded', function(){
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
 
-function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feed'&&typeof startWatchingList==='function')startWatchingList();if(id==='games'){if((window._gamesSport==='nfl'||window._gamesSport==='cfb')&&typeof loadFootballWeek==='function'){loadFootballWeek(window._gamesSport);}else if(typeof loadGamesList==='function'){loadGamesList();}}if(id==='games-picker'&&typeof renderGamesSportGrid==='function')renderGamesSportGrid();if(id==='games-soon'&&typeof renderGamesSoon==='function')renderGamesSoon();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
+// Keeps the iPad landscape sidebar's active pill in sync with whatever
+// screen just became current. The sidebar is a single persistent element
+// (unlike the phone bottom-nav, which is duplicated per screen with a
+// hardcoded active item baked in) so this has to run on every navigation.
+// Sub-screens with no direct sidebar tab (games, notifications, a memory
+// detail, etc.) just clear the active state rather than force a guess.
+var IPAD_SIDENAV_TABS=['feed','calendar','memories','profile'];
+function _syncIpadNav(id){
+  var nav=document.getElementById('ipad-sidenav');
+  if(!nav) return;
+  nav.querySelectorAll('.ipad-nav-item').forEach(function(btn){btn.classList.remove('active')});
+  if(IPAD_SIDENAV_TABS.indexOf(id)!==-1){
+    var active=document.getElementById('ipad-nav-'+id);
+    if(active) active.classList.add('active');
+  }
+}
+function _navApplyScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));var el=document.getElementById('screen-'+id);if(el)el.classList.add('active');_syncIpadNav(id);if(id==='memories'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMoments==='function')loadMoments();if(id==='profile'&&typeof loadMyGroups==='function')loadMyGroups();if(id==='profile'&&typeof loadMyFriendsList==='function')loadMyFriendsList();if(id==='calendar'&&typeof loadMoments==='function')loadMoments();if(id==='feed'&&typeof loadFeedMoments==='function')loadFeedMoments();if(id==='feed'&&typeof _applyOslBannerVisibility==='function')_applyOslBannerVisibility();if(id==='feed'&&typeof startWatchingList==='function')startWatchingList();if(id==='games'){if((window._gamesSport==='nfl'||window._gamesSport==='cfb')&&typeof loadFootballWeek==='function'){loadFootballWeek(window._gamesSport);}else if(typeof loadGamesList==='function'){loadGamesList();}}if(id==='games-picker'&&typeof renderGamesSportGrid==='function')renderGamesSportGrid();if(id==='games-soon'&&typeof renderGamesSoon==='function')renderGamesSoon();if(id==='feedback-group'&&typeof startFeedbackChat==='function')startFeedbackChat();if(id==='notifications'&&typeof loadNotifications==='function')loadNotifications();if(id==='osl-group'&&typeof oslCheckRsvp==='function')oslCheckRsvp();if(id==='osl-group'&&typeof startOslChat==='function')startOslChat();if(id==='osl-group'&&typeof _oslLandOnLineup==='function')_oslLandOnLineup();if(id==='birthday-group'&&typeof loadBirthdayEventData==='function'){loadBirthdayEventData(function(){if(typeof bdayCheckRsvp==='function')bdayCheckRsvp();if(typeof startBirthdayChat==='function')startBirthdayChat();if(typeof _bdayLandOnStops==='function')_bdayLandOnStops();if(typeof _bdayApplyEditVisibility==='function')_bdayApplyEditVisibility();if(typeof renderBdayMessage==='function')renderBdayMessage();});}if(id==='group-detail'&&window._activeGroup&&(window._activeGroup.features||[]).indexOf('chat')!==-1&&typeof startGroupChat==='function')startGroupChat(window._activeGroupId);if(id==='create-group'){var d=document.getElementById('moment-date');if(d&&!d.value)d.value=_todayLocal();if(typeof backToStep0==='function')backToStep0();if(typeof renderVibePills==='function')renderVibePills();}_nudgeScrollers(el);}
 
 // A scrollable element that's hidden (opacity:0) and shown again can, on
 // iOS Safari, get permanently stuck — no error, no console warning, taps
