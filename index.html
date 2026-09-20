@@ -17646,6 +17646,7 @@ function _fbFieldSvg(v, big) {
   var n1 = function (x) { return x.toFixed(1); };
   window._fbPinSeq = (window._fbPinSeq || 0) + 1; // ids must stay unique across every field on screen
   var pin = 'fbpin' + window._fbPinSeq;
+  var arrow = 'fbarrow' + window._fbPinSeq;
   var ballX = hasBall ? X(v.pct) : 0;
 
   var bands = '';
@@ -17659,7 +17660,8 @@ function _fbFieldSvg(v, big) {
 
   var h = '<svg viewBox="0 0 320 ' + TOT + '" width="100%" height="' + TOT + '" style="display:block;flex-shrink:0" role="img" aria-label="' +
     _escapeHtml(v.aria || 'Field position') + '">' +
-    '<defs><clipPath id="' + pin + '"><circle cx="' + n1(ballX) + '" cy="' + n1(mid - pinDrop) + '" r="' + pinR + '"/></clipPath></defs>' +
+    '<defs><clipPath id="' + pin + '"><circle cx="' + n1(ballX) + '" cy="' + n1(mid - pinDrop) + '" r="' + pinR + '"/></clipPath>' +
+    '<marker id="' + arrow + '" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="' + (big ? 7 : 5.5) + '" markerHeight="' + (big ? 7 : 5.5) + '" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>' +
     '<rect x="0" y="' + FT + '" width="320" height="' + FH + '" rx="7" fill="#24523A"/>' + bands +
     '<path d="M0 ' + (FT + 7) + 'a7 7 0 0 1 7-7h19v' + FH + 'H7a7 7 0 0 1-7-7z" fill="' + (v.awayColor || '#2A2460') + '"/>' +
     '<path d="M294 ' + FT + 'h19a7 7 0 0 1 7 7v' + (FH - 14) + 'a7 7 0 0 1-7 7h-19z" fill="' + (v.homeColor || '#2A2460') + '"/>' +
@@ -17676,9 +17678,9 @@ function _fbFieldSvg(v, big) {
     if (Math.abs(sx - ex) > 3) {
       var groundY = n1(FT + FH * 0.69);
       if (lp.kind === 'rush') {
-        h += '<path d="M' + n1(sx) + ' ' + groundY + ' H' + n1(ex) + '" stroke="#fff" stroke-width="' + (big ? 2.8 : 2.2) + '" fill="none" stroke-linecap="round"/>';
+        h += '<path d="M' + n1(sx) + ' ' + groundY + ' H' + n1(ex) + '" stroke="#fff" stroke-width="' + (big ? 2.8 : 2.2) + '" fill="none" stroke-linecap="round" marker-end="url(#' + arrow + ')"/>';
       } else {
-        h += '<path d="M' + n1(sx) + ' ' + groundY + ' Q' + n1((sx + ex) / 2) + ' ' + n1(FT + FH * 0.17) + ' ' + n1(ex) + ' ' + n1(FT + FH * 0.59) + '" stroke="#fff" stroke-width="' + (big ? 2.4 : 2) + '" stroke-dasharray="3 4" fill="none" stroke-linecap="round"/>';
+        h += '<path d="M' + n1(sx) + ' ' + groundY + ' Q' + n1((sx + ex) / 2) + ' ' + n1(FT + FH * 0.17) + ' ' + n1(ex) + ' ' + n1(FT + FH * 0.59) + '" stroke="#fff" stroke-width="' + (big ? 2.4 : 2) + '" stroke-dasharray="3 4" fill="none" stroke-linecap="round" marker-end="url(#' + arrow + ')"/>';
       }
       h += '<circle cx="' + n1(sx) + '" cy="' + groundY + '" r="' + (big ? 4 : 3) + '" fill="#fff"/>';
     }
