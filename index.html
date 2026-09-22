@@ -623,6 +623,108 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 
 .nav-pill span{font-size:13px;font-weight:600;color:var(--indigo);letter-spacing:-0.2px}
 
+/* ═══ TEAM PAGE (v5.65.0) — tap a team on a game's cheat sheet for its
+   record, roster and whole-season calendar. Phone-first: one column,
+   week tiles that wrap, a 7-day calendar that fits 320px. The iPad
+   landscape block at the bottom only widens things. ═══ */
+.tm-tab{background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.tm-tab.on{background:rgba(255,255,255,.14);color:#fff}
+.tm-wrap{max-width:1080px}
+.tm-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;letter-spacing:-.02em;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,.08)}
+.tm-badge-hero{width:64px;height:64px;font-size:22px;box-shadow:0 0 0 3px rgba(255,255,255,.08),0 10px 28px rgba(0,0,0,.35)}
+.tm-hero{position:relative;border-radius:20px;padding:18px;background:#1A1640;border:1px solid rgba(168,159,232,.14);display:flex;flex-wrap:wrap;gap:14px 16px;align-items:center;margin-bottom:14px;overflow:hidden}
+.tm-hero-txt{flex:1;min-width:0;position:relative}
+.tm-loc{font-size:12px;color:#B9B3E6}
+.tm-name{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.01em;line-height:1.15}
+.tm-rec{font-size:34px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+.tm-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tm-chip{font-size:11.5px;font-weight:700;color:#E9E5FF;background:rgba(168,159,232,.16);border-radius:20px;padding:4px 10px;white-space:nowrap}
+.tm-hero-side{flex-basis:100%;display:flex;flex-direction:column;gap:8px;position:relative}
+.tm-next{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:10px 12px;border-radius:14px;background:rgba(13,8,32,.55);border:1px solid rgba(168,159,232,.14);color:#fff;font-family:inherit;text-align:left;cursor:pointer}
+.tm-next-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.tm-next-txt small{font-size:11px;color:#9C95D0}
+.tm-next-txt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-calbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;border:0;border-radius:14px;background:#3D3580;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.tm-card{background:#1A1640;border:1px solid rgba(168,159,232,.12);border-radius:18px;padding:14px;margin-bottom:14px}
+.tm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#9C95D0;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tm-eyebrow span{letter-spacing:0;text-transform:none;font-weight:600}
+.tm-filters,.tm-months{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tm-filters button,.tm-months button{flex-shrink:0;border:0;border-radius:20px;padding:7px 12px;min-height:34px;background:rgba(168,159,232,.1);color:#B9B3E6;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.tm-months button{border-radius:12px;text-align:center;line-height:1.25}
+.tm-months button small{display:block;font-size:10.5px;font-weight:600;opacity:.8}
+.tm-filters button.on,.tm-months button.on{background:#3D3580;color:#fff}
+.tm-group{margin-bottom:16px}
+.tm-group:last-child{margin-bottom:0}
+.tm-roster{display:grid;grid-template-columns:minmax(0,1fr);column-gap:22px}
+.tm-prow{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 2px;border-top:0.5px solid rgba(255,255,255,.08);cursor:pointer}
+.tm-num{width:30px;flex-shrink:0;font-size:15px;font-weight:800;color:#A89FE8;font-variant-numeric:tabular-nums;text-align:center}
+.tm-pmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.tm-pmain b{font-size:14px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-pmain span{font-size:12px;color:#9C95D0}
+.tm-pmeta{font-size:12px;color:#9C95D0;flex-shrink:0}
+.tm-weeks{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.tm-wk{display:flex;flex-direction:column;gap:5px;min-height:96px;padding:9px;border-radius:14px;background:rgba(13,8,32,.55);border:1px solid rgba(168,159,232,.12);color:#fff;font-family:inherit;text-align:left;cursor:pointer;min-width:0}
+.tm-wk.now{border-color:#A89FE8;box-shadow:inset 0 0 0 1px #A89FE8}
+.tm-wk.bye{opacity:.5;cursor:default;align-items:center;justify-content:center;font-size:12px;color:#B9B3E6}
+.tm-wk-top{display:flex;justify-content:space-between;font-size:10.5px;color:#9C95D0;gap:4px;white-space:nowrap}
+.tm-wk-opp{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;min-width:0}
+.tm-wk-opp small{font-size:11px;color:#9C95D0;font-weight:600}
+.tm-out{margin-top:auto;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-out.W{color:#7CF29C}.tm-out.L{color:#FF9A8E}.tm-out.T{color:#F2C869}.tm-out.in{color:#F2C869}.tm-out.pre{color:#B9B3E6;font-weight:600}
+.tm-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.tm-dow{font-size:10.5px;color:#9C95D0;text-align:center;padding:2px 0 4px;font-weight:700}
+.tm-day{min-height:60px;border-radius:10px;background:rgba(13,8,32,.55);padding:4px;display:flex;flex-direction:column;gap:2px;border:1px solid transparent;min-width:0}
+.tm-day.empty{background:transparent}
+.tm-day.off{opacity:.4}
+.tm-day.today{border-color:#A89FE8;background:rgba(61,53,128,.55)}
+.tm-dn{font-size:10.5px;color:#9C95D0}
+.tm-dg{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:2px;border:0;border-radius:6px;background:none;color:#fff;font-family:inherit;text-align:left;cursor:pointer;min-width:0;flex:1}
+.tm-dg:active,.tm-wk:active,.tm-next:active,.tm-prow:active{opacity:.75}
+.tm-dg-ha{font-size:8.5px;font-weight:700;color:#9C95D0;line-height:1}
+.tm-dg-opp{display:flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;white-space:nowrap;letter-spacing:-.03em;line-height:1.15}
+.tm-dg-opp .tm-badge{display:none}
+.tm-dg .tm-out{margin-top:0;font-size:9.5px;letter-spacing:-.02em;line-height:1.2;overflow:visible}
+/* Smallest phones (SE, mini zoomed): result letter over score */
+@media (max-width:359px){
+  .tm-cal{gap:3px}
+  .tm-day{padding:3px 2px}
+  .tm-dg{padding:1px}
+  .tm-dg-opp{font-size:9.5px}
+  .tm-dg .tm-out{display:flex;flex-direction:column;font-size:9px}
+}
+.tm-splits{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tm-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:#9C95D0;margin-top:10px}
+.tm-empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:40px 20px;color:#B9B3E6;font-size:13px;line-height:1.5}
+.tm-empty b{font-size:15px;color:#fff}
+.tm-btn{border:0;border-radius:12px;padding:10px 16px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.tm-skel{height:14px;border-radius:7px;background:rgba(168,159,232,.12);animation:tmPulse 1.2s ease-in-out infinite}
+@keyframes tmPulse{0%,100%{opacity:.5}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.tm-skel{animation:none}}
+/* Team tiles on the cheat sheet that open the team page */
+.tm-tap{cursor:pointer;border-radius:14px;-webkit-tap-highlight-color:transparent}
+.tm-tap:active{opacity:.75}
+.tm-tap:focus-visible{outline:2px solid #A89FE8;outline-offset:3px}
+.tm-hint{font-size:10px;font-weight:700;color:#A89FE8;margin-top:1px;letter-spacing:.02em}
+@media (orientation:landscape){
+  html.is-tablet #tm-body{padding:20px 28px 40px!important}
+  html.is-tablet .tm-hero{padding:22px 24px;flex-wrap:nowrap;gap:22px}
+  html.is-tablet .tm-badge-hero{width:92px;height:92px;font-size:30px}
+  html.is-tablet .tm-hero-side{flex-basis:270px;flex-shrink:0}
+  html.is-tablet .tm-name{font-size:28px}
+  html.is-tablet .tm-rec{font-size:44px}
+  html.is-tablet .tm-card{padding:18px 20px}
+  html.is-tablet .tm-roster{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  html.is-tablet .tm-weeks{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  html.is-tablet .tm-wk{min-height:112px;padding:11px}
+  html.is-tablet .tm-cal{gap:6px}
+  html.is-tablet .tm-day{min-height:86px;padding:7px}
+  html.is-tablet .tm-dn{font-size:12px}
+  html.is-tablet .tm-dg-ha{font-size:10.5px}
+  html.is-tablet .tm-dg-opp{font-size:12.5px;gap:5px;letter-spacing:0}
+  html.is-tablet .tm-dg-opp .tm-badge{display:inline-flex}
+  html.is-tablet .tm-dg .tm-out{font-size:12px}
+}
+
 /* ═══ IPAD LANDSCAPE — LEFT SIDEBAR NAV ═══
    Below the breakpoint this is inert (display:none, .app untouched).
    At/above it, .bottom-nav (all 6 copies, one per top-level screen) is
@@ -3276,6 +3378,25 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
       <div onclick="navBack()" style="margin-top:8px;font-size:13.5px;font-weight:700;color:#A89FE8;cursor:pointer">‹ Back to leagues</div>
     </div>
   </div>
+</div>
+
+<!-- ═══ TEAM PAGE (v5.65.0) — record, roster and whole-season calendar
+     for one team, reached by tapping a team on a game's cheat sheet.
+     One instance re-used per team; window._tm tracks which. ═══ -->
+<div class="screen" id="screen-team">
+  <div style="background:var(--card);padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);flex-shrink:0">
+    <div style="padding:0 16px 12px;display:flex;align-items:center;gap:12px">
+      <button onclick="navBack()" aria-label="Back" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
+      </button>
+      <div id="tm-title" style="flex:1;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Team</div>
+    </div>
+    <div style="display:flex;gap:6px;padding:0 16px 12px" role="tablist">
+      <button id="tm-tab-roster" class="tm-tab on" role="tab" onclick="tmTab('roster')">Roster</button>
+      <button id="tm-tab-schedule" class="tm-tab" role="tab" onclick="tmTab('schedule')">Schedule</button>
+    </div>
+  </div>
+  <div id="tm-body" class="scroll-bare" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);padding:14px 16px calc(env(safe-area-inset-bottom, 0px) + 28px)"></div>
 </div>
 
 <!-- ═══ GAME DETAIL — cheat sheet + an open chat, reached from the Games
@@ -9512,7 +9633,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.64.4-ipad-flourish-scale-fix';
+window.INNINGS_BUILD = 'v5.65.0-team-pages';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -9530,6 +9651,10 @@ document.addEventListener('DOMContentLoaded', function(){
 // memory-detail) that already track their own bespoke "return to" destination and
 // should not also push/pop the general stack.
 window._navStack = window._navStack || [];
+// One entry per 'game' on _navStack (v5.65.0): the game screen is a single
+// instance, so going game → team → another game → back would otherwise land
+// on the wrong game. navBack() reloads the one that was showing.
+window._gameBackStack = window._gameBackStack || [];
 
 // Keeps the iPad landscape sidebar's active pill in sync with whatever
 // screen just became current. The sidebar is a single persistent element
@@ -9597,13 +9722,15 @@ function bannerNavWithPop(bannerEl, screenId){
 function nav(id){
   var current=document.querySelector('.screen.active');
   var currentId=current?current.id.replace('screen-',''):null;
-  if(currentId&&currentId!==id){window._navStack.push(currentId);}
+  if(currentId&&currentId!==id){window._navStack.push(currentId);if(currentId==='game')window._gameBackStack.push(window._activeBrowseGame?Object.assign({},window._activeBrowseGame):null);}
   _navApplyScreen(id);
 }
 
 function navBack(fallback){
   var prev=window._navStack.pop();
+  var g=prev==='game'?(window._gameBackStack.pop()||null):null;
   _navApplyScreen(prev||fallback||'feed');
+  if(g&&(!window._activeBrowseGame||String(window._activeBrowseGame.gamePk)!==String(g.gamePk))&&typeof _showGameScreen==='function')_showGameScreen(g,false);
 }
 
 // The swipe-from-edge back gesture that used to live here has been removed
@@ -18889,7 +19016,18 @@ function tpToggleFollow(teamName) {
 }
 
 function openGameScreen(gamePk, away, home, sport, date) {
-  window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: sport || 'mlb', date: date || null };
+  // Opening a different game from the game screen itself (a Last 5 circle)
+  // keeps the one being left on the back stack.
+  var cur = document.querySelector('.screen.active');
+  if (cur && cur.id === 'screen-game' && window._activeBrowseGame && String(window._activeBrowseGame.gamePk) !== String(gamePk)) {
+    window._navStack.push('game');
+    window._gameBackStack.push(Object.assign({}, window._activeBrowseGame));
+  }
+  _showGameScreen({ gamePk: gamePk, away: away, home: home, sport: sport, date: date }, true);
+}
+function _showGameScreen(g, doNav) {
+  var gamePk = g.gamePk, away = g.away, home = g.home;
+  window._activeBrowseGame = { gamePk: gamePk, away: away || null, home: home || null, sport: g.sport || 'mlb', date: g.date || null };
   var titleEl = document.getElementById('game-detail-title');
   if (titleEl) titleEl.textContent = (away && home) ? (away + ' @ ' + home) : 'Game';
   var rowEl = document.getElementById('game-watching-with-row');
@@ -18899,7 +19037,7 @@ function openGameScreen(gamePk, away, home, sport, date) {
   var stripEl = document.getElementById('game-chat-watchers');
   if (stripEl) stripEl.style.display = 'none';
   if (typeof skipGameRecap === 'function') skipGameRecap(); // don't let a still-playing recap from the last game bleed into this one
-  nav('game');
+  if (doNav) nav('game');
   gameDetailTab('sheet');
   loadGameCheatSheet(gamePk);
   _refreshGameWatchButton(gamePk);
@@ -18933,6 +19071,411 @@ function gameDetailTab(key) {
     if (chatPanel) chatPanel.style.display = 'none';
     if (inputZone) inputZone.style.display = 'none';
   }
+}
+
+// ── LAST 5 (ESPN leagues) — tap a circle for the score, then open that
+// game (v5.65.0). Same interaction as MLB's Last 10. The gamecast payload
+// carries each game's ESPN event id; if it's missing (older cached
+// response) the game is found on that day's scoreboard by team names.
+function _gxFormDay(iso) { return _tmLocalDay(iso); }
+function _gxFormDetailInner(m, key, i) {
+  var g = m.form && m.form[key] && m.form[key][i];
+  if (!g) return '';
+  var tone = g.res === 'W' ? 'background:rgba(124,242,156,.16);color:#9be8ac' : (g.res === 'L' ? 'background:rgba(255,122,107,.16);color:#FFC2BA' : 'background:rgba(255,255,255,.08);color:#D9D4FA');
+  var home = String(g.atVs || '').indexOf('@') === -1;
+  var day = _gxFormDay(g.date);
+  var line = '<div class="gh-l10-line">' +
+    '<span class="gh-tag" style="font-size:11px;' + tone + '">' + _escapeHtml(g.res + (g.score ? ' ' + g.score : '')) + '</span>' +
+    '<span style="font-weight:700">' + (home ? 'vs ' : 'at ') + _escapeHtml(_teamShortName(g.oppName || '') || g.opp || '') + '</span>' +
+    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml(day ? _ghL10DateLabel(day) : '') + '</span></div>';
+  if (m.league === 'nhl' || (!g.id && !day)) return line;
+  return line + '<button class="gh-l10-open" onclick="gxFormOpen(\'' + key + '\',' + i + ',this)">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>Open this game</button>';
+}
+function gxFormPick(btn) {
+  var st = window._ghState;
+  var m = window._gdPregame && window._gdPregame.gx;
+  if (!st || !m || !m.form) return;
+  var key = btn.getAttribute('data-side'), i = Number(btn.getAttribute('data-i'));
+  if (!m.form[key] || !m.form[key][i]) return;
+  var same = st.formSel && st.formSel.side === key && st.formSel.i === i;
+  st.formSel = same ? null : { side: key, i: i };
+  // Update in place — no re-render, so nothing re-animates
+  document.querySelectorAll('#game-sheet-panel .gh-l10-dot.sel').forEach(function (b) { b.classList.remove('sel'); b.setAttribute('aria-pressed', 'false'); });
+  ['away', 'home'].forEach(function (k) {
+    var d = document.getElementById('gx-form-detail-' + k);
+    if (!d) return;
+    var show = st.formSel && st.formSel.side === k;
+    d.className = 'gh-l10-detail' + (show ? ' on' : '');
+    d.innerHTML = show ? _gxFormDetailInner(m, k, st.formSel.i) : '';
+  });
+  if (!same) { btn.classList.add('sel'); btn.setAttribute('aria-pressed', 'true'); }
+}
+function gxFormOpen(key, i, btn) {
+  var m = window._gdPregame && window._gdPregame.gx;
+  var g = m && m.form && m.form[key] && m.form[key][i];
+  if (!g) return;
+  var side = m[key] || {};
+  var teamName = side.name || side.short || '';
+  var oppName = g.oppName || g.opp || '';
+  var isHome = String(g.atVs || '').indexOf('@') === -1;
+  var away = isHome ? oppName : teamName, home = isHome ? teamName : oppName;
+  var day = _gxFormDay(g.date);
+  var league = m.league;
+  var go = function (id) { openGameScreen(String(id), away, home, league, day); };
+  if (g.id) { go(g.id); return; }
+  if (!day) { _ghL10OpenFailed(btn); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Finding that game…'; }
+  // A night game can sit on the next UTC day, so the UTC day is a second try.
+  var days = [day];
+  var utc = String(g.date || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(utc) && utc !== day) days.push(utc);
+  var tryDay = function (k) {
+    if (k >= days.length) { _ghL10OpenFailed(btn); return; }
+    fetch('/api/espn?league=' + encodeURIComponent(league) + '&mode=schedule&date=' + encodeURIComponent(_toEspnDate(days[k])))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var hit = ((d && d.games) || []).filter(function (x) { return _ghSameTeamName(x.away, away) && _ghSameTeamName(x.home, home); })[0];
+        if (hit && hit.gamePk != null) go(hit.gamePk); else tryDay(k + 1);
+      })
+      .catch(function (err) { console.error('Open past game error:', err); tryDay(k + 1); });
+  };
+  tryDay(0);
+}
+
+// ═══ TEAM PAGE (v5.65.0) ══════════════════════════════════════════════
+// Tap a team on a game's cheat sheet → record, roster, and the whole
+// season (football: a week-by-week board; baseball: a month calendar).
+// Data: /api/espn?mode=team (NFL, CFB) and /api/mlb?mode=team. Other
+// leagues get the page by adding them here once their layout is checked.
+var _TM_LEAGUES = { nfl: true, cfb: true, mlb: true };
+var _TM_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+window._tmCache = window._tmCache || {};
+window._tm = window._tm || null;
+
+// 'YYYY-MM-DD' in the viewer's own time zone
+function _tmLocalDay(iso) {
+  if (!iso) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  var p = function (n) { return n < 10 ? '0' + n : String(n); };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+// Attributes that make any element open a team page. data-* rather than
+// an inline string so names with apostrophes can't break the handler.
+function _tmTapAttrs(league, id, name) {
+  if (!_TM_LEAGUES[league] || (id == null && !name) || (id === '' && !name)) return '';
+  return ' role="button" tabindex="0" data-tm-league="' + _escapeHtml(league) + '" data-tm-id="' + _escapeHtml(id != null ? String(id) : '') + '" data-tm-name="' + _escapeHtml(name || '') + '"' +
+    ' onclick="event.stopPropagation();openTeamPageFromEl(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}"' +
+    ' aria-label="Open ' + _escapeHtml(name || 'team') + ' team page"';
+}
+function openTeamPageFromEl(el) {
+  openTeamPage(el.getAttribute('data-tm-league'), el.getAttribute('data-tm-id') || null, el.getAttribute('data-tm-name') || null);
+}
+function openTeamPage(league, id, name) {
+  if (!_TM_LEAGUES[league]) return;
+  window._tm = { league: league, id: id || null, name: name || null, data: null, err: null, tab: 'roster', month: null, grp: 'All', token: Date.now() };
+  var t = document.getElementById('tm-title');
+  if (t) t.textContent = name || 'Team';
+  _tmTabStyles();
+  nav('team');
+  var body = document.getElementById('tm-body');
+  if (body) body.scrollTop = 0;
+  _tmLoad();
+}
+function tmRetry() { if (window._tm) { window._tm.err = null; window._tm.token = Date.now(); _tmLoad(); } }
+function _tmLoad() {
+  var s = window._tm;
+  if (!s) return;
+  var token = s.token;
+  _tmRender();
+  var stale = function () { return !window._tm || window._tm.token !== token; };
+  _tmResolveId(s.league, s.id, s.name).then(function (id) {
+    if (stale()) return null;
+    if (id == null) throw new Error('Couldn\'t match this team to a schedule.');
+    s.id = id;
+    var key = s.league + ':' + id;
+    var hit = window._tmCache[key];
+    if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.data;
+    var url = s.league === 'mlb'
+      ? '/api/mlb?mode=team&teamId=' + encodeURIComponent(id)
+      : '/api/espn?league=' + encodeURIComponent(s.league) + '&mode=team&teamId=' + encodeURIComponent(id);
+    return fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || d.error || !d.team) throw new Error((d && d.error) || 'No team data came back.');
+      d.league = s.league;
+      d.groups = d.groups || [];
+      d.games = d.games || [];
+      window._tmCache[key] = { at: Date.now(), data: d };
+      return d;
+    });
+  }).then(function (d) {
+    if (stale() || !d) return;
+    s.data = d;
+    var t = document.getElementById('tm-title');
+    if (t) t.textContent = d.team.name || s.name || 'Team';
+    _tmRender();
+  }).catch(function (err) {
+    console.error('[team page] load failed:', err);
+    if (stale()) return;
+    s.err = (err && err.message) || 'Something went wrong.';
+    _tmRender();
+  });
+}
+// ESPN hands us its team id; MLB's live/final box score only carries names,
+// so those are matched against the team list.
+function _tmResolveId(league, id, name) {
+  if (id != null && id !== '') return Promise.resolve(id);
+  if (league !== 'mlb' || !name) return Promise.resolve(null);
+  return fetch('/api/mlb?mode=teams').then(function (r) { return r.json(); }).then(function (d) {
+    var teams = (d && d.teams) || [];
+    var exact = teams.filter(function (t) { return String(t.name).toLowerCase() === String(name).toLowerCase(); })[0];
+    var loose = exact || teams.filter(function (t) { return _ghSameTeamName(t.name, name); })[0];
+    return loose ? loose.id : null;
+  });
+}
+function tmTab(key) {
+  if (!window._tm) return;
+  window._tm.tab = key;
+  _tmTabStyles();
+  _tmRender();
+}
+function _tmTabStyles() {
+  var tab = (window._tm && window._tm.tab) || 'roster';
+  ['roster', 'schedule'].forEach(function (k) {
+    var b = document.getElementById('tm-tab-' + k);
+    if (!b) return;
+    b.classList.toggle('on', k === tab);
+    b.setAttribute('aria-selected', k === tab ? 'true' : 'false');
+  });
+}
+function tmShowCalendar() {
+  tmTab('schedule');
+  var el = document.getElementById('tm-sched');
+  var body = document.getElementById('tm-body');
+  if (!el || !body) return;
+  var top = body.scrollTop + el.getBoundingClientRect().top - body.getBoundingClientRect().top - 12;
+  body.scrollTo({ top: Math.max(0, top), behavior: _ghReducedMotion() ? 'auto' : 'smooth' });
+}
+function tmFilter(label) { if (window._tm) { window._tm.grp = label; _tmRender(); } }
+function tmMonth(ym) { if (window._tm) { window._tm.month = ym; _tmRender(); } }
+function tmOpenGame(i) {
+  var d = window._tm && window._tm.data;
+  var g = d && d.games[i];
+  if (!g) return;
+  var me = d.team.name || '', opp = g.oppName || g.opp || '';
+  openGameScreen(String(g.id), g.home ? opp : me, g.home ? me : opp, d.league, g.day || _tmLocalDay(g.date));
+}
+
+function _tmColors(d, abbr) {
+  if (d.league === 'mlb') return _ghTeamColors(abbr);
+  var c = (d.teamColors && d.teamColors[abbr]) || {};
+  return _gxColors(d.league, abbr, c.color, c.alt);
+}
+function _tmSelfColors(d) {
+  return d.league === 'mlb' ? _ghTeamColors(d.team.abbr) : _gxColors(d.league, d.team.abbr, d.team.color, d.team.alt);
+}
+function _tmBadge(c, abbr, size, cls) {
+  abbr = abbr || '?';
+  var sz = size ? 'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * (abbr.length > 2 ? 0.34 : 0.42)) + 'px;' : '';
+  return '<span class="tm-badge' + (cls ? ' ' + cls : '') + '" style="' + sz + 'background:' + c.bg + ';color:' + c.fg + '">' + _escapeHtml(abbr) + '</span>';
+}
+function _tmRec(games) {
+  var w = 0, l = 0, t = 0;
+  games.forEach(function (g) { if (g.res === 'W') w++; else if (g.res === 'L') l++; else if (g.res === 'T') t++; });
+  return w + '-' + l + (t ? '-' + t : '');
+}
+function _tmStreak(finals) {
+  if (!finals.length) return '';
+  var last = finals[finals.length - 1].res, n = 0;
+  for (var i = finals.length - 1; i >= 0 && finals[i].res === last; i--) n++;
+  return (last === 'W' ? 'Won ' : last === 'L' ? 'Lost ' : 'Tied ') + n;
+}
+function _tmDayLabel(g) {
+  var day = g.day || _tmLocalDay(g.date);
+  return day ? _ghL10DateLabel(day) : '';
+}
+function _tmShortDate(g) {
+  var day = g.day || _tmLocalDay(g.date);
+  if (!day) return '';
+  var p = day.split('-');
+  return _TM_MONTHS[Number(p[1]) - 1] + ' ' + Number(p[2]);
+}
+function _tmTime(g) {
+  if (g.timeTbd) return 'TBD';
+  return (g.date && _formatGameTime(g.date)) || '';
+}
+function _tmOutHtml(g, compact) {
+  if (g.res) return compact
+    ? '<span class="tm-out ' + g.res + '"><span>' + g.res + '</span> <span>' + g.us + '-' + g.them + '</span></span>'
+    : '<span class="tm-out ' + g.res + '">' + g.res + ' ' + g.us + '–' + g.them + '</span>';
+  if (g.state === 'in') return '<span class="tm-out in">Live</span>';
+  if (g.state === 'post') return '<span class="tm-out pre">' + _escapeHtml(g.status || 'Final') + '</span>';
+  var today = (g.day || _tmLocalDay(g.date)) === _todayLocal();
+  // Calendar cells are ~36px wide on a phone: "6:45p" instead of "6:45 PM"
+  var tm = compact ? _tmTime(g).replace(/\s*([AaPp])\.?[Mm]\.?$/, function (x, ap) { return ap.toLowerCase(); }) : _tmTime(g);
+  return '<span class="tm-out pre">' + _escapeHtml(today ? (compact ? 'Today' : 'Today ' + tm) : tm) + '</span>';
+}
+// Live game first, otherwise the next one that hasn't started
+function _tmNextIndex(d) {
+  for (var i = 0; i < d.games.length; i++) if (d.games[i].state === 'in') return i;
+  for (var j = 0; j < d.games.length; j++) if (d.games[j].state === 'pre') return j;
+  return -1;
+}
+
+function _tmRender() {
+  var el = document.getElementById('tm-body');
+  if (!el) return;
+  var s = window._tm;
+  if (!s) { el.innerHTML = ''; return; }
+  if (s.err) {
+    el.innerHTML = '<div class="tm-empty"><b>This team didn\'t load</b><div>' + _escapeHtml(s.err) + '</div><button class="tm-btn" onclick="tmRetry()">Try again</button></div>';
+    return;
+  }
+  if (!s.data) {
+    el.innerHTML = '<div class="tm-wrap"><div class="tm-hero" aria-busy="true"><span class="tm-badge tm-badge-hero" style="background:rgba(168,159,232,.14)"></span>' +
+      '<div class="tm-hero-txt" style="display:flex;flex-direction:column;gap:10px"><div class="tm-skel" style="width:40%"></div><div class="tm-skel" style="width:65%;height:20px"></div><div class="tm-skel" style="width:30%;height:28px"></div></div></div>' +
+      '<div class="tm-card"><div class="tm-skel" style="width:50%;margin-bottom:12px"></div><div class="tm-skel" style="margin-bottom:10px"></div><div class="tm-skel" style="margin-bottom:10px"></div><div class="tm-skel"></div></div></div>';
+    return;
+  }
+  var d = s.data;
+  var body = s.tab === 'schedule'
+    ? '<div id="tm-sched">' + (d.league === 'mlb' ? _tmCalendarHtml(d, s) : _tmWeeksHtml(d)) + '</div>'
+    : _tmRosterHtml(d, s);
+  el.innerHTML = '<div class="tm-wrap">' + _tmHeroHtml(d) + body + '</div>';
+}
+
+function _tmHeroHtml(d) {
+  var t = d.team, c = _tmSelfColors(d);
+  var finals = d.games.filter(function (g) { return g.res; });
+  var regular = finals.filter(function (g) { return !g.post; });
+  var rec = t.record || _tmRec(regular);
+  var chips = [];
+  if (t.standing) chips.push(t.standing);
+  var sk = _tmStreak(finals);
+  if (sk) chips.push(sk);
+  if (d.league === 'mlb' && finals.length >= 10) chips.push('Last 10: ' + _tmRec(finals.slice(-10)));
+  var ni = _tmNextIndex(d), next = '';
+  if (ni >= 0) {
+    var g = d.games[ni];
+    var when = g.state === 'in' ? 'Live now' : ((g.day || _tmLocalDay(g.date)) === _todayLocal() ? 'Today' : _tmDayLabel(g)) + (g.state === 'in' ? '' : ', ' + _tmTime(g));
+    next = '<button class="tm-next" onclick="tmOpenGame(' + ni + ')">' + _tmBadge(_tmColors(d, g.opp), g.opp, 36) +
+      '<span class="tm-next-txt"><small>' + (g.state === 'in' ? 'Playing now' : 'Next game') + '</small><b>' + (g.home ? 'vs ' : '@ ') + _escapeHtml(g.oppShort || g.oppName || g.opp) + '</b><small>' + _escapeHtml(when) + '</small></span>' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C95D0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>';
+  }
+  var cal = '<button class="tm-calbtn" onclick="tmShowCalendar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>Full season calendar</button>';
+  return '<div class="tm-hero" style="background:radial-gradient(ellipse at 0% 0%,' + _ghHexAlpha(c.bg, .4) + ',transparent 62%),#1A1640">' +
+    _tmBadge(c, t.abbr, 0, 'tm-badge-hero') +
+    '<div class="tm-hero-txt">' + (t.location ? '<div class="tm-loc">' + _escapeHtml(t.location) + '</div>' : '') +
+      '<div class="tm-name">' + _escapeHtml(t.short || t.name || '') + '</div>' +
+      '<div class="tm-rec">' + _escapeHtml(rec) + '</div>' +
+      (chips.length ? '<div class="tm-chips">' + chips.map(function (x) { return '<span class="tm-chip">' + _escapeHtml(x) + '</span>'; }).join('') + '</div>' : '') +
+    '</div><div class="tm-hero-side">' + next + cal + '</div></div>';
+}
+
+function _tmRosterHtml(d, s) {
+  if (!d.groups.length) return '<div class="tm-card"><div class="tm-empty" style="padding:24px 10px"><b>No roster yet</b><div>The roster for this team isn\'t available right now.</div></div></div>';
+  var grp = s.grp;
+  if (grp !== 'All' && !d.groups.some(function (g) { return g.label === grp; })) grp = 'All';
+  var total = d.groups.reduce(function (n, g) { return n + g.players.length; }, 0);
+  var h = '<div class="tm-card">';
+  if (d.groups.length > 1) {
+    h += '<div class="tm-filters">' + ['All'].concat(d.groups.map(function (g) { return g.label; })).map(function (l) {
+      return '<button class="' + (l === grp ? 'on' : '') + '" data-grp="' + _escapeHtml(l) + '" onclick="tmFilter(this.dataset.grp)">' + _escapeHtml(l) + '</button>';
+    }).join('') + '</div>';
+  }
+  d.groups.forEach(function (g) {
+    if (grp !== 'All' && g.label !== grp) return;
+    h += '<div class="tm-group"><div class="tm-eyebrow">' + _escapeHtml(g.label) + '<span>' + g.players.length + (g.players.length === 1 ? ' player' : ' players') + '</span></div><div class="tm-roster">' +
+      g.players.map(function (p) {
+        var meta = p.exp == null ? '' : (p.exp === 0 ? 'Rookie' : p.exp + (p.exp === 1 ? ' yr' : ' yrs'));
+        return '<div class="tm-prow" role="button" tabindex="0" data-name="' + _escapeHtml(p.name) + '" data-id="' + _escapeHtml(String(p.id || '')) + '" data-league="' + d.league + '" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id||null,this.dataset.league)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.click();}">' +
+          '<span class="tm-num">' + _escapeHtml(p.jersey || '') + '</span>' +
+          '<div class="tm-pmain"><b>' + _escapeHtml(p.name) + '</b><span>' + _escapeHtml(p.posName || p.pos || '') + '</span></div>' +
+          (meta ? '<span class="tm-pmeta">' + meta + '</span>' : '') + '</div>';
+      }).join('') + '</div></div>';
+  });
+  return h + (grp === 'All' ? '<div class="tm-legend">' + total + ' players · tap a name for reference links</div>' : '') + '</div>';
+}
+
+// Football: one tile per week, bye weeks filled in from gaps in the
+// regular-season week numbers, postseason tiles after.
+function _tmWeeksHtml(d) {
+  if (!d.games.length) return '<div class="tm-card"><div class="tm-empty" style="padding:24px 10px"><b>No schedule yet</b><div>This season\'s schedule isn\'t out yet.</div></div></div>';
+  var ni = _tmNextIndex(d);
+  var reg = [], post = [];
+  d.games.forEach(function (g, i) { (g.post ? post : reg).push({ g: g, i: i }); });
+  var tiles = [];
+  var lastWeek = null;
+  reg.forEach(function (x) {
+    var w = x.g.week;
+    if (d.league === 'nfl' && w != null && lastWeek != null) for (var b = lastWeek + 1; b < w; b++) tiles.push({ bye: b });
+    if (w != null) lastWeek = w;
+    tiles.push(x);
+  });
+  post.forEach(function (x) { tiles.push(x); });
+  var finals = d.games.filter(function (g) { return g.res && !g.post; });
+  var yr = (d.games[0].day || _tmLocalDay(d.games[0].date) || '').slice(0, 4);
+  var h = '<div class="tm-card"><div class="tm-eyebrow">' + _escapeHtml(yr) + ' season<span>' + _escapeHtml(_tmRec(finals)) + '</span></div><div class="tm-weeks">';
+  tiles.forEach(function (x) {
+    if (x.bye) { h += '<div class="tm-wk bye"><span>Week ' + x.bye + '</span><b>Bye</b></div>'; return; }
+    var g = x.g;
+    var label = g.post ? (g.label || 'Playoffs') : (g.week != null ? 'Week ' + g.week : (g.label || ''));
+    h += '<button class="tm-wk' + (x.i === ni ? ' now' : '') + '" onclick="tmOpenGame(' + x.i + ')" aria-label="' + _escapeHtml(label + ', ' + (g.home ? 'vs ' : 'at ') + (g.oppName || g.opp) + ', ' + _tmDayLabel(g)) + '">' +
+      '<span class="tm-wk-top"><span style="overflow:hidden;text-overflow:ellipsis">' + _escapeHtml(label) + '</span><span>' + _escapeHtml(_tmShortDate(g)) + '</span></span>' +
+      '<span class="tm-wk-opp">' + _tmBadge(_tmColors(d, g.opp), g.opp, 26) + '<span><small>' + (g.neutral ? 'vs' : (g.home ? 'vs' : '@')) + '</small> ' + _escapeHtml(g.opp) + '</span></span>' +
+      _tmOutHtml(g, false) + '</button>';
+  });
+  return h + '</div><div class="tm-legend"><span>Outlined week is up next</span><span>Tap any week to open the game</span></div></div>';
+}
+
+// Baseball: a month at a time, every game on its day, doubleheaders stacked.
+function _tmCalendarHtml(d, s) {
+  if (!d.games.length) return '<div class="tm-card"><div class="tm-empty" style="padding:24px 10px"><b>No schedule yet</b><div>This season\'s schedule isn\'t out yet.</div></div></div>';
+  var byDay = {}, months = [];
+  d.games.forEach(function (g, i) {
+    var day = g.day || _tmLocalDay(g.date);
+    if (!day) return;
+    (byDay[day] = byDay[day] || []).push(i);
+    var ym = day.slice(0, 7);
+    if (months.indexOf(ym) === -1) months.push(ym);
+  });
+  months.sort();
+  var cur = s.month;
+  if (!cur || months.indexOf(cur) === -1) {
+    var today = _todayLocal().slice(0, 7);
+    var ni = _tmNextIndex(d);
+    cur = months.indexOf(today) !== -1 ? today : (ni >= 0 ? (d.games[ni].day || _tmLocalDay(d.games[ni].date)).slice(0, 7) : months[months.length - 1]);
+    s.month = cur;
+  }
+  var finals = d.games.filter(function (g) { return g.res; });
+  var h = '<div class="tm-card"><div class="tm-months">' + months.map(function (ym) {
+    var mFinals = finals.filter(function (g) { return (g.day || _tmLocalDay(g.date) || '').slice(0, 7) === ym; });
+    return '<button class="' + (ym === cur ? 'on' : '') + '" onclick="tmMonth(\'' + ym + '\')">' + _TM_MONTHS[Number(ym.slice(5, 7)) - 1] + '<small>' + (mFinals.length ? _tmRec(mFinals) : '—') + '</small></button>';
+  }).join('') + '</div>';
+  var reg = finals.filter(function (g) { return !g.post; });
+  var left = d.games.filter(function (g) { return !g.post && !g.res && g.state !== 'post'; }).length;
+  h += '<div class="tm-splits"><span class="tm-chip">Home ' + _tmRec(reg.filter(function (g) { return g.home; })) + '</span><span class="tm-chip">Away ' + _tmRec(reg.filter(function (g) { return !g.home; })) + '</span>' +
+    (left ? '<span class="tm-chip">' + left + ' left</span>' : '') + '</div>';
+  var y = Number(cur.slice(0, 4)), mo = Number(cur.slice(5, 7)) - 1;
+  var first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
+  var todayStr = _todayLocal();
+  h += '<div class="tm-cal">' + ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<div class="tm-dow">' + x + '</div>'; }).join('');
+  for (var e = 0; e < first; e++) h += '<div class="tm-day empty"></div>';
+  for (var dd = 1; dd <= days; dd++) {
+    var key = cur + '-' + (dd < 10 ? '0' + dd : dd);
+    var idx = byDay[key] || [];
+    var cls = 'tm-day' + (idx.length ? '' : ' off') + (key === todayStr ? ' today' : '');
+    h += '<div class="' + cls + '"><span class="tm-dn">' + dd + '</span>';
+    idx.forEach(function (i) {
+      var g = d.games[i];
+      h += '<button class="tm-dg" onclick="tmOpenGame(' + i + ')" aria-label="' + _escapeHtml((g.home ? 'vs ' : 'at ') + (g.oppName || g.opp) + ', ' + _tmDayLabel(g) + (g.res ? ', ' + (g.res === 'W' ? 'won ' : 'lost ') + g.us + ' to ' + g.them : '')) + '">' +
+        '<span class="tm-dg-ha">' + (g.home ? 'vs' : '@') + '</span>' +
+        '<span class="tm-dg-opp">' + _tmBadge(_tmColors(d, g.opp), g.opp, 18) + _escapeHtml(g.opp) + '</span>' + _tmOutHtml(g, true) + '</button>';
+    });
+    h += '</div>';
+  }
+  return h + '</div><div class="tm-legend"><span>Outlined day is today</span><span>Tap any game to open it</span></div></div>';
 }
 
 // Cheat sheets: before a game starts, MLB shows a probable-pitcher
@@ -19160,6 +19703,7 @@ function _ghSideFromPregame(s) {
   var st = s.standing || {};
   var f = s.feat;
   return {
+    id: s.id != null ? s.id : null,
     name: s.name, short: _teamShortName(s.name), abbr: abbr, colors: _ghTeamColors(abbr),
     record: s.record || null, divRank: st.divRank || null, divName: st.divName || null,
     l10: st.l10 || null, streak: st.streak || null,
@@ -19275,10 +19819,11 @@ function _ghPreHtml(m, st, animating) {
   var teamTile = function (s, cls, delay) {
     var rec = s.record ? (s.record.w + '–' + s.record.l) : '—';
     var place = (s.divRank && s.divName) ? _ordinalSuffix(s.divRank) + ' · ' + s.divName : '';
-    return '<div class="gh-team ' + cls + '" style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
+    var tap = _tmTapAttrs('mlb', s.id, s.name);
+    return '<div class="gh-team ' + cls + (tap ? ' tm-tap' : '') + '"' + tap + ' style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
       '<div style="font-size:12.5px;font-weight:700;margin-top:4px;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(s.short) + '</div>' +
       '<div class="gh-num" style="font-size:28px;line-height:1">' + rec + '</div>' +
-      (place ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(place) + '</div>' : '') + '</div>';
+      (place ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(place) + '</div>' : '') + (tap ? '<div class="tm-hint">Team page ›</div>' : '') + '</div>';
   };
   h += '<div class="gh-stage">' +
     '<svg viewBox="0 0 314 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
@@ -19511,7 +20056,8 @@ function _ghScoreboard(m, centerHtml, flash, finalMode) {
   var sideHtml = function (s, isRight, isFlash, isWin, isLose) {
     var label = isWin ? '<span style="font-size:11.5px;font-weight:800;white-space:nowrap;color:' + s.colors.accent + '">' + _escapeHtml(s.short) + ' win</span>'
       : '<span class="gh-sub" style="white-space:nowrap">' + _escapeHtml(s.short) + '</span>';
-    return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + (isLose ? ';opacity:.85' : '') + '">' +
+    var tap = _tmTapAttrs(m.league || 'mlb', s.id, s.name);
+    return '<div' + (tap ? ' class="tm-tap"' + tap : '') + ' style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + (isLose ? ';opacity:.85' : '') + '">' +
       _ghBadge(s, 42) +
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' + label + scoreEl(s, isFlash, isWin, isLose) + '</div></div>';
   };
@@ -20338,8 +20884,9 @@ function _gxFormHtml(m, st) {
     return games.length > 0 && priorOf(pair[1], games) > 0;
   });
   var title = m.sport === 'soccer' ? 'Form · last ' + n : 'Last ' + n;
+  var sel = st && st.formSel;
   var h = '<div class="gh-up" style="' + _ghDelay(1.3) + 'display:flex;flex-direction:column;gap:12px">' +
-    '<div class="gh-row" style="align-items:baseline"><span class="gh-eyebrow">' + title + '</span><span style="font-size:11px;color:#9C95D0">oldest → latest</span></div>';
+    '<div class="gh-row" style="align-items:baseline"><span class="gh-eyebrow">' + title + '</span><span style="font-size:11px;color:#9C95D0">oldest → latest · tap a game</span></div>';
   if (split) {
     h += '<div class="gh-sub" style="margin-top:-6px;line-height:1.45">Records count this season only. Games left of the line are from last season.</div>';
   }
@@ -20373,15 +20920,17 @@ function _gxFormHtml(m, st) {
       var oc = m.league === 'nhl' ? _gxColors('nhl', g.opp) : _gxColors(m.league, g.opp, colors[g.opp] && colors[g.opp].color, colors[g.opp] && colors[g.opp].alt);
       var fs = (games.length > 5 ? 8.5 : 10.5) - (String(g.opp).length > 3 ? 1.5 : 0);
       var older = i < prior;
-      h += '<span class="gh-l10-dot gh-l10-pop' + (g.res === 'W' ? '' : ' loss') + '" role="img" aria-label="' + _escapeHtml(word[g.res] + ' ' + (g.oppName || g.opp) + (g.score ? ' ' + g.score : '') + (older ? ' (last season)' : '')) + '" style="' + _ghDelay(base + i * 0.11) +
-        'width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;cursor:default;' + (older ? 'opacity:.45;' : '') + 'background:' + oc.bg + ';color:' + oc.fg + ';box-shadow:0 0 0 2px ' + ring[g.res] + '">' + _escapeHtml(g.opp) + '</span>';
+      var isSel = sel && sel.side === pair[0] && sel.i === i;
+      h += '<button class="gh-l10-dot gh-l10-pop' + (g.res === 'W' ? '' : ' loss') + (isSel ? ' sel' : '') + '" data-side="' + pair[0] + '" data-i="' + i + '" onclick="gxFormPick(this)" aria-pressed="' + (isSel ? 'true' : 'false') + '" aria-label="' + _escapeHtml(word[g.res] + ' ' + (g.oppName || g.opp) + (g.score ? ' ' + g.score : '') + (older ? ' (last season)' : '')) + '" style="' + _ghDelay(base + i * 0.11) +
+        'width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;' + (older ? 'opacity:.45;' : '') + 'background:' + oc.bg + ';color:' + oc.fg + ';box-shadow:0 0 0 2px ' + ring[g.res] + '">' + _escapeHtml(g.opp) + '</button>';
     });
     h += '</div><div style="display:flex;justify-content:space-between;gap:2px;margin-top:-4px" aria-hidden="true">';
     games.forEach(function (g, i) {
       if (prior > 0 && i === prior) h += '<span style="width:1px;flex-shrink:0"></span>';
       h += '<span class="gh-l10-wl gh-l10-pop" style="' + _ghDelay(base + i * 0.11 + 0.05) + 'width:' + size + 'px;' + (i < prior ? 'opacity:.45;' : '') + 'color:' + letter[g.res] + '">' + g.res + '</span>';
     });
-    h += '</div></div>';
+    var selGame = sel && sel.side === pair[0] ? games[sel.i] : null;
+    h += '</div><div id="gx-form-detail-' + pair[0] + '" class="gh-l10-detail' + (selGame ? ' on' : '') + '">' + (selGame ? _gxFormDetailInner(m, pair[0], sel.i) : '') + '</div></div>';
   });
   return h + '</div>';
 }
@@ -20390,10 +20939,11 @@ function _gxPreHtml(m, st) {
   var meta = [_formatGameTime(m.startTime), m.venue].filter(Boolean).join(' · ');
   var h = _ghHeader('pre', '<span class="gh-dot pre"></span>PRE-GAME', meta);
   var tile = function (s, cls, delay) {
-    return '<div class="gh-team ' + cls + '" style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
+    var tap = _tmTapAttrs(m.league, s.id, s.name);
+    return '<div class="gh-team ' + cls + (tap ? ' tm-tap' : '') + '"' + tap + ' style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
       '<div style="font-size:12.5px;font-weight:700;margin-top:4px;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(s.short || '') + '</div>' +
       '<div class="gh-num" style="font-size:26px;line-height:1">' + _escapeHtml(s.record || '—') + '</div>' +
-      (s.standing ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(s.standing) + '</div>' : '') + '</div>';
+      (s.standing ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(s.standing) + '</div>' : '') + (tap ? '<div class="tm-hint">Team page ›</div>' : '') + '</div>';
   };
   h += '<div class="gh-stage">' + _gxStageSvg(m) + '<div class="gh-teams">' + tile(m.away, 'gh-from-l', .25) +
     '<div style="display:flex;flex-direction:column;align-items:center;gap:6px">' + _gxBallIcon(m.sport) +
