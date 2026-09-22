@@ -90,6 +90,28 @@ module.exports = async function handler(req, res) {
       res.status(200).json(result);
       return;
     }
+    // Team page (v5.65.0): header info, roster and the whole season's
+    // schedule for one team, in one call. Each ESPN piece is fetched on its
+    // own and fails soft to null, so a missing roster never costs the
+    // schedule and vice versa.
+    if (mode === 'team') {
+      const teamId = req.query.teamId;
+      if (!teamId) { res.status(400).json({ error: 'Missing teamId' }); return; }
+      const base = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams/' + encodeURIComponent(teamId);
+      const season = req.query.season ? '&season=' + encodeURIComponent(req.query.season) : '';
+      const parts = await Promise.all([
+        _tpGetJson(base),
+        _tpGetJson(base + '/roster'),
+        _tpGetJson(base + '/schedule?seasontype=2' + season),
+        _tpGetJson(base + '/schedule?seasontype=3' + season),
+        _gcTeamColors(path, league)
+      ]);
+      const result = summarizeTeamPage(parts, teamId, league);
+      if (!result.team.name && !result.games.length) { res.status(502).json({ error: 'No team data from ESPN' }); return; }
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      res.status(200).json(result);
+      return;
+    }
     if (mode === 'standings') {
       if (league !== 'nfl') { res.status(400).json({ error: 'Standings-based playoff seeding is only built for nfl right now — cfb seeding comes from the CFP committee, not computable win-loss standings' }); return; }
       const season = req.query.season || new Date().getFullYear();
@@ -832,7 +854,7 @@ function _gcForm(data, away, home) {
       var res = String(e.gameResult || '').toUpperCase();
       res = res === 'T' ? 'D' : res;
       var opp = e.opponent || {};
-      return { opp: opp.abbreviation || '?', oppName: opp.displayName || null, res: res || '?', score: e.score || null, atVs: e.atVs || null, date: e.gameDate || null };
+      return { id: e.id != null ? String(e.id) : null, opp: opp.abbreviation || '?', oppName: opp.displayName || null, res: res || '?', score: e.score || null, atVs: e.atVs || null, date: e.gameDate || null };
     }).filter(function (g) { return /^[WLD]$/.test(g.res); });
   });
   return out;
@@ -1239,4 +1261,105 @@ async function _gcTeamColors(path, league) {
   } catch (e) {
     return {};
   }
+}
+
+// ── TEAM PAGE (v5.65.0) ──────────────────────────────────────────────
+async function _tpGetJson(url) {
+  try { var r = await fetch(url); if (!r.ok) return null; return await r.json(); }
+  catch (e) { return null; }
+}
+function _tpScore(s) {
+  if (s == null) return null;
+  if (typeof s === 'object') return s.value != null ? Number(s.value) : _num(s.displayValue);
+  return _num(s);
+}
+var _TP_GROUP_LABELS = { offense: 'Offense', defense: 'Defense', specialteam: 'Special teams', specialteams: 'Special teams' };
+function summarizeTeamPage(parts, teamId, league) {
+  var info = (parts[0] && parts[0].team) || {};
+  var items = (info.record && info.record.items) || [];
+  var total = items.filter(function (r) { return /total|overall/i.test(r.type || r.description || ''); })[0] || items[0];
+  var team = {
+    id: String(info.id || teamId),
+    name: info.displayName || null,
+    short: info.shortDisplayName || info.name || null,
+    abbr: info.abbreviation || null,
+    location: info.location || null,
+    color: _hex(info.color),
+    alt: _hex(info.alternateColor),
+    logo: (info.logos && info.logos[0] && info.logos[0].href) || null,
+    record: total ? (total.summary || null) : null,
+    standing: info.standingSummary || null
+  };
+
+  // Football rosters come grouped (offense / defense / special teams);
+  // every other league is one flat list.
+  var mapP = function (a) {
+    a = a || {};
+    var exp = a.experience && a.experience.years;
+    return {
+      id: a.id != null ? String(a.id) : null,
+      name: a.displayName || a.fullName || '',
+      jersey: a.jersey != null ? String(a.jersey) : null,
+      pos: (a.position && a.position.abbreviation) || null,
+      posName: (a.position && (a.position.displayName || a.position.name)) || null,
+      exp: exp != null ? Number(exp) : null
+    };
+  };
+  var groups = [];
+  var ath = (parts[1] && parts[1].athletes) || [];
+  if (ath.length && ath[0] && Array.isArray(ath[0].items)) {
+    ath.forEach(function (g) {
+      var key = String(g.position || '').toLowerCase().replace(/[^a-z]/g, '');
+      var players = (g.items || []).map(mapP).filter(function (p) { return p.name; });
+      if (players.length) groups.push({ label: _TP_GROUP_LABELS[key] || (g.position ? String(g.position).charAt(0).toUpperCase() + String(g.position).slice(1) : 'Roster'), players: players });
+    });
+  } else if (ath.length) {
+    var flat = ath.map(mapP).filter(function (p) { return p.name; });
+    if (flat.length) groups.push({ label: 'Roster', players: flat });
+  }
+
+  var seen = {}, games = [];
+  [parts[2], parts[3]].forEach(function (sched, si) {
+    ((sched && sched.events) || []).forEach(function (ev) {
+      if (!ev || ev.id == null || seen[ev.id]) return;
+      seen[ev.id] = true;
+      var comp = (ev.competitions && ev.competitions[0]) || {};
+      var cs = comp.competitors || [];
+      var me = cs.filter(function (c) { return String(c.id || (c.team && c.team.id)) === team.id; })[0];
+      var opp = cs.filter(function (c) { return c !== me; })[0];
+      if (!me || !opp) return;
+      var ot = opp.team || {};
+      var st = (comp.status && comp.status.type) || (ev.status && ev.status.type) || {};
+      var state = st.state || (st.completed ? 'post' : 'pre');
+      var us = _tpScore(me.score), them = _tpScore(opp.score);
+      var res = null;
+      if (state === 'post') {
+        if (us != null && them != null && (us || them)) res = us > them ? 'W' : (us < them ? 'L' : 'T');
+        else if (me.winner === true) res = 'W';
+        else if (opp.winner === true) res = 'L';
+      }
+      var week = ev.week || {};
+      games.push({
+        id: String(ev.id),
+        date: ev.date || comp.date || null,
+        timeTbd: comp.timeValid === false || ev.timeValid === false,
+        week: week.number != null ? Number(week.number) : null,
+        label: week.text || (si === 1 ? 'Postseason' : null),
+        post: si === 1,
+        home: me.homeAway === 'home',
+        neutral: !!comp.neutralSite,
+        opp: ot.abbreviation || '?',
+        oppName: ot.displayName || ot.name || null,
+        oppShort: ot.shortDisplayName || null,
+        state: state,
+        status: st.shortDetail || st.detail || null,
+        us: res ? us : null,
+        them: res ? them : null,
+        res: res,
+        venue: (comp.venue && comp.venue.fullName) || null
+      });
+    });
+  });
+  games.sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
+  return { league: league, team: team, groups: groups, games: games, teamColors: parts[4] || {} };
 }
