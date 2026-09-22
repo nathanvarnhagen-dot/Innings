@@ -115,9 +115,20 @@ module.exports = async function handler(req, res) {
     if (mode === 'standings') {
       if (league !== 'nfl') { res.status(400).json({ error: 'Standings-based playoff seeding is only built for nfl right now — cfb seeding comes from the CFP committee, not computable win-loss standings' }); return; }
       const season = req.query.season || new Date().getFullYear();
-      const url = 'https://site.web.api.espn.com/apis/v2/sports/' + path + '/standings?season=' + encodeURIComponent(season);
+      // level=3 is what makes ESPN nest conference -> division -> teams.
+      // Without it each conference comes back as one flat 16-team table
+      // with no division children, which parsed to nothing (v5.65.2 fix,
+      // shape checked against a live response).
+      const url = 'https://site.web.api.espn.com/apis/v2/sports/' + path + '/standings?level=3&season=' + encodeURIComponent(season);
       const r = await fetch(url);
       const data = await r.json();
+      // ESPN's standings feed has been seen reporting 0-0 for every team
+      // weeks into a season. When it does, records are rebuilt from that
+      // season's weekly scoreboards instead.
+      if (_nflStandingsAllZero(data)) {
+        const recs = await _nflRecordsFromScoreboards(path, season);
+        if (recs) _nflApplyRecords(data, recs);
+      }
       // Diagnostic wrapper: if this comes back empty or throws, surface
       // what ESPN actually sent back instead of a generic failure — two
       // guesses at this endpoint's shape have already been wrong once
@@ -663,6 +674,61 @@ function _nflStatValue(entry, name) {
   return stat && stat.value != null ? Number(stat.value) : 0;
 }
 
+function _nflEachEntry(data, fn) {
+  (data.children || []).forEach(function (conf) {
+    (conf.children || []).forEach(function (div) {
+      ((div.standings && div.standings.entries) || []).forEach(fn);
+    });
+  });
+}
+function _nflStandingsAllZero(data) {
+  var games = 0, teams = 0;
+  _nflEachEntry(data, function (e) { teams++; games += _nflStatValue(e, 'wins') + _nflStatValue(e, 'losses') + _nflStatValue(e, 'ties'); });
+  return teams > 0 && games === 0;
+}
+async function _nflRecordsFromScoreboards(path, season) {
+  try {
+    var weeks = [];
+    for (var w = 1; w <= 18; w++) weeks.push(w);
+    var boards = await Promise.all(weeks.map(function (w) {
+      return _tpGetJson('https://site.api.espn.com/apis/site/v2/sports/' + path + '/scoreboard?seasontype=2&week=' + w + '&dates=' + encodeURIComponent(season));
+    }));
+    var recs = {}, any = false;
+    boards.forEach(function (b) {
+      ((b && b.events) || []).forEach(function (ev) {
+        var comp = (ev.competitions && ev.competitions[0]) || {};
+        var st = (comp.status && comp.status.type) || (ev.status && ev.status.type) || {};
+        if (!st.completed) return;
+        var cs = comp.competitors || [];
+        if (cs.length !== 2) return;
+        var a = _num(cs[0].score), h = _num(cs[1].score);
+        if (a == null || h == null) return;
+        cs.forEach(function (c, i) {
+          var id = c.team && c.team.id != null ? String(c.team.id) : null;
+          if (!id) return;
+          var us = i === 0 ? a : h, them = i === 0 ? h : a;
+          var r = recs[id] = recs[id] || { w: 0, l: 0, t: 0 };
+          if (us > them) r.w++; else if (us < them) r.l++; else r.t++;
+          any = true;
+        });
+      });
+    });
+    return any ? recs : null;
+  } catch (e) { return null; }
+}
+function _nflApplyRecords(data, recs) {
+  _nflEachEntry(data, function (e) {
+    var id = e.team && e.team.id != null ? String(e.team.id) : null;
+    var r = id && recs[id];
+    if (!r) return;
+    (e.stats || []).forEach(function (s) {
+      if (s.name === 'wins') s.value = r.w;
+      if (s.name === 'losses') s.value = r.l;
+      if (s.name === 'ties') s.value = r.t;
+    });
+  });
+}
+
 function summarizeNflStandings(data) {
   var conferences = data.children || [];
   var divisions = [];
@@ -671,7 +737,9 @@ function summarizeNflStandings(data) {
     var confKey = /national/i.test(confName) ? 'nfc' : 'afc';
     var divGroups = conf.children || [];
     divGroups.forEach(function (div) {
-      var divName = (div.name || div.abbreviation || '').replace(/^(American|National) Football Conference /i, '');
+      // Live division names already carry the conference ("NFC West"); it's
+      // stripped here because the division label adds it back.
+      var divName = (div.name || div.abbreviation || '').replace(/^((American|National) Football Conference|AFC|NFC)\s+/i, '');
       var entries = (div.standings && div.standings.entries) || [];
       var teams = entries.map(function (e) {
         return { name: (e.team && (e.team.displayName || e.team.name)) || '', w: _nflStatValue(e, 'wins'), l: _nflStatValue(e, 'losses') };
