@@ -725,6 +725,13 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
   html.is-tablet .tm-dg .tm-out{font-size:12px}
 }
 
+/* Pull to refresh (v5.65.1) */
+.ptr-ind{position:absolute;left:50%;top:0;z-index:30;display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;background:rgba(26,22,64,.96);border:1px solid rgba(168,159,232,.28);box-shadow:0 6px 18px rgba(0,0,0,.35);color:#E9E5FF;font-size:12px;font-weight:700;white-space:nowrap;opacity:0;transform:translate(-50%,-24px);pointer-events:none;transition:opacity .2s,transform .2s}
+.ptr-ind.pulling{transition:none}
+.ptr-spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(168,159,232,.35);border-top-color:#A89FE8;flex-shrink:0}
+.ptr-ind.busy .ptr-spin{animation:ptrSpin .8s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.ptr-ind.busy .ptr-spin{animation:none}}
 /* ═══ IPAD LANDSCAPE — LEFT SIDEBAR NAV ═══
    Below the breakpoint this is inert (display:none, .app untouched).
    At/above it, .bottom-nav (all 6 copies, one per top-level screen) is
@@ -9633,7 +9640,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.65.0-team-pages';
+window.INNINGS_BUILD = 'v5.65.1-pull-refresh';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19038,6 +19045,7 @@ function _showGameScreen(g, doNav) {
   if (stripEl) stripEl.style.display = 'none';
   if (typeof skipGameRecap === 'function') skipGameRecap(); // don't let a still-playing recap from the last game bleed into this one
   if (doNav) nav('game');
+  _ptrAttach(document.getElementById('game-sheet-panel'), gameRefreshNow);
   gameDetailTab('sheet');
   loadGameCheatSheet(gamePk);
   _refreshGameWatchButton(gamePk);
@@ -19143,6 +19151,92 @@ function gxFormOpen(key, i, btn) {
   tryDay(0);
 }
 
+// ── PULL TO REFRESH (v5.65.1) — drag down from the top of the game's
+// cheat sheet (or a team page) to re-fetch just that, instead of
+// reloading the whole app. Listeners are passive and live only on the
+// two panels that use it, never on the whole document.
+function _ptrAttach(panel, onRefresh) {
+  if (!panel || panel._ptr) return;
+  panel._ptr = true;
+  var screen = panel.closest('.screen') || panel.parentNode;
+  var ind = document.createElement('div');
+  ind.className = 'ptr-ind';
+  ind.setAttribute('role', 'status');
+  ind.innerHTML = '<span class="ptr-spin"></span><span class="ptr-txt">Pull to refresh</span>';
+  screen.appendChild(ind);
+  var txt = ind.querySelector('.ptr-txt'), spin = ind.querySelector('.ptr-spin');
+  var startY = null, pull = 0, busy = false, TRIGGER = 64;
+  var show = function (y, label) {
+    ind.style.top = (panel.offsetTop + 6) + 'px';
+    ind.style.opacity = String(Math.min(1, y / 30));
+    ind.style.transform = 'translate(-50%,' + (y - 24) + 'px)';
+    if (label) txt.textContent = label;
+  };
+  var hide = function () {
+    ind.classList.remove('pulling', 'busy');
+    ind.style.opacity = '0';
+    ind.style.transform = 'translate(-50%,-24px)';
+    spin.style.transform = '';
+  };
+  panel.addEventListener('touchstart', function (e) {
+    startY = (!busy && panel.scrollTop <= 0 && e.touches.length === 1) ? e.touches[0].clientY : null;
+    pull = 0;
+  }, { passive: true });
+  panel.addEventListener('touchmove', function (e) {
+    if (startY == null) return;
+    var dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || panel.scrollTop > 0) { startY = null; pull = 0; hide(); return; }
+    pull = Math.min(dy * 0.5, 96);
+    ind.classList.add('pulling');
+    spin.style.transform = 'rotate(' + Math.round(pull * 4) + 'deg)';
+    show(Math.min(pull, 64), pull >= TRIGGER ? 'Release to refresh' : 'Pull to refresh');
+  }, { passive: true });
+  var end = function () {
+    if (startY == null) return;
+    startY = null;
+    if (pull < TRIGGER) { hide(); return; }
+    busy = true;
+    ind.classList.remove('pulling');
+    ind.classList.add('busy');
+    spin.style.transform = '';
+    show(40, 'Refreshing…');
+    var t0 = Date.now();
+    var done = function () {
+      setTimeout(function () { busy = false; hide(); }, Math.max(0, 450 - (Date.now() - t0)));
+    };
+    try { Promise.resolve(onRefresh()).then(done, function (err) { console.error('[refresh] failed:', err); done(); }); }
+    catch (err) { console.error('[refresh] failed:', err); done(); }
+  };
+  panel.addEventListener('touchend', end, { passive: true });
+  panel.addEventListener('touchcancel', function () { startY = null; if (!busy) hide(); }, { passive: true });
+}
+// Runs fn with a cache-buster on any /api/ request it starts right away,
+// so a manual refresh isn't answered from Vercel's edge cache.
+function _withFreshApi(fn) {
+  var orig = window.fetch;
+  window.fetch = function (u, o) {
+    if (typeof u === 'string' && u.indexOf('/api/') === 0) u += (u.indexOf('?') === -1 ? '?' : '&') + '_fresh=' + Date.now();
+    return orig.call(this, u, o);
+  };
+  try { return Promise.resolve(fn()); }
+  finally { window.fetch = orig; }
+}
+// Re-fetch only the open game: score/box score first, and the pregame
+// sheet too if it hasn't started. Keeps the current tab and state.
+function gameRefreshNow() {
+  var g = window._activeBrowseGame;
+  if (!g) return Promise.resolve();
+  var pk = g.gamePk, sport = g.sport || 'mlb';
+  return _withFreshApi(function () { return _refreshBoxScore(pk); }).then(function (isLive) {
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != pk) return;
+    if (window._gdPregame && window._gdPregame.boxScoreHtml) {
+      if (isLive && !window._gameLiveRefreshTimer) _startGameLiveRefresh(pk);
+      return;
+    }
+    return _withFreshApi(function () { return _loadPregameSheet(pk, sport); });
+  });
+}
+
 // ═══ TEAM PAGE (v5.65.0) ══════════════════════════════════════════════
 // Tap a team on a game's cheat sheet → record, roster, and the whole
 // season (football: a week-by-week board; baseball: a month calendar).
@@ -19182,7 +19276,16 @@ function openTeamPage(league, id, name) {
   nav('team');
   var body = document.getElementById('tm-body');
   if (body) body.scrollTop = 0;
+  _ptrAttach(body, tmRefresh);
   _tmLoad();
+}
+function tmRefresh() {
+  var s = window._tm;
+  if (!s) return Promise.resolve();
+  s.err = null;
+  s.fresh = true;
+  s.token = Date.now();
+  return _tmLoad();
 }
 function tmRetry() { if (window._tm) { window._tm.err = null; window._tm.token = Date.now(); _tmLoad(); } }
 function _tmLoad() {
@@ -19191,16 +19294,19 @@ function _tmLoad() {
   var token = s.token;
   _tmRender();
   var stale = function () { return !window._tm || window._tm.token !== token; };
-  _tmResolveId(s.league, s.id, s.name).then(function (id) {
+  var fresh = !!s.fresh;
+  s.fresh = false;
+  return _tmResolveId(s.league, s.id, s.name).then(function (id) {
     if (stale()) return null;
     if (id == null) throw new Error('Couldn\'t match this team to a schedule.');
     s.id = id;
     var key = s.league + ':' + id;
     var hit = window._tmCache[key];
-    if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.data;
+    if (!fresh && hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.data;
     var url = s.league === 'mlb'
       ? '/api/mlb?mode=team&teamId=' + encodeURIComponent(id)
       : '/api/espn?league=' + encodeURIComponent(s.league) + '&mode=team&teamId=' + encodeURIComponent(id);
+    if (fresh) url += '&_fresh=' + Date.now(); // skips Vercel's edge cache
     return fetch(url).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || d.error || !d.team) throw new Error((d && d.error) || 'No team data came back.');
       d.league = s.league;
@@ -20189,7 +20295,8 @@ function _ghLiveHtml(m, st) {
     mini + '</div>';
   var side = function (t, isRight, flash) {
     var trailing = t.score != null && (t === m.away ? m.home.score : m.away.score) > t.score;
-    var badge = '<div class="gh-badge gh-sb-badge" style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>';
+    var tapA = _tmTapAttrs('mlb', t.id, t.name);
+    var badge = '<div class="gh-badge gh-sb-badge' + (tapA ? ' tm-tap' : '') + '"' + tapA + ' style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>';
     return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + '">' + badge +
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
         '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short) + '</span>' +
@@ -21083,7 +21190,7 @@ function _gxLiveHtml(m, st) {
     var other = t === m.away ? m.home : m.away;
     var trailing = t.score != null && other.score != null && other.score > t.score;
     return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + '">' +
-      '<div class="gh-badge gh-sb-badge' + (String(t.abbr).length > 3 ? ' gh-ab4' : '') + '" style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>' +
+      '<div class="gh-badge gh-sb-badge' + (String(t.abbr).length > 3 ? ' gh-ab4' : '') + (_tmTapAttrs(m.league, t.id, t.name) ? ' tm-tap' : '') + '"' + _tmTapAttrs(m.league, t.id, t.name) + ' style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>' +
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
         '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short || '') + '</span>' +
         '<span class="gh-num gh-sb-score' + ((m.away.score >= 100 || m.home.score >= 100) ? ' gh-sb3' : '') + '" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
