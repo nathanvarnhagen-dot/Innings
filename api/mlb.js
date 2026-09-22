@@ -67,6 +67,23 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Team page (v5.65.0): header info, active roster and the whole
+    // season's schedule (regular season + postseason) for one team.
+    if (mode === 'team') {
+      const teamId = Number(req.query.teamId);
+      if (!teamId) { res.status(400).json({ error: 'Missing teamId' }); return; }
+      const season = req.query.season || new Date().getFullYear();
+      const parts = await Promise.all([
+        _tpGetJson('https://statsapi.mlb.com/api/v1/teams/' + teamId),
+        _tpGetJson('https://statsapi.mlb.com/api/v1/teams/' + teamId + '/roster?rosterType=active&season=' + encodeURIComponent(season)),
+        _tpGetJson('https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team&teamId=' + teamId + '&season=' + encodeURIComponent(season)),
+        _standingsByTeam(season)
+      ]);
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      res.status(200).json(summarizeTeamPage(parts, teamId));
+      return;
+    }
+
     if (mode === 'teams') {
       const url = 'https://statsapi.mlb.com/api/v1/teams?sportId=1';
       const r = await fetch(url);
@@ -79,7 +96,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, or teams' });
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, teams, or team' });
   } catch (err) {
     res.status(500).json({ error: 'MLB lookup failed' });
   }
@@ -499,6 +516,7 @@ async function summarizePregame(data) {
   [[away, teams.away], [home, teams.home]].forEach(function (pair) {
     var side = pair[0], team = pair[1] || {};
     side.abbr = team.abbreviation || null;
+    side.id = team.id != null ? team.id : null; // lets the hero open this team's page (v5.65.0)
     var st = team.id != null ? standings[team.id] : null;
     side.record = st ? { w: st.w, l: st.l } : _teamRecord(team);
     side.standing = st ? { divRank: st.divRank, divName: st.divName, l10: st.l10, streak: st.streak } : null;
@@ -808,4 +826,80 @@ function _teamShortName(name) {
   if (/White Sox$/.test(name)) return 'White Sox';
   var parts = name.trim().split(' ');
   return parts[parts.length - 1];
+}
+
+// ── TEAM PAGE (v5.65.0) ──────────────────────────────────────────────
+async function _tpGetJson(url) {
+  try { var r = await fetch(url); if (!r.ok) return null; return await r.json(); }
+  catch (e) { return null; }
+}
+function _tpOrdinal(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+var _TP_POSTSEASON = { F: 'Wild Card', D: 'Division Series', L: 'LCS', W: 'World Series' };
+var _TP_GROUPS = [['Pitcher', 'Pitchers'], ['Two-Way Player', 'Two-way'], ['Catcher', 'Catchers'], ['Infielder', 'Infielders'], ['Outfielder', 'Outfielders'], ['Hitter', 'Designated hitters']];
+function summarizeTeamPage(parts, teamId) {
+  var t = ((parts[0] && parts[0].teams) || [])[0] || {};
+  var st = (parts[3] || {})[teamId] || null;
+  var team = {
+    id: teamId,
+    name: t.name || null,
+    short: t.teamName || t.clubName || null,
+    abbr: t.abbreviation || _MLB_ABBR_BY_ID[teamId] || null,
+    location: t.locationName || null,
+    record: st ? st.w + '-' + st.l : null,
+    standing: st && st.divRank && st.divName ? _tpOrdinal(st.divRank) + ' in ' + st.divName : null,
+    l10: st && st.l10 ? st.l10.w + '-' + st.l10.l : null,
+    streak: st ? st.streak : null
+  };
+
+  var byType = {};
+  ((parts[1] && parts[1].roster) || []).forEach(function (r) {
+    var p = r.person || {}, pos = r.position || {};
+    if (!p.fullName) return;
+    var type = pos.type || 'Hitter';
+    (byType[type] = byType[type] || []).push({ id: p.id || null, name: p.fullName, jersey: r.jerseyNumber || null, pos: pos.abbreviation || null, posName: pos.name || null, exp: null });
+  });
+  var groups = [];
+  _TP_GROUPS.forEach(function (g) { if (byType[g[0]]) { groups.push({ label: g[1], players: byType[g[0]] }); delete byType[g[0]]; } });
+  Object.keys(byType).forEach(function (k) { groups.push({ label: k, players: byType[k] }); });
+  groups.forEach(function (g) { g.players.sort(function (a, b) { return (Number(a.jersey) || 999) - (Number(b.jersey) || 999); }); });
+
+  // Spring training and exhibitions are dropped; a postponed game shows up
+  // again on its make-up date, so the postponed row itself is skipped.
+  var games = [];
+  ((parts[2] && parts[2].dates) || []).forEach(function (d) {
+    (d.games || []).forEach(function (g) {
+      var type = g.gameType || 'R';
+      if (type !== 'R' && !_TP_POSTSEASON[type]) return;
+      var s = g.status || {};
+      if (/postponed|cancel|suspended/i.test(s.detailedState || '')) return;
+      var home = g.teams && g.teams.home, away = g.teams && g.teams.away;
+      if (!home || !away) return;
+      var isHome = home.team && home.team.id === teamId;
+      var me = isHome ? home : away, opp = isHome ? away : home;
+      var ot = opp.team || {};
+      var state = s.abstractGameState === 'Final' ? 'post' : (s.abstractGameState === 'Live' ? 'in' : 'pre');
+      var res = null;
+      if (state === 'post' && me.score != null && opp.score != null && me.score !== opp.score) res = me.score > opp.score ? 'W' : 'L';
+      games.push({
+        id: g.gamePk,
+        date: g.gameDate || null,
+        day: d.date || g.officialDate || null,
+        timeTbd: !!(s.startTimeTBD),
+        label: _TP_POSTSEASON[type] || (g.doubleHeader && g.doubleHeader !== 'N' ? 'Game ' + (g.gameNumber || 1) : null),
+        post: type !== 'R',
+        home: !!isHome,
+        opp: ot.abbreviation || _MLB_ABBR_BY_ID[ot.id] || '?',
+        oppName: ot.name || null,
+        oppShort: ot.teamName || null,
+        state: state,
+        status: s.detailedState || null,
+        us: res ? me.score : null,
+        them: res ? opp.score : null,
+        res: res,
+        n: g.gameNumber || 1
+      });
+    });
+  });
+  games.sort(function (a, b) { return String(a.date) < String(b.date) ? -1 : String(a.date) > String(b.date) ? 1 : a.n - b.n; });
+  return { league: 'mlb', team: team, groups: groups, games: games };
 }
