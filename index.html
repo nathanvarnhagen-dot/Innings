@@ -9980,7 +9980,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.85.0-faster-refresh-your-games';
+window.INNINGS_BUILD = 'v5.86.0-highlights-closed-when-watching';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -21052,9 +21052,24 @@ function _ghReducedMotion() {
 // or there's nothing to show): the list shows, then flies up and settles
 // to 'compact'. Transitional modes re-render as their settled version so a
 // refresh never replays them.
+
+// Are you watching or attending the game on screen? (either the choice
+// already loaded for this game, or your watching list)
+function _ghIsWatchingThis() {
+  var g = window._activeBrowseGame;
+  if (!g) return false;
+  var s = window._gatt;
+  if (s && s.mode && String(s.gamePk) === String(g.gamePk)) return true;
+  if ((window._watchingList || []).some(function (w) { return String(w.gamePk != null ? w.gamePk : w._id) === String(g.gamePk); })) return true;
+  // on a reload the lists above may not be back yet — use the last known list
+  try { return (JSON.parse(localStorage.getItem('innings_watching_ids') || '[]')).indexOf(String(g.gamePk)) !== -1; } catch (e) { return false; }
+}
+
 function _ghPhaseMode(st, key, playCount) {
   if (!st[key]) {
-    var skipIntro = _ghReducedMotion() || !playCount;
+    // v5.86.0: if you're watching/attending this game, highlights start
+    // closed — the Highlights button still opens them.
+    var skipIntro = _ghReducedMotion() || !playCount || _ghIsWatchingThis();
     st[key] = skipIntro ? 'compact' : 'intro';
     if (!skipIntro) {
       clearTimeout(st[key + 'Timer']);
@@ -22873,6 +22888,7 @@ function startWatchingList() {
     var sig = arr.map(function (w) { return w._id + ':' + (w.mode || ''); }).sort().join(',');
     var changed = window._watchingSig !== sig;
     window._watchingList = arr; window._watchingSig = sig;
+    try { localStorage.setItem('innings_watching_ids', JSON.stringify(arr.map(function (w) { return String(w.gamePk != null ? w.gamePk : w._id); }))); } catch (e) {}
     renderLiveFeed();
     var gs = document.getElementById('screen-games');
     if (changed && gs && gs.classList.contains('active') && typeof loadGamesList === 'function') loadGamesList(window._gamesDate, { silent: true });
@@ -25883,7 +25899,7 @@ function _reelHtml(m) {
   var items = _reelItems(m);
   if (!items.length) return '';
   var g = window._activeBrowseGame, key = g ? String(g.gamePk) : 'x', r = window._reel;
-  if (r.key !== key) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = true; } // plays once on first view; after that only the Highlights button opens it
+  if (r.key !== key) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = !_ghIsWatchingThis(); } // plays once on first view; after that only the Highlights button opens it
   r.items = items; r.box = typeof _gcBox === 'function' ? _gcBox() : null;
   return '<div class="gh-reel" id="gh-reel" style="display:' + (r.open ? 'flex' : 'none') + '">' +
     '<div class="gh-reel-bars" id="gh-reel-bars"></div>' +
