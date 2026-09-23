@@ -9980,7 +9980,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.83.0-pitcher-today';
+window.INNINGS_BUILD = 'v5.84.0-pitch-colors';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11642,14 +11642,14 @@ function _ordinalSuffix(n) {
 // LEFT-handed batter's on the RIGHT — the opposite of what might seem
 // intuitive, which is exactly why this was checked rather than guessed.
 function _pitchCallColor(call) {
+  // v5.84.0: three colors only — green for any ball, red for any strike
+  // (called, swinging, foul, foul tip, missed bunt), blue for in play.
   if (!call) return 'rgba(255,255,255,.35)';
   var c = call.toLowerCase();
-  if (c.indexOf('in play') !== -1) return '#6FA8DC';
-  if (c.indexOf('swinging strike') !== -1 || c.indexOf('foul tip') !== -1) return '#C23B3B';
-  if (c.indexOf('called strike') !== -1) return '#E8622C';
-  if (c.indexOf('foul') !== -1) return '#F2C869';
+  if (c.indexOf('in play') !== -1) return '#4C9DFF';
   if (c.indexOf('hit by pitch') !== -1) return '#A89FE8';
-  if (c.indexOf('ball') !== -1) return '#7A9CC6';
+  if (/strike|foul|missed bunt/.test(c)) return '#F04848';
+  if (/ball|pitchout/.test(c)) return '#3DBE6E';
   return 'rgba(255,255,255,.35)';
 }
 // New wider, consistent-scale coordinate system (350x260, ~50px per
@@ -11781,7 +11781,7 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color, partsOnly) {
       '<div style="font-size:11px;color:' + color + ';line-height:1.3">' + _escapeHtml(descBits.join(' · ')) + '</div></div>';
   }).join('') : '<div style="font-size:11px;color:' + subColor + ';padding:4px 0">No pitches yet this at-bat</div>';
 
-  var legend = ['Ball', 'Called strike', 'Swinging strike', 'Foul', 'In play'].map(function (label) {
+  var legend = ['Ball', 'Strike', 'In play'].map(function (label) {
     return '<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:' + subColor + '">' +
       '<div style="width:7px;height:7px;border-radius:50%;background:' + _pitchCallColor(label) + '"></div>' + label + '</div>';
   }).join('');
@@ -21237,7 +21237,7 @@ function _ghLiveDetailHtml(box) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
       }
       out += '<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11px;color:#B9B3E6">' +
-        ['Ball', 'Called strike', 'Swinging strike', 'Foul', 'In play'].map(function (label) {
+        ['Ball', 'Strike', 'In play'].map(function (label) {
           return '<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:' + _pitchCallColor(label) + '"></span>' + label + '</span>';
         }).join('') + '</div>';
     }
