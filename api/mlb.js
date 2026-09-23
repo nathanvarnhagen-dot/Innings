@@ -512,10 +512,20 @@ function _liveParticipant(person, boxTeams, group) {
   var line = null;
   if (stat) {
     line = group === 'pitching'
-      ? (stat.era != null ? stat.era + ' ERA' : '') + (stat.strikeOuts != null ? ' · ' + stat.strikeOuts + ' K' : '')
+      ? (stat.era != null ? stat.era + ' ERA' : '') + (stat.strikeOuts != null ? ' · ' + stat.strikeOuts + ' K' : '') + (stat.inningsPitched != null ? ' · ' + stat.inningsPitched + ' IP' : '')
       : (stat.avg || '.000') + ' / ' + (stat.obp || '.000') + ' / ' + (stat.slg || '.000');
   }
-  return { name: person.fullName, id: person.id, line: line || null };
+  // v5.83.0: the pitcher's line in THIS game — innings, total pitches,
+  // strikes, balls (boxscore players[ID].stats.pitching, standard fields).
+  var today = null;
+  var gp = group === 'pitching' && obj && obj.stats && obj.stats.pitching;
+  if (gp) {
+    var tp = gp.numberOfPitches != null ? gp.numberOfPitches : (gp.pitchesThrown != null ? gp.pitchesThrown : null);
+    var st = gp.strikes != null ? gp.strikes : null;
+    var bl = gp.balls != null ? gp.balls : (tp != null && st != null ? tp - st : null);
+    today = { ip: gp.inningsPitched != null ? gp.inningsPitched : '0.0', tp: tp, s: st, b: bl };
+  }
+  return { name: person.fullName, id: person.id, line: line || null, today: today };
 }
 
 // ── PREGAME CHEAT SHEET — probable pitcher + season stats for the "feat"
