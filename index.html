@@ -1600,7 +1600,8 @@ html.desk .gatt-sheet{max-width:560px}
 @keyframes reelBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .gh-reel-box{position:relative;display:block;width:100%;height:220px;padding:0;border:1px solid rgba(168,159,232,.12);border-radius:16px;overflow:hidden;background:#120E2B;cursor:pointer;font-family:inherit;color:inherit}
 .gh-reel-box #gh-reel-slot{position:absolute;inset:0}
-.gh-reel-cap{display:flex;align-items:center;gap:10px;min-height:28px}
+.gh-reel-cap{display:flex;align-items:flex-start;gap:10px;min-height:28px;padding:0 2px}
+.gh-reel-sb{min-height:40px}
 
 .pa-map-row{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(168,159,232,.12);color:#fff;font-family:inherit;text-align:left;cursor:pointer;width:100%}
 .pa-map-n{width:22px;height:22px;border-radius:50%;color:#0D0820;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -9976,7 +9977,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.77.0-reel-pitches-closes';
+window.INNINGS_BUILD = 'v5.78.0-reel-scoreboard-text';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -25805,7 +25806,7 @@ function _reelItems(m) {
   box.allPlays.forEach(function (p) { if (p && p.anim && p.atBatIndex != null) byIdx[p.atBatIndex] = p.anim; });
   return (m.plays || []).filter(function (p) { return p.atBatIndex != null && byIdx[p.atBatIndex]; }).map(function (p) {
     return { lp: byIdx[p.atBatIndex], tag: (p.half === 'top' ? 'T' : 'B') + (p.inning || ''), half: p.half,
-      headline: _ghPlayHeadline(p), chip: _ghScoreChip(p, m.away.abbr, m.home.abbr),
+      headline: _ghPlayHeadline(p), chip: _ghScoreChip(p, m.away.abbr, m.home.abbr), text: p.text || '', inning: p.inning, away: m.away, home: m.home, after: [p.awayScore, p.homeScore],
       col: (p.half === 'top' ? m.away : m.home).colors.accent };
   });
 }
@@ -25817,8 +25818,46 @@ function _reelHtml(m) {
   r.items = items; r.box = typeof _gcBox === 'function' ? _gcBox() : null;
   return '<div class="gh-reel" id="gh-reel" style="display:' + (r.open ? 'flex' : 'none') + '">' +
     '<div class="gh-reel-bars" id="gh-reel-bars"></div>' +
+    '<div class="gh-reel-sb" id="gh-reel-sb"></div>' +
     '<button class="gh-reel-box" onclick="ghReelTap()" aria-label="Skip to the next highlight"><div id="gh-reel-slot"></div></button>' +
     '<div class="gh-reel-cap" id="gh-reel-cap"></div></div>';
+}
+
+// The inning/score strip above the reel (same look as the live card):
+// the score, inning, runners, outs and count as the at-bat began, then
+// the score and outs change the moment the play resolves.
+function _reelScoreboardHtml(it, E, resolveAt) {
+  var lp = it.lp, top = it.half === 'top';
+  var runs = (lp.runners || []).filter(function (r) { return r.end === 'score'; }).length;
+  var after = it.after, before = [after[0], after[1]];
+  if (top) before[0] = Math.max(0, after[0] - runs); else before[1] = Math.max(0, after[1] - runs);
+  var outsOn = (lp.runners || []).filter(function (r) { return r.out; }).length;
+  var outsAfter = lp.outs != null ? lp.outs : outsOn, outsBefore = Math.max(0, outsAfter - outsOn);
+  var b = 0, k = 0;
+  (lp.pitches || []).slice(0, -1).forEach(function (p) {
+    var c = String(p.call || '').toLowerCase();
+    if (/ball/.test(c) && !/in play/.test(c)) b = Math.min(3, b + 1);
+    else if (/foul/.test(c)) { if (k < 2) k++; }
+    else if (/strike/.test(c)) k = Math.min(2, k + 1);
+  });
+  var pre = lp.pre || {};
+  var dia = function (on, x, y) { return '<rect x="' + x + '" y="' + y + '" width="7" height="7" transform="rotate(45 ' + (x + 3.5) + ' ' + (y + 3.5) + ')" fill="' + (on ? '#A89FE8' : 'none') + '" stroke="#A89FE8" stroke-width="1.4"/>'; };
+  var swap = function (a, bv, cls) {
+    return '<span class="' + (cls || '') + '" style="position:relative;display:inline-block">' +
+      '<span style="animation:paOut .25s linear ' + _paSec(resolveAt, E) + ' forwards">' + a + '</span>' +
+      '<span style="position:absolute;left:0;top:0;opacity:0;animation:paIn .3s linear ' + _paSec(resolveAt, E) + ' forwards">' + bv + '</span></span>';
+  };
+  var dots = function (n) { var h = ''; for (var i = 0; i < 3; i++) h += '<span style="width:7px;height:7px;border-radius:50%;display:inline-block;' + (i < n ? 'background:#F08A7E' : 'border:1.5px solid #9C95D0;box-sizing:border-box') + '"></span>'; return h; };
+  var badge = function (t) { return '<span style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:' + t.colors.bg + ';color:' + t.colors.fg + ';box-shadow:0 0 0 3px rgba(255,255,255,.08);flex-shrink:0">' + _escapeHtml(t.abbr) + '</span>'; };
+  var score = function (i) { return before[i] === after[i] ? String(after[i]) : swap(before[i], '<span style="color:#9be8ac">' + after[i] + '</span>'); };
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px 0">' +
+    '<div style="display:flex;align-items:center;gap:10px">' + badge(it.away) + '<span class="gh-num" style="font-size:26px">' + score(0) + '</span></div>' +
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' +
+      '<div style="display:flex;align-items:baseline;gap:6px"><span style="color:#A89FE8;font-size:11px">' + (top ? '&#9650;' : '&#9660;') + '</span><span class="gh-num" style="font-size:20px">' + (it.inning || '') + '</span><span class="gh-eyebrow" style="font-size:9.5px">' + (top ? 'TOP' : 'BOT') + '</span></div>' +
+      '<div style="display:flex;align-items:center;gap:8px"><svg width="26" height="18" viewBox="0 0 26 18" aria-hidden="true">' + dia(pre['2B'], 9.5, 1) + dia(pre['3B'], 2, 8.5) + dia(pre['1B'], 17, 8.5) + '</svg>' +
+        '<span style="display:flex;gap:4px">' + (outsBefore === outsAfter ? dots(outsAfter) : swap('<span style="display:flex;gap:4px">' + dots(outsBefore) + '</span>', '<span style="display:flex;gap:4px">' + dots(Math.min(3, outsAfter)) + '</span>')) + '</span>' +
+        '<span class="gh-num" style="font-size:13px">' + b + '&ndash;' + k + '</span></div></div>' +
+    '<div style="display:flex;align-items:center;gap:10px"><span class="gh-num" style="font-size:26px">' + score(1) + '</span>' + badge(it.home) + '</div></div>';
 }
 function _reelBtnHtml(n) {
   return '<button class="gh-hl-btn" onclick="ghReelToggle()" aria-expanded="' + (window._reel.open ? 'true' : 'false') + '">Highlights<span class="gh-hl-count">' + n + '</span>' +
@@ -25865,12 +25904,15 @@ function _reelFill() {
   var html = '';
   try { html = _paOverlayHtml(); } finally { window._pa = saved; }
   var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(it.lp.eventType || ''));
-  var off = Math.max(0, (it.lp.pitches || []).length - 1) * .65;
-  var dur = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4) + 2.4;
+  var off = Math.max(0, (it.lp.pitches || []).length - 1) * .85;
+  var resolveAt = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4);
+  var dur = resolveAt + 3.4; // hold on the result a little longer
   slot.innerHTML = html;
-  if (cap) cap.innerHTML = '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:' + it.col + '">' + _escapeHtml(it.tag) + '</span>' +
-    '<span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(it.headline) + '</span>' +
-    '<span class="gh-num" style="font-size:14px;white-space:nowrap">' + _escapeHtml(it.chip) + '</span>';
+  if (cap) cap.innerHTML = '<div style="display:flex;flex-direction:column;gap:3px;min-width:0">' +
+    '<span style="font-size:14px;font-weight:800">' + _escapeHtml(it.headline) + '</span>' +
+    (it.text ? '<span style="font-size:13px;line-height:1.45;color:#D9D4FA">' + _escapeHtml(it.text) + '</span>' : '') + '</div>';
+  var sb = document.getElementById('gh-reel-sb');
+  if (sb) sb.innerHTML = _reelScoreboardHtml(it, (Date.now() - r.startAt) / 1000, resolveAt);
   var el = (Date.now() - r.startAt) / 1000;
   if (bars) {
     bars.innerHTML = r.items.map(function (_, i) {
@@ -26048,7 +26090,7 @@ function _paOverlayHtml() {
   var allP = (lp.pitches || []).slice();
   // v5.75.0: a replay you tapped shows every pitch coming in one at a
   // time first; everything after the pitches shifts later by that much.
-  var GAP = .65;
+  var GAP = .85; // v5.78.0: a touch slower between pitches
   var OFF = s.seq ? Math.max(0, allP.length - 1) * GAP : 0;
   var END = (inPlay ? PA.END : 9) + OFF;
   s.total = END;
