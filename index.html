@@ -1592,6 +1592,10 @@ html.desk .gatt-sheet{max-width:560px}
 @keyframes paIncoming{from{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}to{opacity:1;transform:none}}
 #gh-pa-slot{position:absolute;inset:0;pointer-events:none}
 #gh-pa-slot:empty{display:none}
+.pa-map-row{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(168,159,232,.12);color:#fff;font-family:inherit;text-align:left;cursor:pointer;width:100%}
+.pa-map-n{width:22px;height:22px;border-radius:50%;color:#0D0820;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pa-map-t{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -9962,7 +9966,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.74.0-final-replays';
+window.INNINGS_BUILD = 'v5.75.0-pitch-by-pitch-game-map';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -12040,7 +12044,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
 
   // v5.74.0: on the game screen this card uses the same card style as the
   // live cards (no lighter panel once the game goes final).
-  return (opts.hero ? '<div class="gh-card">' : '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">') +
+  return (heroFinal && typeof _paGameMapHtml === 'function' ? _paGameMapHtml(box) : '') + (opts.hero ? '<div class="gh-card">' : '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">') +
     (opts.hero ? '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:8px">' + (heroFinal ? 'Plays & box score' : 'Pitch by pitch') + '</div>' :
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
@@ -25775,6 +25779,55 @@ function msClear() { var inp = document.getElementById('ms-q'); if (inp) inp.val
 
 </script>
 <script>
+
+// ══ THE GAME IN PLAYS (v5.75.0) — final MLB games ════════════════════
+// One field showing where every run-scoring at-bat went, numbered in
+// order and colored by team. Tap one (or any play in the play-by-play)
+// and it replays in this same square — pitches one by one, then the
+// field — before settling back to the whole-game view.
+function _paGameMapHtml(box) {
+  var list = (box.allPlays || []).filter(function (p) { return p && p.anim; });
+  if (!list.length || typeof _paLanding !== 'function') return '';
+  var prevA = 0, prevH = 0, picks = [];
+  (box.allPlays || []).forEach(function (p) {
+    var a = p.awayScore, h = p.homeScore;
+    if (a == null || h == null) return;
+    if ((a > prevA || h > prevH) && p.anim) picks.push(p);
+    prevA = a; prevH = h;
+  });
+  if (!picks.length) picks = list.filter(function (p) { return /home_run|double|triple/.test(p.anim.eventType || ''); });
+  picks = picks.slice(0, 12);
+  var gk = window._activeBrowseGame ? window._activeBrowseGame.gamePk : '';
+  var aC = _ghTeamColors(box.awayAbbr || _ghAbbrFallback(box.away)).accent, hC = _ghTeamColors(box.homeAbbr || _ghAbbrFallback(box.home)).accent;
+  var marks = '', rows = '';
+  picks.forEach(function (p, i) {
+    var lp = p.anim, n = i + 1, col = p.half === 'top' ? aC : hC;
+    var land = _paLanding(lp);
+    if (land) {
+      var x = Math.max(16, Math.min(484, land.x)), y = Math.max(16, Math.min(370, land.y));
+      marks += '<path d="M 250 366 L ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="' + col + '" stroke-opacity=".45" stroke-width="2" fill="none"/>' +
+        '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + col + '" stroke="#120E2B" stroke-width="2"/>' +
+        '<text x="' + x.toFixed(1) + '" y="' + (y + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#0D0820">' + n + '</text>';
+    }
+    var tag = (p.half === 'top' ? 'T' : 'B') + (p.inning || '');
+    var sc = (p.awayScore != null && p.homeScore != null) ? _ghScoreChip(p, box.awayAbbr || _ghAbbrFallback(box.away), box.homeAbbr || _ghAbbrFallback(box.home)) : '';
+    rows += '<button class="pa-map-row" onclick="ghPaReplayPlay(\'' + gk + '_' + p.atBatIndex + '\')">' +
+      '<span class="pa-map-n" style="background:' + col + '">' + n + '</span>' +
+      '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:#D9D4FA">' + tag + '</span>' +
+      '<span class="pa-map-t">' + _escapeHtml(_paTitle(lp).charAt(0) + _paTitle(lp).slice(1).toLowerCase()) + (lp.batter ? ' · ' + _escapeHtml(_ghLastName(lp.batter)) : '') + '</span>' +
+      (sc ? '<span class="gh-num" style="font-size:13px;white-space:nowrap">' + _escapeHtml(sc) + '</span>' : '') + '</button>';
+  });
+  var field = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
+    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
+    '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
+    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".6" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
+    ['1B', '2B', '3B'].map(function (b) { var q = PA_B[b]; return '<rect x="' + (q[0] - 7) + '" y="' + (q[1] - 7) + '" width="14" height="14" transform="rotate(45 ' + q[0] + ' ' + q[1] + ')" fill="#F5F3FF"/>'; }).join('') +
+    marks + '</svg>';
+  return '<div class="gh-card" style="margin-bottom:14px">' +
+    '<div class="gh-row" style="margin-bottom:10px"><span class="gh-eyebrow">How the runs scored</span><span class="gh-sub">Tap one to replay it</span></div>' +
+    '<div style="position:relative;border-radius:16px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.12)">' + field + '<div id="gh-pa-slot"></div></div>' +
+    (rows ? '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + rows + '</div>' : '') + '</div>';
+}
 // ══ PLAY ANIMATION IN THE AT-BAT SQUARE (v5.70.0, slowed + fielders in v5.71.0) ═════════════════════
 // When a new play finishes in a live MLB game, the at-bat square shows
 // the last pitch coming in, then swaps to an overhead field: where the
@@ -25798,11 +25851,11 @@ function _paNote(box) {
   s.box = box;
   if (!lp || lp.atBatIndex == null) return;
   if (s.gamePk !== pk) { s.gamePk = pk; s.seen = lp.atBatIndex; s.play = lp; s.startAt = 0; return; }
-  if (lp.atBatIndex !== s.seen) { s.seen = lp.atBatIndex; s.play = lp; s.startAt = Date.now(); }
+  if (lp.atBatIndex !== s.seen) { s.seen = lp.atBatIndex; s.play = lp; s.startAt = Date.now(); s.seq = false; s.keep = false; }
 }
 function _paActive() {
   var s = window._pa;
-  return !!(s.play && s.startAt && (Date.now() - s.startAt) / 1000 < PA.END + .6);
+  return !!(s.play && s.startAt && (Date.now() - s.startAt) / 1000 < (s.total || PA.END) + .6);
 }
 // Replay a play from the play-by-play (tap the row once). Scrolls the
 // at-bat square into view and runs that play's animation.
@@ -25832,7 +25885,7 @@ function ghPaReplayPlay(playId, rowEl) {
     rowEl.parentNode.insertBefore(wrap, rowEl.nextSibling);
     s.keep = true;
   } else s.keep = false;
-  s.play = hit; s.startAt = Date.now(); s.box = box;
+  s.play = hit; s.startAt = Date.now(); s.box = box; s.seq = true;
   _paFill();
   var slot = document.getElementById('gh-pa-slot');
   if (slot && slot.parentElement && slot.parentElement.scrollIntoView) slot.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -25850,7 +25903,7 @@ function _paFill() {
     window._paEndT = setTimeout(function () {
       var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) sl.innerHTML = '';
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
-    }, Math.max(0, (PA.END + .6) * 1000 - (Date.now() - window._pa.startAt)));
+    }, Math.max(0, ((window._pa.total || PA.END) + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
 }
 function _paSec(t, E) { return (t - E).toFixed(2) + 's'; }
@@ -25933,32 +25986,52 @@ function _paOverlayHtml() {
   if (!lp || !box || !s.startAt) return '';
   var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
   var E = (Date.now() - s.startAt) / 1000;
-  if (reduce) E = Math.max(E, 5);
+  if (reduce) E = Math.max(E, 30);
   var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(lp.eventType || ''));
-  var END = inPlay ? PA.END : 9;
+  var allP = (lp.pitches || []).slice();
+  // v5.75.0: a replay you tapped shows every pitch coming in one at a
+  // time first; everything after the pitches shifts later by that much.
+  var GAP = .65;
+  var OFF = s.seq ? Math.max(0, allP.length - 1) * GAP : 0;
+  var END = (inPlay ? PA.END : 9) + OFF;
+  s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
   else if (E > END + 0.6) return '';
+  var Es = E - OFF; // clock for everything after the pitches
   var land = _paLanding(lp);
   var title = _paTitle(lp), note = _paNote2(lp, box, land);
-  var anim = function (name, dur, t, extra) { return 'animation:' + name + ' ' + dur + 's ' + (extra || 'linear') + ' ' + _paSec(t, E) + ' both;'; };
-  // ── pitch view: that at-bat's pitches, the last one flying in ──
-  var ps = (lp.pitches || []).slice();
-  var lastP = ps.pop();
+  var anim = function (name, dur, t, extra, clock) { return 'animation:' + name + ' ' + dur + 's ' + (extra || 'linear') + ' ' + _paSec(t, clock == null ? E : clock) + ' both;'; };
+  var incoming = function (p, t, big) {
+    var X = _szX(p.px), Y = _szY(p.pz), c = _pitchCallColor(p.call);
+    return '<g style="transform-box:view-box;transform-origin:' + X.toFixed(1) + 'px ' + Y.toFixed(1) + 'px;--dx:' + (250 - X).toFixed(1) + 'px;--dy:' + (150 - Y).toFixed(1) + 'px;' + anim('paIncoming', .6, t, 'cubic-bezier(.3,.1,.3,1)') + '">' +
+      '<circle cx="' + X.toFixed(1) + '" cy="' + Y.toFixed(1) + '" r="' + (big ? 15 : 14) + '" fill="' + c + '" stroke="' + (big ? 'rgba(255,255,255,.35)' : '#0D0820') + '" stroke-width="' + (big ? 4 : 1.5) + '"/>' +
+      '<text x="' + X.toFixed(1) + '" y="' + (Y + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0D0820">' + p.num + '</text></g>';
+  };
+  var ps, groups = '', callout = '';
+  if (s.seq) {
+    ps = [];
+    allP.forEach(function (p, i) { groups += incoming(p, .35 + i * GAP, i === allP.length - 1); });
+    // a small running line under the zone: pitch n · speed · type · call
+    allP.forEach(function (p, i) {
+      var t0 = .35 + i * GAP, t1 = i < allP.length - 1 ? t0 + GAP : null;
+      callout += '<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11.5px;font-weight:700;color:#D9D4FA;text-shadow:0 1px 6px rgba(11,8,32,.9);opacity:0;' + anim('paIn', .15, t0) + (t1 != null ? 'animation:paIn .15s linear ' + _paSec(t0, E) + ' both,paOut .15s linear ' + _paSec(t1, E) + ' both;' : '') + '">' +
+        _escapeHtml([p.num + '.', p.speed ? p.speed + ' mph' : null, p.type, p.call].filter(Boolean).join(' ')) + '</div>';
+    });
+  } else {
+    ps = allP.slice();
+    var lastP = ps.pop();
+    if (lastP) groups = incoming(lastP, .35, true);
+  }
   var seq = { batter: lp.batter, batSide: lp.batSide, zoneTop: lp.zoneTop, zoneBottom: lp.zoneBottom, pitches: ps };
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
-  if (lastP) {
-    var X = _szX(lastP.px), Y = _szY(lastP.pz), c = _pitchCallColor(lastP.call);
-    pv = pv.replace(/<\/svg>$/, '<g style="transform-box:view-box;transform-origin:' + X.toFixed(1) + 'px ' + Y.toFixed(1) + 'px;--dx:' + (250 - X).toFixed(1) + 'px;--dy:' + (150 - Y).toFixed(1) + 'px;' + anim('paIncoming', .8, .35, 'cubic-bezier(.3,.1,.3,1)') + '">' +
-      '<circle cx="' + X.toFixed(1) + '" cy="' + Y.toFixed(1) + '" r="15" fill="' + c + '" stroke="rgba(255,255,255,.35)" stroke-width="4"/>' +
-      '<text x="' + X.toFixed(1) + '" y="' + (Y + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0D0820">' + lastP.num + '</text></g></svg>');
-  }
+  pv = pv.replace(/<\/svg>$/, groups + '</svg>');
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
-  out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .5, PA.SW) : '') + '">' + pv +
-    (inPlay ? '<div style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2) + '">In play</div>' : '') + '</div>';
-  if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW) + '">' + _paFieldSvg(lp, land, E) + '</div>';
+  out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
+    (inPlay ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">In play</div>' : '') + '</div>';
+  if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW, null, Es) + '">' + _paFieldSvg(lp, land, Es) + '</div>';
   // title at the top
   var tT = inPlay ? (s._titleAt || PA.T0 + 2) : 1.4;
-  out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT) + '">' +
+  out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT, null, Es) + '">' +
     '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
     (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div>';
   out += '</div>';
