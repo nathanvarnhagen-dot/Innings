@@ -9978,7 +9978,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.79.0-reel-count-pitch-list';
+window.INNINGS_BUILD = 'v5.80.0-landing-fixes';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -25804,7 +25804,7 @@ function _reelItems(m) {
   var box = typeof _gcBox === 'function' ? _gcBox() : null;
   if (!box || !box.allPlays) return [];
   var byIdx = {};
-  box.allPlays.forEach(function (p) { if (p && p.anim && p.atBatIndex != null) byIdx[p.atBatIndex] = p.anim; });
+  box.allPlays.forEach(function (p) { if (p && p.anim && p.atBatIndex != null) { byIdx[p.atBatIndex] = p.anim; if (!p.anim.desc && p.text) p.anim.desc = p.text; } });
   return (m.plays || []).filter(function (p) { return p.atBatIndex != null && byIdx[p.atBatIndex]; }).map(function (p) {
     return { lp: byIdx[p.atBatIndex], tag: (p.half === 'top' ? 'T' : 'B') + (p.inning || ''), half: p.half,
       headline: _ghPlayHeadline(p), chip: _ghScoreChip(p, m.away.abbr, m.home.abbr), text: p.text || '', inning: p.inning, away: m.away, home: m.home, after: [p.awayScore, p.homeScore],
@@ -25997,7 +25997,7 @@ function ghPaReplayPlay(playId, rowEl) {
   var abi = String(playId || '').split('_').pop();
   var list = box.allPlays || [];
   var hit = null;
-  list.forEach(function (p) { if (String(p.atBatIndex) === abi && p.anim) hit = p.anim; });
+  list.forEach(function (p) { if (String(p.atBatIndex) === abi && p.anim) { hit = p.anim; if (!hit.desc && p.text) hit.desc = p.text; } });
   if (!hit && box.lastPlay && String(box.lastPlay.atBatIndex) === abi) hit = box.lastPlay;
   if (!hit) { if (typeof ib_toast === 'function') ib_toast('No replay for that play'); return; }
   var s = window._pa;
@@ -26053,14 +26053,45 @@ function _paBasesBetween(start, end) {
 }
 // Gameday hit coordinates → a spot on the drawing. Home is ~(125.4,198.3)
 // in Gameday units (~2.5 ft each); the drawing's wall sits ~270 units out.
+// v5.80.0: where the ball ends up on the drawing.
+//  · Direction from Gameday's hit coordinates; hits are always drawn fair
+//    (a ball can land a hair outside the drawn line from rounding).
+//  · Distance scaled against a real fence (330 ft down the lines, 400 to
+//    center) so the drawn wall means the real wall: home runs always land
+//    beyond it, everything else stays inside it.
+//  · Distance comes from where the ball was fielded (coordinates), not
+//    Statcast's "hit distance" — for a grounder that's only where it
+//    first bounced, which is why singles through the hole looked like
+//    infield hits. A hit the play text sends to an outfielder is never
+//    left on the infield.
+function _paWallR(deg) {
+  var best = 270, bd = 1e9;
+  for (var i = 0; i <= 80; i++) {
+    var t = i / 80, x = (1 - t) * (1 - t) * 58 + 2 * (1 - t) * t * 250 + t * t * 442, y = (1 - t) * (1 - t) * 174 + 2 * (1 - t) * t * 20 + t * t * 174;
+    var a = Math.atan2(x - PA_H[0], PA_H[1] - y) * 180 / Math.PI;
+    if (Math.abs(a - deg) < bd) { bd = Math.abs(a - deg); best = Math.hypot(x - PA_H[0], y - PA_H[1]); }
+  }
+  return best;
+}
 function _paLanding(lp) {
   var h = lp.hit;
   if (!h || h.x == null || h.y == null) return null;
+  var t = lp.eventType || '';
   var dx = h.x - 125.42, dy = 198.27 - h.y;
-  var ang = Math.atan2(dx, dy);
-  var feet = h.distance || Math.sqrt(dx * dx + dy * dy) * 2.5;
-  var r = Math.min(feet, 440) / 400 * 270;
-  return { x: PA_H[0] + r * Math.sin(ang), y: PA_H[1] - r * Math.cos(ang), ang: ang * 180 / Math.PI, feet: Math.round(feet) };
+  var deg = Math.atan2(dx, dy) * 180 / Math.PI;
+  var fairForSure = /^(single|double|triple|home_run|field_error)$/.test(t);
+  if (fairForSure) deg = Math.max(-43, Math.min(43, deg));
+  var coordFt = Math.sqrt(dx * dx + dy * dy) * 2.5;
+  var feet = t === 'home_run' ? (h.distance || coordFt) : coordFt;
+  var fence = 330 + 70 * Math.cos(2 * deg * Math.PI / 180);
+  var wallR = _paWallR(deg);
+  var r = feet / fence * wallR;
+  if (t === 'home_run') r = Math.max(r, wallR + 22);
+  else r = Math.min(r, wallR - 10);
+  var desc = String(lp.description || lp.desc || '');
+  if (/^(single|double|triple|field_error)$/.test(t) && /(left|center|right) fielder/i.test(desc) && r < 190) r = 190;
+  var rad = deg * Math.PI / 180;
+  return { x: PA_H[0] + r * Math.sin(rad), y: PA_H[1] - r * Math.cos(rad), ang: deg, feet: Math.round(feet) };
 }
 function _paDir(deg) {
   if (deg < -30) return 'left'; if (deg < -12) return 'left-center'; if (deg <= 12) return 'center'; if (deg <= 30) return 'right-center'; return 'right';
@@ -26188,7 +26219,8 @@ function _paFieldSvg(lp, land, E) {
   // where the ball goes first: the landing spot, or the first fielder
   var first = land ? [land.x, land.y] : (fl[0] && PA_F[fl[0]] ? PA_F[fl[0]] : [250, 150]);
   if (!hr && land) { var rr = Math.hypot(first[0] - PA_H[0], first[1] - PA_H[1]); if (rr > 262) { var k = 262 / rr; first = [PA_H[0] + (first[0] - PA_H[0]) * k, PA_H[1] + (first[1] - PA_H[1]) * k]; } }
-  var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : tr === 'ground_ball' ? .9 : 1.1;
+  var groundOut = /ground|bunt_grounder/.test(tr) && land && Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150;
+  var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
   // v5.73.0: fielders only move when the play has an out in it. A hit
   // that drops stays where it landed — unless someone is thrown out on
@@ -26250,12 +26282,27 @@ function _paFieldSvg(lp, land, E) {
     var bow = Math.min(28, len * .12);
     ctrl = [mx + (-dy / len) * bow, my + (dx / len) * bow];
   }
-  var flightD = ctrl ? 'M ' + PA_H[0] + ' ' + PA_H[1] + ' Q ' + ctrl[0].toFixed(1) + ' ' + ctrl[1].toFixed(1) + ' ' + first[0].toFixed(1) + ' ' + first[1].toFixed(1) : _paPath(fly);
-  var flightRel = ctrl ? 'M 0 0 Q ' + (ctrl[0] - PA_H[0]).toFixed(1) + ' ' + (ctrl[1] - PA_H[1]).toFixed(1) + ' ' + (first[0] - PA_H[0]).toFixed(1) + ' ' + (first[1] - PA_H[1]).toFixed(1) : _paRel(fly);
+  // grounders into the outfield: three hops, each smaller, along the line
+  var hopD = null, hopRel = null;
+  if (groundOut && !ctrl) {
+    var hx = first[0] - PA_H[0], hy = first[1] - PA_H[1], hl = Math.hypot(hx, hy) || 1, nx = -hy / hl, ny = hx / hl;
+    var cuts = [0, .34, .64, .86, 1], sizes = [22, 14, 8, 4];
+    var segs = '', rel = '';
+    for (var hi = 0; hi < 4; hi++) {
+      var a0 = cuts[hi], a1 = cuts[hi + 1], am = (a0 + a1) / 2;
+      var ex = hx * a1, ey = hy * a1, cx = hx * am + nx * sizes[hi], cy = hy * am + ny * sizes[hi];
+      segs += ' Q ' + (PA_H[0] + cx).toFixed(1) + ' ' + (PA_H[1] + cy).toFixed(1) + ' ' + (PA_H[0] + ex).toFixed(1) + ' ' + (PA_H[1] + ey).toFixed(1);
+      rel += ' Q ' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1);
+    }
+    hopD = 'M ' + PA_H[0] + ' ' + PA_H[1] + segs; hopRel = 'M 0 0' + rel;
+  }
+  var flightD = hopD ? hopD : ctrl ? 'M ' + PA_H[0] + ' ' + PA_H[1] + ' Q ' + ctrl[0].toFixed(1) + ' ' + ctrl[1].toFixed(1) + ' ' + first[0].toFixed(1) + ' ' + first[1].toFixed(1) : _paPath(fly);
+  var flightRel = hopRel ? hopRel : ctrl ? 'M 0 0 Q ' + (ctrl[0] - PA_H[0]).toFixed(1) + ' ' + (ctrl[1] - PA_H[1]).toFixed(1) + ' ' + (first[0] - PA_H[0]).toFixed(1) + ' ' + (first[1] - PA_H[1]).toFixed(1) : _paRel(fly);
   g += '<path d="' + flightD + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#F5F3FF" stroke-opacity=".6" stroke-width="2" style="animation:paDraw ' + flight + 's linear ' + _paSec(T0, E) + ' both"/>';
   if (throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(tThrow, E) + ' both"/>';
   g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' forwards' : '') + '">' +
     '<animateMotion dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze" path="' + flightRel + '"/>' +
+    (hopD ? '<animate attributeName="r" values="6;9;6;8;6;7;6;6.5;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
     ((air || hr) ? '<animate attributeName="r" values="6;11;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
     (throwPts.length > 1 ? '<animateMotion dur="' + (ballEnd - tThrow).toFixed(2) + 's" begin="' + _paSec(tThrow, E) + '" fill="freeze" path="' + _paOff(PA_H, throwPts) + '"/>' : '') +
     '</circle>';
