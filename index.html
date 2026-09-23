@@ -736,6 +736,8 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .gatt-opt:focus-visible,.gatt-add:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
 .gatt-strip{display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(61,53,128,.45);border-top:.5px solid rgba(168,159,232,.2)}
 .gatt-strip.on{display:flex;animation:gattDrop .22s ease-out}
+.gatt-strip.leaving{overflow:hidden;animation:gattFold .5s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes gattFold{0%{opacity:1}35%{opacity:0}100%{opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-top-width:0}}
 @keyframes gattDrop{from{opacity:0;transform:translateY(-6px)}}
 .gatt-txt{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#E9E5FF;line-height:1.35;background:none;border:0;text-align:left;font-family:inherit;padding:0}
 .gatt-txt small{display:block;font-weight:500;color:#9C95D0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -9978,7 +9980,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.81.0-watching-strip-on-tap';
+window.INNINGS_BUILD = 'v5.82.0-watching-strip-5s';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19641,7 +19643,7 @@ function _gattNoteModel(m) {
 function _gattLoad(gamePk) {
   var s = window._gatt;
   s.gamePk = gamePk; s.mode = null; s.momentId = null; s.moment = null; s.phase = null; s.busy = false;
-  s.showStrip = false; // v5.81.0: the memory strip only shows after you tap Watching/Attending
+  s.showStrip = false; clearTimeout(s.stripTimer); s.stripTimer = null; s.stripUntil = 0;
   s.token = Date.now();
   var tok = s.token;
   _gattRender();
@@ -19653,6 +19655,7 @@ function _gattLoad(gamePk) {
     if (doc.exists) {
       var d = doc.data() || {};
       s.mode = d.mode === 'attend' ? 'attend' : 'watch'; // docs from the old Watch button have no mode
+      if (!s.stripShownFor || s.stripShownFor !== gamePk) { s.showStrip = true; s.stripShownFor = gamePk; } // v5.82.0: shows for 5s when you open the game
       s.momentId = d.momentId || null;
       _gattRender();
     }
@@ -19698,6 +19701,11 @@ function _gattRender() {
   if (!strip) return;
   if (!s.mode || !s.showStrip) { strip.className = 'gatt-strip'; strip.innerHTML = ''; return; }
   strip.className = 'gatt-strip on';
+  // v5.82.0: the strip stays 5 seconds, then folds away; tapping Watching
+  // or Attending again brings it back for another 5.
+  if (!s.stripUntil) s.stripUntil = Date.now() + 5000;
+  clearTimeout(s.stripTimer);
+  s.stripTimer = setTimeout(_gattStripFold, Math.max(0, s.stripUntil - Date.now()));
   if (s.moment) {
     var m = s.moment;
     var uids = (m.taggedUids || []);
@@ -19717,6 +19725,19 @@ function _gattRender() {
   }
 }
 
+
+function _gattStripFold() {
+  var s = window._gatt, strip = document.getElementById('game-att-strip');
+  if (!strip || !s.showStrip) return;
+  if (document.querySelector('.gatt-backdrop.on')) { s.stripUntil = Date.now() + 5000; _gattRender(); return; } // not while the memory sheet is open
+  var done = function () { strip.removeEventListener('animationend', done); s.showStrip = false; s.stripUntil = 0; _gattRender(); };
+  if (_ghReducedMotion && _ghReducedMotion()) { done(); return; }
+  strip.style.maxHeight = strip.offsetHeight + 'px';
+  strip.classList.add('leaving');
+  strip.addEventListener('animationend', done);
+  setTimeout(function () { if (strip.classList.contains('leaving')) done(); }, 700);
+}
+
 function gattChoose(mode) {
   var s = window._gatt, g = window._activeBrowseGame;
   if (!g || s.busy) return;
@@ -19728,7 +19749,7 @@ function gattChoose(mode) {
   // v5.81.0: tapping your current choice again brings back the memory
   // strip (it's hidden on a fresh load); tapping it while the strip is
   // open clears the choice, as before.
-  if (prev === mode && !s.showStrip) { s.showStrip = true; _gattRender(); return; }
+  if (prev === mode && !s.showStrip) { s.showStrip = true; s.stripUntil = 0; _gattRender(); return; }
   s.busy = true;
   if (prev === mode) {
     // Clearing the choice takes the game off your watch list. A memory
@@ -19738,7 +19759,7 @@ function gattChoose(mode) {
     op = ref.delete();
   } else {
     s.mode = mode;
-    s.showStrip = true;
+    s.showStrip = true; s.stripUntil = 0;
     _gattRender();
     var data = { gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, date: g.date || null, mode: mode };
     if (!prev) data.addedAt = Date.now();
