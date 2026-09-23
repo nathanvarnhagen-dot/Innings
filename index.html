@@ -9980,7 +9980,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.84.0-pitch-colors';
+window.INNINGS_BUILD = 'v5.85.0-faster-refresh-your-games';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -17975,7 +17975,8 @@ function _gameBadgeHtml(g, dayPrefix) {
   var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : null;
   var prefix = dayPrefix ? dayPrefix + ' ' : '';
   if (concluded) {
-    return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.18);color:#CECBF6;flex-shrink:0">' + _escapeHtml(prefix + (scoreLabel || g.status || 'Final')) + '</div>';
+    // v5.85.0: a finished game says so plainly — FINAL plus the score.
+    return '<div style="font-size:10.5px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.26);border:1px solid rgba(168,159,232,.45);color:#fff;flex-shrink:0;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:6px">' + (prefix ? _escapeHtml(prefix) : '') + '<span style="color:#CECBF6">FINAL</span>' + (scoreLabel ? '<span>' + _escapeHtml(scoreLabel) + '</span>' : '') + '</div>';
   }
   if (live) {
     return '<div style="font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(232,98,44,.2);color:#F2916A;flex-shrink:0;font-weight:700;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#F2916A;display:inline-block;flex-shrink:0"></span>' + _escapeHtml(prefix) + 'LIVE' + (scoreLabel ? ' · ' + _escapeHtml(scoreLabel) : '') + '</div>';
@@ -18334,8 +18335,11 @@ function _upgradeLiveGlanceCards(games, sport, stillValidFn) {
       if (!stillValidFn() || window._gamesListCache[idx] !== g) return; // superseded
       var detail = _glanceDetailHtml(box, sport);
       if (!detail) return;
+      (window._glanceCache = window._glanceCache || {})[sport + ':' + g.gamePk] = detail;
       var cardEl = document.getElementById('glist-card-' + idx);
-      if (cardEl && !cardEl.querySelector('.glance-detail')) cardEl.insertAdjacentHTML('beforeend', detail);
+      if (!cardEl) return;
+      var old = cardEl.querySelector('.glance-detail');
+      if (old) old.outerHTML = detail; else cardEl.insertAdjacentHTML('beforeend', detail);
     }).catch(function (err) { console.error('Glance detail fetch error:', err); });
   });
 }
@@ -18348,7 +18352,10 @@ function _upgradeLiveGlanceCards(games, sport, stillValidFn) {
 // itself or the time alone is ambiguous.
 function _shortDowName(iso) { return _dowName(iso).slice(0, 3); }
 
-function loadGamesList(date) {
+function loadGamesList(date, opts) {
+  opts = opts || {};
+  if (typeof startWatchingList === 'function') startWatchingList(); // so games you're watching can sit up top
+  clearTimeout(window._gamesListTimer);
   window._gamesDate = date || window._gamesDate || _todayLocal();
   var requestedDate = window._gamesDate;
   var requestedSport = window._gamesSport;
@@ -18371,7 +18378,7 @@ function loadGamesList(date) {
     prefetch = window._dayFlourishPrefetch.promise;
     window._dayFlourishPrefetch = null;
   }
-  if (!prefetch) listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
+  if (!prefetch && !opts.silent) listEl.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.4);padding:8px 2px">Loading games…</div>';
   (prefetch || Promise.all([
     fetch(_bsModalScheduleUrl(requestedSport, requestedDate)).then(function (r) { return r.json(); }),
     _loadFavTeams(requestedSport)
@@ -18388,13 +18395,20 @@ function loadGamesList(date) {
       return;
     }
     var split = _splitSpotlight(games, favTeams);
+    // v5.85.0: games you're watching or attending sit right under your
+    // teams' games, marked, in the same top section.
+    var watchedIds = {};
+    (window._watchingList || []).forEach(function (w) { if (w && (w.sport || 'mlb') === requestedSport) watchedIds[String(w.gamePk != null ? w.gamePk : w._id)] = w.mode || 'watch'; });
+    var watchedGames = split.rest.filter(function (g) { return watchedIds[String(g.gamePk)]; });
+    if (watchedGames.length) split = { spotlight: split.spotlight.concat(watchedGames), rest: split.rest.filter(function (g) { return !watchedIds[String(g.gamePk)]; }) };
+    window._gamesWatchedIds = watchedIds;
     // Followed-team games stay in "Your teams" no matter their status;
     // whatever's left sinks its concluded games to their own section below,
     // the same treatment the NFL/CFB week view already gives finished games.
     var restSplit = _splitConcluded(split.rest);
     var html = '';
     if (split.spotlight.length) {
-      html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">Your teams</div>';
+      html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">' + (split.spotlight.length === watchedGames.length ? 'Your games' : 'Your teams') + '</div>';
       html += split.spotlight.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
     }
     html += restSplit.upcoming.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
@@ -18404,6 +18418,15 @@ function loadGamesList(date) {
     }
     listEl.innerHTML = html;
     _upgradeLiveGlanceCards(games, requestedSport, function () { return window._gamesSport === requestedSport && window._gamesDate === requestedDate; });
+    // v5.85.0: keep today's list current on its own (scores, live detail)
+    // every 20s while it's on screen and anything is live or still to come.
+    var anyActive = games.some(function (g) { return !_isGameConcluded(g.status); });
+    if (requestedDate === _todayLocal() && anyActive) {
+      window._gamesListTimer = setTimeout(function () {
+        var scr = document.getElementById('screen-games');
+        if (scr && scr.classList.contains('active') && !document.hidden && window._gamesDate === requestedDate && window._gamesSport === requestedSport) loadGamesList(requestedDate, { silent: true });
+      }, 20000);
+    }
   }).catch(function (err) {
     if (window._gamesDate !== requestedDate || window._gamesSport !== requestedSport) return;
     console.error('Load games list error:', err);
@@ -18415,8 +18438,9 @@ function loadGamesList(date) {
     return '<div id="glist-card-' + i + '" onclick="openGameFromList(' + i + ')" style="background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer">' +
       '<div style="display:flex;align-items:center;justify-content:space-between">' +
       '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+      ((window._gamesWatchedIds || {})[String(g.gamePk)] ? '<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 8px;border-radius:999px;background:rgba(168,159,232,.18);color:#D9D4FA;font-size:10.5px;font-weight:800;letter-spacing:.04em">' + ((window._gamesWatchedIds || {})[String(g.gamePk)] === 'attend' ? 'ATTENDING' : 'WATCHING') + '</div>' : '') +
       '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-      _gameBadgeHtml(g) + '</div></div>';
+      _gameBadgeHtml(g) + '</div>' + (!_isGameConcluded(g.status) && (window._glanceCache || {})[requestedSport + ':' + g.gamePk] ? window._glanceCache[requestedSport + ':' + g.gamePk] : '') + '</div>';
   }
 }
 
@@ -22547,7 +22571,7 @@ window._gameLiveRefreshTimer = null;
 // between pitches.
 function _gameLiveRefreshMs() {
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
-  return (sport === 'nfl' || sport === 'cfb') ? 8000 : 15000;
+  return (sport === 'nfl' || sport === 'cfb') ? 8000 : 6000; // v5.85.0: MLB every 6s (was 15s)
 }
 function _startGameLiveRefresh(gamePk) {
   _stopGameLiveRefresh();
@@ -22846,8 +22870,12 @@ function startWatchingList() {
   window.db.collection('users').doc(user.uid).collection('watching').onSnapshot(function (snap) {
     var arr = [];
     snap.forEach(function (doc) { arr.push(Object.assign({ _id: doc.id }, doc.data())); });
-    window._watchingList = arr;
+    var sig = arr.map(function (w) { return w._id + ':' + (w.mode || ''); }).sort().join(',');
+    var changed = window._watchingSig !== sig;
+    window._watchingList = arr; window._watchingSig = sig;
     renderLiveFeed();
+    var gs = document.getElementById('screen-games');
+    if (changed && gs && gs.classList.contains('active') && typeof loadGamesList === 'function') loadGamesList(window._gamesDate, { silent: true });
   }, function (err) {
     console.error('Watching list error:', err);
     window._watchingStarted = false;
@@ -26410,6 +26438,20 @@ function _paFieldSvg(lp, land, E) {
   };
 })();
 
+</script>
+<script>
+// v5.85.0: coming back to the app catches up right away instead of
+// waiting for the next tick (phones pause timers in the background).
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) return;
+  var gameScr = document.getElementById('screen-game'), listScr = document.getElementById('screen-games');
+  var g = window._activeBrowseGame;
+  if (gameScr && gameScr.classList.contains('active') && g && typeof _refreshBoxScore === 'function') {
+    _refreshBoxScore(g.gamePk).then(function (isLive) { if (isLive && !window._gameLiveRefreshTimer && typeof _startGameLiveRefresh === 'function') _startGameLiveRefresh(g.gamePk); }).catch(function () {});
+  } else if (listScr && listScr.classList.contains('active') && typeof loadGamesList === 'function') {
+    loadGamesList(window._gamesDate, { silent: true });
+  }
+});
 </script>
 </body>
 </html>
