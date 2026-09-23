@@ -222,7 +222,25 @@ function summarize(data, gamePk, wantAllPlays) {
         text: result.description,
         atBatIndex: about.atBatIndex != null ? about.atBatIndex : null,
         awayScore: result.awayScore != null ? result.awayScore : null,
-        homeScore: result.homeScore != null ? result.homeScore : null
+        homeScore: result.homeScore != null ? result.homeScore : null,
+        // Play context in game chat (v5.68.0): outs and runners after the
+        // play, and the pitches in the at-bat. count.outs and matchup.
+        // postOnFirst/Second/Third are standard fields on every completed
+        // play; pitches are the same playEvents pitchSequence reads.
+        outs: (p.count && p.count.outs != null) ? p.count.outs : null,
+        bases: {
+          first: !!(p.matchup && p.matchup.postOnFirst),
+          second: !!(p.matchup && p.matchup.postOnSecond),
+          third: !!(p.matchup && p.matchup.postOnThird)
+        },
+        pitches: (p.playEvents || []).filter(function (e) { return e && e.isPitch; }).map(function (e) {
+          var d = e.details || {};
+          return {
+            call: (d.call && d.call.description) || d.description || null,
+            type: (d.type && d.type.description) || null,
+            speed: (e.pitchData && e.pitchData.startSpeed != null) ? Math.round(e.pitchData.startSpeed) : null
+          };
+        })
       };
     });
   }
