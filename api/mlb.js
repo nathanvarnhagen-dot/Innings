@@ -30,7 +30,8 @@ module.exports = async function handler(req, res) {
           });
         });
       });
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      // v5.85.0: scores on the schedule list refresh within ~15s (was 5 min).
+      res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=15');
       res.status(200).json({ games: games });
       return;
     }
@@ -41,7 +42,11 @@ module.exports = async function handler(req, res) {
       const url = 'https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live';
       const r = await fetch(url);
       const data = await r.json();
-      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+      // v5.85.0: a live game is only cached for a few seconds at the edge
+      // (it was a full minute, so polling faster never showed anything
+      // newer); finished games can sit much longer.
+      const st = (data && data.gameData && data.gameData.status && data.gameData.status.abstractGameState) || '';
+      res.setHeader('Cache-Control', st === 'Live' ? 's-maxage=3, stale-while-revalidate=5' : st === 'Final' ? 's-maxage=300, stale-while-revalidate' : 's-maxage=30, stale-while-revalidate');
       res.status(200).json(summarize(data, gamePk, req.query.plays === 'all'));
       return;
     }
