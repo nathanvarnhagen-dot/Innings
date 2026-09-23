@@ -9962,7 +9962,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.73.0-fielders-outs-only';
+window.INNINGS_BUILD = 'v5.74.0-final-replays';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -12038,7 +12038,9 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
     setTimeout(function () { _loadPlayReactions(playIdsForReactions); }, 0);
   }
 
-  return '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">' +
+  // v5.74.0: on the game screen this card uses the same card style as the
+  // live cards (no lighter panel once the game goes final).
+  return (opts.hero ? '<div class="gh-card">' : '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">') +
     (opts.hero ? '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:8px">' + (heroFinal ? 'Plays & box score' : 'Pitch by pitch') + '</div>' :
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
@@ -25804,8 +25806,8 @@ function _paActive() {
 }
 // Replay a play from the play-by-play (tap the row once). Scrolls the
 // at-bat square into view and runs that play's animation.
-function ghPaReplayPlay(playId) {
-  var box = window._pa.box || (typeof _gcBox === 'function' ? _gcBox() : null);
+function ghPaReplayPlay(playId, rowEl) {
+  var box = (typeof _gcBox === 'function' && _gcBox()) || window._pa.box; // freshest box (final games don't refresh _pa.box)
   if (!box) return;
   var abi = String(playId || '').split('_').pop();
   var list = box.allPlays || [];
@@ -25814,6 +25816,22 @@ function ghPaReplayPlay(playId) {
   if (!hit && box.lastPlay && String(box.lastPlay.atBatIndex) === abi) hit = box.lastPlay;
   if (!hit) { if (typeof ib_toast === 'function') ib_toast('No replay for that play'); return; }
   var s = window._pa;
+  // v5.74.0: after the game (no live at-bat square), the replay opens
+  // right under the play you tapped: its pitches first, then the field
+  // if the ball was put in play. Tapping the same play again closes it.
+  var live = document.getElementById('gh-pa-slot');
+  if (!live || live.getAttribute('data-inline')) {
+    var prevBox = document.getElementById('pa-inline');
+    var sameRow = prevBox && rowEl && prevBox.previousElementSibling === rowEl;
+    if (prevBox) prevBox.remove();
+    if (sameRow || !rowEl) { s.play = null; return; }
+    var wrap = document.createElement('div');
+    wrap.id = 'pa-inline';
+    wrap.style.cssText = 'position:relative;height:220px;border-radius:16px;overflow:hidden;margin:4px 0 12px;background:#120E2B;border:1px solid rgba(168,159,232,.14)';
+    wrap.innerHTML = '<div id="gh-pa-slot" data-inline="1"></div>';
+    rowEl.parentNode.insertBefore(wrap, rowEl.nextSibling);
+    s.keep = true;
+  } else s.keep = false;
   s.play = hit; s.startAt = Date.now(); s.box = box;
   _paFill();
   var slot = document.getElementById('gh-pa-slot');
@@ -25830,7 +25848,7 @@ function _paFill() {
     // One full run, then hand the square back and catch up on any
     // refresh that waited (see the render hook below).
     window._paEndT = setTimeout(function () {
-      var sl = document.getElementById('gh-pa-slot'); if (sl) sl.innerHTML = '';
+      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) sl.innerHTML = '';
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
     }, Math.max(0, (PA.END + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
@@ -25918,7 +25936,8 @@ function _paOverlayHtml() {
   if (reduce) E = Math.max(E, 5);
   var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(lp.eventType || ''));
   var END = inPlay ? PA.END : 9;
-  if (E > END + 0.6) return '';
+  if (s.keep) E = Math.min(E, END - .01);
+  else if (E > END + 0.6) return '';
   var land = _paLanding(lp);
   var title = _paTitle(lp), note = _paNote2(lp, box, land);
   var anim = function (name, dur, t, extra) { return 'animation:' + name + ' ' + dur + 's ' + (extra || 'linear') + ' ' + _paSec(t, E) + ' both;'; };
@@ -25933,7 +25952,7 @@ function _paOverlayHtml() {
       '<circle cx="' + X.toFixed(1) + '" cy="' + Y.toFixed(1) + '" r="15" fill="' + c + '" stroke="rgba(255,255,255,.35)" stroke-width="4"/>' +
       '<text x="' + X.toFixed(1) + '" y="' + (Y + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0D0820">' + lastP.num + '</text></g></svg>');
   }
-  var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + anim('paOut', .5, END, 'ease') + '">';
+  var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
   out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .5, PA.SW) : '') + '">' + pv +
     (inPlay ? '<div style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2) + '">In play</div>' : '') + '</div>';
   if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW) + '">' + _paFieldSvg(lp, land, E) + '</div>';
@@ -26093,7 +26112,7 @@ function _paFieldSvg(lp, land, E) {
     if (second) return;
     var g = window._activeBrowseGame;
     if (!g || (g.sport || 'mlb') !== 'mlb') return;
-    el._paTapT = setTimeout(function () { if (el._lastTapTs) ghPaReplayPlay(playId); }, 420);
+    el._paTapT = setTimeout(function () { if (el._lastTapTs) ghPaReplayPlay(playId, el); }, 420);
   };
 })();
 
