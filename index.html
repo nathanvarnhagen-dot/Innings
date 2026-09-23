@@ -1508,6 +1508,81 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 .gc-flash{animation:gcFlash 1.8s ease}
 @keyframes gcFlash{0%,40%{background:rgba(168,159,232,.28)}100%{background:transparent}}
 </style>
+<style>
+/* ═══ v5.69.0 — On This Day, archive search, desktop layout ═══ */
+#otd-feed-banner{margin-bottom:12px}
+.otd-card{position:relative;overflow:hidden;width:100%;min-height:150px;border-radius:20px;border:1px solid rgba(168,159,232,.3);color:#fff;text-align:left;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:16px 18px;box-sizing:border-box;animation:otdIn .5s ease both}
+.otd-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,8,32,.15) 0%,rgba(11,8,32,.72) 100%);pointer-events:none}
+.otd-card > span:not(.otd-shade){position:relative}
+.otd-eb{position:absolute!important;top:14px;left:18px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#F4F1FF}
+.otd-title{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.otd-sub{font-size:13px;color:#D9D4FA;line-height:1.4}
+.otd-go{align-self:flex-end;font-size:13px;font-weight:700;color:#fff;margin-top:2px}
+@keyframes otdIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.otd-card{animation:none}}
+#otd-overlay{display:none;position:fixed;inset:0;z-index:192;flex-direction:column;background:#0B0820;color:#fff}
+.otd-row{width:100%;display:flex;gap:14px;align-items:center;padding:12px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(168,159,232,.14);color:#fff;text-align:left;font-family:inherit;cursor:pointer}
+.otd-row-img{width:64px;height:64px;border-radius:14px;flex-shrink:0}
+.otd-row.big{flex-direction:column;align-items:stretch;padding:0;overflow:hidden}
+.otd-row.big .otd-row-img{width:100%;height:150px;border-radius:0}
+.otd-row.big .otd-row-tx{padding:0 16px 16px}
+.otd-row-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.otd-row-tx b{font-size:16px}
+.otd-row-tx > span:not(.gh-eyebrow){font-size:12.5px;color:#9C95D0}
+.otd-row-tx .otd-row-note{color:#D9D4FA!important;font-size:13.5px!important;line-height:1.45;margin-top:4px}
+/* Archive search */
+.ms-bar{margin-bottom:4px}
+#screen-memories .imm-body.ms-on > :not(.ms-keep){display:none!important}
+#ms-results{display:flex;flex-direction:column}
+.ms-list{display:flex;flex-direction:column;gap:8px}
+.ms-row{width:100%;display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#fff;text-align:left;font-family:inherit;cursor:pointer}
+.ms-img{width:52px;height:52px;border-radius:12px;flex-shrink:0}
+.ms-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ms-tx b{font-size:14.5px}
+.ms-tx > span{font-size:12.5px;color:#9C95D0}
+.ms-tx .ms-snip{color:#D9D4FA;line-height:1.4}
+.ms-row mark,.ms-tx mark{background:rgba(168,159,232,.35);color:#fff;border-radius:3px;padding:0 2px}
+.md-grid{display:block}
+/* Desktop-only sidebar entries */
+.desk-only{display:none!important}
+.rail-list{display:flex;flex-direction:column;gap:8px}
+.rail-mem{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#fff;text-align:left;font-family:inherit;cursor:pointer}
+.rail-mem-img{width:48px;height:48px;border-radius:10px;flex-shrink:0}
+.rail-mem-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rail-mem-tx b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail-mem-tx span{font-size:12px;color:#9C95D0}
+.ipad-search{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;margin:0 0 14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(168,159,232,.18);color:rgba(206,203,246,.6);font-size:13.5px;font-family:inherit;cursor:pointer;text-align:left}
+.ipad-search span{flex:1}
+.ipad-search kbd{font-family:inherit;font-size:11px;padding:2px 6px;border-radius:5px;border:1px solid rgba(168,159,232,.25)}
+
+html.desk .desk-only{display:flex!important}
+/* Content columns: centered, readable widths on a wide window */
+html.desk .screen > .scroll,html.desk .screen > .scroll-bare,html.desk .screen > .imm-body{padding-left:max(28px,calc((100% - 780px) / 2))!important;padding-right:max(28px,calc((100% - 780px) / 2))!important}
+html.desk #screen-memories > .imm-body,html.desk #md-scroll{padding-left:max(32px,calc((100% - 1160px) / 2))!important;padding-right:max(32px,calc((100% - 1160px) / 2))!important}
+html.desk #mem-list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px!important}
+html.desk .ms-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+/* Feed: main column + right column */
+html.desk #screen-feed > .imm-body.feed-desk{display:grid!important;grid-template-columns:minmax(0,720px) 320px;gap:28px;justify-content:center;align-content:start;padding-left:32px!important;padding-right:32px!important}
+#feed-desk-main{display:flex;flex-direction:column;gap:inherit;min-width:0}
+#feed-desk-rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:0;align-self:start}
+html.desk .imm-hero{padding-left:max(28px,calc((100% - 1068px) / 2))!important;padding-right:max(28px,calc((100% - 1068px) / 2))!important}
+/* Game: cheat sheet on the left, chat always open on the right */
+html.desk #screen-game{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr) auto}
+html.desk #screen-game > div:first-child{grid-column:1 / -1}
+html.desk #game-sheet-panel,html.desk #game-rules-panel{grid-column:1;grid-row:2 / 4;padding-left:max(28px,calc((100% - 820px) / 2))!important;padding-right:max(28px,calc((100% - 820px) / 2))!important}
+html.desk #game-chat-panel{grid-column:2;grid-row:2;display:flex!important;border-left:1px solid rgba(168,159,232,.12);padding-left:16px!important;padding-right:16px!important}
+html.desk #game-chat-input-zone{grid-column:2;grid-row:3;display:flex!important;border-left:1px solid rgba(168,159,232,.12)}
+html.desk #game-tab-chat{display:none!important}
+html.desk #game-recap-overlay{grid-column:1 / -1}
+/* Game memory: ticket + game on the left, people/photos/thread on the right */
+html.desk .md-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+html.desk .md-col-b{display:flex;flex-direction:column;gap:12px}
+html.desk .md-col-b > *{margin-top:0!important}
+html.desk #md-composer{padding-left:max(16px,calc((100% - 1160px) / 2))!important;padding-right:max(16px,calc((100% - 1160px) / 2))!important}
+/* Overlays sit over the content, not the sidebar */
+html.desk #otd-overlay,html.desk #isearch-overlay,html.desk #rule-overlay,html.desk #ptag-overlay{left:232px}
+html.desk .gatt-sheet{max-width:560px}
+</style>
 </head>
 <body>
 <!-- ═══ IPAD LANDSCAPE SIDEBAR — hidden below the tablet-landscape
@@ -1520,9 +1595,14 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
     <div class="ipad-brand-mark">I<span>N</span></div>
     <div class="ipad-brand-name">Innings</div>
   </div>
+  <button class="ipad-search desk-only" onclick="openInningsSearch()" aria-label="Search players, teams, rules and memories"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
   <button class="ipad-nav-item active" id="ipad-nav-feed" onclick="nav('feed')" aria-label="Feed">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="3" y="11" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><line x1="13" y1="7" x2="21" y2="7"/><line x1="13" y1="13" x2="21" y2="13"/><line x1="13" y1="19" x2="21" y2="19"/></svg>
     <span>Feed</span>
+  </button>
+  <button class="ipad-nav-item desk-only" id="ipad-nav-games" onclick="playSportsHub()" aria-label="Games">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M6.5 5.5c2 2 2 11 0 13M17.5 5.5c-2 2-2 11 0 13"/></svg>
+    <span>Games</span>
   </button>
   <button class="ipad-nav-item" id="ipad-nav-calendar" onclick="nav('calendar')" aria-label="Calendar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg>
@@ -2124,6 +2204,9 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
   </div>
 
   <div class="scroll imm-body">
+
+    <!-- ON THIS DAY (v5.69.0) — a past memory from today's date, when there is one -->
+    <div id="otd-feed-banner" style="display:none"></div>
 
     <!-- OSL BANNER -->
     <div class="banner-pop-card imm-row" id="osl-feed-banner" onclick="bannerNavWithPop(this,'osl-group')">
@@ -3309,6 +3392,12 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
      under a game's tabs once Watching or Attending is picked. ═══ -->
 <div id="gatt-backdrop" class="gatt-backdrop" onclick="if(event.target===this)gattCloseSheet()">
   <div id="gatt-sheet" class="gatt-sheet" role="dialog" aria-modal="true" aria-labelledby="gatt-title"></div>
+</div>
+
+<!-- ═══ ON THIS DAY (v5.69.0) ═══ -->
+<div id="otd-overlay" role="dialog" aria-modal="true" aria-label="On this day">
+  <div class="ov-top"><button class="ov-back" aria-label="Back" onclick="closeOnThisDay()"><svg width="9" height="14" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 1 1 6.5 7 12"/></svg></button><span style="font-size:16px;font-weight:800">On this day</span></div>
+  <div class="ov-body" id="otd-body"></div>
 </div>
 
 <!-- ═══ PLAY CONTEXT SHEET (v5.68.0) — tap a quoted play or a reaction line in game chat ═══ -->
@@ -9461,6 +9550,10 @@ function _runOslPreviewSequence() {
     </div>
   </div>
   <div class="scroll imm-body">
+    <!-- ARCHIVE SEARCH (v5.69.0) -->
+    <div class="ms-bar ms-keep"><label class="rb-search" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="ms-q" type="search" autocomplete="off" aria-label="Search your memories" placeholder="Search your memories — friends, teams, notes" oninput="msInput(this.value)"></label></div>
+    <div id="ms-tabs" class="rb-pills ms-keep" style="display:none;margin:0"></div>
+    <div id="ms-results" class="ms-keep"></div>
     <div class="imm-note"><i class="ti ti-lock" style="color:#A89FE8;font-size:15px"></i> Your memories are private. Only people in the moment with you can see them.</div>
 
     <!-- PERSONAL INSIGHT: private, self-referential only — never compared to
@@ -9859,7 +9952,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.68.0-memory-ticket-chat';
+window.INNINGS_BUILD = 'v5.69.0-desktop-resurfacing-search';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -14651,19 +14744,22 @@ function renderMemoryView(m) {
   // then who was there — the seat lives on the ticket now.
   if (isTicket) {
     scroll.innerHTML =
+      '<div class="md-grid"><div class="md-col-a">' +
       '<div style="padding:2px 4px 12px;text-shadow:0 1px 12px rgba(0,0,0,.45)">' +
         '<div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.15">' + _escapeHtml(m.name || 'Untitled moment') + '</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px">' + _escapeHtml([m.date ? _formatMomentDate(m.date) : '', m.boxScore.venue || ''].filter(Boolean).join(' · ')) + '</div>' +
         (sharedByLine ? '<div style="margin-top:6px">' + sharedByLine + '</div>' : '') +
       '</div>' +
       boxScoreHtml +
+      '</div><div class="md-col-b">' +
       '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
         '<div style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Who was there</div>' +
         '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:4px">' + peopleChips + '</div>' +
         (typeof _mdPlayersHtml === 'function' ? _mdPlayersHtml(m) : '') +
       '</div>' +
       collabPhotosHtml +
-      '<div style="padding-top:6px">' + thread + '</div>';
+      '<div style="padding-top:6px">' + thread + '</div>' +
+      '</div></div>';
   } else
   scroll.innerHTML =
     '<div style="background:rgba(255,255,255,0.14);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;padding:16px">' +
@@ -19336,7 +19432,15 @@ function gameDetailTab(key) {
   if (!sheetBtn || !chatBtn) return;
   var onStyle = 'background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit';
   var offStyle = 'background:transparent;color:rgba(255,255,255,.5);border:none;border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit';
+  // Desktop (v5.69.0): chat is always open in its own column, so asking
+  // for it just keeps the left side as it was and puts the cursor there.
+  var desk = typeof _isDesk === 'function' && _isDesk();
+  if (desk && key === 'chat') {
+    key = window._gdLeftTab || 'sheet';
+    setTimeout(function () { var f = document.getElementById('game-chat-field'); if (f) f.focus(); }, 0);
+  }
   if (key !== 'chat' && key !== 'rules') key = 'sheet';
+  if (key !== 'chat') window._gdLeftTab = key;
   sheetBtn.style.cssText = key === 'sheet' ? onStyle : offStyle;
   chatBtn.style.cssText = key === 'chat' ? onStyle : offStyle;
   if (rulesBtn) rulesBtn.style.cssText = key === 'rules' ? onStyle : offStyle;
@@ -19352,6 +19456,10 @@ function gameDetailTab(key) {
     }
   } else if (key === 'rules' && typeof renderGameRules === 'function') {
     renderGameRules();
+  }
+  if (desk && key !== 'chat') {
+    var pk = window._activeBrowseGame && window._activeBrowseGame.gamePk;
+    if (pk) { startGameChat(pk); _loadWatchingWithRow(pk); }
   }
 }
 
@@ -23603,6 +23711,7 @@ function loadNotifications() {
       else if (n.type === 'feedback_post') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted feedback';
       else if (n.type === 'game_watch_joined') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started watching ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' with you';
       else if (n.type === 'game_chat_message') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted in the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
+      else if (n.type === 'on_this_day') label = '<b>' + (n.yearsAgo > 1 ? n.yearsAgo + ' years' : 'One year') + ' ago today</b> — look back at it';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
       var subLabel = n.momentName || n.groupName || n.messagePreview || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
       var acceptBtn = n.type === 'friend_request'
@@ -23643,6 +23752,8 @@ function notifTap(notifId) {
   } else if (n.type === 'feedback_post') {
     nav('feedback-group');
     if (n.category) { setTimeout(function(){ if (typeof feedbackTab === 'function') feedbackTab(n.category); }, 0); }
+  } else if (n.type === 'on_this_day' && n.momentId) {
+    openMemory(n.momentId, 'notifications');
   } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message') && n.gamePk) {
     if (typeof openGameScreen === 'function') openGameScreen(n.gamePk, n.away, n.home, n.sport || 'mlb');
     if (n.type === 'game_chat_message') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
@@ -24850,6 +24961,12 @@ function _isRender() {
     return;
   }
   var all = s.filter === 'all', cap = all ? 5 : 40, html = '';
+  if (all && typeof _msSearch === 'function') {
+    var mine = _msSearch(q, 'all').memories.slice(0, 4);
+    if (mine.length) html += '<div class="rb-eyebrow">Your memories</div><div class="ms-list">' + mine.map(function (x) {
+      return _msRowHtml(x, q.toLowerCase()).replace('onclick="openMemory(', 'onclick="closeInningsSearch();openMemory(');
+    }).join('') + '</div>';
+  }
   if (all || s.filter === 'teams') {
     var teams = _isTeamHits(q).slice(0, cap);
     if (teams.length || !all) {
@@ -25347,6 +25464,295 @@ function pctxOpenSheet() {
     setTimeout(function () { row.classList.remove('gc-flash'); }, 1800);
   }, 60);
 }
+
+</script>
+<script>
+// ══ DESKTOP LAYOUT (v5.69.0) ══════════════════════════════════════════
+// A computer (mouse/trackpad, no touch) with a wide landscape window gets
+// html.desk: the iPad sidebar plus desktop layouts — game chat beside the
+// cheat sheet, a right-hand column on the Feed, a grid of memories, and
+// two columns on a game memory. Phones and iPads never get the class.
+function _isDesk() { return document.documentElement.classList.contains('desk'); }
+function _deskCheck() {
+  var fine = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  var on = fine && (navigator.maxTouchPoints || 0) === 0 && window.innerWidth >= 1100 && window.innerWidth > window.innerHeight;
+  var root = document.documentElement;
+  var was = root.classList.contains('desk');
+  root.classList.toggle('desk', on);
+  if (on) root.classList.add('is-tablet'); // the iPad sidebar styles key off this
+  _deskFeedLayout(on);
+  _deskRescaleFlourishes();
+  if (on !== was) {
+    var g = window._activeBrowseGame;
+    if (on && g && typeof startGameChat === 'function') startGameChat(g.gamePk);
+    if (!on && typeof gameDetailTab === 'function' && document.getElementById('screen-game')) gameDetailTab(window._gdLeftTab || 'sheet');
+    if (window._openMomentId && typeof _findMoment === 'function') { var mm = _findMoment(window._openMomentId); if (mm && typeof renderMemoryView === 'function') { try { renderMemoryView(mm); } catch (e) {} } }
+  }
+  return on;
+}
+// Fullscreen sport flourishes run on a fixed 390×844 stage. Re-fit any
+// that's on screen when the window changes size, so they stay in
+// proportion (letterboxed in landscape) instead of stretching or cropping.
+function _deskRescaleFlourishes() {
+  if (typeof _mlbfScale !== 'function') return;
+  document.querySelectorAll('.mlbf-stage').forEach(function (stage) {
+    var ov = stage.parentElement;
+    if (!ov || ov.offsetParent === null) return;
+    var w = ov.clientWidth || 390, h = ov.clientHeight || 844;
+    stage.style.setProperty('--mlbf-s', _mlbfScale(w, h).toFixed(4));
+  });
+}
+var _deskResizeT = null;
+document.addEventListener('keydown', function (e) {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K') && typeof openInningsSearch === 'function') { e.preventDefault(); openInningsSearch(); }
+  if (e.key === 'Escape') { ['otd-overlay', 'rule-overlay', 'isearch-overlay'].forEach(function (id) { var el = document.getElementById(id); if (el && el.style.display === 'flex') el.style.display = 'none'; }); }
+});
+window.addEventListener('resize', function () { clearTimeout(_deskResizeT); _deskResizeT = setTimeout(_deskCheck, 120); });
+
+// Feed on desktop: the main column plus a right-hand column holding
+// Watching and your recent memories. The same elements are moved (not
+// copied), so everything that renders into them keeps working, and
+// they go back exactly where they were when the window narrows.
+function _deskFeedLayout(on) {
+  var body = document.querySelector('#screen-feed .imm-body');
+  if (!body) return;
+  var main = document.getElementById('feed-desk-main');
+  if (on && !main) {
+    main = document.createElement('div'); main.id = 'feed-desk-main';
+    var rail = document.createElement('aside'); rail.id = 'feed-desk-rail';
+    rail.innerHTML = '<div id="feed-rail-recent"></div>';
+    while (body.firstChild) main.appendChild(body.firstChild);
+    body.appendChild(main); body.appendChild(rail);
+    var watch = document.getElementById('feed-live-feed-section');
+    if (watch) { watch.setAttribute('data-desk-moved', '1'); rail.insertBefore(watch, rail.firstChild); }
+    body.classList.add('feed-desk');
+    _deskRenderRail();
+  } else if (!on && main) {
+    var rail2 = document.getElementById('feed-desk-rail');
+    var watch2 = document.getElementById('feed-live-feed-section');
+    // Watching sat right after the Feedback banner — its original spot.
+    if (watch2 && watch2.getAttribute('data-desk-moved')) {
+      var anchor = document.getElementById('feed-upcoming-list');
+      var sec = anchor && anchor.previousElementSibling; // the "Coming up" header
+      main.insertBefore(watch2, sec || main.firstChild);
+      watch2.removeAttribute('data-desk-moved');
+    }
+    while (main.firstChild) body.insertBefore(main.firstChild, main);
+    main.remove(); if (rail2) rail2.remove();
+    body.classList.remove('feed-desk');
+  }
+}
+function _deskRenderRail() {
+  var box = document.getElementById('feed-rail-recent');
+  if (!box) return;
+  var ms = (window._moments || []).slice().sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); }).slice(0, 4);
+  if (!ms.length) {
+    if (!window._deskRailAsked && typeof loadMoments === 'function') { window._deskRailAsked = true; loadMoments(); }
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = '<div class="imm-eyebrow" style="margin:6px 2px 10px">Recent memories</div><div class="rail-list">' + ms.map(function (m) {
+    return '<button class="rail-mem" data-id="' + _escapeHtml(m._id) + '" onclick="openMemory(this.dataset.id)">' +
+      '<span class="rail-mem-img" style="' + _otdThumbStyle(m) + '"></span>' +
+      '<span class="rail-mem-tx"><b>' + _escapeHtml(m.name || 'Memory') + '</b><span>' + _escapeHtml(m.date ? _formatMomentDate(m.date) : '') + '</span></span></button>';
+  }).join('') + '</div><button class="imm-link" style="margin:10px 2px 0;background:none;border:0;font-family:inherit;cursor:pointer;padding:0" onclick="nav(\'memories\')">All memories ›</button>';
+}
+
+// ══ ON THIS DAY — resurfacing ═════════════════════════════════════════
+function _otdTodayKey() { var t = _todayLocal(); return t.slice(5); } // "MM-DD"
+function _otdYearsAgo(m) { return Number(_todayLocal().slice(0, 4)) - Number(String(m.date).slice(0, 4)); }
+function _otdThumbStyle(m) {
+  if (m.photo) return 'background-image:url(' + m.photo + ');background-size:cover;background-position:center';
+  if (typeof _mdIsTicket === 'function' && _mdIsTicket(m)) {
+    try {
+      var sp = _mdSport(m), a = _mdSide(m.boxScore, 'away', sp), h = _mdSide(m.boxScore, 'home', sp);
+      return 'background:linear-gradient(135deg,' + a.colors.bg + ' 0%,#2A2160 55%,' + h.colors.bg + ' 140%)';
+    } catch (e) {}
+  }
+  return 'background:linear-gradient(135deg,#3D3580 0%,#1A1640 100%)';
+}
+function _otdWho(m) {
+  var p = (m.people || []).filter(Boolean).map(function (n) { return String(n).split(' ')[0]; });
+  if (!p.length) return '';
+  return 'with ' + (p.length === 1 ? p[0] : p.length === 2 ? p[0] + ' and ' + p[1] : p[0] + ' +' + (p.length - 1));
+}
+function _otdAgo(n) { return n === 1 ? '1 year ago' : n + ' years ago'; }
+window._otd = { key: null, items: [] };
+// Only the memories dated today's month/day in past years — one small
+// query (up to 10 years back — the 'in' limit), not the whole archive.
+function loadOnThisDay() {
+  var user = window.currentUser || (window.auth && window.auth.currentUser);
+  if (!user || !window.db) return;
+  var today = _todayLocal(), key = today.slice(5), year = Number(today.slice(0, 4));
+  if (window._otd.key === today) { _otdRenderBanner(); return; }
+  var dates = [];
+  for (var y = year - 1; y >= year - 10; y--) dates.push(y + '-' + key);
+  window.db.collection('users').doc(user.uid).collection('moments').where('date', 'in', dates).get().then(function (snap) {
+    var arr = [];
+    snap.forEach(function (d) { arr.push(Object.assign({ _id: d.id }, d.data())); });
+    arr.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    window._otd = { key: today, items: arr };
+    _otdRenderBanner();
+    _otdMaybeNotify(user, arr);
+  }).catch(function (err) { console.error('[on this day] ' + (err && err.code), err); });
+}
+function _otdRenderBanner() {
+  var el = document.getElementById('otd-feed-banner');
+  if (!el) return;
+  var items = window._otd.items || [];
+  if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var m = items[0];
+  var sub = [_otdWho(m), m.highlight ? '“' + (m.highlight.length > 60 ? m.highlight.slice(0, 60) + '…' : m.highlight) + '”' : ''].filter(Boolean).join(' · ');
+  el.style.display = 'block';
+  el.innerHTML = '<button class="otd-card" onclick="openOnThisDay()" style="' + _otdThumbStyle(m) + '">' +
+    '<span class="otd-shade"></span>' +
+    '<span class="otd-eb"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 3h6"/></svg>On this day · ' + _otdAgo(_otdYearsAgo(m)) + (items.length > 1 ? ' · +' + (items.length - 1) + ' more' : '') + '</span>' +
+    '<span class="otd-title">' + _escapeHtml(m.name || 'A memory') + '</span>' +
+    (sub ? '<span class="otd-sub">' + _escapeHtml(sub) + '</span>' : '') +
+    '<span class="otd-go">Look back ›</span></button>';
+}
+function openOnThisDay() {
+  var ov = document.getElementById('otd-overlay'), body = document.getElementById('otd-body');
+  if (!ov || !body) return;
+  var items = window._otd.items || [];
+  var d = new Date(_todayLocal() + 'T12:00:00');
+  var dayLabel = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  body.innerHTML = '<div style="display:flex;flex-direction:column;gap:4px"><span class="rb-h1">' + _escapeHtml(dayLabel) + '</span><span class="gh-sub" style="font-size:14px">Every year you&#39;ve marked something on this date</span></div>' +
+    (items.length ? items.map(function (m, i) {
+      var sub = [m.date ? _formatMomentDate(m.date) : '', _otdWho(m)].filter(Boolean).join(' · ');
+      return '<button class="otd-row' + (i === 0 ? ' big' : '') + '" data-id="' + _escapeHtml(m._id) + '" onclick="closeOnThisDay();openMemory(this.dataset.id)">' +
+        '<span class="otd-row-img" style="' + _otdThumbStyle(m) + '"></span>' +
+        '<span class="otd-row-tx"><span class="gh-eyebrow">' + _otdAgo(_otdYearsAgo(m)) + '</span><b>' + _escapeHtml(m.name || 'A memory') + '</b><span>' + _escapeHtml(sub) + '</span>' +
+        (m.highlight ? '<span class="otd-row-note">' + _escapeHtml(m.highlight) + '</span>' : '') + '</span></button>';
+    }).join('') : '<div class="rb-empty">Nothing on this date yet — this is where it&#39;ll show up next year.</div>');
+  ov.style.display = 'flex';
+}
+function closeOnThisDay() { var ov = document.getElementById('otd-overlay'); if (ov) ov.style.display = 'none'; }
+// One in-app notification per day when there's something to look back on.
+// The doc id is fixed per person per day, so it can only ever be created
+// once (a second try is an update, which the rules refuse — harmless).
+function _otdMaybeNotify(user, items) {
+  if (!items.length || !window.db) return;
+  var today = _todayLocal(), flag = 'innings-otd-' + user.uid + '-' + today;
+  try { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, '1'); } catch (e) {}
+  var m = items[0];
+  window.db.collection('notifications').doc('otd_' + user.uid + '_' + today).set({
+    toUid: user.uid, fromUid: user.uid, fromName: 'Innings', type: 'on_this_day',
+    momentId: m._id, momentName: (m.name || 'A memory') + (_otdWho(m) ? ' · ' + _otdWho(m) : ''),
+    yearsAgo: _otdYearsAgo(m), ts: Date.now(), read: false
+  }).catch(function () { /* already sent today */ });
+}
+
+// ══ ARCHIVE SEARCH — your own memories ════════════════════════════════
+window._ms = { q: '', filter: 'all' };
+function _msFields(m) {
+  var bs = m.boxScore || {};
+  return {
+    people: (m.people || []).filter(Boolean),
+    teams: [bs.away, bs.home].filter(Boolean),
+    notes: [m.name, m.vibe, m.highlight, m.dedication, m.watchedAt, bs.venue].concat((m.comments || []).map(function (c) { return c && c.text; })).concat((m.players || []).map(function (p) { return p && p.name; })).filter(Boolean),
+    date: m.date ? _formatMomentDate(m.date) : ''
+  };
+}
+function _msMatch(m, q, filter) {
+  var f = _msFields(m), hit = null;
+  var test = function (arr, kind) { for (var i = 0; i < arr.length; i++) { if (String(arr[i]).toLowerCase().indexOf(q) !== -1) { hit = { kind: kind, text: String(arr[i]) }; return true; } } return false; };
+  if (filter === 'people') return test(f.people, 'people') ? hit : null;
+  if (filter === 'teams') return test(f.teams, 'teams') ? hit : null;
+  if (filter === 'notes') return test(f.notes, 'notes') ? hit : null;
+  if (test(f.people, 'people') || test(f.teams, 'teams') || test(f.notes, 'notes') || test([f.date], 'date')) return hit;
+  return null;
+}
+function _msMark(text, q) {
+  var s = String(text), i = s.toLowerCase().indexOf(q);
+  if (i === -1) return _escapeHtml(s);
+  var start = Math.max(0, i - 40), end = Math.min(s.length, i + q.length + 60);
+  return (start > 0 ? '…' : '') + _escapeHtml(s.slice(start, i)) + '<mark>' + _escapeHtml(s.slice(i, i + q.length)) + '</mark>' + _escapeHtml(s.slice(i + q.length, end)) + (end < s.length ? '…' : '');
+}
+function _msSearch(q, filter) {
+  q = String(q || '').trim().toLowerCase();
+  if (q.length < 2) return { people: [], memories: [] };
+  var mems = [], people = {};
+  (window._moments || []).forEach(function (m) {
+    var hit = _msMatch(m, q, filter || 'all');
+    if (hit) mems.push({ m: m, hit: hit });
+    (m.people || []).forEach(function (n, i) {
+      if (!n || String(n).toLowerCase().indexOf(q) === -1) return;
+      var k = (m.taggedUids && m.taggedUids[i]) || n;
+      var p = people[k] = people[k] || { name: n, uid: (m.taggedUids && m.taggedUids[i]) || null, count: 0, last: '' };
+      p.count++;
+      if (String(m.date || '') > p.last) p.last = m.date || '';
+    });
+  });
+  mems.sort(function (a, b) { return String(b.m.date || '').localeCompare(String(a.m.date || '')); });
+  var plist = Object.keys(people).map(function (k) { return people[k]; }).sort(function (a, b) { return b.count - a.count; });
+  return { people: (filter === 'all' || filter === 'people') ? plist : [], memories: mems };
+}
+function _msRowHtml(x, q) {
+  var m = x.m;
+  var sub = [m.date ? _formatMomentDate(m.date) : '', _otdWho(m)].filter(Boolean).join(' · ');
+  var line = x.hit.kind === 'notes' && x.hit.text !== m.name ? '<span class="ms-snip">' + _msMark(x.hit.text, q) + '</span>' : '';
+  return '<button class="ms-row" data-id="' + _escapeHtml(m._id) + '" onclick="openMemory(this.dataset.id)">' +
+    '<span class="ms-img" style="' + _otdThumbStyle(m) + '"></span>' +
+    '<span class="ms-tx"><b>' + _msMark(m.name || 'Untitled moment', q) + '</b><span>' + _msMark(sub, q) + '</span>' + line + '</span></button>';
+}
+function msInput(v) { window._ms.q = v; _msRender(); }
+function msFilter(k) { window._ms.filter = k; _msRender(); }
+function _msRender() {
+  var s = window._ms, q = (s.q || '').trim().toLowerCase();
+  var body = document.querySelector('#screen-memories .imm-body');
+  var box = document.getElementById('ms-results');
+  var tabs = document.getElementById('ms-tabs');
+  if (!box || !body) return;
+  var on = q.length >= 2;
+  body.classList.toggle('ms-on', on);
+  if (tabs) {
+    tabs.style.display = on ? 'flex' : 'none';
+    tabs.innerHTML = [['all', 'All'], ['people', 'People'], ['teams', 'Teams'], ['notes', 'Notes']].map(function (t) {
+      return '<button class="rb-pill' + (s.filter === t[0] ? ' on' : '') + '" aria-pressed="' + (s.filter === t[0]) + '" onclick="msFilter(\'' + t[0] + '\')">' + t[1] + '</button>';
+    }).join('');
+  }
+  if (!on) { box.innerHTML = ''; return; }
+  var r = _msSearch(q, s.filter), html = '';
+  if (r.people.length) {
+    html += '<div class="rb-eyebrow">People</div><div class="rb-list">' + r.people.slice(0, 4).map(function (p) {
+      return '<button class="is-row" data-uid="' + _escapeHtml(p.uid || '') + '" data-n="' + _escapeHtml(p.name) + '" onclick="msOpenPerson(this.dataset.uid,this.dataset.n)">' +
+        '<span class="is-av">' + _escapeHtml(_initials(p.name)) + '</span><span class="is-txt"><b>' + _escapeHtml(p.name) + '</b><span>' + p.count + (p.count === 1 ? ' memory' : ' memories') + ' together' + (p.last ? ' · last ' + _escapeHtml(_formatMomentDate(p.last)) : '') + '</span></span></button>';
+    }).join('') + '</div>';
+  }
+  html += '<div class="rb-eyebrow">' + r.memories.length + (r.memories.length === 1 ? ' memory' : ' memories') + '</div>';
+  html += r.memories.length ? '<div class="ms-list">' + r.memories.slice(0, 60).map(function (x) { return _msRowHtml(x, q); }).join('') + '</div>'
+    : '<div class="rb-empty">Nothing in your memories matches that.</div>';
+  box.innerHTML = html;
+}
+function msOpenPerson(uid, name) {
+  if (uid && typeof openFriendHub === 'function') { openFriendHub(uid, name); return; }
+  window._ms.filter = 'people';
+  var inp = document.getElementById('ms-q'); if (inp) inp.value = name;
+  msInput(name);
+}
+function msClear() { var inp = document.getElementById('ms-q'); if (inp) inp.value = ''; msInput(''); }
+
+// ── hooks into existing screens ──
+(function () {
+  var prevNav = _navApplyScreen;
+  _navApplyScreen = function (id) {
+    prevNav(id);
+    if (id === 'feed') { loadOnThisDay(); if (_isDesk()) _deskRenderRail(); }
+    var gamesIds = ['games', 'games-picker', 'games-soon', 'game', 'team', 'playoff-picture', 'team-prefs'];
+    var gb = document.getElementById('ipad-nav-games');
+    if (gb) gb.classList.toggle('active', gamesIds.indexOf(id) !== -1);
+  };
+  var prevRender = renderMoments;
+  renderMoments = function (moments) {
+    prevRender(moments);
+    if (window._is) window._is.mem = null;
+    if (_isDesk()) _deskRenderRail();
+    if (window._ms && (window._ms.q || '').trim().length >= 2) _msRender();
+  };
+  _deskCheck();
+  if (document.getElementById('screen-feed') && document.getElementById('screen-feed').classList.contains('active')) loadOnThisDay();
+})();
 
 </script>
 </body>
