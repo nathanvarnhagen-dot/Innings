@@ -9976,7 +9976,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.76.0-highlight-reel';
+window.INNINGS_BUILD = 'v5.77.0-reel-pitches-closes';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -25813,11 +25813,11 @@ function _reelHtml(m) {
   var items = _reelItems(m);
   if (!items.length) return '';
   var g = window._activeBrowseGame, key = g ? String(g.gamePk) : 'x', r = window._reel;
-  if (r.key !== key || (r.idx >= r.items.length && Date.now() - r.startAt > 120000)) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = true; } // coming back to a game later plays it again
+  if (r.key !== key) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = true; } // plays once on first view; after that only the Highlights button opens it
   r.items = items; r.box = typeof _gcBox === 'function' ? _gcBox() : null;
   return '<div class="gh-reel" id="gh-reel" style="display:' + (r.open ? 'flex' : 'none') + '">' +
     '<div class="gh-reel-bars" id="gh-reel-bars"></div>' +
-    '<button class="gh-reel-box" onclick="ghReelTap()" aria-label="Next highlight"><div id="gh-reel-slot"></div></button>' +
+    '<button class="gh-reel-box" onclick="ghReelTap()" aria-label="Skip to the next highlight"><div id="gh-reel-slot"></div></button>' +
     '<div class="gh-reel-cap" id="gh-reel-cap"></div></div>';
 }
 function _reelBtnHtml(n) {
@@ -25834,63 +25834,56 @@ function ghReelToggle() {
 }
 function ghReelTap() {
   var r = window._reel;
-  r.idx = r.idx >= r.items.length ? 0 : r.idx + 1;
+  r.idx++;
   r.startAt = Date.now();
+  if (r.idx >= r.items.length) { _reelClose(); return; }
   _reelFill();
+}
+// v5.77.0: when the last highlight finishes, the reel closes itself;
+// the Highlights button opens it again from the first one.
+function _reelClose() {
+  var r = window._reel, el = document.getElementById('gh-reel');
+  clearTimeout(r.timer);
+  r.open = false; r.idx = 0;
+  if (el) el.style.display = 'none';
+  var btn = document.querySelector('#game-sheet-panel .gh .gh-hl-btn');
+  if (btn) { btn.setAttribute('aria-expanded', 'false'); var ch = btn.querySelector('.gh-chev'); if (ch) ch.style.transform = 'rotate(0deg)'; }
+  var slot = document.getElementById('gh-reel-slot'); if (slot) slot.innerHTML = '';
 }
 function _reelFill() {
   var r = window._reel, slot = document.getElementById('gh-reel-slot');
   clearTimeout(r.timer);
   if (!slot || !r.open || !r.items.length) return;
-  var n = r.items.length, onSummary = r.idx >= n;
+  if (r.idx >= r.items.length) { _reelClose(); return; }
   var cap = document.getElementById('gh-reel-cap'), bars = document.getElementById('gh-reel-bars');
-  var dur = 0, html = '';
-  if (onSummary) {
-    html = _reelSummarySvg(r.items);
-    if (cap) cap.innerHTML = '<span class="gh-sub" style="flex:1">The game in ' + n + (n === 1 ? ' moment' : ' moments') + '</span><span class="gh-sub" style="color:#D9D4FA;font-weight:700">Tap to watch again</span>';
-  } else {
-    var it = r.items[r.idx];
-    // borrow the play animation in "quick" mode (straight to the field)
-    var saved = window._pa;
-    var tmp = { play: it.lp, box: r.box || saved.box, startAt: r.startAt, quick: true, keep: true };
-    window._pa = tmp;
-    try { html = _paOverlayHtml(); } finally { window._pa = saved; }
-    var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(it.lp.eventType || ''));
-    dur = inPlay ? Math.max(3, (tmp._titleAt || PA.T0 + 2) - (PA.SW + .6)) + 2.4 : 3.2;
-    if (cap) cap.innerHTML = '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:' + it.col + '">' + _escapeHtml(it.tag) + '</span>' +
-      '<span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(it.headline) + '</span>' +
-      '<span class="gh-num" style="font-size:14px;white-space:nowrap">' + _escapeHtml(it.chip) + '</span>';
-  }
+  var it = r.items[r.idx];
+  // v5.77.0: each at-bat plays in full — every pitch comes in one by
+  // one, then (if the ball was put in play) the field and what happened.
+  var saved = window._pa;
+  var tmp = { play: it.lp, box: r.box || saved.box, startAt: r.startAt, seq: true, keep: true };
+  window._pa = tmp;
+  var html = '';
+  try { html = _paOverlayHtml(); } finally { window._pa = saved; }
+  var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(it.lp.eventType || ''));
+  var off = Math.max(0, (it.lp.pitches || []).length - 1) * .65;
+  var dur = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4) + 2.4;
   slot.innerHTML = html;
+  if (cap) cap.innerHTML = '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:' + it.col + '">' + _escapeHtml(it.tag) + '</span>' +
+    '<span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(it.headline) + '</span>' +
+    '<span class="gh-num" style="font-size:14px;white-space:nowrap">' + _escapeHtml(it.chip) + '</span>';
+  var el = (Date.now() - r.startAt) / 1000;
   if (bars) {
-    var el = (Date.now() - r.startAt) / 1000;
     bars.innerHTML = r.items.map(function (_, i) {
-      var fill = i < r.idx || onSummary ? '<i style="transform:scaleX(1)"></i>'
+      var fill = i < r.idx ? '<i style="transform:scaleX(1)"></i>'
         : i === r.idx ? '<i style="animation:reelBar ' + dur.toFixed(2) + 's linear ' + (-el).toFixed(2) + 's both"></i>' : '<i></i>';
       return '<span>' + fill + '</span>';
     }).join('');
   }
-  if (!onSummary) {
-    var left = dur * 1000 - (Date.now() - r.startAt);
-    r.timer = setTimeout(function () { if (!document.getElementById('gh-reel-slot')) return; r.idx++; r.startAt = Date.now(); _reelFill(); }, Math.max(200, left));
-  }
-}
-function _reelSummarySvg(items) {
-  var marks = '';
-  items.forEach(function (it, i) {
-    var land = _paLanding(it.lp);
-    if (!land) return;
-    var x = Math.max(16, Math.min(484, land.x)), y = Math.max(16, Math.min(370, land.y));
-    marks += '<path d="M 250 366 L ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="' + it.col + '" stroke-opacity=".45" stroke-width="2" fill="none"/>' +
-      '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + it.col + '" stroke="#120E2B" stroke-width="2" style="transform-box:fill-box;transform-origin:center;animation:paIn .3s ease-out ' + (i * .15).toFixed(2) + 's both"/>' +
-      '<text x="' + x.toFixed(1) + '" y="' + (y + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#0D0820" style="animation:paIn .3s ease-out ' + (i * .15).toFixed(2) + 's both">' + (i + 1) + '</text>';
-  });
-  return '<div style="position:absolute;inset:0;background:#120E2B"><svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
-    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
-    '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
-    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".6" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
-    ['1B', '2B', '3B'].map(function (b) { var q = PA_B[b]; return '<rect x="' + (q[0] - 7) + '" y="' + (q[1] - 7) + '" width="14" height="14" transform="rotate(45 ' + q[0] + ' ' + q[1] + ')" fill="#F5F3FF"/>'; }).join('') +
-    marks + '</svg></div>';
+  r.timer = setTimeout(function () {
+    if (!document.getElementById('gh-reel-slot')) return;
+    r.idx++; r.startAt = Date.now();
+    if (r.idx >= r.items.length) _reelClose(); else _reelFill();
+  }, Math.max(200, dur * 1000 - (Date.now() - r.startAt)));
 }
 // ══ PLAY ANIMATION IN THE AT-BAT SQUARE (v5.70.0, slowed + fielders in v5.71.0) ═════════════════════
 // When a new play finishes in a live MLB game, the at-bat square shows
