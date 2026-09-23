@@ -952,7 +952,6 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
   #nfl-flourish .mlbf-line,#nfl-flourish .mlbf-arc,#nfl-flourish .mlbf-trail,#cfb-flourish .mlbf-line,#cfb-flourish .mlbf-arc,#cfb-flourish .mlbf-trail,#nba-flourish .mlbf-line,#nba-flourish .mlbf-arc,#nba-flourish .mlbf-trail,#wnba-flourish .mlbf-line,#wnba-flourish .mlbf-arc,#wnba-flourish .mlbf-trail,#nhl-flourish .mlbf-line,#nhl-flourish .mlbf-arc,#nhl-flourish .mlbf-trail,#mls-flourish .mlbf-line,#mls-flourish .mlbf-arc,#mls-flourish .mlbf-trail,#nwsl-flourish .mlbf-line,#nwsl-flourish .mlbf-arc,#nwsl-flourish .mlbf-trail{stroke-dashoffset:0!important}
   #nfl-flourish .mlbf-ball-vis,#nfl-flourish .mlbf-contact,#nfl-flourish .mlbf-contact-dot,#nfl-flourish .mlbf-wall-hi,#nfl-flourish .mlbf-spark,#nfl-flourish .mlbf-mote,#cfb-flourish .mlbf-ball-vis,#cfb-flourish .mlbf-contact,#cfb-flourish .mlbf-contact-dot,#cfb-flourish .mlbf-wall-hi,#cfb-flourish .mlbf-spark,#cfb-flourish .mlbf-mote,#nba-flourish .mlbf-ball-vis,#nba-flourish .mlbf-contact,#nba-flourish .mlbf-contact-dot,#nba-flourish .mlbf-wall-hi,#nba-flourish .mlbf-spark,#nba-flourish .mlbf-mote,#wnba-flourish .mlbf-ball-vis,#wnba-flourish .mlbf-contact,#wnba-flourish .mlbf-contact-dot,#wnba-flourish .mlbf-wall-hi,#wnba-flourish .mlbf-spark,#wnba-flourish .mlbf-mote,#nhl-flourish .mlbf-ball-vis,#nhl-flourish .mlbf-contact,#nhl-flourish .mlbf-contact-dot,#nhl-flourish .mlbf-wall-hi,#nhl-flourish .mlbf-spark,#nhl-flourish .mlbf-mote,#mls-flourish .mlbf-ball-vis,#mls-flourish .mlbf-contact,#mls-flourish .mlbf-contact-dot,#mls-flourish .mlbf-wall-hi,#mls-flourish .mlbf-spark,#mls-flourish .mlbf-mote,#nwsl-flourish .mlbf-ball-vis,#nwsl-flourish .mlbf-contact,#nwsl-flourish .mlbf-contact-dot,#nwsl-flourish .mlbf-wall-hi,#nwsl-flourish .mlbf-spark,#nwsl-flourish .mlbf-mote{opacity:0!important}
 }
-}
 /* Watching-together avatar stack — same 2-letter-initials treatment as
    the friends list elsewhere, just sized down to sit inline in the Live
    Feed card and the game detail header. */
@@ -5494,7 +5493,7 @@ function _showFestivalUndoToast(msg) {
   if (!t) {
     t = document.createElement('div');
     t.id = 'festival-undo-toast';
-    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:11px 16px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;display:none;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+    t.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top, 0px) + 14px);left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:11px 16px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;max-width:calc(100vw - 32px);box-sizing:border-box;display:none;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
     document.body.appendChild(t);
   }
   t.innerHTML = '<span>' + _escapeHtml(msg) + '</span><b onclick="undoFestivalChoice()" style="cursor:pointer;color:rgba(168,159,232,1);font-weight:800">Undo</b>';
@@ -9714,7 +9713,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.66.1-live-innings-newest';
+window.INNINGS_BUILD = 'v5.66.2-photos-react-fixes';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11953,7 +11952,7 @@ function ib_toast(msg) {
   if (!t) {
     t = document.createElement('div');
     t.id = 'ib-toast';
-    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:10px 20px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;display:none';
+    t.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top, 0px) + 14px);left:50%;transform:translateX(-50%);background:#0A0A0F;color:white;padding:10px 20px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);display:none';
     document.body.appendChild(t);
   }
   t.textContent = msg;
@@ -14350,14 +14349,21 @@ function _momentPhotoGroupId(m) { return m.sourcePlanId || m._id; }
 function loadMomentPhotos(groupId, cb) {
   if (!groupId || !window.db) { cb([]); return; }
   if (window._momentPhotosCache[groupId]) { cb(window._momentPhotosCache[groupId]); return; }
-  window.db.collection('momentPhotos').where('groupId', '==', groupId).orderBy('ts', 'asc').get().then(function(snap){
+  // Sorted client-side rather than orderBy('ts'): where + orderBy on
+  // different fields needs a composite index, and a missing index fails
+  // the whole read (failed-precondition) the same silent way a rules
+  // denial does.
+  window.db.collection('momentPhotos').where('groupId', '==', groupId).get().then(function(snap){
     var arr = [];
     snap.forEach(function(doc){ arr.push(Object.assign({ _id: doc.id }, doc.data())); });
+    arr.sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
     window._momentPhotosCache[groupId] = arr;
     cb(arr);
   }).catch(function(err){
-    console.error('Load moment photos error:', err);
+    console.error('[momentPhotos:load] ' + (err && err.code), err);
     cb([]);
+    var note = document.getElementById('collab-photo-note');
+    if (note) note.textContent = "Couldn't load photos (" + ((err && err.code) || 'error') + ').';
   });
 }
 
@@ -14378,7 +14384,7 @@ function addMomentPhoto(input) {
             delete window._momentPhotosCache[groupId];
             if (window._openMomentId) { loadMomentPhotos(groupId, function(photos){ _renderCollabPhotoGrid(photos); }); }
           })
-          .catch(function(err){ console.error('Add moment photo error:', err); if (typeof ib_toast === 'function') ib_toast('Photos unavailable — check Firestore rules'); });
+          .catch(function(err){ console.error('[momentPhotos:add] ' + (err && err.code), err); if (typeof ib_toast === 'function') ib_toast('Could not add photo — ' + ((err && err.code) || 'try again')); });
       });
     };
     reader.readAsDataURL(file);
@@ -15535,9 +15541,13 @@ function _pickReaction(emoji) {
   var ref = window.db.collection(target.collection).doc(target.msgId);
   ref.get().then(function(doc){
     var current = (doc.exists && doc.data() && doc.data().reactions) || {};
-    var update = {};
-    var key = 'reactions.' + user.uid;
-    update[key] = (current[user.uid] === emoji) ? firebase.firestore.FieldValue.delete() : emoji;
+    // Nested map, NOT a 'reactions.<uid>' key: only update() reads dots
+    // as a path. set() stored it as a literal top-level field named
+    // "reactions.<uid>", so affectedKeys() was never ['reactions'] and
+    // every chat's reactions rule denied it.
+    var mine = {};
+    mine[user.uid] = (current[user.uid] === emoji) ? firebase.firestore.FieldValue.delete() : emoji;
+    var update = { reactions: mine };
     // set+merge instead of update: identical behavior for an existing
     // message doc, but also correctly CREATES the doc when it doesn't
     // exist yet — which is the normal case for a play reaction, since
@@ -15546,7 +15556,7 @@ function _pickReaction(emoji) {
     return ref.set(update, { merge: true });
   }).then(function(){
     if (typeof target.onDone === 'function') target.onDone();
-  }).catch(function(err){ console.error('React error:', err); if (typeof ib_toast==='function') ib_toast('Could not react — try again'); });
+  }).catch(function(err){ console.error('[react:' + target.collection + '] ' + (err && err.code), err); if (typeof ib_toast==='function') ib_toast('Could not react — ' + ((err && err.code) || 'try again')); });
 }
 
 function _reactionSheetDelete() {
@@ -19273,6 +19283,14 @@ function _gattSeatText(seat) {
   if (seat.seat) p.push('Seat ' + seat.seat);
   return p.join(' · ');
 }
+// Names stored on the memory are a snapshot from when it was saved; a
+// friend who has since renamed (Alex → Alexa) would show stale there
+// while chat shows the live name. Prefer the live profile per uid.
+function _gattLiveNames(m) {
+  var live = window._myFriendProfiles || {};
+  var uids = m.taggedUids || [];
+  return (m.people || []).map(function (n, i) { return (uids[i] && live[uids[i]]) || n; });
+}
 function _gattWithText(names) {
   names = (names || []).filter(Boolean).map(function (n) { return String(n).split(' ')[0]; });
   if (!names.length) return '';
@@ -19318,6 +19336,9 @@ function _gattLoad(gamePk) {
       s.moment = m;
       s.momentId = m ? m._id : null;
       _gattRender();
+      if (m && (m.taggedUids || []).length && typeof _ensureMyFriendsLoaded === 'function') {
+        _ensureMyFriendsLoaded(function () { if (s.token === tok) _gattRender(); });
+      }
     });
   }).catch(function (err) { console.error('[attend] load failed:', err); });
 }
@@ -19354,9 +19375,14 @@ function _gattRender() {
   strip.className = 'gatt-strip on';
   if (s.moment) {
     var m = s.moment;
-    var bits = [m.attendance === 'watch' ? (m.watchedAt ? 'at ' + m.watchedAt : '') : _gattSeatText(m.seat), _gattWithText(m.people)].filter(Boolean).join(' · ');
     var uids = (m.taggedUids || []);
-    var stack = (m.people || []).map(function (n, i) { return n ? '<span class="gatt-av" style="background:' + _gattColor(uids[i] || n) + '">' + _escapeHtml(_gattInitial(n)) + '</span>' : ''; }).filter(Boolean).slice(0, 3).join('');
+    var people = _gattLiveNames(m);
+    var bits = [m.attendance === 'watch' ? (m.watchedAt ? 'at ' + m.watchedAt : '') : _gattSeatText(m.seat), _gattWithText(people)].filter(Boolean).join(' · ');
+    // It's your memory, so your own face leads the stack; tagged friends follow.
+    var me = _gattUser();
+    var myName = (window.userData && window.userData.name) || 'You';
+    var faces = [{ key: me ? me.uid : 'me', name: myName }].concat(people.map(function (n, i) { return { key: uids[i] || n, name: n }; }));
+    var stack = faces.filter(function (f) { return f.name; }).slice(0, 3).map(function (f) { return '<span class="gatt-av" style="background:' + _gattColor(f.key) + '">' + _escapeHtml(_initials(f.name)) + '</span>'; }).join('');
     strip.innerHTML = (stack ? '<span class="gatt-stack" aria-hidden="true">' + stack + '</span>' : '') +
       '<button class="gatt-txt" onclick="gattOpenMemory()">Memory saved<small>' + _escapeHtml(bits || 'Tap to open') + '</small></button>' +
       '<button class="gatt-add edit" onclick="gattOpenSheet()">Edit</button>';
