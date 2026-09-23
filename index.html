@@ -9980,7 +9980,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.82.0-watching-strip-5s';
+window.INNINGS_BUILD = 'v5.83.0-pitcher-today';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -21176,6 +21176,18 @@ function _ghHighlightsListHtml(m, plays, st, opts) {
 // new card style: at-bat (matchup, strike zone, pitch list), line score,
 // play by play (replies + double-tap reactions, same ids/handlers as
 // before), and the full box score toggle.
+
+// v5.83.0: the pitcher's game so far, under his season line — small
+// TODAY label over four columns: IP · TP (total pitches) · S · B.
+function _ghPitcherTodayHtml(t) {
+  var cols = [['IP', t.ip], ['TP', t.tp], ['S', t.s], ['B', t.b]].filter(function (c) { return c[1] != null; });
+  if (!cols.length) return '';
+  return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#9C95D0;margin-top:5px">TODAY</span>' +
+    '<span style="display:grid;grid-template-columns:repeat(' + cols.length + ',auto);column-gap:12px;justify-content:start">' +
+    cols.map(function (c) { return '<span class="gh-num" style="font-size:12.5px">' + _escapeHtml(String(c[1])) + '</span>'; }).join('') +
+    cols.map(function (c) { return '<span style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9C95D0">' + c[0] + '</span>'; }).join('') + '</span>';
+}
+
 function _ghLiveDetailHtml(box) {
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
@@ -21195,7 +21207,8 @@ function _ghLiveDetailHtml(box) {
         return '<div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;' + (right ? 'align-items:flex-end;text-align:right' : '') + '">' +
           '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + label + '</span>' +
           '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(p, 'mlb') + '</span>' +
-          (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') + '</div>';
+          (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') +
+          (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') + '</div>';
       };
       out += '<div class="gh-row" style="align-items:center;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
         '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>';
