@@ -9962,7 +9962,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.72.0-batter-line-drawing';
+window.INNINGS_BUILD = 'v5.73.0-fielders-outs-only';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -25884,6 +25884,11 @@ function _paNote2(lp, box, land) {
   } else if (t === 'walk' || t === 'intent_walk') bits.push(t === 'intent_walk' ? 'IBB' : 'BB');
   else if (t === 'home_run') { if (land) bits.push('To ' + _paDir(land.ang)); if (lp.hit && lp.hit.distance) bits.push(lp.hit.distance + ' ft'); }
   else if (t === 'single' || t === 'double' || t === 'triple') { if (land) bits.push((trWord || 'To') + (trWord ? ' to ' : ' ') + _paDir(land.ang)); }
+  if (/^(single|double|triple)$/.test(t)) {
+    (lp.runners || []).forEach(function (r) {
+      if (r.out && r.outBase) bits.push((r.batter ? 'Batter' : 'Runner') + ' out at ' + ({ '1B': '1st', '2B': '2nd', '3B': '3rd', 'HM': 'home' }[r.outBase] || r.outBase) + (f.length > 1 ? ' (' + f.join('-') + ')' : ''));
+    });
+  }
   else if (t === 'field_out') {
     var pre = tr === 'fly_ball' ? 'F' : tr === 'line_drive' ? 'L' : tr === 'popup' ? 'P' : '';
     if (f.length) bits.push(pre && f.length === 1 ? pre + f[0] : f.join('-'));
@@ -25960,10 +25965,18 @@ function _paFieldSvg(lp, land, E) {
   if (!hr && land) { var rr = Math.hypot(first[0] - PA_H[0], first[1] - PA_H[1]); if (rr > 262) { var k = 262 / rr; first = [PA_H[0] + (first[0] - PA_H[0]) * k, PA_H[1] + (first[1] - PA_H[1]) * k]; } }
   var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
+  // v5.73.0: fielders only move when the play has an out in it. A hit
+  // that drops stays where it landed — unless someone is thrown out on
+  // it, in which case the ball lands, the fielder gets to it, and then
+  // throws (e.g. single to right, runner thrown out at 3rd).
+  var dropped = /^(single|double|triple|field_error)$/.test(t);
+  var anyOut = caught || runners.some(function (r) { return r.out; });
+  var retrieve = dropped && anyOut ? .9 : 0;
+  var tThrow = t1 + retrieve;
   // throws: lead runner first, to each base where someone was put out
   var outs = runners.filter(function (r) { return r.out && r.outBase && !(caught && r.batter); });
   outs.sort(function (a, b) { var o = { '3B': 3, '2B': 2, '1B': 1 }; return (o[b.start] || 0) - (o[a.start] || 0); });
-  var throwPts = [first], tt = t1, outTimes = {};
+  var throwPts = [first], tt = tThrow, outTimes = {};
   outs.forEach(function (r) {
     var base = PA_B[r.outBase] || PA_H;
     if (base[0] === throwPts[throwPts.length - 1][0] && base[1] === throwPts[throwPts.length - 1][1]) { outTimes[r.outBase] = tt; return; }
@@ -25983,41 +25996,43 @@ function _paFieldSvg(lp, land, E) {
     '<path d="M 240 361 L 260 361 L 260 368 L 250 374 L 240 368 Z" fill="#F5F3FF"/>';
   // HR: light the stretch of wall it cleared
   if (hr && land) g += '<path d="' + _paWallSeg(land.ang) + '" fill="none" stroke="#F5F3FF" stroke-width="5" stroke-linecap="round" style="animation:paIn .15s linear ' + _paSec(t1 - .1, E) + ' both"/>';
-  // fielders: whoever fields it runs to the ball, whoever takes a throw
-  // runs to that bag, and on a hit the closest fielder chases it.
+  // fielders: only on plays with an out. Whoever fields it runs to the
+  // ball (arriving after it drops on a hit), whoever takes a throw runs
+  // to that bag. Nobody moves on a clean hit.
   var moves = {};
-  fl.forEach(function (code, i) {
+  if (anyOut) fl.forEach(function (code, i) {
     if (!PA_F[code]) return;
-    if (i === 0) moves[code] = { to: first, at: t1 };
-    else if (throwPts[i]) moves[code] = { to: throwPts[i], at: t1 + PA.THROW * i - .1 };
+    if (i === 0) moves[code] = { to: first, at: tThrow };
+    else if (throwPts[i]) moves[code] = { to: throwPts[i], at: tThrow + PA.THROW * i - .1 };
   });
-  if (!fl.length && land && !/strikeout|walk|hit_by_pitch/.test(t)) {
-    var cands = Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150 ? ['7', '8', '9'] : ['3', '4', '5', '6'];
-    var best = null, bd = 1e9;
-    cands.forEach(function (c) { var p = PA_F[c], d = Math.hypot(p[0] - first[0], p[1] - first[1]); if (d < bd) { bd = d; best = c; } });
-    if (best) { var fp = PA_F[best], k2 = hr ? .6 : .85; moves[best] = { to: [fp[0] + (first[0] - fp[0]) * k2, fp[1] + (first[1] - fp[1]) * k2], at: t1 + .35, chase: true }; }
-  }
   Object.keys(PA_F).forEach(function (code) {
     var p = PA_F[code], mv = moves[code];
     var idx = fl.indexOf(code);
-    var when = idx === 0 ? t1 : (idx > 0 ? t1 + idx * PA.THROW : null);
+    var when = !anyOut ? null : idx === 0 ? tThrow : (idx > 0 ? tThrow + idx * PA.THROW : null);
     var motion = '';
     if (mv) {
-      var st = T0 + .15, dur = Math.max(.35, mv.at - st);
+      var st = T0 + .15, dur = Math.max(.35, mv.at - st); // arrives as/after the ball gets there
       motion = '<animateMotion dur="' + dur.toFixed(2) + 's" begin="' + _paSec(st, E) + '" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".3 0 .4 1" path="M 0 0 L ' + (mv.to[0] - p[0]).toFixed(1) + ' ' + (mv.to[1] - p[1]).toFixed(1) + '"/>';
     }
     g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#5A9BE8" stroke="#CFE3FF" stroke-width="2"' + (when != null ? ' style="transform-box:fill-box;transform-origin:center;animation:paPulse .6s ease-out ' + _paSec(when, E) + ' both"' : '') + '>' + motion + '</circle>';
   });
   // ball: trail + dot along the flight, then the throws
   var fly = [PA_H, first];
-  var ctrl = air || hr ? [(PA_H[0] + first[0]) / 2, Math.min(PA_H[1], first[1]) - (hr ? 150 : 110)] : null;
+  var ctrl = null;
+  if (air || hr) {
+    var mx = (PA_H[0] + first[0]) / 2, my = (PA_H[1] + first[1]) / 2;
+    var dx = first[0] - PA_H[0], dy = first[1] - PA_H[1], len = Math.hypot(dx, dy) || 1;
+    var bow = Math.min(28, len * .12);
+    ctrl = [mx + (-dy / len) * bow, my + (dx / len) * bow];
+  }
   var flightD = ctrl ? 'M ' + PA_H[0] + ' ' + PA_H[1] + ' Q ' + ctrl[0].toFixed(1) + ' ' + ctrl[1].toFixed(1) + ' ' + first[0].toFixed(1) + ' ' + first[1].toFixed(1) : _paPath(fly);
   var flightRel = ctrl ? 'M 0 0 Q ' + (ctrl[0] - PA_H[0]).toFixed(1) + ' ' + (ctrl[1] - PA_H[1]).toFixed(1) + ' ' + (first[0] - PA_H[0]).toFixed(1) + ' ' + (first[1] - PA_H[1]).toFixed(1) : _paRel(fly);
   g += '<path d="' + flightD + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#F5F3FF" stroke-opacity=".6" stroke-width="2" style="animation:paDraw ' + flight + 's linear ' + _paSec(T0, E) + ' both"/>';
-  if (throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(t1, E) + ' both"/>';
+  if (throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(tThrow, E) + ' both"/>';
   g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' both' : '') + '">' +
     '<animateMotion dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze" path="' + flightRel + '"/>' +
-    (throwPts.length > 1 ? '<animateMotion dur="' + (ballEnd - t1).toFixed(2) + 's" begin="' + _paSec(t1, E) + '" fill="freeze" path="' + _paOff(PA_H, throwPts) + '"/>' : '') +
+    ((air || hr) ? '<animate attributeName="r" values="6;11;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
+    (throwPts.length > 1 ? '<animateMotion dur="' + (ballEnd - tThrow).toFixed(2) + 's" begin="' + _paSec(tThrow, E) + '" fill="freeze" path="' + _paOff(PA_H, throwPts) + '"/>' : '') +
     '</circle>';
   // runners who stayed put
   ['1B', '2B', '3B'].forEach(function (b) {
