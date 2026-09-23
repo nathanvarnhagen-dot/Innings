@@ -9714,7 +9714,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.66.0-watch-attend';
+window.INNINGS_BUILD = 'v5.66.1-live-innings-newest';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -20942,6 +20942,9 @@ function _ghPlaysByInningHtml(box, bare) {
   var open = window._ghInningOpen = window._ghInningOpen || {};
   var playIds = [];
   var rows = '';
+  // Live games list the current half-inning first (v5.66.1); finals keep
+  // reading top of the 1st down to the last out.
+  if (m.phase === 'live') keys.reverse();
 
   keys.forEach(function (k) {
     var grp = groups[k];
