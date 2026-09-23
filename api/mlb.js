@@ -214,7 +214,8 @@ function summarize(data, gamePk, wantAllPlays) {
   // so the running score after each play comes along for free.
   var fullPlays = null;
   if (wantAllPlays && (abstractState === 'Live' || abstractState === 'Final')) {
-    fullPlays = allPlays.filter(function (p) { return p.result && p.result.description; }).map(function (p) {
+    var _fp = allPlays.filter(function (p) { return p.result && p.result.description; });
+    fullPlays = _fp.map(function (p, fpIdx) {
       var about = p.about || {}, result = p.result || {};
       return {
         inning: about.inning != null ? about.inning : null,
@@ -233,6 +234,7 @@ function summarize(data, gamePk, wantAllPlays) {
           second: !!(p.matchup && p.matchup.postOnSecond),
           third: !!(p.matchup && p.matchup.postOnThird)
         },
+        anim: (p.about && p.about.isComplete) ? _playAnimSummary(p, _fp[fpIdx - 1]) : null,
         pitches: (p.playEvents || []).filter(function (e) { return e && e.isPitch; }).map(function (e) {
           var d = e.details || {};
           return {
@@ -955,8 +957,13 @@ function summarizeTeamPage(parts, teamId) {
 // every runner's start/end/out. All standard fields on liveData.plays.
 function _lastPlaySummary(allPlays) {
   var done = (allPlays || []).filter(function (p) { return p && p.about && p.about.isComplete && p.result && p.result.description; });
-  var p = done[done.length - 1];
-  if (!p) return null;
+  if (!done.length) return null;
+  return _playAnimSummary(done[done.length - 1], done[done.length - 2]);
+}
+// Everything the at-bat square needs to animate one play (v5.71.0: also
+// attached to every play in the full list so tapping any play replays it).
+function _playAnimSummary(p, prev) {
+  if (!p || !p.result) return null;
   var evs = p.playEvents || [];
   var pitchEvs = evs.filter(function (e) { return e && e.isPitch; });
   var pitches = pitchEvs.filter(function (e) { return e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX != null && e.pitchData.coordinates.pZ != null; }).map(function (e, i) {
@@ -980,12 +987,11 @@ function _lastPlaySummary(allPlays) {
     (r.credits || []).forEach(function (c) {
       var code = c.position && c.position.code;
       if (!code) return;
-      if (fielders[fielders.length - 1] !== code) fielders.push(code);
+      if (fielders.indexOf(code) === -1) fielders.push(code); // first touch order: 6, 4, 3
     });
   });
   // Who was on base when the play started: the previous play's end state
   // in the same half-inning (runners who didn't move aren't in p.runners).
-  var prev = done[done.length - 2];
   var sameHalf = prev && prev.about && prev.about.inning === p.about.inning && prev.about.isTopInning === p.about.isTopInning;
   var pm = (sameHalf && prev.matchup) || {};
   var pre = { '1B': !!pm.postOnFirst, '2B': !!pm.postOnSecond, '3B': !!pm.postOnThird };
