@@ -380,6 +380,7 @@ function summarize(data, gamePk, wantAllPlays) {
     matchup: matchup,
     recentPlays: recentPlays,
     allPlays: fullPlays,
+    lastPlay: (abstractState === 'Live' || abstractState === 'Final') ? _lastPlaySummary(allPlays) : null,
     pitchSequence: pitchSequence,
     boxScoreDetail: boxScoreDetail
   };
@@ -945,4 +946,67 @@ function summarizeTeamPage(parts, teamId) {
   });
   games.sort(function (a, b) { return String(a.date) < String(b.date) ? -1 : String(a.date) > String(b.date) ? 1 : a.n - b.n; });
   return { league: 'mlb', team: team, groups: groups, games: games };
+}
+
+
+// ── LAST COMPLETED PLAY (v5.70.0) — drives the play animation inside the
+// at-bat square on the game screen: the pitches of that at-bat, where the
+// ball went (Gameday hit coordinates), who fielded it (for "6-4-3"), and
+// every runner's start/end/out. All standard fields on liveData.plays.
+function _lastPlaySummary(allPlays) {
+  var done = (allPlays || []).filter(function (p) { return p && p.about && p.about.isComplete && p.result && p.result.description; });
+  var p = done[done.length - 1];
+  if (!p) return null;
+  var evs = p.playEvents || [];
+  var pitchEvs = evs.filter(function (e) { return e && e.isPitch; });
+  var pitches = pitchEvs.filter(function (e) { return e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX != null && e.pitchData.coordinates.pZ != null; }).map(function (e, i) {
+    var d = e.details || {};
+    return { num: e.pitchNumber || (i + 1), px: e.pitchData.coordinates.pX, pz: e.pitchData.coordinates.pZ,
+      call: (d.call && d.call.description) || d.description || null, type: (d.type && d.type.description) || null,
+      speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null };
+  });
+  var lastPd = null;
+  for (var i = pitchEvs.length - 1; i >= 0; i--) { if (pitchEvs[i].pitchData) { lastPd = pitchEvs[i].pitchData; break; } }
+  var hit = null;
+  for (var j = evs.length - 1; j >= 0; j--) { if (evs[j] && evs[j].hitData) { hit = evs[j].hitData; break; } }
+  var byRunner = {}, order = [];
+  var fielders = [];
+  (p.runners || []).forEach(function (r) {
+    var id = r.details && r.details.runner && r.details.runner.id;
+    var mv = r.movement || {};
+    if (id == null) return;
+    if (!byRunner[id]) { byRunner[id] = { start: mv.start || null, end: mv.end || null, out: !!mv.isOut, outBase: mv.outBase || null, batter: !!(p.matchup && p.matchup.batter && p.matchup.batter.id === id) }; order.push(id); }
+    else { byRunner[id].end = mv.end || null; if (mv.isOut) { byRunner[id].out = true; byRunner[id].outBase = mv.outBase || byRunner[id].outBase; } }
+    (r.credits || []).forEach(function (c) {
+      var code = c.position && c.position.code;
+      if (!code) return;
+      if (fielders[fielders.length - 1] !== code) fielders.push(code);
+    });
+  });
+  // Who was on base when the play started: the previous play's end state
+  // in the same half-inning (runners who didn't move aren't in p.runners).
+  var prev = done[done.length - 2];
+  var sameHalf = prev && prev.about && prev.about.inning === p.about.inning && prev.about.isTopInning === p.about.isTopInning;
+  var pm = (sameHalf && prev.matchup) || {};
+  var pre = { '1B': !!pm.postOnFirst, '2B': !!pm.postOnSecond, '3B': !!pm.postOnThird };
+  var errorPos = null;
+  (p.runners || []).forEach(function (r) { (r.credits || []).forEach(function (c) { if (/error/.test(c.credit || '') && c.position) errorPos = c.position.code; }); });
+  return {
+    atBatIndex: p.about.atBatIndex != null ? p.about.atBatIndex : null,
+    inning: p.about.inning || null, half: p.about.isTopInning ? 'top' : 'bottom',
+    event: p.result.event || null, eventType: p.result.eventType || null, description: p.result.description,
+    rbi: p.result.rbi || 0, awayScore: p.result.awayScore != null ? p.result.awayScore : null, homeScore: p.result.homeScore != null ? p.result.homeScore : null,
+    outs: (p.count && p.count.outs != null) ? p.count.outs : null,
+    batter: (p.matchup && p.matchup.batter && p.matchup.batter.fullName) || null,
+    batSide: (p.matchup && p.matchup.batSide && p.matchup.batSide.code) || null,
+    zoneTop: (lastPd && lastPd.strikeZoneTop != null) ? lastPd.strikeZoneTop : 3.5,
+    zoneBottom: (lastPd && lastPd.strikeZoneBottom != null) ? lastPd.strikeZoneBottom : 1.5,
+    pitches: pitches,
+    hit: hit ? { x: hit.coordinates && hit.coordinates.coordX != null ? hit.coordinates.coordX : null, y: hit.coordinates && hit.coordinates.coordY != null ? hit.coordinates.coordY : null,
+      trajectory: hit.trajectory || null, distance: hit.totalDistance != null ? Math.round(hit.totalDistance) : null, speed: hit.launchSpeed != null ? Math.round(hit.launchSpeed) : null } : null,
+    runners: order.map(function (id) { return byRunner[id]; }),
+    pre: pre,
+    fielders: fielders,
+    errorPos: errorPos
+  };
 }
