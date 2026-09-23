@@ -9962,7 +9962,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.71.0-play-anim-fielders-once';
+window.INNINGS_BUILD = 'v5.72.0-batter-line-drawing';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11693,25 +11693,28 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color, partsOnly) {
   var batterTy = zoneY1 - MID_TORSO_LOCAL * batterScale;
   var mirrorAxis = 53;
   var figureOffsetX = flip ? 372 : 20;
-  var HEAD_TORSO =
-    '<path d="M 45,55 C 45,46 52,40 60,40 C 67,40 72,46 72,53 C 72,56 68,59 65,59 C 68,61 70,66 67,70 C 64,74 58,74 54,71 L 45,55 Z"/>' +
-    '<path d="M 68,48 L 84,52 L 82,56 L 68,52 Z"/>' +
-    '<path d="M 52,70 C 46,72 38,82 36,94 C 34,106 38,126 44,140 C 52,140 64,138 70,130 C 72,116 70,96 66,80 C 64,72 60,70 52,70 Z"/>';
-  var LEGS_NARROWED =
-    '<g transform="translate(53,0) scale(0.65,1) translate(-53,0)">' +
-    '<path d="M 40,136 C 34,148 24,166 18,185 C 15,194 10,208 8,214 L 22,216 L 28,206 C 36,194 46,172 52,152 Z"/>' +
-    '<path d="M 66,132 C 72,146 82,168 88,190 C 90,198 94,208 98,214 C 92,216 78,216 76,212 C 72,204 66,188 60,170 C 56,156 56,142 56,132 Z"/>' +
-    '</g>';
-  var ARMS_CONNECTED =
-    '<path d="M 60.3,79.5 L 83.9,68.6 L 80.1,59.4 L 55.7,68.5 Z"/>' +
-    '<path d="M 68.0,75.6 L 83.6,67.7 L 80.4,60.3 L 64.0,66.4 Z"/>';
-  var GRIP_AND_BAT =
-    '<circle cx="82" cy="64" r="6"/>' +
-    '<path d="M 84.1,60.6 L 28.5,19.2 L 18.0,36.3 L 79.9,67.4 Z"/>';
-  var batterInner = HEAD_TORSO + LEGS_NARROWED + ARMS_CONNECTED + GRIP_AND_BAT;
+  // v5.72.0: redrawn body — neck, tapered torso, hips, bent knees, shoes
+  // toward the plate — drawn as ONE shape and shown as its outline (a
+  // morphology filter traces the edge of the whole silhouette, so there
+  // are no seams where the pieces overlap). Head, helmet, arms and bat
+  // are unchanged. Same local landmarks as before: mid-torso y=106,
+  // knee y=175, feet y=216, so the zone calibration below still holds.
+  var BATTER_HEAD = '<path d="M 45,55 C 45,46 52,40 60,40 C 67,40 72,46 72,53 C 72,56 68,59 65,59 C 68,61 70,66 67,70 C 64,74 58,74 54,71 L 45,55 Z"/><path d="M 68,48 L 84,52 L 82,56 L 68,52 Z"/>';
+  var BATTER_NECK = '<path d="M 52,64 L 64,64 L 64,74 L 52,76 Z"/>';
+  var BATTER_TORSO = '<path d="M 47,71 C 40,73 35,80 35,89 C 35,101 39,112 41,121 C 38,127 36,134 38,140 C 44,146 64,146 70,140 C 71,132 69,126 67,120 C 70,108 72,95 70,84 C 68,76 62,71 56,70 Z"/>';
+  var BATTER_ARMS = '<path d="M 60.3,79.5 L 83.9,68.6 L 80.1,59.4 L 55.7,68.5 Z"/><path d="M 68.0,75.6 L 83.6,67.7 L 80.4,60.3 L 64.0,66.4 Z"/>';
+  var BATTER_BAT = '<circle cx="82" cy="64" r="6"/><path d="M 84.1,60.6 L 28.5,19.2 L 18.0,36.3 L 79.9,67.4 Z"/>';
+  var BATTER_BACK_LEG = '<path d="M 39,122 C 33,140 33,156 36,168 C 36,180 31,194 29,205 L 27,210 L 29,216 L 49,216 C 49,212 45,209 41,206 C 43,195 48,183 49,172 C 51,158 55,144 58,124 Z"/>';
+  var BATTER_FRONT_LEG = '<path d="M 50,126 C 58,144 66,158 70,170 C 70,183 69,195 71,205 L 70,210 L 71,216 L 97,216 C 97,212 91,209 85,206 C 84,194 85,182 84,168 C 81,154 75,138 69,122 Z"/>';
+  var batterInner = BATTER_HEAD + BATTER_NECK + BATTER_TORSO + BATTER_ARMS + BATTER_BAT + BATTER_BACK_LEG + BATTER_FRONT_LEG;
   var batterScaled = '<g transform="translate(' + (53 * (1 - batterScale)).toFixed(2) + ',' + batterTy.toFixed(2) + ') scale(' + batterScale.toFixed(4) + ',' + batterScale.toFixed(4) + ')">' + batterInner + '</g>';
   var batterMirrored = flip ? '<g transform="translate(' + (2 * mirrorAxis) + ',0) scale(-1,1)">' + batterScaled + '</g>' : batterScaled;
-  var batterSvg = '<g opacity="0.35" fill="rgba(168,159,232,.55)" stroke="rgba(168,159,232,.8)" stroke-width="0.75" transform="translate(' + figureOffsetX + ',0)">' + batterMirrored + '</g>';
+  var olId = 'szOutline' + (window._szOutlineN = (window._szOutlineN || 0) + 1);
+  var batterSvg = '<defs><filter id="' + olId + '" x="-10%" y="-10%" width="120%" height="120%">' +
+    '<feMorphology in="SourceAlpha" operator="dilate" radius="1.3" result="d"/>' +
+    '<feComposite in="d" in2="SourceAlpha" operator="out" result="o"/>' +
+    '<feFlood flood-color="#D9D4FA"/><feComposite in2="o" operator="in"/></filter></defs>' +
+    '<g filter="url(#' + olId + ')" opacity="0.85" transform="translate(' + figureOffsetX + ',0)"><g fill="#A89FE8">' + batterMirrored + '</g></g>';
   // Feet position derived from the same calibration, not assumed — the
   // plate sits exactly at the batter's own ground line.
   var groundY = batterTy + 216 * batterScale;
