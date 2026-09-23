@@ -9962,7 +9962,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.70.0-at-bat-play-animation';
+window.INNINGS_BUILD = 'v5.71.0-play-anim-fielders-once';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -21161,8 +21161,8 @@ function _ghLiveDetailHtml(box) {
       }
       // v5.70.0: the square is also where the last play animates (#gh-pa-slot,
       // filled after each render so a refresh picks the animation up mid-way).
-      // Tapping it replays the last play.
-      out += '<div' + (box.lastPlay ? ' onclick="ghPaReplay()" title="Replay the last play"' : '') + ' style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)' + (box.lastPlay ? ';cursor:pointer' : '') + '">' + svg + '<div id="gh-pa-slot"></div></div>';
+      // Tap a play in the play-by-play to replay it here.
+      out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div></div>';
       if (seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
           var c = _pitchCallColor(p.call);
@@ -25770,7 +25770,7 @@ function msClear() { var inp = document.getElementById('ms-q'); if (inp) inp.val
 
 </script>
 <script>
-// ══ PLAY ANIMATION IN THE AT-BAT SQUARE (v5.70.0) ═════════════════════
+// ══ PLAY ANIMATION IN THE AT-BAT SQUARE (v5.70.0, slowed + fielders in v5.71.0) ═════════════════════
 // When a new play finishes in a live MLB game, the at-bat square shows
 // the last pitch coming in, then swaps to an overhead field: where the
 // ball went, who fielded it, the throws, runners moving, outs, and the
@@ -25778,7 +25778,7 @@ function msClear() { var inp = document.getElementById('ms-q'); if (inp) inp.val
 // no ball in play (strikeout, walk) stay on the pitch view.
 // Everything is timed from when the play started, so the cheat sheet
 // re-rendering every 15 seconds picks the animation up where it was.
-var PA = { SW: 1.6, T0: 2.2, END: 9.5 };
+var PA = { SW: 2.4, T0: 3.4, END: 14, THROW: .6, LEG: .7 };
 window._pa = { gamePk: null, seen: null, startAt: 0, play: null, box: null };
 var PA_H = [250, 366], PA_B = { '1B': [330, 286], '2B': [250, 206], '3B': [170, 286], 'score': [250, 366], 'HM': [250, 366] };
 var PA_F = { '1': [250, 290], '2': [250, 378], '3': [312, 262], '4': [288, 222], '5': [188, 262], '6': [212, 222], '7': [128, 160], '8': [250, 128], '9': [372, 160] };
@@ -25795,17 +25795,42 @@ function _paNote(box) {
   if (s.gamePk !== pk) { s.gamePk = pk; s.seen = lp.atBatIndex; s.play = lp; s.startAt = 0; return; }
   if (lp.atBatIndex !== s.seen) { s.seen = lp.atBatIndex; s.play = lp; s.startAt = Date.now(); }
 }
-function ghPaReplay() {
+function _paActive() {
   var s = window._pa;
-  var lp = s.box && s.box.lastPlay;
-  if (!lp) return;
-  s.play = lp; s.startAt = Date.now();
+  return !!(s.play && s.startAt && (Date.now() - s.startAt) / 1000 < PA.END + .6);
+}
+// Replay a play from the play-by-play (tap the row once). Scrolls the
+// at-bat square into view and runs that play's animation.
+function ghPaReplayPlay(playId) {
+  var box = window._pa.box || (typeof _gcBox === 'function' ? _gcBox() : null);
+  if (!box) return;
+  var abi = String(playId || '').split('_').pop();
+  var list = box.allPlays || [];
+  var hit = null;
+  list.forEach(function (p) { if (String(p.atBatIndex) === abi && p.anim) hit = p.anim; });
+  if (!hit && box.lastPlay && String(box.lastPlay.atBatIndex) === abi) hit = box.lastPlay;
+  if (!hit) { if (typeof ib_toast === 'function') ib_toast('No replay for that play'); return; }
+  var s = window._pa;
+  s.play = hit; s.startAt = Date.now(); s.box = box;
   _paFill();
+  var slot = document.getElementById('gh-pa-slot');
+  if (slot && slot.parentElement && slot.parentElement.scrollIntoView) slot.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 function _paFill() {
   var slot = document.getElementById('gh-pa-slot');
   if (!slot) return;
   slot.innerHTML = _paOverlayHtml();
+  var s0 = window._pa;
+  slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
+  clearTimeout(window._paEndT);
+  if (_paActive()) {
+    // One full run, then hand the square back and catch up on any
+    // refresh that waited (see the render hook below).
+    window._paEndT = setTimeout(function () {
+      var sl = document.getElementById('gh-pa-slot'); if (sl) sl.innerHTML = '';
+      if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
+    }, Math.max(0, (PA.END + .6) * 1000 - (Date.now() - window._pa.startAt)));
+  }
 }
 function _paSec(t, E) { return (t - E).toFixed(2) + 's'; }
 function _paPath(pts) { return 'M ' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L '); }
@@ -25884,7 +25909,7 @@ function _paOverlayHtml() {
   var E = (Date.now() - s.startAt) / 1000;
   if (reduce) E = Math.max(E, 5);
   var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(lp.eventType || ''));
-  var END = inPlay ? PA.END : 7;
+  var END = inPlay ? PA.END : 9;
   if (E > END + 0.6) return '';
   var land = _paLanding(lp);
   var title = _paTitle(lp), note = _paNote2(lp, box, land);
@@ -25896,17 +25921,17 @@ function _paOverlayHtml() {
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
   if (lastP) {
     var X = _szX(lastP.px), Y = _szY(lastP.pz), c = _pitchCallColor(lastP.call);
-    pv = pv.replace(/<\/svg>$/, '<g style="transform-box:view-box;transform-origin:' + X.toFixed(1) + 'px ' + Y.toFixed(1) + 'px;--dx:' + (250 - X).toFixed(1) + 'px;--dy:' + (150 - Y).toFixed(1) + 'px;' + anim('paIncoming', .5, .25, 'cubic-bezier(.3,.1,.3,1)') + '">' +
+    pv = pv.replace(/<\/svg>$/, '<g style="transform-box:view-box;transform-origin:' + X.toFixed(1) + 'px ' + Y.toFixed(1) + 'px;--dx:' + (250 - X).toFixed(1) + 'px;--dy:' + (150 - Y).toFixed(1) + 'px;' + anim('paIncoming', .8, .35, 'cubic-bezier(.3,.1,.3,1)') + '">' +
       '<circle cx="' + X.toFixed(1) + '" cy="' + Y.toFixed(1) + '" r="15" fill="' + c + '" stroke="rgba(255,255,255,.35)" stroke-width="4"/>' +
       '<text x="' + X.toFixed(1) + '" y="' + (Y + 5).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0D0820">' + lastP.num + '</text></g></svg>');
   }
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + anim('paOut', .5, END, 'ease') + '">';
-  out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .35, PA.SW) : '') + '">' + pv +
-    (inPlay ? '<div style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .2, .8) + '">In play</div>' : '') + '</div>';
-  if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .35, PA.SW) + '">' + _paFieldSvg(lp, land, E) + '</div>';
+  out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .5, PA.SW) : '') + '">' + pv +
+    (inPlay ? '<div style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2) + '">In play</div>' : '') + '</div>';
+  if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW) + '">' + _paFieldSvg(lp, land, E) + '</div>';
   // title at the top
-  var tT = inPlay ? (s._titleAt || PA.T0 + 1.2) : 1.0;
-  out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .35, tT) + '">' +
+  var tT = inPlay ? (s._titleAt || PA.T0 + 2) : 1.4;
+  out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT) + '">' +
     '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
     (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div>';
   out += '</div>';
@@ -25930,7 +25955,7 @@ function _paFieldSvg(lp, land, E) {
   // where the ball goes first: the landing spot, or the first fielder
   var first = land ? [land.x, land.y] : (fl[0] && PA_F[fl[0]] ? PA_F[fl[0]] : [250, 150]);
   if (!hr && land) { var rr = Math.hypot(first[0] - PA_H[0], first[1] - PA_H[1]); if (rr > 262) { var k = 262 / rr; first = [PA_H[0] + (first[0] - PA_H[0]) * k, PA_H[1] + (first[1] - PA_H[1]) * k]; } }
-  var flight = hr ? 1.1 : caught ? (tr === 'line_drive' ? .55 : 1.0) : tr === 'ground_ball' ? .55 : .7;
+  var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
   // throws: lead runner first, to each base where someone was put out
   var outs = runners.filter(function (r) { return r.out && r.outBase && !(caught && r.batter); });
@@ -25939,7 +25964,7 @@ function _paFieldSvg(lp, land, E) {
   outs.forEach(function (r) {
     var base = PA_B[r.outBase] || PA_H;
     if (base[0] === throwPts[throwPts.length - 1][0] && base[1] === throwPts[throwPts.length - 1][1]) { outTimes[r.outBase] = tt; return; }
-    throwPts.push(base); tt += .38; outTimes[r.outBase] = tt;
+    throwPts.push(base); tt += PA.THROW; outTimes[r.outBase] = tt;
   });
   var ballEnd = tt;
   var g = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
@@ -25948,18 +25973,37 @@ function _paFieldSvg(lp, land, E) {
     '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
     '<g fill="none" stroke="#D9D4FA" stroke-opacity=".7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     ['M 250 366 L 58 174', 'M 250 366 L 442 174', 'M 58 174 Q 250 20 442 174', 'M 250 366 L 330 286 L 250 206 L 170 286 Z'].map(function (d) {
-      return '<path d="' + d + '" pathLength="100" stroke-dasharray="100" style="' + 'animation:paDraw .55s cubic-bezier(.5,0,.2,1) ' + _paSec(PA.SW, E) + ' both"/>';
+      return '<path d="' + d + '" pathLength="100" stroke-dasharray="100" style="' + 'animation:paDraw .8s cubic-bezier(.5,0,.2,1) ' + _paSec(PA.SW, E) + ' both"/>';
     }).join('') + '</g>' +
     '<ellipse cx="250" cy="290" rx="10" ry="5" fill="none" stroke="#D9D4FA" stroke-opacity=".5"/>' +
     ['1B', '2B', '3B'].map(function (b) { var p = PA_B[b]; return '<rect x="' + (p[0] - 8) + '" y="' + (p[1] - 8) + '" width="16" height="16" transform="rotate(45 ' + p[0] + ' ' + p[1] + ')" fill="' + (occupied[b] ? '#FD7A48' : '#F5F3FF') + '"/>'; }).join('') +
     '<path d="M 240 361 L 260 361 L 260 368 L 250 374 L 240 368 Z" fill="#F5F3FF"/>';
   // HR: light the stretch of wall it cleared
   if (hr && land) g += '<path d="' + _paWallSeg(land.ang) + '" fill="none" stroke="#F5F3FF" stroke-width="5" stroke-linecap="round" style="animation:paIn .15s linear ' + _paSec(t1 - .1, E) + ' both"/>';
-  // fielders (the ones who touched it pulse)
+  // fielders: whoever fields it runs to the ball, whoever takes a throw
+  // runs to that bag, and on a hit the closest fielder chases it.
+  var moves = {};
+  fl.forEach(function (code, i) {
+    if (!PA_F[code]) return;
+    if (i === 0) moves[code] = { to: first, at: t1 };
+    else if (throwPts[i]) moves[code] = { to: throwPts[i], at: t1 + PA.THROW * i - .1 };
+  });
+  if (!fl.length && land && !/strikeout|walk|hit_by_pitch/.test(t)) {
+    var cands = Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150 ? ['7', '8', '9'] : ['3', '4', '5', '6'];
+    var best = null, bd = 1e9;
+    cands.forEach(function (c) { var p = PA_F[c], d = Math.hypot(p[0] - first[0], p[1] - first[1]); if (d < bd) { bd = d; best = c; } });
+    if (best) { var fp = PA_F[best], k2 = hr ? .6 : .85; moves[best] = { to: [fp[0] + (first[0] - fp[0]) * k2, fp[1] + (first[1] - fp[1]) * k2], at: t1 + .35, chase: true }; }
+  }
   Object.keys(PA_F).forEach(function (code) {
-    var p = PA_F[code], idx = fl.indexOf(code);
-    var when = idx === 0 ? t1 : (idx > 0 ? t1 + idx * .38 : null);
-    g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#5A9BE8" stroke="#CFE3FF" stroke-width="2"' + (when != null ? ' style="transform-box:fill-box;transform-origin:center;animation:paPulse .5s ease-out ' + _paSec(when, E) + ' both"' : '') + '/>';
+    var p = PA_F[code], mv = moves[code];
+    var idx = fl.indexOf(code);
+    var when = idx === 0 ? t1 : (idx > 0 ? t1 + idx * PA.THROW : null);
+    var motion = '';
+    if (mv) {
+      var st = T0 + .15, dur = Math.max(.35, mv.at - st);
+      motion = '<animateMotion dur="' + dur.toFixed(2) + 's" begin="' + _paSec(st, E) + '" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".3 0 .4 1" path="M 0 0 L ' + (mv.to[0] - p[0]).toFixed(1) + ' ' + (mv.to[1] - p[1]).toFixed(1) + '"/>';
+    }
+    g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#5A9BE8" stroke="#CFE3FF" stroke-width="2"' + (when != null ? ' style="transform-box:fill-box;transform-origin:center;animation:paPulse .6s ease-out ' + _paSec(when, E) + ' both"' : '') + '>' + motion + '</circle>';
   });
   // ball: trail + dot along the flight, then the throws
   var fly = [PA_H, first];
@@ -25979,7 +26023,7 @@ function _paFieldSvg(lp, land, E) {
     g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="9" fill="#FD7A48" stroke="#FFFFFF" stroke-width="2.5" style="animation:paIn .2s linear ' + _paSec(PA.SW + .3, E) + ' both"/>';
   });
   // runners: pre-play runners visible from the swap; everyone moves after contact (after the catch on a fly)
-  var runStart = caught ? t1 : T0 + .15;
+  var runStart = caught ? t1 : T0 + .25;
   var lastScore = 0;
   runners.forEach(function (r) {
     var from = r.batter ? 'H' : r.start;
@@ -25992,7 +26036,7 @@ function _paFieldSvg(lp, land, E) {
     var p0 = r.batter ? PA_H : (PA_B[from] || PA_H);
     var legs = Math.max(1, pts.length - 1);
     var st = r.batter ? T0 + .1 : runStart;
-    var dur = r.out && outTimes[r.outBase] ? Math.max(.3, outTimes[r.outBase] - st) : .42 * legs;
+    var dur = r.out && outTimes[r.outBase] ? Math.max(.45, outTimes[r.outBase] - st) : PA.LEG * legs;
     var done = st + dur;
     var fade = r.out || (to === 'score');
     if (to === 'score') lastScore = Math.max(lastScore, done);
@@ -26006,14 +26050,35 @@ function _paFieldSvg(lp, land, E) {
       g += '<g style="animation:paIn .2s linear ' + _paSec(ot, E) + ' both"><rect x="' + (ob[0] - 26) + '" y="' + (ob[1] - 44) + '" width="52" height="22" rx="7" fill="rgba(255,122,107,.2)" stroke="rgba(255,122,107,.7)"/><text x="' + ob[0] + '" y="' + (ob[1] - 28) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#FFB3A8" letter-spacing="1">OUT</text></g>';
     }
   });
-  s._titleAt = Math.max(ballEnd, lastScore, t1) + .15;
+  s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
   return g + '</svg>';
 }
 
+// Hooks: a live refresh that lands mid-animation waits for it to finish
+// (so the play only ever runs once, start to end), and a single tap on a
+// play in the play-by-play replays it — a double tap still reacts.
 (function () {
   var prevRender = renderGameCheatSheet;
-  renderGameCheatSheet = function () { var r = prevRender.apply(this, arguments); try { _paFill(); } catch (e) { console.error('[play anim]', e); } return r; };
+  renderGameCheatSheet = function () {
+    var slot = document.getElementById('gh-pa-slot'), s = window._pa;
+    var key = s.play && s.startAt ? s.play.atBatIndex + ':' + s.startAt : '';
+    if (_paActive() && slot && slot.firstChild && slot.getAttribute('data-pa') === key) { window._paDeferred = true; return; }
+    var r = prevRender.apply(this, arguments);
+    try { _paFill(); } catch (e) { console.error('[play anim]', e); }
+    return r;
+  };
+  var prevTap = _playDoubleTap;
+  _playDoubleTap = function (el, playId) {
+    var second = !!(el._lastTapTs && (Date.now() - el._lastTapTs) < 400);
+    prevTap.apply(this, arguments);
+    clearTimeout(el._paTapT);
+    if (second) return;
+    var g = window._activeBrowseGame;
+    if (!g || (g.sport || 'mlb') !== 'mlb') return;
+    el._paTapT = setTimeout(function () { if (el._lastTapTs) ghPaReplayPlay(playId); }, 420);
+  };
 })();
+
 </script>
 </body>
 </html>
