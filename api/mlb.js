@@ -1,5 +1,6 @@
 // Vercel Serverless Function — GET /api/mlb?mode=schedule&date=YYYY-MM-DD
 //                               GET /api/mlb?mode=boxscore&gamePk=<id>[&plays=all]
+//                               GET /api/mlb?mode=search&q=<name>
 // Proxies the public MLB Stats API (statsapi.mlb.com, no key required) so
 // the browser doesn't have to fetch it directly, and trims the response
 // down to what a memory card actually needs.
@@ -96,7 +97,31 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, teams, or team' });
+    // Player search by name (v5.67.0) — the Stats API's own people
+    // search, active MLB players only, with their current team hydrated.
+    // GET /api/mlb?mode=search&q=<name>
+    if (mode === 'search') {
+      const q = String(req.query.q || '').trim();
+      if (q.length < 2) { res.status(200).json({ players: [] }); return; }
+      const data = await _tpGetJson('https://statsapi.mlb.com/api/v1/people/search?names=' + encodeURIComponent(q) + '&sportIds=1&active=true&hydrate=currentTeam');
+      if (!data) { res.status(502).json({ error: 'MLB search failed', players: [] }); return; }
+      const players = (data.people || []).filter(function (p) { return p && p.fullName && p.active !== false; }).slice(0, 20).map(function (p) {
+        const t = p.currentTeam || {};
+        return {
+          id: p.id,
+          name: p.fullName,
+          pos: (p.primaryPosition && p.primaryPosition.abbreviation) || null,
+          team: t.name || null,
+          teamId: t.id || null,
+          league: 'mlb'
+        };
+      });
+      res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+      res.status(200).json({ players: players });
+      return;
+    }
+
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, pregame, standings, teams, team, or search' });
   } catch (err) {
     res.status(500).json({ error: 'MLB lookup failed' });
   }
