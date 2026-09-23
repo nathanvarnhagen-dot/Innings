@@ -1592,6 +1592,16 @@ html.desk .gatt-sheet{max-width:560px}
 @keyframes paIncoming{from{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}to{opacity:1;transform:none}}
 #gh-pa-slot{position:absolute;inset:0;pointer-events:none}
 #gh-pa-slot:empty{display:none}
+
+.gh-reel{flex-direction:column;gap:8px}
+.gh-reel-bars{display:flex;gap:4px;height:3px}
+.gh-reel-bars span{flex:1;border-radius:2px;background:rgba(168,159,232,.2);overflow:hidden}
+.gh-reel-bars i{display:block;height:100%;background:#D9D4FA;transform-origin:left center;transform:scaleX(0)}
+@keyframes reelBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.gh-reel-box{position:relative;display:block;width:100%;height:220px;padding:0;border:1px solid rgba(168,159,232,.12);border-radius:16px;overflow:hidden;background:#120E2B;cursor:pointer;font-family:inherit;color:inherit}
+.gh-reel-box #gh-reel-slot{position:absolute;inset:0}
+.gh-reel-cap{display:flex;align-items:center;gap:10px;min-height:28px}
+
 .pa-map-row{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(168,159,232,.12);color:#fff;font-family:inherit;text-align:left;cursor:pointer;width:100%}
 .pa-map-n{width:22px;height:22px;border-radius:50%;color:#0D0820;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .pa-map-t{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -9966,7 +9976,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.75.0-pitch-by-pitch-game-map';
+window.INNINGS_BUILD = 'v5.76.0-highlight-reel';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -12044,7 +12054,7 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
 
   // v5.74.0: on the game screen this card uses the same card style as the
   // live cards (no lighter panel once the game goes final).
-  return (heroFinal && typeof _paGameMapHtml === 'function' ? _paGameMapHtml(box) : '') + (opts.hero ? '<div class="gh-card">' : '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">') +
+  return (opts.hero ? '<div class="gh-card">' : '<div style="background:' + bg + ';border:' + border + ';border-radius:14px;padding:12px 14px">') +
     (opts.hero ? '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:8px">' + (heroFinal ? 'Plays & box score' : 'Pitch by pitch') + '</div>' :
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">' +
       '<div style="font-size:13px;font-weight:700;color:' + color + '">' + _escapeHtml(box.away || '') + ' ' + (box.awayScore != null ? box.awayScore : '') + ' – ' + (box.homeScore != null ? box.homeScore : '') + ' ' + _escapeHtml(box.home || '') + '</div>' +
@@ -21428,7 +21438,7 @@ function _ghKeyMoments(m) {
 }
 
 function _ghFinalHtml(m, st) {
-  var a = m.away, b = m.home;
+  var a = m.away, b = m.home, reel = '';
   var allPlays = m.plays.slice().reverse();
   var fMode = _ghPhaseMode(st, 'finalMode', allPlays.length);
   st.finalRenderMode = fMode;
@@ -21442,11 +21452,11 @@ function _ghFinalHtml(m, st) {
     });
   }
   h += _ghHeader('final', '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D9D4FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' + (/final|game over/i.test(m.status || 'final') ? 'GAME OVER' : _escapeHtml(String(m.status).toUpperCase())), m.venue || '',
-    allPlays.length ? _ghHlButtonHtml(allPlays.length, fMode === 'open', false) : ''); // highlights button takes the venue's spot
+    allPlays.length ? ((reel = (typeof _reelHtml === 'function' ? _reelHtml(m) : '')) ? _reelBtnHtml(allPlays.length) : _ghHlButtonHtml(allPlays.length, fMode === 'open', false)) : ''); // highlights button takes the venue's spot
   var extra = m.innings.length > 9 ? '<span class="gh-sub" style="font-weight:700">' + m.innings.length + ' inn</span>' : '';
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">FINAL</span>' + extra + '</div>';
   h += _ghScoreboard(m, center, { away: false, home: false }, true);
-  h += _ghHighlightsListHtml(m, allPlays, st, { title: 'Every scoring play' });
+  h += reel ? reel : _ghHighlightsListHtml(m, allPlays, st, { title: 'Every scoring play' });
 
   var recap = _ghRecap(m);
   if (recap) h += '<p class="gh-up" style="' + _ghDelay(.8) + 'margin:0;font-size:13.5px;line-height:1.5;color:#D9D4FA">' + _escapeHtml(recap) + '</p>';
@@ -25780,53 +25790,107 @@ function msClear() { var inp = document.getElementById('ms-q'); if (inp) inp.val
 </script>
 <script>
 
-// ══ THE GAME IN PLAYS (v5.75.0) — final MLB games ════════════════════
-// One field showing where every run-scoring at-bat went, numbered in
-// order and colored by team. Tap one (or any play in the play-by-play)
-// and it replays in this same square — pitches one by one, then the
-// field — before settling back to the whole-game view.
-function _paGameMapHtml(box) {
-  var list = (box.allPlays || []).filter(function (p) { return p && p.anim; });
-  if (!list.length || typeof _paLanding !== 'function') return '';
-  var prevA = 0, prevH = 0, picks = [];
-  (box.allPlays || []).forEach(function (p) {
-    var a = p.awayScore, h = p.homeScore;
-    if (a == null || h == null) return;
-    if ((a > prevA || h > prevH) && p.anim) picks.push(p);
-    prevA = a; prevH = h;
+
+// ══ HIGHLIGHT REEL (v5.76.0) — the final score card ═══════════════════
+// After the game, "Highlights" plays the scoring at-bats one after
+// another right in the score card — each one on the field (where it
+// went, runners scoring), with a story-style progress bar — then rests
+// on one field with every one of them numbered. Tap to skip ahead;
+// tap the last frame to watch again.
+window._reel = { key: null, items: [], idx: 0, startAt: 0, open: true, timer: null };
+function _reelItems(m) {
+  var box = typeof _gcBox === 'function' ? _gcBox() : null;
+  if (!box || !box.allPlays) return [];
+  var byIdx = {};
+  box.allPlays.forEach(function (p) { if (p && p.anim && p.atBatIndex != null) byIdx[p.atBatIndex] = p.anim; });
+  return (m.plays || []).filter(function (p) { return p.atBatIndex != null && byIdx[p.atBatIndex]; }).map(function (p) {
+    return { lp: byIdx[p.atBatIndex], tag: (p.half === 'top' ? 'T' : 'B') + (p.inning || ''), half: p.half,
+      headline: _ghPlayHeadline(p), chip: _ghScoreChip(p, m.away.abbr, m.home.abbr),
+      col: (p.half === 'top' ? m.away : m.home).colors.accent };
   });
-  if (!picks.length) picks = list.filter(function (p) { return /home_run|double|triple/.test(p.anim.eventType || ''); });
-  picks = picks.slice(0, 12);
-  var gk = window._activeBrowseGame ? window._activeBrowseGame.gamePk : '';
-  var aC = _ghTeamColors(box.awayAbbr || _ghAbbrFallback(box.away)).accent, hC = _ghTeamColors(box.homeAbbr || _ghAbbrFallback(box.home)).accent;
-  var marks = '', rows = '';
-  picks.forEach(function (p, i) {
-    var lp = p.anim, n = i + 1, col = p.half === 'top' ? aC : hC;
-    var land = _paLanding(lp);
-    if (land) {
-      var x = Math.max(16, Math.min(484, land.x)), y = Math.max(16, Math.min(370, land.y));
-      marks += '<path d="M 250 366 L ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="' + col + '" stroke-opacity=".45" stroke-width="2" fill="none"/>' +
-        '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + col + '" stroke="#120E2B" stroke-width="2"/>' +
-        '<text x="' + x.toFixed(1) + '" y="' + (y + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#0D0820">' + n + '</text>';
-    }
-    var tag = (p.half === 'top' ? 'T' : 'B') + (p.inning || '');
-    var sc = (p.awayScore != null && p.homeScore != null) ? _ghScoreChip(p, box.awayAbbr || _ghAbbrFallback(box.away), box.homeAbbr || _ghAbbrFallback(box.home)) : '';
-    rows += '<button class="pa-map-row" onclick="ghPaReplayPlay(\'' + gk + '_' + p.atBatIndex + '\')">' +
-      '<span class="pa-map-n" style="background:' + col + '">' + n + '</span>' +
-      '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:#D9D4FA">' + tag + '</span>' +
-      '<span class="pa-map-t">' + _escapeHtml(_paTitle(lp).charAt(0) + _paTitle(lp).slice(1).toLowerCase()) + (lp.batter ? ' · ' + _escapeHtml(_ghLastName(lp.batter)) : '') + '</span>' +
-      (sc ? '<span class="gh-num" style="font-size:13px;white-space:nowrap">' + _escapeHtml(sc) + '</span>' : '') + '</button>';
+}
+function _reelHtml(m) {
+  var items = _reelItems(m);
+  if (!items.length) return '';
+  var g = window._activeBrowseGame, key = g ? String(g.gamePk) : 'x', r = window._reel;
+  if (r.key !== key || (r.idx >= r.items.length && Date.now() - r.startAt > 120000)) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = true; } // coming back to a game later plays it again
+  r.items = items; r.box = typeof _gcBox === 'function' ? _gcBox() : null;
+  return '<div class="gh-reel" id="gh-reel" style="display:' + (r.open ? 'flex' : 'none') + '">' +
+    '<div class="gh-reel-bars" id="gh-reel-bars"></div>' +
+    '<button class="gh-reel-box" onclick="ghReelTap()" aria-label="Next highlight"><div id="gh-reel-slot"></div></button>' +
+    '<div class="gh-reel-cap" id="gh-reel-cap"></div></div>';
+}
+function _reelBtnHtml(n) {
+  return '<button class="gh-hl-btn" onclick="ghReelToggle()" aria-expanded="' + (window._reel.open ? 'true' : 'false') + '">Highlights<span class="gh-hl-count">' + n + '</span>' +
+    '<svg class="gh-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(' + (window._reel.open ? 180 : 0) + 'deg)"><path d="M6 9l6 6 6-6"/></svg></button>';
+}
+function ghReelToggle() {
+  var r = window._reel, el = document.getElementById('gh-reel');
+  r.open = !r.open;
+  if (el) el.style.display = r.open ? 'flex' : 'none';
+  var btn = document.querySelector('#game-sheet-panel .gh .gh-hl-btn');
+  if (btn) { btn.setAttribute('aria-expanded', r.open ? 'true' : 'false'); var ch = btn.querySelector('.gh-chev'); if (ch) ch.style.transform = 'rotate(' + (r.open ? 180 : 0) + 'deg)'; }
+  if (r.open) { r.idx = 0; r.startAt = Date.now(); _reelFill(); } else clearTimeout(r.timer);
+}
+function ghReelTap() {
+  var r = window._reel;
+  r.idx = r.idx >= r.items.length ? 0 : r.idx + 1;
+  r.startAt = Date.now();
+  _reelFill();
+}
+function _reelFill() {
+  var r = window._reel, slot = document.getElementById('gh-reel-slot');
+  clearTimeout(r.timer);
+  if (!slot || !r.open || !r.items.length) return;
+  var n = r.items.length, onSummary = r.idx >= n;
+  var cap = document.getElementById('gh-reel-cap'), bars = document.getElementById('gh-reel-bars');
+  var dur = 0, html = '';
+  if (onSummary) {
+    html = _reelSummarySvg(r.items);
+    if (cap) cap.innerHTML = '<span class="gh-sub" style="flex:1">The game in ' + n + (n === 1 ? ' moment' : ' moments') + '</span><span class="gh-sub" style="color:#D9D4FA;font-weight:700">Tap to watch again</span>';
+  } else {
+    var it = r.items[r.idx];
+    // borrow the play animation in "quick" mode (straight to the field)
+    var saved = window._pa;
+    var tmp = { play: it.lp, box: r.box || saved.box, startAt: r.startAt, quick: true, keep: true };
+    window._pa = tmp;
+    try { html = _paOverlayHtml(); } finally { window._pa = saved; }
+    var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(it.lp.eventType || ''));
+    dur = inPlay ? Math.max(3, (tmp._titleAt || PA.T0 + 2) - (PA.SW + .6)) + 2.4 : 3.2;
+    if (cap) cap.innerHTML = '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:' + it.col + '">' + _escapeHtml(it.tag) + '</span>' +
+      '<span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(it.headline) + '</span>' +
+      '<span class="gh-num" style="font-size:14px;white-space:nowrap">' + _escapeHtml(it.chip) + '</span>';
+  }
+  slot.innerHTML = html;
+  if (bars) {
+    var el = (Date.now() - r.startAt) / 1000;
+    bars.innerHTML = r.items.map(function (_, i) {
+      var fill = i < r.idx || onSummary ? '<i style="transform:scaleX(1)"></i>'
+        : i === r.idx ? '<i style="animation:reelBar ' + dur.toFixed(2) + 's linear ' + (-el).toFixed(2) + 's both"></i>' : '<i></i>';
+      return '<span>' + fill + '</span>';
+    }).join('');
+  }
+  if (!onSummary) {
+    var left = dur * 1000 - (Date.now() - r.startAt);
+    r.timer = setTimeout(function () { if (!document.getElementById('gh-reel-slot')) return; r.idx++; r.startAt = Date.now(); _reelFill(); }, Math.max(200, left));
+  }
+}
+function _reelSummarySvg(items) {
+  var marks = '';
+  items.forEach(function (it, i) {
+    var land = _paLanding(it.lp);
+    if (!land) return;
+    var x = Math.max(16, Math.min(484, land.x)), y = Math.max(16, Math.min(370, land.y));
+    marks += '<path d="M 250 366 L ' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="' + it.col + '" stroke-opacity=".45" stroke-width="2" fill="none"/>' +
+      '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="13" fill="' + it.col + '" stroke="#120E2B" stroke-width="2" style="transform-box:fill-box;transform-origin:center;animation:paIn .3s ease-out ' + (i * .15).toFixed(2) + 's both"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#0D0820" style="animation:paIn .3s ease-out ' + (i * .15).toFixed(2) + 's both">' + (i + 1) + '</text>';
   });
-  var field = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
+  return '<div style="position:absolute;inset:0;background:#120E2B"><svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
     '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
     '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
     '<g fill="none" stroke="#D9D4FA" stroke-opacity=".6" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
     ['1B', '2B', '3B'].map(function (b) { var q = PA_B[b]; return '<rect x="' + (q[0] - 7) + '" y="' + (q[1] - 7) + '" width="14" height="14" transform="rotate(45 ' + q[0] + ' ' + q[1] + ')" fill="#F5F3FF"/>'; }).join('') +
-    marks + '</svg>';
-  return '<div class="gh-card" style="margin-bottom:14px">' +
-    '<div class="gh-row" style="margin-bottom:10px"><span class="gh-eyebrow">How the runs scored</span><span class="gh-sub">Tap one to replay it</span></div>' +
-    '<div style="position:relative;border-radius:16px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.12)">' + field + '<div id="gh-pa-slot"></div></div>' +
-    (rows ? '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + rows + '</div>' : '') + '</div>';
+    marks + '</svg></div>';
 }
 // ══ PLAY ANIMATION IN THE AT-BAT SQUARE (v5.70.0, slowed + fielders in v5.71.0) ═════════════════════
 // When a new play finishes in a live MLB game, the at-bat square shows
@@ -25997,6 +26061,7 @@ function _paOverlayHtml() {
   s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
   else if (E > END + 0.6) return '';
+  if (s.quick) { OFF = 0; E = E + PA.SW + .6; } // reel: straight to the field
   var Es = E - OFF; // clock for everything after the pitches
   var land = _paLanding(lp);
   var title = _paTitle(lp), note = _paNote2(lp, box, land);
@@ -26014,7 +26079,7 @@ function _paOverlayHtml() {
     // a small running line under the zone: pitch n · speed · type · call
     allP.forEach(function (p, i) {
       var t0 = .35 + i * GAP, t1 = i < allP.length - 1 ? t0 + GAP : null;
-      callout += '<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11.5px;font-weight:700;color:#D9D4FA;text-shadow:0 1px 6px rgba(11,8,32,.9);opacity:0;' + anim('paIn', .15, t0) + (t1 != null ? 'animation:paIn .15s linear ' + _paSec(t0, E) + ' both,paOut .15s linear ' + _paSec(t1, E) + ' both;' : '') + '">' +
+      callout += '<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11.5px;font-weight:700;color:#D9D4FA;text-shadow:0 1px 6px rgba(11,8,32,.9);opacity:0;' + anim('paIn', .15, t0) + (t1 != null ? 'animation:paIn .15s linear ' + _paSec(t0, E) + ' both,paOut .15s linear ' + _paSec(t1, E) + ' forwards;' : '') + '">' +
         _escapeHtml([p.num + '.', p.speed ? p.speed + ' mph' : null, p.type, p.call].filter(Boolean).join(' ')) + '</div>';
     });
   } else {
@@ -26121,7 +26186,7 @@ function _paFieldSvg(lp, land, E) {
   var flightRel = ctrl ? 'M 0 0 Q ' + (ctrl[0] - PA_H[0]).toFixed(1) + ' ' + (ctrl[1] - PA_H[1]).toFixed(1) + ' ' + (first[0] - PA_H[0]).toFixed(1) + ' ' + (first[1] - PA_H[1]).toFixed(1) : _paRel(fly);
   g += '<path d="' + flightD + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#F5F3FF" stroke-opacity=".6" stroke-width="2" style="animation:paDraw ' + flight + 's linear ' + _paSec(T0, E) + ' both"/>';
   if (throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(tThrow, E) + ' both"/>';
-  g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' both' : '') + '">' +
+  g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' forwards' : '') + '">' +
     '<animateMotion dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze" path="' + flightRel + '"/>' +
     ((air || hr) ? '<animate attributeName="r" values="6;11;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
     (throwPts.length > 1 ? '<animateMotion dur="' + (ballEnd - tThrow).toFixed(2) + 's" begin="' + _paSec(tThrow, E) + '" fill="freeze" path="' + _paOff(PA_H, throwPts) + '"/>' : '') +
@@ -26151,7 +26216,7 @@ function _paFieldSvg(lp, land, E) {
     var fade = r.out || (to === 'score');
     if (to === 'score') lastScore = Math.max(lastScore, done);
     var col = r.batter ? '#FFFFFF' : '#FD7A48';
-    g += '<circle cx="' + p0[0] + '" cy="' + p0[1] + '" r="9" fill="' + col + '" stroke="' + (r.batter ? '#A89FE8' : '#FFFFFF') + '" stroke-width="2.5" style="animation:paIn .2s linear ' + _paSec(r.batter ? T0 : PA.SW + .3, E) + ' both' + (fade ? ',paOut .3s linear ' + _paSec(done + .15, E) + ' both' : '') + '">' +
+    g += '<circle cx="' + p0[0] + '" cy="' + p0[1] + '" r="9" fill="' + col + '" stroke="' + (r.batter ? '#A89FE8' : '#FFFFFF') + '" stroke-width="2.5" style="animation:paIn .2s linear ' + _paSec(r.batter ? T0 : PA.SW + .3, E) + ' both' + (fade ? ',paOut .3s linear ' + _paSec(done + .15, E) + ' forwards' : '') + '">' +
       (pts.length > 1 ? '<animateMotion dur="' + dur.toFixed(2) + 's" begin="' + _paSec(st, E) + '" fill="freeze" path="' + _paRel(pts) + '"/>' : '') + '</circle>';
     if (r.out) {
       var ob = PA_B[r.outBase] || (r.batter && caught && land ? [land.x, land.y] : PA_H);
@@ -26175,6 +26240,7 @@ function _paFieldSvg(lp, land, E) {
     if (_paActive() && slot && slot.firstChild && slot.getAttribute('data-pa') === key) { window._paDeferred = true; return; }
     var r = prevRender.apply(this, arguments);
     try { _paFill(); } catch (e) { console.error('[play anim]', e); }
+    try { if (typeof _reelFill === 'function') _reelFill(); } catch (e) { console.error('[reel]', e); }
     return r;
   };
   var prevTap = _playDoubleTap;
