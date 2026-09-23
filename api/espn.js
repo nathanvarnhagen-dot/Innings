@@ -1,5 +1,6 @@
 // Vercel Serverless Function — GET /api/espn?league=nfl|cfb|nba|wnba|mls|nwsl&mode=schedule&date=YYYYMMDD
 //                               GET /api/espn?league=...&mode=boxscore&eventId=<id>
+//                               GET /api/espn?mode=search&q=<name>[&debug=1]
 // One shared file for five leagues, since they all run on the exact same
 // underlying source: ESPN's hidden scoreboard API. This is NOT an official,
 // documented, or supported API — it's the same undocumented endpoint every
@@ -36,6 +37,8 @@ var LEAGUE_PATHS = {
 module.exports = async function handler(req, res) {
   const league = req.query.league;
   const mode = req.query.mode;
+  // Cross-sport player search needs no league (v5.67.0).
+  if (mode === 'search') { await _playerSearch(req, res); return; }
   const path = LEAGUE_PATHS[league];
   if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
   try {
@@ -1430,4 +1433,71 @@ function summarizeTeamPage(parts, teamId, league) {
   });
   games.sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   return { league: league, team: team, groups: groups, games: games, teamColors: parts[4] || {} };
+}
+
+// ── PLAYER SEARCH (v5.67.0) — GET /api/espn?mode=search&q=<name>
+// ESPN's site-wide search, which spans every league in one call. Same
+// caveat as the rest of this file: undocumented, best-effort. Two known
+// endpoint shapes are tried in order (common/v3 "items", then search/v2
+// "results[].contents"), and each item is read defensively. If results
+// ever come back empty for a name that should match, hit this with
+// &debug=1 to see what ESPN actually returned instead of guessing.
+var _SEARCH_LEAGUE = {
+  'nfl': 'nfl', 'college-football': 'cfb', 'nba': 'nba', 'wnba': 'wnba', 'nhl': 'nhl', 'mlb': 'mlb',
+  'usa.1': 'mls', 'mls': 'mls', 'usa.nwsl': 'nwsl', 'nwsl': 'nwsl'
+};
+// ESPN numeric league ids, for items that only carry a uid like
+// "s:20~l:28~a:3139477".
+var _SEARCH_LEAGUE_ID = { '28': 'nfl', '23': 'cfb', '46': 'nba', '59': 'wnba', '90': 'nhl', '10': 'mlb', '770': 'mls' };
+function _searchItemToPlayer(it) {
+  if (!it || typeof it !== 'object') return null;
+  var type = String(it.type || '').toLowerCase();
+  if (type && type !== 'player' && type !== 'athlete') return null;
+  var name = it.displayName || it.name || it.fullName || null;
+  if (!name) return null;
+  var uid = String(it.uid || '');
+  var idMatch = uid.match(/a:(\d+)/);
+  var id = it.id || (idMatch ? idMatch[1] : null);
+  var slug = String(it.league || it.defaultLeagueSlug || (it.leagues && it.leagues[0] && (it.leagues[0].slug || it.leagues[0].abbreviation)) || '').toLowerCase();
+  var league = _SEARCH_LEAGUE[slug] || null;
+  if (!league) { var lm = uid.match(/l:(\d+)/); if (lm) league = _SEARCH_LEAGUE_ID[lm[1]] || null; }
+  if (!league) return null; // a sport Innings doesn't cover
+  var rel = (it.teamRelationships && it.teamRelationships[0]) || null;
+  var team = (rel && (rel.displayName || (rel.core && rel.core.displayName))) || (it.team && it.team.displayName) || it.subtitle || null;
+  var pos = (it.position && (it.position.abbreviation || it.position.displayName)) || null;
+  return { id: id != null ? String(id) : null, name: name, pos: pos, team: team, league: league };
+}
+async function _playerSearch(req, res) {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) { res.status(200).json({ players: [] }); return; }
+  const enc = encodeURIComponent(q);
+  const v3 = await _tpGetJson('https://site.web.api.espn.com/apis/common/v3/search?region=us&lang=en&query=' + enc + '&limit=25&mode=prefix&type=player');
+  let items = (v3 && Array.isArray(v3.items)) ? v3.items : [];
+  let players = items.map(_searchItemToPlayer).filter(Boolean);
+  let v2 = null;
+  if (!players.length) {
+    v2 = await _tpGetJson('https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&limit=25&query=' + enc);
+    const groups = (v2 && Array.isArray(v2.results)) ? v2.results : [];
+    items = [];
+    groups.forEach(function (g) {
+      if (!g || !/player|athlete/i.test(String(g.type || ''))) return;
+      (g.contents || []).forEach(function (c) { items.push(Object.assign({ type: 'player' }, c)); });
+    });
+    players = items.map(_searchItemToPlayer).filter(Boolean);
+  }
+  if (req.query.debug) {
+    res.status(200).json({
+      players: players,
+      debug: {
+        v3Keys: v3 ? Object.keys(v3) : null,
+        v3Sample: (v3 && v3.items || []).slice(0, 2),
+        v2Keys: v2 ? Object.keys(v2) : null,
+        v2Types: v2 && v2.results ? v2.results.map(function (g) { return g && g.type; }) : null,
+        v2Sample: items.slice(0, 2)
+      }
+    });
+    return;
+  }
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+  res.status(200).json({ players: players.slice(0, 20) });
 }
