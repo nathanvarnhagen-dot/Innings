@@ -9978,7 +9978,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.80.0-landing-fixes';
+window.INNINGS_BUILD = 'v5.81.0-watching-strip-on-tap';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19641,6 +19641,7 @@ function _gattNoteModel(m) {
 function _gattLoad(gamePk) {
   var s = window._gatt;
   s.gamePk = gamePk; s.mode = null; s.momentId = null; s.moment = null; s.phase = null; s.busy = false;
+  s.showStrip = false; // v5.81.0: the memory strip only shows after you tap Watching/Attending
   s.token = Date.now();
   var tok = s.token;
   _gattRender();
@@ -19695,7 +19696,7 @@ function _gattRender() {
   }
   var strip = document.getElementById('game-att-strip');
   if (!strip) return;
-  if (!s.mode) { strip.className = 'gatt-strip'; strip.innerHTML = ''; return; }
+  if (!s.mode || !s.showStrip) { strip.className = 'gatt-strip'; strip.innerHTML = ''; return; }
   strip.className = 'gatt-strip on';
   if (s.moment) {
     var m = s.moment;
@@ -19724,6 +19725,10 @@ function gattChoose(mode) {
   var ref = _gattRef(user, g.gamePk);
   var prev = s.mode;
   var op;
+  // v5.81.0: tapping your current choice again brings back the memory
+  // strip (it's hidden on a fresh load); tapping it while the strip is
+  // open clears the choice, as before.
+  if (prev === mode && !s.showStrip) { s.showStrip = true; _gattRender(); return; }
   s.busy = true;
   if (prev === mode) {
     // Clearing the choice takes the game off your watch list. A memory
@@ -19733,6 +19738,7 @@ function gattChoose(mode) {
     op = ref.delete();
   } else {
     s.mode = mode;
+    s.showStrip = true;
     _gattRender();
     var data = { gamePk: g.gamePk, sport: g.sport || 'mlb', away: g.away || null, home: g.home || null, date: g.date || null, mode: mode };
     if (!prev) data.addedAt = Date.now();
