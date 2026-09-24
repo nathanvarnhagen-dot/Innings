@@ -169,6 +169,7 @@ function summarize(data, gamePk, wantAllPlays) {
   var liveData = data.liveData || {};
   var linescore = liveData.linescore || {};
   var teams = gameData.teams || {};
+  _absTeamIds = { away: teams.away && teams.away.id, home: teams.home && teams.home.id }; // v6.3.0
   var decisions = liveData.decisions || {};
   var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
   var abstractState = (gameData.status && gameData.status.abstractGameState) || null;
@@ -322,7 +323,8 @@ function summarize(data, gamePk, wantAllPlays) {
           type: (e.details && e.details.type && e.details.type.description) || null,
           code: (e.details && e.details.type && e.details.type.code) || null,   // v5.87.0: FF, SL… for "vs his normal"
           mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null,
-          speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null
+          speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null,
+          abs: _absOf(e)   // v6.3.0: ABS challenge on this pitch
         };
       }).filter(function (p) { return p.px != null && p.pz != null; });
       var lastEvent = pitchEvents.length ? pitchEvents[pitchEvents.length - 1] : null;
@@ -454,7 +456,9 @@ function summarize(data, gamePk, wantAllPlays) {
     allPlays: fullPlays,
     lastPlay: (abstractState === 'Live' || abstractState === 'Final') ? _lastPlaySummary(allPlays) : null,
     pitchSequence: pitchSequence,
-    boxScoreDetail: boxScoreDetail
+    boxScoreDetail: boxScoreDetail,
+    // v6.3.0: ABS challenges left/used per team (feed/live gameData.absChallenges)
+    absChallenges: gameData.absChallenges || null
   };
 }
 
@@ -1050,7 +1054,7 @@ function _playAnimSummary(p, prev) {
     var d = e.details || {};
     return { num: e.pitchNumber || (i + 1), px: e.pitchData.coordinates.pX, pz: e.pitchData.coordinates.pZ,
       call: (d.call && d.call.description) || d.description || null, type: (d.type && d.type.description) || null, code: (d.type && d.type.code) || null,
-      speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null };
+      speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null, abs: _absOf(e) };
   });
   var lastPd = null;
   for (var i = pitchEvs.length - 1; i >= 0; i--) { if (pitchEvs[i].pitchData) { lastPd = pitchEvs[i].pitchData; break; } }
@@ -1501,3 +1505,17 @@ return async function handler(req, res) {
 };
 
 })();
+
+
+// ── ABS CHALLENGES (v6.3.0) ───────────────────────────────────────────────
+// A challenged pitch carries reviewDetails with reviewType "MJ" (player ABS
+// challenge; "NJ" also seen for ABS) and details.hasReview. The call on the
+// pitch is the final one; isOverturned says whether the umpire's call changed.
+var _absTeamIds = {};
+function _absOf(e) {
+  var rv = e && e.reviewDetails;
+  if (!rv || !/^[MN]J$/.test(String(rv.reviewType || ''))) return null;
+  var id = rv.challengeTeamId != null ? rv.challengeTeamId : null;
+  var side = id == null ? null : (id === _absTeamIds.away ? 'away' : (id === _absTeamIds.home ? 'home' : null));
+  return { overturned: !!rv.isOverturned, inProgress: !!rv.inProgress, teamId: id, side: side };
+}
