@@ -807,6 +807,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ SPRAY CHART FILTERS (v6.6.0) ═══ */
+.sp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sp-chip{display:flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:999px;border:1px solid rgba(168,159,232,.2);background:transparent;color:#9C95D0;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;opacity:.6}
+.sp-chip i{width:9px;height:9px;border-radius:50%}
+.sp-chip span{font-weight:600;color:#6E68A6}
+.sp-chip.on{opacity:1;color:#F5F3FF;background:rgba(168,159,232,.14);border-color:rgba(168,159,232,.4)}
+.sp-chip.on span{color:#B9B3E6}
+.sp-chip.sp-reset{opacity:1;color:#A89FE8;border-style:dashed}
+.sp-chip:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+
 /* ═══ SLIM SCORE BAR (v6.5.0) — on the cheat sheet the game header scrolls
    away with the page (it's laid over the top of the scroller and moved with
    it), and once the big scoreboard scrolls off, a slim frosted bar with the
@@ -10215,7 +10225,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.5.0-slim-score-bar';
+window.INNINGS_BUILD = 'v6.6.0-spray-filters';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -28050,17 +28060,50 @@ function _savPlayerSheetFill(id) {
   if (d.partial) html += '<div style="font-size:12px;color:#9C95D0;padding:0 2px 10px">Still loading some of it…</div>';
   box.innerHTML = html || '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>';
 }
+// v6.6.0: tappable filters. Hits only by default (outs one tap away); tap
+// one type to see only that, tap more to add them, tap again to drop one.
+var _SP_CATS = [['hr', 'HR', '#F04848'], ['3b', '3B', '#FF9F43'], ['2b', '2B', '#F2C869'], ['1b', '1B', '#4C9DFF'], ['out', 'Out', 'rgba(255,255,255,.35)']];
+window._spSel = window._spSel || { set: null, outs: false }; // set null = every kind of hit
+function _spCat(ev) { return ev === 'home_run' ? 'hr' : ev === 'triple' ? '3b' : ev === 'double' ? '2b' : ev === 'single' ? '1b' : 'out'; }
+function _spVisible(c) { var S = window._spSel; return c === 'out' ? S.outs : (S.set == null || S.set.indexOf(c) !== -1); }
 function _savSprayHtml(pts) {
-  var dots = pts.map(function (p) {
+  var counts = { hr: 0, '3b': 0, '2b': 0, '1b': 0, out: 0 };
+  var col = {}; _SP_CATS.forEach(function (c) { col[c[0]] = c[2]; });
+  var withCat = pts.map(function (p) { var c = _spCat(p.ev); counts[c]++; return { p: p, c: c }; });
+  // outs underneath, hits on top
+  withCat.sort(function (a, b) { return (a.c === 'out' ? 0 : 1) - (b.c === 'out' ? 0 : 1); });
+  var dots = withCat.map(function (o) {
+    var p = o.p;
     var dx = p.x - 125.42, dy = 198.27 - p.y, a = Math.atan2(dx, dy), r = Math.min(Math.hypot(dx, dy) * 2.5, 450) / 400 * 270;
     var x = 250 + r * Math.sin(a), y = 366 - r * Math.cos(a);
-    var col = p.ev === 'home_run' ? '#F04848' : /double|triple/.test(p.ev) ? '#F2C869' : p.ev === 'single' ? '#4C9DFF' : 'rgba(255,255,255,.35)';
-    return '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="4.5" fill="' + col + '"/>';
+    return '<circle data-c="' + o.c + '" cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="4.5" fill="' + col[o.c] + '"' + (_spVisible(o.c) ? '' : ' style="display:none"') + '/>';
   }).join('');
-  return '<div style="border-radius:14px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.12)"><svg viewBox="0 0 500 386" width="100%" height="200" style="display:block">' +
+  var chips = _SP_CATS.map(function (c) {
+    if (!counts[c[0]]) return '';
+    var on = _spVisible(c[0]);
+    return '<button class="sp-chip' + (on ? ' on' : '') + '" data-c="' + c[0] + '" onclick="spToggle(this)" aria-pressed="' + on + '"><i style="background:' + c[2] + '"></i>' + c[1] + '<span>' + counts[c[0]] + '</span></button>';
+  }).join('');
+  var S = window._spSel, filtered = S.set != null || S.outs;
+  return '<div class="sp-wrap"><div style="border-radius:14px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.12)"><svg viewBox="0 0 500 386" width="100%" height="200" style="display:block">' +
     '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
     '<g fill="none" stroke="#D9D4FA" stroke-opacity=".5" stroke-width="2"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174"/></g>' + dots + '</svg></div>' +
-    '<div style="display:flex;gap:12px;font-size:11px;color:#B9B3E6;margin-top:6px"><span><b style="color:#F04848">&#9679;</b> HR</span><span><b style="color:#F2C869">&#9679;</b> 2B/3B</span><span><b style="color:#4C9DFF">&#9679;</b> 1B</span><span>&#9679; Out</span></div>';
+    '<div class="sp-chips">' + chips + '<button class="sp-chip sp-reset" onclick="spReset()"' + (filtered ? '' : ' style="display:none"') + '>All hits</button></div></div>';
+}
+function spToggle(btn) {
+  var S = window._spSel, c = btn.getAttribute('data-c');
+  if (c === 'out') S.outs = !S.outs;
+  else if (S.set == null) S.set = [c];                         // first tap: only this kind
+  else { var i = S.set.indexOf(c); if (i === -1) S.set.push(c); else S.set.splice(i, 1); if (!S.set.length) S.set = null; }
+  _spApply();
+}
+function spReset() { window._spSel = { set: null, outs: false }; _spApply(); }
+function _spApply() {
+  var S = window._spSel;
+  document.querySelectorAll('.sp-wrap').forEach(function (w) {
+    w.querySelectorAll('circle[data-c]').forEach(function (d) { d.style.display = _spVisible(d.getAttribute('data-c')) ? '' : 'none'; });
+    w.querySelectorAll('.sp-chip[data-c]').forEach(function (b) { var on = _spVisible(b.getAttribute('data-c')); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    var r = w.querySelector('.sp-reset'); if (r) r.style.display = (S.set != null || S.outs) ? '' : 'none';
+  });
 }
 
 // ── 11 · Memory ticket: the game by the numbers
