@@ -1615,6 +1615,20 @@ html.desk .gatt-sheet{max-width:560px}
 </style>
 <style>
 /* ── Statcast (v5.87.0) ── */
+#player-link-backdrop.pls-in{animation:plsFade .2s ease-out both}
+#player-link-backdrop.pls-in>div{animation:plsUp .28s cubic-bezier(.2,.8,.2,1) both}
+#player-link-backdrop.pls-out{animation:plsFade .18s ease-in reverse both}
+#player-link-backdrop.pls-out>div{animation:plsUp .18s ease-in reverse both}
+#player-link-rows a,#player-sav .sav-sec{animation:plsRow .3s ease-out both}
+#player-link-rows a:nth-child(2){animation-delay:.04s}#player-link-rows a:nth-child(3){animation-delay:.08s}
+#player-sav .sav-sec:nth-child(1){animation-delay:.1s}#player-sav .sav-sec:nth-child(2){animation-delay:.14s}#player-sav .sav-sec:nth-child(3){animation-delay:.18s}#player-sav .sav-sec:nth-child(4){animation-delay:.22s}
+.sav-loading{font-size:12.5px;color:#9C95D0;padding:6px 2px 12px;animation:plsPulse 1.2s ease-in-out infinite alternate}
+@keyframes plsFade{from{opacity:0}to{opacity:1}}
+@keyframes plsUp{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@keyframes plsRow{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes plsPulse{from{opacity:.45}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){#player-link-backdrop.pls-in,#player-link-backdrop.pls-in>div,#player-link-rows a,#player-sav .sav-sec,.sav-loading{animation:none}}
+
 .sav-sec{display:flex;flex-direction:column;gap:10px;padding:4px 2px 14px}
 .sav-pct{display:flex;align-items:center;gap:10px;min-height:22px}
 .sav-pct-l{font-size:12.5px;color:#D9D4FA;width:112px;flex-shrink:0}
@@ -3487,8 +3501,8 @@ html.desk .gatt-sheet{max-width:560px}
   <div style="width:100%;max-width:430px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom,16px) + 18px);max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:4px;margin:6px auto 14px"></div>
     <div id="player-link-name" style="font-size:15px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px"></div>
-    <div id="player-sav"></div>
     <div id="player-link-rows"></div>
+    <div id="player-sav" style="margin-top:14px"></div>
   </div>
 </div>
 
@@ -10012,7 +10026,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.88.0-pitch-flight';
+window.INNINGS_BUILD = 'v5.89.0-statcast-fix-bvp';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -17869,11 +17883,21 @@ function openPlayerLinkSheet(name, id, league) {
   var sv = document.getElementById('player-sav');
   if (sv) { if (league === 'mlb' && id && typeof _savPlayerSheetFill === 'function') { window._savSheetId = String(id); _savPlayerSheetFill(id); } else { window._savSheetId = null; sv.innerHTML = ''; } }
   var backdrop = document.getElementById('player-link-backdrop');
-  if (backdrop) backdrop.style.display = 'flex';
+  if (backdrop) {
+    clearTimeout(window._plsCloseT);
+    backdrop.classList.remove('pls-out');
+    backdrop.style.display = 'flex';
+    backdrop.classList.remove('pls-in'); void backdrop.offsetWidth; backdrop.classList.add('pls-in');
+    var sheet = backdrop.firstElementChild; if (sheet) sheet.scrollTop = 0;
+  }
 }
 function closePlayerLinkSheet() {
   var backdrop = document.getElementById('player-link-backdrop');
-  if (backdrop) backdrop.style.display = 'none';
+  if (!backdrop) return;
+  window._savSheetId = null;
+  if (_ghReducedMotion && _ghReducedMotion()) { backdrop.style.display = 'none'; return; }
+  backdrop.classList.remove('pls-in'); backdrop.classList.add('pls-out');
+  window._plsCloseT = setTimeout(function () { backdrop.style.display = 'none'; backdrop.classList.remove('pls-out'); }, 200);
 }
 
 // data-* attributes rather than embedding the name in the onclick string
@@ -21285,7 +21309,7 @@ function _ghLiveDetailHtml(box) {
           (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') + '</div>';
       };
       out += '<div class="gh-row" style="align-items:center;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
-        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>';
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>' + (typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
     }
     if (seq) {
       var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
@@ -26561,7 +26585,7 @@ document.addEventListener('visibilitychange', function () {
 // Data layer: small in-browser caches with de-duplicated requests. When
 // something new arrives for the game on screen, the cheat sheet re-renders
 // (the play-animation hook defers that while a play is animating).
-window._sav = window._sav || { game: {}, arsenal: {}, batter: {}, player: {}, pending: {} };
+window._sav = window._sav || { game: {}, arsenal: {}, batter: {}, player: {}, bvp: {}, pending: {} };
 function _savGet(kind, key, url, ttlMs, onArrive) {
   var S = window._sav, bucket = S[kind], e = bucket[key];
   var fresh = e && (ttlMs == null || Date.now() - e.at < ttlMs);
@@ -26569,8 +26593,8 @@ function _savGet(kind, key, url, ttlMs, onArrive) {
     S.pending[kind + key] = fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       delete S.pending[kind + key];
       if (d && !d.error) { bucket[key] = { at: Date.now(), data: d }; if (onArrive) onArrive(d); }
-      else if (!e) bucket[key] = { at: Date.now(), data: null };
-    }).catch(function () { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null }; });
+      else { if (!e) bucket[key] = { at: Date.now(), data: null, failed: true }; if (onArrive) onArrive(null); }
+    }).catch(function () { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null, failed: true }; if (onArrive) onArrive(null); });
   }
   return e ? e.data : null;
 }
@@ -26591,6 +26615,47 @@ function _savPlay(pk, atBatIndex) {
 }
 function _savArsenal(id) { return id ? _savGet('arsenal', String(id), '/api/savant?mode=arsenal&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
 function _savBatter(id) { return id ? _savGet('batter', String(id), '/api/savant?mode=batter&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
+
+
+// ── Batter vs pitcher (v5.89.0) — career line from the MLB Stats API
+function _bvp(bId, pId) {
+  if (!bId || !pId) return null;
+  return _savGet('bvp', bId + ':' + pId, '/api/mlb?mode=bvp&batter=' + encodeURIComponent(bId) + '&pitcher=' + encodeURIComponent(pId), 6 * 3600e3, function () { _savRerender(); if (window._savSheetId) _savPlayerSheetFill(window._savSheetId); });
+}
+function _bvpText(v) {
+  if (!v) return '';
+  if (!v.pa) return 'First career meeting';
+  var bits = [v.h + '-for-' + v.ab];
+  if (v.hr) bits.push(v.hr + ' HR');
+  if (v.d) bits.push(v.d + ' 2B');
+  if (v.t) bits.push(v.t + ' 3B');
+  if (v.bb) bits.push(v.bb + ' BB');
+  if (v.so) bits.push(v.so + ' K');
+  return bits.join(' · ');
+}
+function _bvpLineHtml(mb, mp) {
+  if (!mb || !mp || !mb.id || !mp.id) return '';
+  var v = _bvp(mb.id, mp.id);
+  if (!v) return '';
+  var slash = v.pa && v.avg ? '<span style="color:#9C95D0"> · ' + _escapeHtml(v.avg + '/' + v.obp + '/' + v.slg) + '</span>' : '';
+  return '<div style="display:flex;justify-content:center;align-items:baseline;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;font-size:12.5px;color:#D9D4FA;text-align:center">' +
+    '<span class="gh-eyebrow" style="font-size:9.5px">Career</span><b style="color:#fff">' + _escapeHtml(_ghLastName(mb.name)) + ' vs ' + _escapeHtml(_ghLastName(mp.name)) + '</b><span>' + _escapeHtml(_bvpText(v)) + '</span>' + slash + '</div>';
+}
+// In the player sheet: if this player is in the current live matchup,
+// show his career line against the other one.
+function _savMatchupHtml(id) {
+  var box = typeof _gcBox === 'function' ? _gcBox() : null, m = box && box.matchup;
+  if (!m || !m.batter || !m.pitcher) return '';
+  var isB = String(m.batter.id) === String(id), isP = String(m.pitcher.id) === String(id);
+  if (!isB && !isP) return '';
+  var v = _bvp(m.batter.id, m.pitcher.id);
+  if (!v) return '<div class="sav-sec"><span class="gh-eyebrow">This matchup</span><span class="gh-sub">Loading…</span></div>';
+  var other = isB ? m.pitcher.name : m.batter.name;
+  var who = isB ? 'vs ' + other : other + ' against him';
+  var stats = v.pa ? [['PA', v.pa], ['H', v.h], ['HR', v.hr], ['BB', v.bb], ['K', v.so], ['AVG', v.avg || '—'], ['OPS', v.ops || '—']] : null;
+  return '<div class="sav-sec"><span class="gh-eyebrow">This matchup · career</span><span style="font-size:13.5px;font-weight:700">' + _escapeHtml(who) + (v.pa ? '' : ' — first career meeting') + '</span>' +
+    (stats ? '<div style="display:grid;grid-template-columns:repeat(' + stats.length + ',auto);column-gap:12px;justify-content:start">' + stats.map(function (x) { return '<span class="gh-num" style="font-size:14px">' + _escapeHtml(String(x[1])) + '</span>'; }).join('') + stats.map(function (x) { return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0">' + x[0] + '</span>'; }).join('') + '</div>' : '') + '</div>';
+}
 
 // ── 1, 2, 3, 5 · Stat pills in the play animation (corners of the square)
 function _savPlayPillsHtml(lp, t, E) {
@@ -26676,14 +26741,16 @@ function _savZonesSvg(seq, x1, y1, x2, y2) {
 function _savPlayerSheetFill(id) {
   var box = document.getElementById('player-sav');
   if (!box) return;
-  box.innerHTML = '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">Loading Statcast…</div>';
+  box.innerHTML = '<div class="sav-loading">Loading Statcast…</div>';
   var want = String(id);
   _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); });
   var e = window._sav.player[want];
-  if (!e) return;
+  if (!e) { box.innerHTML = _savMatchupHtml(id) + box.innerHTML; return; }
   var d = e.data;
-  if (!d) { box.innerHTML = '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>'; return; }
-  var html = '';
+  if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
+  // a partial answer (Savant was slow) fills in with one more try
+  if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
+  var html = _savMatchupHtml(id);
   var pctBlock = function (title, list) {
     if (!list || !list.length) return '';
     return '<div class="sav-sec"><span class="gh-eyebrow">' + title + '</span>' + list.map(function (x) {
@@ -26705,6 +26772,7 @@ function _savPlayerSheetFill(id) {
   if (d.sprintSpeed != null) extra.push('Sprint speed <b>' + d.sprintSpeed.toFixed(1) + ' ft/s</b>');
   if (d.batter && d.batter.avgBatSpeed != null) extra.push('Avg bat speed <b>' + d.batter.avgBatSpeed.toFixed(1) + ' mph</b>');
   if (extra.length) html += '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#D9D4FA;padding:0 2px 10px">' + extra.join('') + '</div>';
+  if (d.partial) html += '<div style="font-size:12px;color:#9C95D0;padding:0 2px 10px">Still loading some of it…</div>';
   box.innerHTML = html || '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>';
 }
 function _savSprayHtml(pts) {
