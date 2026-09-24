@@ -1611,6 +1611,34 @@ html.desk .gatt-sheet{max-width:560px}
 .pa-map-t{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 </style>
+<style>
+/* ── Statcast (v5.87.0) ── */
+.sav-sec{display:flex;flex-direction:column;gap:10px;padding:4px 2px 14px}
+.sav-pct{display:flex;align-items:center;gap:10px;min-height:22px}
+.sav-pct-l{font-size:12.5px;color:#D9D4FA;width:112px;flex-shrink:0}
+.sav-pct-bar{position:relative;flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08)}
+.sav-pct-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.sav-pct-bar b{position:absolute;top:-8px;width:22px;height:22px;border-radius:50%;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.sav-ars{display:grid;grid-template-columns:1fr 50px 50px 50px;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid rgba(168,159,232,.12)}
+.sav-ars span:not(:first-child){text-align:right}
+.sav-ars-h{font-size:10px;font-weight:700;letter-spacing:.12em;color:#9C95D0;text-transform:uppercase;border-top:0;padding:0}
+.bp-card{display:flex;flex-direction:column;gap:12px;margin:4px 0 14px;padding:16px;border-radius:20px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2)}
+.bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bp-tile{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:rgba(168,159,232,.10);border:1px solid rgba(168,159,232,.16)}
+.bp-v{font-size:22px;font-weight:800;color:#fff}
+.bp-l{font-size:11.5px;color:#B9B3E6;line-height:1.3}
+.bp-recap-btn{align-self:flex-start;min-height:40px;padding:0 14px;border-radius:12px;border:0;background:#A89FE8;color:#0D0820;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+#recap-overlay{display:none}
+#recap-overlay.on{display:flex;position:fixed;inset:0;z-index:400;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px calc(env(safe-area-inset-bottom,0px) + 18px);background:radial-gradient(120% 80% at 50% 0%,#3D3580 0%,#15112E 60%,#0B0820 100%);color:#fff}
+.rc-bars{display:flex;gap:4px;height:3px}
+.rc-bars span{flex:1;border-radius:2px;background:rgba(255,255,255,.22);overflow:hidden}
+.rc-bars i{display:block;height:100%;background:#fff;transform-origin:left center;transform:scaleX(0)}
+.rc-close{position:absolute;right:14px;top:calc(env(safe-area-inset-top,0px) + 26px);width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:24px;cursor:pointer}
+.rc-tap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;border:0;background:none;color:inherit;font:inherit;text-align:left;padding:0 6px;cursor:pointer}
+.rc-big{font-size:34px;font-weight:800;line-height:1.15}
+.rc-sub{font-size:16px;color:#D9D4FA;line-height:1.5}
+.rc-share{align-self:flex-start;min-height:44px;padding:0 18px;border-radius:14px;border:0;background:#A89FE8;color:#0D0820;font:inherit;font-weight:800;cursor:pointer}
+</style>
 </head>
 <body>
 <!-- ═══ IPAD LANDSCAPE SIDEBAR — hidden below the tablet-landscape
@@ -3454,9 +3482,10 @@ html.desk .gatt-sheet{max-width:560px}
 </div>
 
 <div id="player-link-backdrop" onclick="if(event.target===this)closePlayerLinkSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:180;align-items:flex-end">
-  <div style="width:100%;max-width:430px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom,16px) + 18px)">
+  <div style="width:100%;max-width:430px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom,16px) + 18px);max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:4px;margin:6px auto 14px"></div>
     <div id="player-link-name" style="font-size:15px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px"></div>
+    <div id="player-sav"></div>
     <div id="player-link-rows"></div>
   </div>
 </div>
@@ -9582,6 +9611,7 @@ function _runOslPreviewSequence() {
     <div class="ms-bar ms-keep"><label class="rb-search" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="ms-q" type="search" autocomplete="off" aria-label="Search your memories" placeholder="Search your memories — friends, teams, notes" oninput="msInput(this.value)"></label></div>
     <div id="ms-tabs" class="rb-pills ms-keep" style="display:none;margin:0"></div>
     <div id="ms-results" class="ms-keep"></div>
+    <div id="ballpark-record"></div>
     <div class="imm-note"><i class="ti ti-lock" style="color:#A89FE8;font-size:15px"></i> Your memories are private. Only people in the moment with you can see them.</div>
 
     <!-- PERSONAL INSIGHT: private, self-referential only — never compared to
@@ -9980,7 +10010,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.86.0-highlights-closed-when-watching';
+window.INNINGS_BUILD = 'v5.87.0-statcast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11763,7 +11793,7 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color, partsOnly) {
     '<rect x="0" y="0" width="500" height="386" fill="rgba(255,255,255,.03)" rx="10"/>' +
     shadowSvg +
     '<rect x="' + zoneX1.toFixed(1) + '" y="' + zoneY1.toFixed(1) + '" width="' + (zoneX2 - zoneX1).toFixed(1) + '" height="' + (zoneY2 - zoneY1).toFixed(1) + '" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>' +
-    gridSvg + plateSvg;
+    (typeof _savZonesSvg === 'function' ? _savZonesSvg(seq, zoneX1, zoneY1, zoneX2, zoneY2) : '') + gridSvg + plateSvg;
   seq.pitches.forEach(function (p) {
     var x = _szX(p.px), y = _szY(p.pz), pColor = _pitchCallColor(p.call);
     svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="17" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.5"/>' +
@@ -17834,6 +17864,8 @@ function openPlayerLinkSheet(name, id, league) {
         '<span style="color:rgba(255,255,255,.35);font-size:16px">›</span></a>';
     }).join('');
   }
+  var sv = document.getElementById('player-sav');
+  if (sv) { if (league === 'mlb' && id && typeof _savPlayerSheetFill === 'function') { window._savSheetId = String(id); _savPlayerSheetFill(id); } else { window._savSheetId = null; sv.innerHTML = ''; } }
   var backdrop = document.getElementById('player-link-backdrop');
   if (backdrop) backdrop.style.display = 'flex';
 }
@@ -21231,6 +21263,7 @@ function _ghLiveDetailHtml(box) {
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
   if (typeof _paNote === 'function') _paNote(box);
+  if (typeof _savGame === 'function' && window._activeBrowseGame && (window._activeBrowseGame.sport || 'mlb') === 'mlb') _savGame(window._activeBrowseGame.gamePk, true);
   var s = box.situation || {};
   var out = '<div class="gh-detail">';
   var sub = 'rgba(255,255,255,.65)';
@@ -21270,8 +21303,9 @@ function _ghLiveDetailHtml(box) {
             '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + p.num + '</span>' +
             (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
             '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
+            (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
             (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
-        }).join('') + '</div>';
+        }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '');
       } else {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
       }
@@ -25358,6 +25392,7 @@ function _mdGameCardHtml(m) {
     .map(function (x) { var nm = x[2] || x[3]; return nm ? '<span style="white-space:nowrap"><b style="color:' + x[1] + '">' + x[0] + '</b> ' + _escapeHtml(_ghLastName(nm)) + '</span>' : ''; })
     .filter(Boolean).join('');
   if (dec) html += '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px">' + dec + '</div>';
+  if (sport === 'mlb' && box.gamePk != null && typeof _savMemoryFill === 'function') { var _pk = box.gamePk; html += '<div id="md-sav-' + _escapeHtml(String(_pk)) + '"></div>'; setTimeout(function () { _savMemoryFill(_pk); }, 0); }
   if (box.gamePk != null) html += '<button class="mdt-open" onclick="mdOpenGame()">Open the game <span aria-hidden="true">›</span></button>';
   return '<div class="gh" style="margin:12px 0 0"><div class="gh-orb" style="right:-80px;top:-90px"></div><div class="gh-body">' + html + '</div></div>';
 }
@@ -26270,7 +26305,7 @@ function _paOverlayHtml() {
     var lastP = ps.pop();
     if (lastP) groups = incoming(lastP, .35, true);
   }
-  var seq = { batter: lp.batter, batSide: lp.batSide, zoneTop: lp.zoneTop, zoneBottom: lp.zoneBottom, pitches: ps };
+  var seq = { batter: lp.batter, batterId: lp.batterId, batSide: lp.batSide, zoneTop: lp.zoneTop, zoneBottom: lp.zoneBottom, pitches: ps };
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
   pv = pv.replace(/<\/svg>$/, groups + '</svg>');
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
@@ -26282,6 +26317,7 @@ function _paOverlayHtml() {
   out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT, null, Es) + '">' +
     '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
     (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div>';
+  if (inPlay && typeof _savPlayPillsHtml === 'function') out += _savPlayPillsHtml(lp, tT + .3, Es);
   out += '</div>';
   return out;
 }
@@ -26468,6 +26504,284 @@ document.addEventListener('visibilitychange', function () {
     loadGamesList(window._gamesDate, { silent: true });
   }
 });
+</script>
+<script>
+// ══ STATCAST (v5.87.0) — Baseball Savant via /api/savant ══════════════
+// Data layer: small in-browser caches with de-duplicated requests. When
+// something new arrives for the game on screen, the cheat sheet re-renders
+// (the play-animation hook defers that while a play is animating).
+window._sav = window._sav || { game: {}, arsenal: {}, batter: {}, player: {}, pending: {} };
+function _savGet(kind, key, url, ttlMs, onArrive) {
+  var S = window._sav, bucket = S[kind], e = bucket[key];
+  var fresh = e && (ttlMs == null || Date.now() - e.at < ttlMs);
+  if (!fresh && !S.pending[kind + key]) {
+    S.pending[kind + key] = fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      delete S.pending[kind + key];
+      if (d && !d.error) { bucket[key] = { at: Date.now(), data: d }; if (onArrive) onArrive(d); }
+      else if (!e) bucket[key] = { at: Date.now(), data: null };
+    }).catch(function () { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null }; });
+  }
+  return e ? e.data : null;
+}
+function _savRerender() {
+  clearTimeout(window._savRerenderT);
+  window._savRerenderT = setTimeout(function () {
+    var scr = document.getElementById('screen-game');
+    if (scr && scr.classList.contains('active') && typeof renderGameCheatSheet === 'function') renderGameCheatSheet();
+  }, 250);
+}
+function _savGame(pk, live) {
+  if (pk == null) return null;
+  return _savGet('game', String(pk), '/api/savant?mode=game&gamePk=' + encodeURIComponent(pk) + (live ? '&live=1' : ''), live ? 20000 : null, live ? _savRerender : null);
+}
+function _savPlay(pk, atBatIndex) {
+  var g = pk != null ? (window._sav.game[String(pk)] || {}).data : null;
+  return g && g.plays ? g.plays[String(atBatIndex)] || null : null;
+}
+function _savArsenal(id) { return id ? _savGet('arsenal', String(id), '/api/savant?mode=arsenal&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
+function _savBatter(id) { return id ? _savGet('batter', String(id), '/api/savant?mode=batter&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
+
+// ── 1, 2, 3, 5 · Stat pills in the play animation (corners of the square)
+function _savPlayPillsHtml(lp, t, E) {
+  var g = window._activeBrowseGame, pk = g && g.gamePk;
+  var sp = _savPlay(pk, lp.atBatIndex) || {};
+  var h = lp.hit || {};
+  var ev = h.speed != null ? h.speed : sp.ev, la = h.angle != null ? h.angle : sp.la, dist = h.distance != null ? h.distance : sp.dist;
+  var et = lp.eventType || '', tr = h.trajectory || '';
+  var isHit = /^(single|double|triple|home_run)$/.test(et);
+  var pill = function (txt, bg, col) { return '<span style="padding:3px 8px;border-radius:999px;background:' + (bg || 'rgba(11,8,32,.78)') + ';border:1px solid rgba(168,159,232,.3);color:' + (col || '#F5F3FF') + ';font-size:10.5px;font-weight:800;white-space:nowrap">' + txt + '</span>'; };
+  var left = [], right = [];
+  if (ev != null) left.push(pill(_escapeHtml(String(ev)) + ' mph'));
+  if (la != null) left.push(pill(_escapeHtml(String(la)) + '&deg;'));
+  if (dist != null && tr !== 'ground_ball') left.push(pill(_escapeHtml(String(dist)) + ' ft'));
+  if (sp.xba != null) {
+    var x = sp.xba, tag = isHit && x < .25 ? ' · Lucky' : (!isHit && x >= .6 ? ' · Robbed' : '');
+    var good = isHit ? '#9BE8AC' : '#FFB3A8';
+    right.push(pill('xBA ' + x.toFixed(3).replace(/^0/, '') + tag, tag ? 'rgba(11,8,32,.85)' : null, tag ? good : null));
+  }
+  if (sp.parks != null && (et === 'home_run' || /fly_ball|line_drive/.test(tr))) right.push(pill('HR in ' + sp.parks + '/30 parks', null, sp.parks >= 15 ? '#9BE8AC' : null));
+  var caught = et === 'field_out' && /fly_ball|line_drive|popup/.test(tr);
+  if (caught && sp.catchProb != null && sp.catchProb <= .75) {
+    var cp = sp.catchProb, stars = cp <= .25 ? 5 : cp <= .5 ? 4 : 3;
+    right.push(pill('<span style="color:#F2C869">' + '&#9733;'.repeat(stars) + '</span> ' + Math.round(cp * 100) + '% catch'));
+  }
+  var closeAt1 = tr === 'ground_ball' && (et === 'single' || (et === 'field_out' && (lp.runners || []).some(function (r) { return r.batter && r.out && r.outBase === '1B'; })));
+  if (closeAt1 && lp.batterId) {
+    var bd = _savBatter(lp.batterId);
+    if (bd && bd.sprintSpeed != null) right.push(pill(bd.sprintSpeed.toFixed(1) + ' ft/s sprint'));
+  }
+  if (!left.length && !right.length) return '';
+  var a = 'animation:paIn .5s linear ' + _paSec(t, E) + ' both;';
+  return (left.length ? '<div style="position:absolute;left:8px;bottom:8px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;z-index:4;' + a + '">' + left.join('') + '</div>' : '') +
+    (right.length ? '<div style="position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;z-index:4;' + a + '">' + right.join('') + '</div>' : '');
+}
+
+// ── 4 & 6 · Pitch rows: vs his average, and bat speed on swings
+function _savPitchExtrasHtml(p, seq, pk) {
+  var out = '';
+  var ars = _savArsenal(seq && seq.pitcherId);
+  var avg = ars && ars.avgSpeed && p.code ? ars.avgSpeed[p.code] : null;
+  var mph = p.mph != null ? p.mph : p.speed;
+  if (avg != null && mph != null) {
+    var d = Math.round((mph - avg) * 10) / 10;
+    if (Math.abs(d) >= 1) out += '<span title="vs his ' + avg.toFixed(1) + ' mph average" style="font-size:10.5px;font-weight:800;flex-shrink:0;color:' + (d < 0 ? '#FFB3A8' : '#9BE8AC') + '">' + (d < 0 ? '&#9660;' : '&#9650;') + Math.abs(d).toFixed(1) + '</span>';
+  }
+  var sp = seq && seq.atBatIndex != null ? _savPlay(pk, seq.atBatIndex) : null;
+  var sw = sp && sp.swings ? sp.swings.filter(function (s) { return s.n === p.num; })[0] : null;
+  if (sw) {
+    var bd = _savBatter(seq.batterId), bavg = bd && bd.avgBatSpeed;
+    out += '<span title="' + (bavg ? 'His average: ' + bavg + ' mph' : '') + '" style="font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(168,159,232,.16);color:#D9D4FA;flex-shrink:0">Swing ' + sw.batSpeed.toFixed(0) + (bavg ? '<span style="color:' + (sw.batSpeed >= bavg ? '#9BE8AC' : '#9C95D0') + '"> ' + (sw.batSpeed >= bavg ? '&#9650;' : '&#9660;') + '</span>' : '') + '</span>';
+  }
+  return out;
+}
+function _savVeloNoteHtml(seq) {
+  var ars = _savArsenal(seq && seq.pitcherId);
+  if (!ars || !ars.avgSpeed || !seq || !seq.pitches) return '';
+  var diffs = [];
+  seq.pitches.forEach(function (p) { if (/^(FF|SI|FC)$/.test(p.code || '') && ars.avgSpeed[p.code] != null && (p.mph != null || p.speed != null)) diffs.push((p.mph != null ? p.mph : p.speed) - ars.avgSpeed[p.code]); });
+  if (diffs.length < 2) return '';
+  var m = diffs.reduce(function (a, b) { return a + b; }, 0) / diffs.length;
+  if (Math.abs(m) < 1.5) return '';
+  return '<div style="margin-top:10px;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.45;' + (m < 0 ? 'background:rgba(255,122,107,.10);border:1px solid rgba(255,122,107,.3);color:#FFD2CC' : 'background:rgba(124,242,156,.08);border:1px solid rgba(124,242,156,.3);color:#C8F5D4') + '">' +
+    'His fastball is ' + Math.abs(m).toFixed(1) + ' mph ' + (m < 0 ? 'slower' : 'faster') + ' than his season average this at-bat.</div>';
+}
+
+// ── 7 · Hot/cold zones behind the strike-zone grid
+function _savZonesSvg(seq, x1, y1, x2, y2) {
+  var bd = _savBatter(seq && seq.batterId);
+  if (!bd || !bd.zones) return '';
+  var cw = (x2 - x1) / 3, ch = (y2 - y1) / 3, out = '';
+  for (var z = 1; z <= 9; z++) {
+    var cell = bd.zones[z];
+    if (!cell) continue;
+    var r = Math.floor((z - 1) / 3), c = (z - 1) % 3, a = cell.avg;
+    var col = a >= .3 ? 'rgba(240,72,72,' + Math.min(.55, .2 + (a - .3) * 2).toFixed(2) + ')' : a <= .2 ? 'rgba(76,157,255,' + Math.min(.55, .2 + (.2 - a) * 2).toFixed(2) + ')' : 'rgba(255,255,255,.04)';
+    out += '<rect x="' + (x1 + c * cw).toFixed(1) + '" y="' + (y1 + r * ch).toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + ch.toFixed(1) + '" fill="' + col + '"><title>' + cell.avg.toFixed(3).replace(/^0/, '') + ' in ' + cell.ab + ' AB</title></rect>';
+  }
+  return out;
+}
+
+// ── 8, 9, 10 · Player sheet: percentiles, arsenal, spray chart
+function _savPlayerSheetFill(id) {
+  var box = document.getElementById('player-sav');
+  if (!box) return;
+  box.innerHTML = '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">Loading Statcast…</div>';
+  var want = String(id);
+  _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); });
+  var e = window._sav.player[want];
+  if (!e) return;
+  var d = e.data;
+  if (!d) { box.innerHTML = '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>'; return; }
+  var html = '';
+  var pctBlock = function (title, list) {
+    if (!list || !list.length) return '';
+    return '<div class="sav-sec"><span class="gh-eyebrow">' + title + '</span>' + list.map(function (x) {
+      var p = Math.max(1, Math.min(100, Math.round(x.pct)));
+      var col = p >= 70 ? '#F04848' : p < 35 ? '#4C9DFF' : '#9C95D0';
+      return '<div class="sav-pct"><span class="sav-pct-l">' + _escapeHtml(x.label) + '</span><span class="sav-pct-bar"><i style="width:' + p + '%;background:' + col + '"></i><b style="left:calc(' + p + '% - 11px);background:' + col + '">' + p + '</b></span></div>';
+    }).join('') + '</div>';
+  };
+  if (d.pitcher) html += pctBlock('Pitching percentiles · ' + d.year, d.pitcher.percentiles);
+  if (d.batter) html += pctBlock('Hitting percentiles · ' + d.year, d.batter.percentiles);
+  if (d.pitcher && d.pitcher.arsenal && d.pitcher.arsenal.length) {
+    html += '<div class="sav-sec"><span class="gh-eyebrow">Pitch arsenal</span><div class="sav-ars sav-ars-h"><span>Pitch</span><span>Use</span><span>MPH</span><span>Whiff</span></div>' +
+      d.pitcher.arsenal.map(function (a) {
+        return '<div class="sav-ars"><span style="font-weight:700">' + _escapeHtml(a.name || a.code) + '</span><span>' + (a.usage != null ? a.usage.toFixed(0) + '%' : '—') + '</span><span>' + (a.mph != null ? a.mph.toFixed(1) : '—') + '</span><span>' + (a.whiff != null ? a.whiff.toFixed(0) + '%' : '—') + '</span></div>';
+      }).join('') + '</div>';
+  }
+  if (d.batter && d.batter.spray && d.batter.spray.length) html += '<div class="sav-sec"><span class="gh-eyebrow">Spray chart · ' + d.year + '</span>' + _savSprayHtml(d.batter.spray) + '</div>';
+  var extra = [];
+  if (d.sprintSpeed != null) extra.push('Sprint speed <b>' + d.sprintSpeed.toFixed(1) + ' ft/s</b>');
+  if (d.batter && d.batter.avgBatSpeed != null) extra.push('Avg bat speed <b>' + d.batter.avgBatSpeed.toFixed(1) + ' mph</b>');
+  if (extra.length) html += '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#D9D4FA;padding:0 2px 10px">' + extra.join('') + '</div>';
+  box.innerHTML = html || '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>';
+}
+function _savSprayHtml(pts) {
+  var dots = pts.map(function (p) {
+    var dx = p.x - 125.42, dy = 198.27 - p.y, a = Math.atan2(dx, dy), r = Math.min(Math.hypot(dx, dy) * 2.5, 450) / 400 * 270;
+    var x = 250 + r * Math.sin(a), y = 366 - r * Math.cos(a);
+    var col = p.ev === 'home_run' ? '#F04848' : /double|triple/.test(p.ev) ? '#F2C869' : p.ev === 'single' ? '#4C9DFF' : 'rgba(255,255,255,.35)';
+    return '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="4.5" fill="' + col + '"/>';
+  }).join('');
+  return '<div style="border-radius:14px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.12)"><svg viewBox="0 0 500 386" width="100%" height="200" style="display:block">' +
+    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
+    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".5" stroke-width="2"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174"/></g>' + dots + '</svg></div>' +
+    '<div style="display:flex;gap:12px;font-size:11px;color:#B9B3E6;margin-top:6px"><span><b style="color:#F04848">&#9679;</b> HR</span><span><b style="color:#F2C869">&#9679;</b> 2B/3B</span><span><b style="color:#4C9DFF">&#9679;</b> 1B</span><span>&#9679; Out</span></div>';
+}
+
+// ── 11 · Memory ticket: the game by the numbers
+function _savMemoryFill(pk) {
+  var el = document.getElementById('md-sav-' + pk);
+  if (!el) return;
+  var cached = _savGameSummary(pk, function () { _savMemoryFill(pk); });
+  if (!cached) { el.innerHTML = ''; return; }
+  var s = cached, rows = [];
+  if (s.hardest) rows.push(['Hardest-hit ball', s.hardest.ev.toFixed(1) + ' mph', s.hardest.name]);
+  if (s.fastest) rows.push(['Fastest pitch', s.fastest.mph.toFixed(1) + ' mph', s.fastest.name]);
+  if (s.longestHr) rows.push(['Longest homer', s.longestHr.dist + ' ft', s.longestHr.name]);
+  if (!rows.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px"><span class="gh-eyebrow">By the numbers</span>' + rows.map(function (r) {
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:13px;color:#D9D4FA">' + r[0] + '</span><span style="font-size:13.5px;font-weight:800;text-align:right">' + _escapeHtml(r[1]) + (r[2] ? '<span style="font-weight:600;color:#B9B3E6"> · ' + _escapeHtml(_ghLastName(r[2])) + '</span>' : '') + '</span></div>';
+  }).join('') + '</div>';
+}
+// Finished games never change: keep their summary in localStorage too.
+function _savGameSummary(pk, onArrive) {
+  var key = 'innings_sav_sum_' + pk;
+  try { var ls = localStorage.getItem(key); if (ls) return JSON.parse(ls); } catch (e) {}
+  var d = _savGet('game', String(pk), '/api/savant?mode=game&gamePk=' + encodeURIComponent(pk), null, function (data) {
+    if (data && data.summary) { try { localStorage.setItem(key, JSON.stringify(data.summary)); } catch (e) {} }
+    if (onArrive) onArrive();
+  });
+  return d && d.summary ? d.summary : null;
+}
+
+// ── 12 · Your ballpark record (Memories), 13 · season recap
+function _bpAttendedMlb(moments) {
+  return (moments || []).filter(function (m) {
+    var pk = m.boxScore && m.boxScore.gamePk;
+    var sport = typeof _mdSport === 'function' ? _mdSport(m) : ((m.boxScore && m.boxScore.sport) || 'mlb');
+    return pk != null && m.attendance === 'attend' && sport === 'mlb';
+  });
+}
+function _bpCompute(moments) {
+  var games = _bpAttendedMlb(moments), missing = 0;
+  var rec = { games: games.length, hrs: 0, longest: null, fastest: null, hardest: null, byYear: {} };
+  games.forEach(function (m) {
+    var pk = m.boxScore.gamePk;
+    var s = _savGameSummary(pk, function () { clearTimeout(window._bpT); window._bpT = setTimeout(function () { _bpRender(window._moments); }, 300); });
+    if (!s) { missing++; return; }
+    var yr = String(m.date || '').slice(0, 4) || 'all';
+    var Y = rec.byYear[yr] || (rec.byYear[yr] = { games: 0, hrs: 0, longest: null, fastest: null, hardest: null, withCount: {} });
+    Y.games++;
+    var who = typeof _gattLiveNames === 'function' ? _gattLiveNames(m) : [];
+    who.forEach(function (n) { Y.withCount[n] = (Y.withCount[n] || 0) + 1; });
+    var ctx = { date: m.date, venue: m.boxScore.venue || '', who: who, memoryId: m._id };
+    [rec, Y].forEach(function (R) {
+      R.hrs += (s.homeRuns || []).length;
+      if (s.longestHr && (!R.longest || s.longestHr.dist > R.longest.dist)) R.longest = Object.assign({}, s.longestHr, ctx);
+      if (s.fastest && (!R.fastest || s.fastest.mph > R.fastest.mph)) R.fastest = Object.assign({}, s.fastest, ctx);
+      if (s.hardest && (!R.hardest || s.hardest.ev > R.hardest.ev)) R.hardest = Object.assign({}, s.hardest, ctx);
+    });
+  });
+  rec.loading = missing > 0;
+  return rec;
+}
+function _bpRender(moments) {
+  var el = document.getElementById('ballpark-record');
+  if (!el) return;
+  var rec = _bpCompute(moments);
+  if (!rec.games) { el.innerHTML = ''; return; }
+  var tile = function (v, l) { return '<div class="bp-tile"><span class="bp-v">' + v + '</span><span class="bp-l">' + l + '</span></div>'; };
+  var withTxt = function (x) { return x && x.who && x.who.length ? ' (with ' + _escapeHtml(x.who.slice(0, 2).join(' & ')) + ')' : ''; };
+  var year = String(new Date().getFullYear());
+  el.innerHTML = '<div class="bp-card"><div class="gh-row"><span class="gh-eyebrow">Your ballpark record</span>' + (rec.loading ? '<span class="gh-sub">Counting…</span>' : '') + '</div>' +
+    '<div class="bp-grid">' + tile(rec.hrs, 'home runs seen') + tile(rec.longest ? rec.longest.dist + ' ft' : '—', 'longest homer' + withTxt(rec.longest)) +
+      tile(rec.fastest ? rec.fastest.mph.toFixed(1) : '—', 'fastest pitch (mph)') + tile(rec.games, rec.games === 1 ? 'game attended' : 'games attended') + '</div>' +
+    (rec.longest ? '<div style="font-size:12.5px;color:#D9D4FA;line-height:1.45">Longest homer you&rsquo;ve seen: ' + _escapeHtml(rec.longest.name || '') + ', ' + _escapeHtml(rec.longest.date ? _formatMomentDate(rec.longest.date) : '') + (rec.longest.venue ? ', at ' + _escapeHtml(rec.longest.venue) : '') + '.</div>' : '') +
+    (rec.byYear[year] ? '<button class="bp-recap-btn" onclick="openSeasonRecap(\'' + year + '\')">Your ' + year + ' in baseball <span aria-hidden="true">&rsaquo;</span></button>' : '') + '</div>';
+}
+function openSeasonRecap(year) {
+  var rec = _bpCompute(window._moments);
+  var Y = rec.byYear[year];
+  if (!Y) return;
+  var topFriend = Object.keys(Y.withCount).sort(function (a, b) { return Y.withCount[b] - Y.withCount[a]; })[0];
+  var slides = [];
+  slides.push({ k: 'Your ' + year + ' in baseball', big: 'You went to ' + Y.games + (Y.games === 1 ? ' game.' : ' games.'), sub: topFriend ? 'Most often with ' + topFriend + ' (' + Y.withCount[topFriend] + ').' : '' });
+  if (Y.hrs) slides.push({ k: 'Home runs', big: 'You saw ' + Y.hrs + (Y.hrs === 1 ? ' home run.' : ' home runs.'), sub: Y.longest ? 'The longest went ' + Y.longest.dist + ' ft — ' + (Y.longest.name || '') + (Y.longest.who && Y.longest.who.length ? '. You were with ' + Y.longest.who.join(' & ') + '.' : '.') : '' });
+  if (Y.fastest) slides.push({ k: 'Heat', big: 'Fastest pitch: ' + Y.fastest.mph.toFixed(1) + ' mph.', sub: (Y.fastest.name || '') + (Y.fastest.date ? ', ' + _formatMomentDate(Y.fastest.date) : '') });
+  if (Y.hardest) slides.push({ k: 'Loudest contact', big: 'Hardest-hit ball: ' + Y.hardest.ev.toFixed(1) + ' mph.', sub: (Y.hardest.name || '') + (Y.hardest.venue ? ' at ' + Y.hardest.venue : '') });
+  slides.push({ k: 'See you next season', big: year + ', kept.', sub: 'Every one of these lives in your Memories.' });
+  window._recap = { slides: slides, i: 0 };
+  var ov = document.getElementById('recap-overlay');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'recap-overlay'; document.body.appendChild(ov); }
+  ov.className = 'on';
+  _recapShow();
+}
+function _recapShow() {
+  var R = window._recap, ov = document.getElementById('recap-overlay');
+  if (!R || !ov) return;
+  var s = R.slides[R.i];
+  ov.innerHTML = '<div class="rc-bars">' + R.slides.map(function (_, i) { return '<span><i style="' + (i < R.i ? 'transform:scaleX(1)' : i === R.i ? 'animation:reelBar 6s linear both' : '') + '"></i></span>'; }).join('') + '</div>' +
+    '<button class="rc-close" onclick="closeSeasonRecap()" aria-label="Close">&times;</button>' +
+    '<button class="rc-tap" onclick="recapNext()" aria-label="Next">' +
+    '<span class="gh-eyebrow">' + _escapeHtml(s.k) + '</span><span class="rc-big">' + _escapeHtml(s.big) + '</span>' + (s.sub ? '<span class="rc-sub">' + _escapeHtml(s.sub) + '</span>' : '') + '</button>' +
+    (R.i === R.slides.length - 1 && navigator.share ? '<button class="rc-share" onclick="recapShare()">Share</button>' : '');
+  clearTimeout(R.t);
+  R.t = setTimeout(recapNext, 6000);
+}
+function recapNext() { var R = window._recap; if (!R) return; if (R.i < R.slides.length - 1) { R.i++; _recapShow(); } else closeSeasonRecap(); }
+function closeSeasonRecap() { var R = window._recap; if (R) clearTimeout(R.t); var ov = document.getElementById('recap-overlay'); if (ov) { ov.className = ''; ov.innerHTML = ''; } }
+function recapShare() {
+  var R = window._recap; if (!R) return;
+  var txt = R.slides.map(function (s) { return s.big + (s.sub ? ' ' + s.sub : ''); }).join('\n');
+  try { navigator.share({ title: R.slides[0].k, text: txt }); } catch (e) {}
+}
+
+(function () {
+  if (typeof renderMoments !== 'function') return;
+  var prev = renderMoments;
+  renderMoments = function (arr) { var r = prev.apply(this, arguments); try { _bpRender(arr || window._moments); } catch (e) { console.error('[ballpark record]', e); } return r; };
+})();
 </script>
 </body>
 </html>
