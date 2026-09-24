@@ -1616,6 +1616,8 @@ html.desk .gatt-sheet{max-width:560px}
 <style>
 /* ── Statcast (v5.87.0) ── */
 #player-link-backdrop.pls-in{animation:plsFade .2s ease-out both}
+.bvp-in{animation:bvpIn .45s cubic-bezier(.2,.8,.2,1) both}
+@keyframes bvpIn{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
 #player-link-backdrop.pls-in>div{animation:plsUp .28s cubic-bezier(.2,.8,.2,1) both}
 #player-link-backdrop.pls-out{animation:plsFade .18s ease-in reverse both}
 #player-link-backdrop.pls-out>div{animation:plsUp .18s ease-in reverse both}
@@ -10026,7 +10028,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.89.0-statcast-fix-bvp';
+window.INNINGS_BUILD = 'v5.90.0-bvp-columns';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19737,7 +19739,6 @@ function _gattLoad(gamePk) {
     if (doc.exists) {
       var d = doc.data() || {};
       s.mode = d.mode === 'attend' ? 'attend' : 'watch'; // docs from the old Watch button have no mode
-      if (!s.stripShownFor || s.stripShownFor !== gamePk) { s.showStrip = true; s.stripShownFor = gamePk; } // v5.82.0: shows for 5s when you open the game
       s.momentId = d.momentId || null;
       _gattRender();
     }
@@ -21306,10 +21307,15 @@ function _ghLiveDetailHtml(box) {
           '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + label + '</span>' +
           '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(p, 'mlb') + '</span>' +
           (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') +
-          (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') + '</div>';
+          (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') +
+          (right && abStarted && typeof _bvpColsHtml === 'function' ? _bvpColsHtml(mb, mp) : '') + '</div>';
       };
+      // v5.90.0: career batter-vs-pitcher sits centered until the first pitch
+      // of the at-bat, then moves under the batter, lined up with the
+      // pitcher's TODAY numbers.
+      var abStarted = !!(seq && seq.pitches && seq.pitches.length);
       out += '<div class="gh-row" style="align-items:center;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
-        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>' + (typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
     }
     if (seq) {
       var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
@@ -26590,11 +26596,11 @@ function _savGet(kind, key, url, ttlMs, onArrive) {
   var S = window._sav, bucket = S[kind], e = bucket[key];
   var fresh = e && (ttlMs == null || Date.now() - e.at < ttlMs);
   if (!fresh && !S.pending[kind + key]) {
-    S.pending[kind + key] = fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    S.pending[kind + key] = fetch(url).then(function (r) { S.lastStatus = r.ok ? '' : 'HTTP ' + r.status; return r.json().catch(function () { return null; }).then(function (j) { return r.ok ? j : (j && j.error ? j : null); }); }).then(function (d) {
       delete S.pending[kind + key];
       if (d && !d.error) { bucket[key] = { at: Date.now(), data: d }; if (onArrive) onArrive(d); }
-      else { if (!e) bucket[key] = { at: Date.now(), data: null, failed: true }; if (onArrive) onArrive(null); }
-    }).catch(function () { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null, failed: true }; if (onArrive) onArrive(null); });
+      else { if (!e) bucket[key] = { at: Date.now(), data: null, failed: true, why: (d && (d.detail || d.error)) || S.lastStatus || '' }; if (onArrive) onArrive(null); }
+    }).catch(function (err) { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null, failed: true, why: String(err && err.message || err) }; if (onArrive) onArrive(null); });
   }
   return e ? e.data : null;
 }
@@ -26633,6 +26639,21 @@ function _bvpText(v) {
   if (v.so) bits.push(v.so + ' K');
   return bits.join(' · ');
 }
+
+function _bvpColsHtml(mb, mp) {
+  if (!mb || !mp || !mb.id || !mp.id) return '';
+  var v = _bvp(mb.id, mp.id);
+  if (!v) return '';
+  var key = mb.id + ':' + mp.id, P = window._bvpPlaced || (window._bvpPlaced = {});
+  var fresh = !P[key]; P[key] = 1; // slides in once, the first time it moves over
+  var label = '<span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#9C95D0;margin-top:5px">VS ' + _escapeHtml(_ghLastName(mp.name).toUpperCase()) + '</span>';
+  if (!v.pa) return '<span class="' + (fresh ? 'bvp-in' : '') + '" style="display:flex;flex-direction:column;align-items:flex-end">' + label + '<span style="font-size:12px;color:#CECBF6">First meeting</span></span>';
+  var cols = [['H-AB', v.h + '-' + v.ab], ['HR', v.hr], ['RBI', v.rbi]];
+  return '<span class="' + (fresh ? 'bvp-in' : '') + '" style="display:flex;flex-direction:column;align-items:flex-end">' + label +
+    '<span style="display:grid;grid-template-columns:repeat(3,auto);column-gap:12px;justify-content:end;text-align:right">' +
+    cols.map(function (c) { return '<span class="gh-num" style="font-size:12.5px;color:#fff">' + _escapeHtml(String(c[1])) + '</span>'; }).join('') +
+    cols.map(function (c) { return '<span style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9C95D0">' + c[0] + '</span>'; }).join('') + '</span></span>';
+}
 function _bvpLineHtml(mb, mp) {
   if (!mb || !mp || !mb.id || !mp.id) return '';
   var v = _bvp(mb.id, mp.id);
@@ -26653,8 +26674,8 @@ function _savMatchupHtml(id) {
   var other = isB ? m.pitcher.name : m.batter.name;
   var who = isB ? 'vs ' + other : other + ' against him';
   var stats = v.pa ? [['PA', v.pa], ['H', v.h], ['HR', v.hr], ['BB', v.bb], ['K', v.so], ['AVG', v.avg || '—'], ['OPS', v.ops || '—']] : null;
-  return '<div class="sav-sec"><span class="gh-eyebrow">This matchup · career</span><span style="font-size:13.5px;font-weight:700">' + _escapeHtml(who) + (v.pa ? '' : ' — first career meeting') + '</span>' +
-    (stats ? '<div style="display:grid;grid-template-columns:repeat(' + stats.length + ',auto);column-gap:12px;justify-content:start">' + stats.map(function (x) { return '<span class="gh-num" style="font-size:14px">' + _escapeHtml(String(x[1])) + '</span>'; }).join('') + stats.map(function (x) { return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0">' + x[0] + '</span>'; }).join('') + '</div>' : '') + '</div>';
+  return '<div class="sav-sec"><span class="gh-eyebrow" style="color:#9C95D0">This matchup · career</span><span style="font-size:14px;font-weight:700;color:#FFFFFF">' + _escapeHtml(who) + (v.pa ? '' : ' — first career meeting') + '</span>' +
+    (stats ? '<div style="display:grid;grid-template-columns:repeat(' + stats.length + ',auto);column-gap:14px;row-gap:2px;justify-content:start;padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.12);border:1px solid rgba(168,159,232,.2)">' + stats.map(function (x) { return '<span class="gh-num" style="font-size:15px;color:#FFFFFF">' + _escapeHtml(String(x[1])) + '</span>'; }).join('') + stats.map(function (x) { return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#B9B3E6">' + x[0] + '</span>'; }).join('') + '</div>' : '') + '</div>';
 }
 
 // ── 1, 2, 3, 5 · Stat pills in the play animation (corners of the square)
@@ -26747,7 +26768,7 @@ function _savPlayerSheetFill(id) {
   var e = window._sav.player[want];
   if (!e) { box.innerHTML = _savMatchupHtml(id) + box.innerHTML; return; }
   var d = e.data;
-  if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
+  if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' + (e.why ? '<span style="display:block;margin-top:4px;font-size:11px;color:#6F6A98">(' + _escapeHtml(String(e.why).slice(0, 140)) + ')</span>' : '') : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
   // a partial answer (Savant was slow) fills in with one more try
   if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
   var html = _savMatchupHtml(id);
