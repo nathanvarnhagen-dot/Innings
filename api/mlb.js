@@ -1056,9 +1056,44 @@ function _playAnimSummary(p, prev) {
   for (var i = pitchEvs.length - 1; i >= 0; i--) { if (pitchEvs[i].pitchData) { lastPd = pitchEvs[i].pitchData; break; } }
   var hit = null;
   for (var j = evs.length - 1; j >= 0; j--) { if (evs[j] && evs[j].hitData) { hit = evs[j].hitData; break; } }
+  // v6.1.0: things that happened between pitches of this at-bat (a caught
+  // stealing, a wild pitch…) are their own scenes, not part of the final
+  // play. Their runners and fielders are kept out of the play below, and
+  // listed in `actions` with how many pitches came before each one.
+  var lastPitchIdx = -1;
+  evs.forEach(function (e) { if (e && e.isPitch && e.index != null && e.index > lastPitchIdx) lastPitchIdx = e.index; });
+  var ACT = /stolen_base|caught_stealing|wild_pitch|passed_ball|pickoff|balk|defensive_indiff|other_advance|error/;
+  var evByIdx = {};
+  evs.forEach(function (e) { if (e && e.index != null) evByIdx[e.index] = e; });
+  var isActRunner = function (r) {
+    var pi = r && r.details && r.details.playIndex;
+    if (pi == null || pi >= lastPitchIdx) return false;
+    var e = evByIdx[pi];
+    return !!(e && !e.isPitch);
+  };
+  var actions = [];
+  evs.forEach(function (e) {
+    if (!e || e.isPitch || e.index == null || e.index >= lastPitchIdx) return;
+    if (e.type !== 'action' && e.type !== 'pickoff') return;
+    var d = e.details || {};
+    var et = d.eventType || (e.type === 'pickoff' ? 'pickoff_attempt' : '');
+    if (!ACT.test(et)) return;
+    var mv = (p.runners || []).filter(function (r) { return r.details && r.details.playIndex === e.index; });
+    var codes = [];
+    mv.forEach(function (r) { (r.credits || []).forEach(function (c) { var k = c.position && c.position.code; if (k && codes.indexOf(k) === -1) codes.push(k); }); });
+    var baseM = String(d.description || '').match(/\b(1B|2B|3B)\b/);
+    var before = evs.filter(function (x) { return x && x.isPitch && x.index != null && x.index < e.index; }).length;
+    actions.push({
+      kind: 'action', index: e.index, eventType: et, description: d.description || '', isOut: !!d.isOut, base: baseM ? baseM[1] : null,
+      afterPitch: before,
+      runners: mv.map(function (r) { var m = r.movement || {}; return { start: m.start || null, end: m.end || null, out: !!m.isOut, outBase: m.outBase || null, name: (r.details && r.details.runner && r.details.runner.fullName) || null }; }),
+      fielders: codes
+    });
+  });
   var byRunner = {}, order = [];
   var fielders = [];
   (p.runners || []).forEach(function (r) {
+    if (isActRunner(r)) return; // v6.1.0: belongs to a between-pitch scene
     var id = r.details && r.details.runner && r.details.runner.id;
     var mv = r.movement || {};
     if (id == null) return;
@@ -1075,8 +1110,14 @@ function _playAnimSummary(p, prev) {
   var sameHalf = prev && prev.about && prev.about.inning === p.about.inning && prev.about.isTopInning === p.about.isTopInning;
   var pm = (sameHalf && prev.matchup) || {};
   var pre = { '1B': !!pm.postOnFirst, '2B': !!pm.postOnSecond, '3B': !!pm.postOnThird };
+  // v6.1.0: bases as they stood when the final pitch was thrown — after any
+  // between-pitch scenes (a runner caught stealing is gone, a steal moved up)
+  actions.forEach(function (a) {
+    a.runners.forEach(function (r) { if (r.start && pre[r.start] !== undefined) pre[r.start] = false; });
+    a.runners.forEach(function (r) { if (!r.out && r.end && pre[r.end] !== undefined) pre[r.end] = true; });
+  });
   var errorPos = null;
-  (p.runners || []).forEach(function (r) { (r.credits || []).forEach(function (c) { if (/error/.test(c.credit || '') && c.position) errorPos = c.position.code; }); });
+  (p.runners || []).forEach(function (r) { if (isActRunner(r)) return; (r.credits || []).forEach(function (c) { if (/error/.test(c.credit || '') && c.position) errorPos = c.position.code; }); });
   return {
     atBatIndex: p.about.atBatIndex != null ? p.about.atBatIndex : null,
     inning: p.about.inning || null, half: p.about.isTopInning ? 'top' : 'bottom',
@@ -1097,7 +1138,8 @@ function _playAnimSummary(p, prev) {
     runners: order.map(function (id) { return byRunner[id]; }),
     pre: pre,
     fielders: fielders,
-    errorPos: errorPos
+    errorPos: errorPos,
+    actions: actions
   };
 }
 
