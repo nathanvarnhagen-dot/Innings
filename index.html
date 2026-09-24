@@ -807,6 +807,68 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ POSTSEASON (v6.8.0) ═══ */
+.ps-lc{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.ps-chip{display:inline-flex;align-items:center;font-size:10px;font-weight:900;letter-spacing:.14em;padding:4px 8px;border-radius:8px}
+.ps-ser{font-size:12px;font-weight:700;color:#F5F3FF}
+.ps-hot{display:inline-flex;font-size:9.5px;font-weight:900;letter-spacing:.12em;padding:3px 7px;border-radius:7px;background:rgba(255,106,88,.16);color:#FF9A8C}
+.ps-ban{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-radius:18px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--rcb);background:linear-gradient(120deg,var(--rc2),#15103A 72%);color:#fff;font-family:inherit;cursor:pointer}
+.ps-ban .k{font-size:10px;font-weight:900;letter-spacing:.3em;color:var(--rc)}
+.ps-ban .t{font-size:19px;font-weight:900;font-style:italic;margin-top:1px}
+.ps-ban .s{font-size:12px;color:#D9D4FA;margin-top:1px}
+.ps-ban .go{margin-left:auto;font-size:12px;font-weight:800;color:var(--rc);white-space:nowrap}
+.ps-shine{position:absolute;top:-30%;bottom:-30%;width:30%;left:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:psShine 4.5s ease-in-out infinite;pointer-events:none}
+@keyframes psShine{0%,60%{left:-40%}100%{left:130%}}
+.ps-rib{position:relative;overflow:hidden;border-radius:18px;padding:13px 15px;margin-bottom:12px;border:1px solid var(--rcb);background:linear-gradient(120deg,var(--rc2),#15103A 72%)}
+.ps-rib .k{font-size:10px;font-weight:900;letter-spacing:.3em;color:var(--rc)}
+.ps-rib .t{font-size:20px;font-weight:900;font-style:italic;margin-top:1px}
+.ps-rib .s{font-size:13px;font-weight:700;color:#F5F3FF;margin-top:2px}
+.ps-rib .emb{position:absolute;right:12px;top:12px;opacity:.9}
+.ps-pips{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.ps-pip{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;padding:5px 6px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:10px;color:#9C95D0;font-family:inherit;cursor:pointer}
+.ps-pip b{font-size:11px;color:#fff}
+.ps-pip.now{background:var(--rcx);border-color:var(--rc);color:var(--rc)}
+.ps-pip.w{border-color:var(--rcb)}
+.ps-pip:focus-visible,.ps-ban:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.gsb-mid.ps{flex-direction:column;gap:1px}
+.gsb-ps{font-size:9px;font-weight:900;letter-spacing:.14em;color:var(--gsb-rc,#A89FE8)}
+.gsb-row{display:flex;align-items:center;gap:7px}
+/* bracket sheet */
+.psb{position:fixed;inset:0;z-index:190;background:#0D0820;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 14px calc(env(safe-area-inset-bottom,0px) + 30px);display:none}
+.psb.on{display:block;animation:psIn .3s cubic-bezier(.22,1,.36,1)}
+@keyframes psIn{from{opacity:0;transform:translateY(12px)}}
+.psb-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.psb-hd h2{font-size:20px;font-weight:800;flex:1;margin:0;color:#F5F3FF}
+.psb-x{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:0;color:#E9E5FF;font-size:18px;cursor:pointer}
+.psb-lg{font-size:10.5px;font-weight:800;letter-spacing:.18em;color:#9C95D0;margin:14px 2px 8px}
+.psb-rounds{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.psb-col{flex:0 0 min(78%,300px);scroll-snap-align:start;display:flex;flex-direction:column;gap:8px}
+.psb-col h3{font-size:10px;font-weight:900;letter-spacing:.2em;color:#9C95D0;margin:0 0 0 2px}
+.psb-col.cur h3{color:var(--rc)}
+.psb-s{border-radius:14px;background:#1A1640;border:1px solid rgba(168,159,232,.12);padding:8px 10px;display:flex;flex-direction:column;gap:4px;text-align:left;font-family:inherit;color:#fff;cursor:pointer}
+.psb-col.cur .psb-s{border-color:var(--rcb)}
+.psb-tr{display:flex;align-items:center;gap:8px;font-size:13px}
+.psb-tr .sd{width:14px;font-size:10px;color:#9C95D0;font-weight:800;text-align:center}
+.psb-tr .lo{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:900;flex-shrink:0}
+.psb-tr .n{flex:1;font-weight:700}
+.psb-tr.out .n,.psb-tr.out .w{opacity:.4}
+.psb-tr .w{display:flex;gap:3px}
+.psb-tr .w i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.12)}
+.psb-tr .w i.on{background:var(--rcs,#A89FE8)}
+.psb-st{font-size:10.5px;color:#9C95D0;padding-left:22px}
+.psb-st b{color:#fff;font-weight:800}
+.psb-tbd{font-size:12px;color:#6E68A6;padding:6px 2px}
+/* clinch + champions (end of the highlights reel) */
+.gw.gw-ps .bg{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 115%,var(--wc) 0%,transparent 62%),linear-gradient(160deg,var(--rc2) 0%,#141218 60%,#0B0A0E 100%)}
+.gw-ps .nx{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.14);font-size:11.5px;font-weight:700}
+.gw-ps .nx em{font-style:normal;font-size:9.5px;font-weight:900;letter-spacing:.16em;color:var(--rc)}
+.gw-champ{opacity:0;animation:gwFade .5s ease-out both;animation-delay:var(--t0);background:radial-gradient(100% 80% at 50% 40%,#3A2A08 0%,#140E04 55%,#070503 100%)}
+.gw-champ .rays{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;animation:gwRays .8s cubic-bezier(.22,1,.36,1) both,psSpin 40s linear infinite;animation-delay:var(--t0),calc(var(--t0) + .8s)}
+@keyframes psSpin{to{transform:rotate(360deg)}}
+.gw-champ .tro{width:52px;height:auto;filter:drop-shadow(0 6px 20px rgba(242,200,105,.5))}
+.gw-champ .big{font-size:28px;font-weight:900;font-style:italic;background:linear-gradient(180deg,#FFF1C4,#F2C869 55%,#B7822A);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.05}
+@media (prefers-reduced-motion: reduce){.ps-shine{display:none}.psb.on{animation:none}.gw-champ{animation:none;opacity:1}.gw-champ .rays{animation:none}}
+
 /* ═══ GAME WINNER / WALK-OFF (v6.7.0) — closes the highlights reel ═══ */
 .gw{position:absolute;inset:0;z-index:8;border-radius:16px;overflow:hidden;pointer-events:none}
 .gw-win{clip-path:inset(0 100% 0 0);animation:gwWipe .55s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
@@ -10260,7 +10322,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.7.0-game-winner';
+window.INNINGS_BUILD = 'v6.8.0-postseason';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -18700,6 +18762,7 @@ function loadGamesList(date, opts) {
     // the same treatment the NFL/CFB week view already gives finished games.
     var restSplit = _splitConcluded(split.rest);
     var html = '';
+    if (requestedSport === 'mlb' && typeof _psBannerHtml === 'function') html += _psBannerHtml(games); // v6.8.0
     if (split.spotlight.length) {
       html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">' + (split.spotlight.length === watchedGames.length ? 'Your games' : 'Your teams') + '</div>';
       html += split.spotlight.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
@@ -18730,7 +18793,9 @@ function loadGamesList(date, opts) {
     var favTeams = window._favTeamsCache[requestedSport] || { favorite: null, following: [] };
     var wMode = (window._gamesWatchedIds || {})[String(g.gamePk)], gDone = _isGameConcluded(g.status);
     var watchingNow = !!wMode && !gDone;
-    return '<div id="glist-card-' + i + '" onclick="openGameFromList(' + i + ')" style="background:' + (watchingNow ? 'rgba(124,242,156,.06)' : 'rgba(255,255,255,.055)') + ';border:' + (watchingNow ? '1.5px solid #7CF29C;box-shadow:0 0 0 3px rgba(124,242,156,.12)' : '1px solid rgba(255,255,255,.09)') + ';border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer">' +
+    var psR = requestedSport === 'mlb' && typeof _psRound === 'function' ? _psRound(g) : null; // v6.8.0
+    return '<div id="glist-card-' + i + '" onclick="openGameFromList(' + i + ')" style="background:' + (watchingNow ? 'rgba(124,242,156,.06)' : psR ? 'linear-gradient(160deg,' + _ghHexAlpha(psR.rc2, .55) + ',rgba(255,255,255,.04) 60%)' : 'rgba(255,255,255,.055)') + ';border:' + (watchingNow ? '1.5px solid #7CF29C;box-shadow:0 0 0 3px rgba(124,242,156,.12)' : psR ? '1px solid ' + _ghHexAlpha(psR.rc, .45) : '1px solid rgba(255,255,255,.09)') + ';border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer">' +
+      (psR ? _psListLineHtml(g) : '') +
       '<div style="display:flex;align-items:center;justify-content:space-between">' +
       '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
       (wMode ? '<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 8px;border-radius:999px;background:' + (watchingNow ? 'rgba(124,242,156,.16)' : 'rgba(168,159,232,.18)') + ';color:' + (watchingNow ? '#9BE8AC' : '#D9D4FA') + ';font-size:10.5px;font-weight:800;letter-spacing:.04em">' + (wMode === 'attend' ? (gDone ? 'ATTENDED' : 'ATTENDING') : (gDone ? 'WATCHED' : 'WATCHING')) + '</div>' : '') +
@@ -27594,6 +27659,259 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ═══ POSTSEASON (v6.8.0) ═══════════════════════════════════════════════
+// Games from Wild Card to World Series carry the round (gameType F/D/L/W),
+// its game number and the series status from MLB's schedule. The whole
+// season's postseason games (/api/mlb?mode=postseason) drive the bracket,
+// each series' strip, and whether a win clinched it.
+var PS_ROUND = {
+  F: { name: 'Wild Card Series', rc: '#5AD1C9', rc2: '#1E6F6A', best: 3, next: 'DS' },
+  D: { name: 'Division Series', rc: '#B8C8F2', rc2: '#2E3A66', best: 5, next: 'CS' },
+  L: { name: 'Championship Series', rc: '#D6A8FF', rc2: '#4A2A73', best: 7, next: 'WS' },
+  W: { name: 'World Series', rc: '#F2C869', rc2: '#6B4A12', best: 7, next: null }
+};
+var PS_EMB = {
+  F: '<svg width="40" height="40" viewBox="0 0 46 46" aria-hidden="true"><rect x="9" y="8" width="22" height="30" rx="4" transform="rotate(-10 20 23)" fill="none" stroke="#5AD1C9" stroke-width="2"/><rect x="15" y="8" width="22" height="30" rx="4" transform="rotate(8 26 23)" fill="rgba(90,209,201,.18)" stroke="#5AD1C9" stroke-width="2"/></svg>',
+  D: '<svg width="40" height="40" viewBox="0 0 46 46" aria-hidden="true"><path d="M23 5l5 10 11 1.6-8 7.8 2 11L23 30l-10 5.4 2-11-8-7.8L18 15z" fill="rgba(184,200,242,.18)" stroke="#B8C8F2" stroke-width="2" stroke-linejoin="round"/></svg>',
+  L: '<svg width="40" height="40" viewBox="0 0 46 46" aria-hidden="true"><path d="M8 34h30l-3-18-7 7-5-12-5 12-7-7z" fill="rgba(214,168,255,.18)" stroke="#D6A8FF" stroke-width="2" stroke-linejoin="round"/><rect x="8" y="35" width="30" height="4" rx="2" fill="#D6A8FF"/></svg>',
+  W: '<svg width="40" height="40" viewBox="0 0 46 46" aria-hidden="true"><path d="M15 8h16v8a8 8 0 0 1-16 0z" fill="rgba(242,200,105,.22)" stroke="#F2C869" stroke-width="2"/><path d="M15 11h-5a5 5 0 0 0 5 7M31 11h5a5 5 0 0 1-5 7" fill="none" stroke="#F2C869" stroke-width="2"/><path d="M23 24v7M17 38h12l-2-7h-8z" fill="rgba(242,200,105,.22)" stroke="#F2C869" stroke-width="2" stroke-linejoin="round"/></svg>'
+};
+window._psData = window._psData || null;
+function _psRound(g) { return g && g.gameType && PS_ROUND[g.gameType] ? PS_ROUND[g.gameType] : null; }
+function _psName(g) {
+  var t = g.gameType, lg = g.league || '';
+  if (t === 'W') return 'World Series';
+  if (t === 'F') return (lg ? lg + ' ' : '') + 'Wild Card';
+  return (lg || '') + (t === 'D' ? 'DS' : 'CS');
+}
+function _psNeed(g) { return Math.ceil((g.gamesInSeries || (PS_ROUND[g.gameType] || {}).best || 7) / 2); }
+function _psAbbr(g, side) { return side === 'away' ? (g.awayAbbr || _ghAbbrFallback(g.away || '')) : (g.homeAbbr || _ghAbbrFallback(g.home || '')); }
+function _psFinalWinnerId(x) { if (x.state !== 'Final' || x.awayScore == null || x.homeScore == null || x.awayScore === x.homeScore) return null; return x.awayScore > x.homeScore ? x.awayId : x.homeId; }
+function _psSeries(g) {
+  var d = window._psData;
+  if (!d || !g || g.awayId == null) return null;
+  var ids = [g.awayId, g.homeId].sort().join('-');
+  return d.games.filter(function (x) { return x.gameType === g.gameType && [x.awayId, x.homeId].sort().join('-') === ids; })
+    .sort(function (a, b) { return (a.seriesGameNumber || 0) - (b.seriesGameNumber || 0); });
+}
+// Wins for each side of `g`, counting the series' finished games before
+// this one (after: include this game once it's final).
+function _psWins(g, after) {
+  var list = _psSeries(g), w = { away: 0, home: 0 };
+  if (list && list.length) {
+    list.forEach(function (x) {
+      var n = x.seriesGameNumber || 0, me = g.seriesGameNumber || 0;
+      if (n > me || (n === me && !after)) return;
+      var wid = _psFinalWinnerId(x);
+      if (wid == null) return;
+      if (wid === g.awayId) w.away++; else if (wid === g.homeId) w.home++;
+    });
+    return w;
+  }
+  // fall back to MLB's series status on the game itself
+  var s = g.series;
+  if (!s || s.wins == null) return w;
+  if (s.tied) { w.away = w.home = s.wins; return w; }
+  if (s.leader) { w[s.leader] = s.wins; w[s.leader === 'away' ? 'home' : 'away'] = s.losses || 0; }
+  return w;
+}
+function _psDone(g) { return /final|game over|completed/i.test(g.status || '') || g.state === 'Final'; }
+// "Game 1" for game 1 (until it's over), the series score after that
+function _psScoreText(g) {
+  var done = _psDone(g), w = _psWins(g, done), need = _psNeed(g);
+  var a = _psAbbr(g, 'away'), h = _psAbbr(g, 'home');
+  if (!w.away && !w.home) return '';
+  if (w.away === w.home) return 'Series tied ' + w.away + '\u2013' + w.home;
+  var lead = w.away > w.home ? a : h, hi = Math.max(w.away, w.home), lo = Math.min(w.away, w.home);
+  return lead + (hi >= need ? ' wins ' : ' leads ') + hi + '\u2013' + lo;
+}
+function _psStakes(g) {
+  if (_psDone(g)) return '';
+  var w = _psWins(g, false), need = _psNeed(g), a = _psAbbr(g, 'away'), h = _psAbbr(g, 'home');
+  if (w.away === need - 1 && w.home === need - 1) return g.gameType === 'W' ? 'GAME ' + (g.seriesGameNumber || '') + ' \u00b7 WINNER TAKES THE TITLE' : 'WINNER-TAKE-ALL';
+  if (w.away === need - 1) return a + ' CAN ' + (g.gameType === 'W' ? 'WIN IT ALL' : 'CLINCH') + ' TONIGHT';
+  if (w.home === need - 1) return h + ' CAN ' + (g.gameType === 'W' ? 'WIN IT ALL' : 'CLINCH') + ' TONIGHT';
+  return '';
+}
+function _psListLineHtml(g) {
+  var R = _psRound(g); if (!R) return '';
+  var sc = _psScoreText(g), st = _psStakes(g);
+  return '<div class="ps-lc"><span class="ps-chip" style="background:' + _ghHexAlpha(R.rc, .16) + ';color:' + R.rc + '">' + _escapeHtml((_psName(g) + ' \u00b7 Game ' + (g.seriesGameNumber || '')).toUpperCase()) + '</span>' +
+    (sc ? '<span class="ps-ser">' + _escapeHtml(sc) + '</span>' : '') + (st ? '<span class="ps-hot">' + _escapeHtml(st) + '</span>' : '') + '</div>';
+}
+function _psVars(R) { return '--rc:' + R.rc + ';--rc2:' + R.rc2 + ';--rcx:' + _ghHexAlpha(R.rc, .15) + ';--rcb:' + _ghHexAlpha(R.rc, .45); }
+function _psBannerHtml(games) {
+  var ps = (games || []).filter(function (g) { return _psRound(g); });
+  if (!ps.length) return '';
+  var order = 'FDLW', g = ps.slice().sort(function (a, b) { return order.indexOf(b.gameType) - order.indexOf(a.gameType); })[0], R = _psRound(g);
+  var yr = (window._gamesDate || '').slice(0, 4) || String(new Date().getFullYear());
+  return '<button class="ps-ban" style="' + _psVars(R) + '" onclick="psOpenBracket(' + yr + ')"><span class="ps-shine"></span>' + PS_EMB[g.gameType] +
+    '<span><span class="k" style="display:block">' + yr + ' POSTSEASON</span><span class="t" style="display:block">' + _escapeHtml(g.gameType === 'W' ? 'World Series' : R.name) + '</span><span class="s" style="display:block">' + ps.length + (ps.length === 1 ? ' game' : ' games') + ' today</span></span>' +
+    '<span class="go">Bracket \u203a</span></button>';
+}
+function _psLoad(season, cb) {
+  var d = window._psData;
+  if (d && d.season === season && Date.now() - d.at < 60000) { cb && cb(d); return; }
+  if (window._psLoading) { (window._psWaiters = window._psWaiters || []).push(cb); return; }
+  window._psLoading = true;
+  fetch('/api/mlb?mode=postseason&season=' + season).then(function (r) { return r.json(); }).then(function (j) {
+    window._psData = { season: season, at: Date.now(), games: (j && j.games) || [] };
+  }).catch(function () {}).then(function () {
+    window._psLoading = false;
+    var w = window._psWaiters || []; window._psWaiters = [];
+    cb && cb(window._psData); w.forEach(function (f) { f && f(window._psData); });
+  });
+}
+// The open game, with its postseason fields (from the list, or the season's postseason games)
+function _psGame() {
+  var g = window._activeBrowseGame;
+  if (!g || (g.sport || 'mlb') !== 'mlb') return null;
+  var pk = String(g.gamePk), hit = null;
+  (window._gamesListCache || []).forEach(function (x) { if (x && String(x.gamePk) === pk && x.gameType) hit = x; });
+  if (window._psData) window._psData.games.forEach(function (x) { if (String(x.gamePk) === pk) hit = Object.assign({}, hit || {}, x); });
+  return hit && _psRound(hit) ? hit : null;
+}
+function _psSeason() { var g = window._activeBrowseGame; var d = (g && g.date) || window._gamesDate || ''; return parseInt(String(d).slice(0, 4), 10) || new Date().getFullYear(); }
+function _psShortTag() { var g = _psGame(); return g ? (_psName(g).replace('Wild Card', 'WC').replace('World Series', 'WS') + ' \u00b7 G' + (g.seriesGameNumber || '')).toUpperCase() : ''; }
+function _psDecorate() {
+  var panel = document.getElementById('game-sheet-panel');
+  if (!panel) return;
+  var old = document.getElementById('ps-rib');
+  var g = _psGame();
+  var bar = document.getElementById('game-sb');
+  if (!g) {
+    if (old) old.remove();
+    // opened from somewhere other than the list during October: look it up once
+    var ab = window._activeBrowseGame, mo = ab && ab.date ? parseInt(String(ab.date).slice(5, 7), 10) : 0;
+    if (ab && (ab.sport || 'mlb') === 'mlb' && mo >= 9 && !window._psTried) { window._psTried = true; _psLoad(_psSeason(), function () { if (_psGame()) _psDecorate(); }); }
+    return;
+  }
+  if (!window._psData || window._psData.season !== _psSeason() || Date.now() - window._psData.at > 60000) _psLoad(_psSeason(), function () { _psDecorate(); if (typeof _gshRefresh === 'function') _gshRefresh(); });
+  var R = _psRound(g), sc = _psScoreText(g), st = _psStakes(g), n = g.seriesGameNumber || '';
+  var list = _psSeries(g) || [], need = _psNeed(g), total = g.gamesInSeries || R.best;
+  var pips = '';
+  if (list.length) {
+    for (var k = 1; k <= total; k++) {
+      var x = list.filter(function (y) { return y.seriesGameNumber === k; })[0];
+      var now = x && String(x.gamePk) === String(g.gamePk);
+      var wid = x ? _psFinalWinnerId(x) : null;
+      var lab = wid != null ? (wid === x.awayId ? _psAbbr(x, 'away') : _psAbbr(x, 'home')) + ' ' + Math.max(x.awayScore, x.homeScore) + '\u2013' + Math.min(x.awayScore, x.homeScore)
+        : now ? (_psDone(g) ? 'Final' : 'Now') : x ? (x.state === 'Live' ? 'Live' : 'Upcoming') : 'If needed';
+      pips += '<button class="ps-pip' + (now ? ' now' : '') + (wid != null ? ' w' : '') + '"' + (x && !now ? ' onclick="psOpenGame(' + x.gamePk + ')"' : '') + (x ? '' : ' disabled') + '><b>G' + k + '</b>' + _escapeHtml(lab) + '</button>';
+    }
+  }
+  var html = '<div class="ps-rib" style="' + _psVars(R) + '"><span class="ps-shine"></span><span class="emb">' + PS_EMB[g.gameType] + '</span>' +
+    '<div class="k">' + _psSeason() + ' POSTSEASON</div><div class="t">' + _escapeHtml(g.gameType === 'W' ? 'World Series' : _psName(g).replace(/DS$/, ' Division Series').replace(/CS$/, ' Championship Series').replace(/^(AL|NL) Wild Card$/, '$1 Wild Card Series')) + '</div>' +
+    '<div class="s">Game ' + n + (sc ? ' \u00b7 ' + _escapeHtml(sc) : '') + '</div>' +
+    (st ? '<div style="margin-top:8px"><span class="ps-hot">' + _escapeHtml(st) + '</span></div>' : '') +
+    (pips ? '<div class="ps-pips">' + pips + '</div>' : '') + '</div>';
+  // only touch the DOM when something changed (keeps the shine running)
+  if (old && old._psh === html && old.parentNode === panel && panel.firstChild === old) { if (bar) bar.style.setProperty('--gsb-rc', R.rc); return; }
+  var wrap = document.createElement('div'); wrap.innerHTML = html;
+  var el = wrap.firstChild; el.id = 'ps-rib'; el._psh = html;
+  if (old) old.remove();
+  panel.insertBefore(el, panel.firstChild);
+  if (bar) bar.style.setProperty('--gsb-rc', R.rc);
+}
+function psOpenGame(pk) {
+  var x = window._psData && window._psData.games.filter(function (y) { return String(y.gamePk) === String(pk); })[0];
+  if (!x) return;
+  psCloseBracket();
+  openGameScreen(x.gamePk, x.away, x.home, 'mlb', x.date);
+}
+// ── bracket ──
+function psOpenBracket(season) {
+  var el = document.getElementById('ps-bracket');
+  if (!el) { el = document.createElement('div'); el.id = 'ps-bracket'; el.className = 'psb'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Postseason bracket'); document.body.appendChild(el); }
+  el.innerHTML = '<div class="psb-hd"><h2>' + season + ' Postseason</h2><button class="psb-x" onclick="psCloseBracket()" aria-label="Close">\u2715</button></div><div class="psb-tbd">Loading the bracket\u2026</div>';
+  el.classList.add('on');
+  _psLoad(season, function (d) { el.innerHTML = _psBracketHtml(season, d); var cur = el.querySelectorAll('.psb-rounds'); cur.forEach(function (r) { var c = r.querySelector('.psb-col.cur'); if (c) r.scrollLeft = c.offsetLeft - r.offsetLeft - 4; }); });
+}
+function psCloseBracket() { var el = document.getElementById('ps-bracket'); if (el) el.classList.remove('on'); }
+function _psBracketHtml(season, d) {
+  var games = (d && d.games) || [];
+  var head = '<div class="psb-hd"><h2>' + season + ' Postseason</h2><button class="psb-x" onclick="psCloseBracket()" aria-label="Close">\u2715</button></div>';
+  if (!games.length) return head + '<div class="psb-tbd">No postseason games yet.</div>';
+  // group into series
+  var map = {}, series = [];
+  games.forEach(function (x) {
+    var k = x.gameType + ':' + [x.awayId, x.homeId].sort().join('-');
+    if (!map[k]) { map[k] = { type: x.gameType, league: x.league, games: [], teams: {} }; series.push(map[k]); }
+    map[k].games.push(x);
+    [['away', x.awayId], ['home', x.homeId]].forEach(function (p) {
+      var id = p[1]; if (id == null) return;
+      var t = map[k].teams[id] || (map[k].teams[id] = { id: id, abbr: _psAbbr(x, p[0]), name: _teamShortName(x[p[0]] || '') || _psAbbr(x, p[0]), seed: x[p[0] + 'Seed'], w: 0 });
+      if (t.seed == null && x[p[0] + 'Seed'] != null) t.seed = x[p[0] + 'Seed'];
+    });
+  });
+  series.forEach(function (s) {
+    s.games.forEach(function (x) { var wid = _psFinalWinnerId(x); if (wid != null && s.teams[wid]) s.teams[wid].w++; });
+    s.need = Math.ceil((s.games[0].gamesInSeries || PS_ROUND[s.type].best) / 2);
+    s.list = Object.keys(s.teams).map(function (k) { return s.teams[k]; }).sort(function (a, b) { return (a.seed || 99) - (b.seed || 99); });
+    s.next = s.games.filter(function (x) { return x.state !== 'Final'; }).sort(function (a, b) { return (a.seriesGameNumber || 0) - (b.seriesGameNumber || 0); })[0] || s.games[s.games.length - 1];
+  });
+  var latest = 'F'; series.forEach(function (s) { if ('FDLW'.indexOf(s.type) > 'FDLW'.indexOf(latest)) latest = s.type; });
+  var card = function (s) {
+    var R = PS_ROUND[s.type], a = s.list[0], b = s.list[1];
+    if (!a || !b) return '';
+    var over = a.w >= s.need || b.w >= s.need, lead = a.w === b.w ? null : (a.w > b.w ? a : b);
+    var row = function (t, lose) {
+      var c = typeof _ghTeamColors === 'function' ? _ghTeamColors(t.abbr) : { bg: '#3D3580', fg: '#fff' }, pips = '';
+      for (var i = 0; i < s.need; i++) pips += '<i class="' + (i < t.w ? 'on' : '') + '"></i>';
+      return '<span class="psb-tr' + (lose ? ' out' : '') + '"><span class="sd">' + (t.seed != null ? t.seed : '') + '</span><span class="lo" style="background:' + c.bg + ';color:' + c.fg + '">' + _escapeHtml(t.abbr) + '</span><span class="n">' + _escapeHtml(t.name) + '</span><span class="w">' + pips + '</span></span>';
+    };
+    var st = over ? '<b>' + _escapeHtml(lead.abbr) + '</b> won ' + lead.w + '\u2013' + Math.min(a.w, b.w)
+      : lead ? '<b>' + _escapeHtml(lead.abbr) + '</b> leads ' + lead.w + '\u2013' + Math.min(a.w, b.w) + (s.next ? ' \u00b7 Game ' + s.next.seriesGameNumber + ' next' : '')
+      : (a.w ? 'Series tied ' + a.w + '\u2013' + b.w : 'Game 1') + (s.next && a.w ? ' \u00b7 Game ' + s.next.seriesGameNumber + ' next' : '');
+    return '<button class="psb-s" style="--rcs:' + R.rc + '" onclick="psOpenGame(' + s.next.gamePk + ')">' + row(a, over && b.w > a.w) + row(b, over && a.w > b.w) + '<span class="psb-st">' + st + '</span></button>';
+  };
+  // each league scrolls to the latest round it has reached
+  var latestIn = function (lg) { var l = 'F'; series.forEach(function (s) { if (s.league === lg && 'FDL'.indexOf(s.type) > 'FDL'.indexOf(l)) l = s.type; }); return l; };
+  var col = function (type, lg, title) {
+    var list = series.filter(function (s) { return s.type === type && (type === 'W' || s.league === lg); });
+    var R = PS_ROUND[type];
+    var cur = type === 'W' ? true : type === latestIn(lg);
+    return '<div class="psb-col' + (cur ? ' cur' : '') + '" style="' + _psVars(R) + '"><h3>' + title + '</h3>' + (list.length ? list.map(card).join('') : '<div class="psb-tbd">Not set yet</div>') + '</div>';
+  };
+  var ws = series.filter(function (s) { return s.type === 'W'; });
+  var h = head;
+  if (ws.length) h += '<div class="psb-lg">WORLD SERIES</div><div class="psb-rounds">' + col('W', null, 'WORLD SERIES') + '</div>';
+  ['NL', 'AL'].forEach(function (lg) {
+    h += '<div class="psb-lg">' + (lg === 'NL' ? 'NATIONAL LEAGUE' : 'AMERICAN LEAGUE') + '</div><div class="psb-rounds">' +
+      col('F', lg, 'WILD CARD') + col('D', lg, lg + 'DS') + col('L', lg, lg + 'CS') + '</div>';
+  });
+  return h;
+}
+// ── the end of a series: clinch or champions, in place of the win graphic ──
+function _psClinchHtml(end, box, W, L, ws, ls, t0) {
+  var g = _psGame();
+  if (!g || !window._psData) return '';
+  var need = _psNeed(g), w = _psWins(g, true);
+  var winSide = end.winner, wWins = w[winSide], lWins = w[winSide === 'home' ? 'away' : 'home'];
+  if (wWins < need) return '';
+  var R = _psRound(g);
+  var d = function (ms) { return 'style="animation-delay:calc(var(--t0) + ' + ms + 'ms)"'; };
+  var logo = function (T) { return '<i style="background:' + T.c.bg + ';color:' + T.c.fg + '">' + _escapeHtml(T.abbr) + '</i>'; };
+  var score = '<div class="sc" ' + d(700) + '><span class="s">' + logo(W) + '<b>' + ws + '</b></span><span class="dash"></span><span class="s lo"><b>' + ls + '</b>' + logo(L) + '</span></div>';
+  var yr = _psSeason();
+  if (g.gameType === 'W') {
+    var rays = ''; for (var i = 0; i < 24; i++) { var a = i * 15 * Math.PI / 180, b = a + .07; rays += '<polygon points="260,260 ' + (260 + Math.sin(a) * 280).toFixed(0) + ',' + (260 - Math.cos(a) * 280).toFixed(0) + ' ' + (260 + Math.sin(b) * 280).toFixed(0) + ',' + (260 - Math.cos(b) * 280).toFixed(0) + '" fill="' + (i % 2 ? '#F2C869' : W.c.bg) + '" opacity="' + (i % 2 ? .12 : .16) + '"/>'; }
+    var tro = '<svg class="tro" viewBox="0 0 120 150" aria-hidden="true"><defs><linearGradient id="pstg" x1="0" x2="1"><stop offset="0" stop-color="#B7822A"/><stop offset=".5" stop-color="#FFF1C4"/><stop offset="1" stop-color="#B7822A"/></linearGradient></defs><g fill="url(#pstg)">';
+    for (var k = 0; k < 12; k++) { var x = 14 + k * 8; tro += '<path d="M' + x + ' 18 L' + (x + 6) + ' 18 L' + (60 + (x - 57) * .15).toFixed(1) + ' 96 L' + (58 + (x - 57) * .15).toFixed(1) + ' 96 Z"/>'; }
+    tro += '<ellipse cx="60" cy="18" rx="48" ry="6"/><rect x="52" y="94" width="16" height="22"/><path d="M34 116h52l6 18H28z"/><rect x="24" y="134" width="72" height="8" rx="2"/></g></svg>';
+    return '<div class="gw gw-champ" style="--t0:' + t0 + '"><svg class="rays" viewBox="0 0 520 520" aria-hidden="true">' + rays + '</svg>' +
+      '<div class="ct"><span ' + d(200) + '>' + tro + '</span><span class="fin" style="--wa:#F2C869;animation-delay:calc(var(--t0) + 380ms)">' + yr + ' WORLD SERIES</span><span class="big" ' + d(480) + '>CHAMPIONS</span>' +
+      '<span class="ln" ' + d(600) + '>' + _escapeHtml((end.winner === 'home' ? box.home : box.away) || W.name) + '</span>' +
+      '<span class="rec" ' + d(700) + '>Beat the ' + _escapeHtml(L.name) + ' ' + wWins + '\u2013' + lWins + '</span></div></div>';
+  }
+  var nextName = R.next === 'WS' ? 'World Series' : (g.league || '') + R.next;
+  return '<div class="gw gw-win gw-ps" style="--t0:' + t0 + ';--wc:' + _ghHexAlpha(W.c.bg, .55) + ';--rc:' + R.rc + ';--rc2:' + R.rc2 + ';--wa:' + R.rc + '">' +
+    '<div class="bg"></div><div class="sw"></div>' +
+    '<div class="ct"><span class="fin" ' + d(0) + '>' + _escapeHtml(_psName(g).toUpperCase()) + '</span><span class="team" ' + d(110) + '>' + _escapeHtml(W.name.toUpperCase()) + ' ADVANCE</span>' +
+    '<span class="ln" ' + d(240) + '>Won the series ' + wWins + '\u2013' + lWins + '</span>' +
+    '<span class="nx" ' + d(420) + '><em>NEXT</em>' + _escapeHtml(nextName) + '</span></div></div>';
+}
+
 // ═══ GAME WINNER / WALK-OFF (v6.7.0) ═══════════════════════════════════
 // The last play of a finished game closes the highlights reel: the last
 // at-bat (pitches, then the field if the ball was in play), then the win —
@@ -27651,6 +27969,7 @@ function _gwGraphicHtml(end, box, startSec, E) {
       (who ? '<span class="who" ' + d(400) + '>' + _escapeHtml(who) + ' WALKS IT OFF</span>' : '') +
       '<span class="what" ' + d(560) + '>' + _escapeHtml(_gwWalkoffWhat(lp)) + '</span>' + score + '</div></div>';
   }
+  if (typeof _psClinchHtml === 'function') { var ps = _psClinchHtml(end, box, W, L, ws, ls, t0); if (ps) return ps; }
   var dd = box.decisionsDetail || {};
   var line = dd.save && dd.save.name ? _ghLastName(dd.save.name) + ' closed it out' + (dd.save.rec ? ' \u00b7 save #' + dd.save.rec : '')
     : dd.winner && dd.winner.name ? 'W: ' + dd.winner.name + (dd.winner.rec ? ' (' + dd.winner.rec + ')' : '') : '';
@@ -27706,8 +28025,10 @@ function _gshBarHtml() {
     var pt = typeof _gxPeriodText === 'function' ? _gxPeriodText(m) : { big: '', small: '' };
     mid = _escapeHtml(pt.big || '') + (pt.small ? ' <span class="sub">' + _escapeHtml(pt.small) + '</span>' : '');
   }
+  var psL = typeof _psShortTag === 'function' ? _psShortTag() : '';
+  if (psL) mid = '<span class="gsb-ps">' + _escapeHtml(psL) + '</span><span class="gsb-row">' + mid + '</span>';
   return '<div class="gsb-in"><div class="gsb-t"><button class="gsb-back" onclick="navBack()" aria-label="Back"><svg width="7" height="12" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg></button>' + lg(a) + '<b>' + sc(a) + '</b></div>' +
-    '<div class="gsb-mid">' + mid + '</div><div class="gsb-t r"><b>' + sc(h) + '</b>' + lg(h) + '</div></div>';
+    '<div class="gsb-mid' + (psL ? ' ps' : '') + '">' + mid + '</div><div class="gsb-t r"><b>' + sc(h) + '</b>' + lg(h) + '</div></div>';
 }
 function _gshSetup() {
   var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel');
@@ -27955,6 +28276,7 @@ function _paiRemount() { if (window._pai) _paiMount(null, false); }
     try { _paFill(); } catch (e) { console.error('[play anim]', e); }
     try { if (typeof _reelFill === 'function') _reelFill(); } catch (e) { console.error('[reel]', e); }
     try { if (typeof _paiRemount === 'function') _paiRemount(); } catch (e) { console.error('[inline replay]', e); }
+    try { if (typeof _psDecorate === 'function') _psDecorate(); } catch (e) { console.error('[postseason]', e); }
     try { if (typeof _gshRefresh === 'function') _gshRefresh(); } catch (e) { console.error('[score bar]', e); }
     return r;
   };
