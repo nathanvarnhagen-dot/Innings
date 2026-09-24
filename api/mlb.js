@@ -8,7 +8,7 @@
 module.exports = async function handler(req, res) {
   const mode = req.query.mode;
   // v5.91.0: Baseball Savant runs inside this function (see api/_savant.js)
-  if (mode === 'savant') return require('./_savant.js')(req, res);
+  if (mode === 'savant') return savantHandler(req, res);
 
   try {
     if (mode === 'schedule') {
@@ -1080,3 +1080,358 @@ function _playAnimSummary(p, prev) {
     errorPos: errorPos
   };
 }
+
+
+// ══ BASEBALL SAVANT (v5.92.0) — inlined into this function ══════════════
+// Was a separate file loaded with require(); on Vercel that file wasn't
+// found at runtime (HTTP 500), so it now lives right here. Wrapped in its
+// own scope so none of its helper names collide with the ones above.
+const savantHandler = (function () {
+// Baseball Savant (Statcast) for Innings — v5.91.0
+// Lives in api/_savant.js (the leading underscore means Vercel does NOT
+// deploy it as its own function — it runs inside /api/mlb, so it doesn't
+// count toward the plan's function limit). Called as:
+//   /api/mlb?mode=savant&smode=<game|arsenal|batter|player|ping>&…
+//
+//   GET /api/savant?mode=game&gamePk=<id>[&live=1]
+//       Every batted ball / pitch in one game: exit velo, launch angle,
+//       distance, xBA, "HR in N of 30 parks", catch probability (when
+//       Savant has it), bat speed per swing — keyed by at-bat — plus the
+//       game's hardest-hit ball, fastest pitch and longest homer.
+//   GET /api/savant?mode=arsenal&id=<pitcherId>[&year=YYYY]
+//       A pitcher's pitch mix: usage, average velocity, whiff rate.
+//   GET /api/savant?mode=batter&id=<batterId>[&year=YYYY]
+//       A hitter's season: spray chart points, batting average by zone
+//       (hot/cold zones), average bat speed, sprint speed.
+//   GET /api/savant?mode=player&id=<id>[&year=YYYY]
+//       Everything for the player sheet: percentile ranks (+ arsenal for
+//       pitchers, + spray/zones for hitters).
+//
+// Baseball Savant has no official API. This reads the same public CSV/JSON
+// pages its site uses (game feed, Statcast search CSV, leaderboard CSVs).
+// Those can change without notice, so every field is read defensively and
+// anything missing is simply left out. Where Savant has nothing for a game
+// yet, the MLB Stats API live feed fills in the basics (exit velo, angle,
+// distance, pitch speed) so those features still work.
+//
+// Caching: leaderboards are kept in memory for a few hours per warm
+// instance and at the edge; finished games are immutable so they cache for
+// a day; live games for 15 seconds.
+
+const UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15', 'Accept': 'text/csv,application/json,text/plain,*/*', 'Accept-Language': 'en-US,en;q=0.9', 'Referer': 'https://baseballsavant.mlb.com/' };
+const MEM = global.__inningsSavantCache || (global.__inningsSavantCache = new Map());
+
+function memGet(k) { const e = MEM.get(k); if (!e) return null; if (Date.now() > e.exp) { MEM.delete(k); return null; } return e.v; }
+function memSet(k, v, ms) { MEM.set(k, { v: v, exp: Date.now() + ms }); if (MEM.size > 400) MEM.delete(MEM.keys().next().value); return v; }
+
+async function fetchText(url, ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms || 8000);
+  try {
+    const r = await fetch(url, { headers: UA, signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+async function fetchJson(url, ms) { return JSON.parse(await fetchText(url, ms)); }
+
+// Small RFC-4180 CSV parser (quoted fields, escaped quotes, BOM).
+function parseCsv(text) {
+  text = String(text || '').replace(/^\uFEFF/, '');
+  const rows = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const head = rows[0].map(h => h.trim().replace(/^"|"$/g, ''));
+  return rows.slice(1).map(r => { const o = {}; head.forEach((h, i) => { o[h] = r[i] != null ? r[i] : ''; }); return o; });
+}
+async function csv(url, ttlMs, ms) {
+  const hit = memGet(url);
+  if (hit) return hit;
+  return memSet(url, parseCsv(await fetchText(url, ms || 7000)), ttlMs || 3 * 3600 * 1000);
+}
+
+const num = v => { if (v == null || v === '' || v === 'null') return null; const n = Number(v); return isFinite(n) ? n : null; };
+const first = (o, keys) => { for (const k of keys) { if (o && o[k] != null && o[k] !== '') return o[k]; } return null; };
+const round1 = v => v == null ? null : Math.round(v * 10) / 10;
+function findKey(o, re) { if (!o || typeof o !== 'object') return null; for (const k of Object.keys(o)) if (re.test(k) && o[k] != null && o[k] !== '') return o[k]; return null; }
+function yearOf(q) { const y = parseInt(q, 10); return y > 2000 ? y : new Date().getFullYear(); }
+
+// ── One pitch row (from any of the three sources) → the fields we use.
+function normPitch(r, src) {
+  const ctx = r.contextMetrics || r.context_metrics || {};
+  const ab = num(first(r, ['ab_number', 'at_bat_number', 'atBatNumber']));
+  return {
+    ab: ab,
+    n: num(first(r, ['pitch_number', 'pitchNumber'])),
+    mph: round1(num(first(r, ['start_speed', 'release_speed', 'pitch_speed']))),
+    code: first(r, ['pitch_type']) || null,
+    ev: round1(num(first(r, ['launch_speed', 'exit_velocity', 'hit_speed']))),
+    la: num(first(r, ['launch_angle', 'hit_angle'])),
+    dist: num(first(r, ['hit_distance', 'hit_distance_sc', 'total_distance'])),
+    xba: num(first(r, ['xba', 'estimated_ba_using_speedangle'])),
+    batSpeed: round1(num(first(r, ['bat_speed', 'batSpeed']))),
+    parks: num(first(ctx, ['homeRunBallparks', 'home_run_ballparks'])) != null ? num(first(ctx, ['homeRunBallparks', 'home_run_ballparks'])) : num(first(r, ['hr_ballparks', 'homeRunBallparks'])),
+    catchProb: (function () { const v = num(findKey(r, /catch_?prob/i) != null ? findKey(r, /catch_?prob/i) : findKey(ctx, /catch_?prob/i)); return v == null ? null : (v > 1 ? v / 100 : v); })(),
+    event: String(first(r, ['events', 'result', 'event']) || '').toLowerCase().replace(/\s+/g, '_'),
+    batter: first(r, ['batter_name', 'batterName']) || (src === 'csv' ? null : null),
+    batterId: num(first(r, ['batter', 'batter_id', 'batterId'])),
+    pitcher: first(r, ['pitcher_name', 'pitcherName', 'player_name']) || null,
+    pitcherId: num(first(r, ['pitcher', 'pitcher_id', 'pitcherId']))
+  };
+}
+
+// MLB Stats API fallback: the same basics straight from the live feed.
+async function mlbFeedPitches(gamePk) {
+  const d = await fetchJson('https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live', 8000);
+  const out = [];
+  const plays = (d.liveData && d.liveData.plays && d.liveData.plays.allPlays) || [];
+  plays.forEach(p => {
+    const ab = p.about && p.about.atBatIndex != null ? p.about.atBatIndex + 1 : null;
+    const ev = (p.result && p.result.eventType) || '';
+    const bat = p.matchup && p.matchup.batter, pit = p.matchup && p.matchup.pitcher;
+    (p.playEvents || []).forEach(e => {
+      if (!e.isPitch) return;
+      const hd = e.hitData || {};
+      out.push({
+        ab: ab, n: e.pitchNumber || null,
+        mph: e.pitchData && e.pitchData.startSpeed != null ? round1(e.pitchData.startSpeed) : null,
+        code: (e.details && e.details.type && e.details.type.code) || null,
+        ev: hd.launchSpeed != null ? round1(hd.launchSpeed) : null, la: hd.launchAngle != null ? Math.round(hd.launchAngle) : null,
+        dist: hd.totalDistance != null ? Math.round(hd.totalDistance) : null,
+        xba: null, batSpeed: null, parks: null, catchProb: null,
+        event: hd.launchSpeed != null ? ev : '',
+        batter: bat && bat.fullName || null, batterId: bat && bat.id || null,
+        pitcher: pit && pit.fullName || null, pitcherId: pit && pit.id || null
+      });
+    });
+  });
+  return out;
+}
+
+function summarizeGame(pitches, source) {
+  const plays = {};
+  let hardest = null, fastest = null, longestHr = null;
+  const hrs = [];
+  pitches.forEach(p => {
+    if (p.ab == null) return;
+    const k = String(p.ab - 1); // atBatIndex (MLB's at-bat number is 1-based)
+    const pl = plays[k] || (plays[k] = { atBatIndex: p.ab - 1, swings: [] });
+    ['batter', 'batterId', 'pitcher', 'pitcherId'].forEach(f => { if (p[f] != null && pl[f] == null) pl[f] = p[f]; });
+    if (p.batSpeed != null) pl.swings.push({ n: p.n, batSpeed: p.batSpeed });
+    if (p.ev != null) {
+      pl.ev = p.ev; pl.la = p.la; pl.dist = p.dist;
+      if (p.xba != null) pl.xba = p.xba;
+      if (p.parks != null) pl.parks = p.parks;
+      if (p.catchProb != null) pl.catchProb = p.catchProb;
+      if (p.event) pl.event = p.event;
+      if (!hardest || p.ev > hardest.ev) hardest = { ev: p.ev, name: p.batter, atBatIndex: p.ab - 1 };
+    }
+    if (p.mph != null && (!fastest || p.mph > fastest.mph)) fastest = { mph: p.mph, name: p.pitcher, atBatIndex: p.ab - 1 };
+    if (/home_run/.test(p.event || '') && p.dist != null) {
+      hrs.push({ dist: p.dist, ev: p.ev, name: p.batter, atBatIndex: p.ab - 1 });
+      if (!longestHr || p.dist > longestHr.dist) longestHr = { dist: p.dist, ev: p.ev, name: p.batter, atBatIndex: p.ab - 1 };
+    }
+  });
+  Object.keys(plays).forEach(k => { if (!plays[k].swings.length) delete plays[k].swings; });
+  return { source: source, plays: plays, summary: { hardest: hardest, fastest: fastest, longestHr: longestHr, homeRuns: hrs } };
+}
+
+// Player names by id, for sources that only carry ids (the Statcast CSV
+// names the pitcher only).
+async function gameNames(gamePk) {
+  try {
+    const b = await fetchJson('https://statsapi.mlb.com/api/v1/game/' + encodeURIComponent(gamePk) + '/boxscore', 6000);
+    const map = {};
+    ['away', 'home'].forEach(side => {
+      const pl = (b.teams && b.teams[side] && b.teams[side].players) || {};
+      Object.keys(pl).forEach(k => { const p = pl[k].person; if (p && p.id) map[p.id] = p.fullName; });
+    });
+    return map;
+  } catch (e) { return {}; }
+}
+function fillNames(ps, names) {
+  ps.forEach(p => {
+    if (!p.batter && p.batterId && names[p.batterId]) p.batter = names[p.batterId];
+    if (!p.pitcher && p.pitcherId && names[p.pitcherId]) p.pitcher = names[p.pitcherId];
+  });
+  return ps;
+}
+
+async function gameMode(gamePk) {
+  // 1) Savant's game feed (updates during the game)
+  try {
+    const gf = await fetchJson('https://baseballsavant.mlb.com/gf?game_pk=' + encodeURIComponent(gamePk), 8000);
+    const rows = [].concat(gf.team_home || [], gf.team_away || []);
+    if (rows.length) {
+      let ps = rows.map(r => normPitch(r, 'gf'));
+      if (ps.some(p => !p.batter)) ps = fillNames(ps, await gameNames(gamePk));
+      return summarizeGame(ps, 'savant-gf');
+    }
+  } catch (e) { /* fall through */ }
+  // 2) Statcast search CSV (complete after the game)
+  try {
+    const rows = parseCsv(await fetchText('https://baseballsavant.mlb.com/statcast_search/csv?all=true&type=details&game_pk=' + encodeURIComponent(gamePk), 9000));
+    if (rows.length && rows[0].game_pk != null) {
+      const ps = rows.map(r => {
+        const p = normPitch(r, 'csv');
+        // CSV player_name is the PITCHER in pitcher view, "Last, First"
+        if (r.player_name) p.pitcher = r.player_name.split(', ').reverse().join(' ');
+        return p;
+      });
+      return summarizeGame(fillNames(ps, await gameNames(gamePk)), 'savant-csv');
+    }
+  } catch (e) { /* fall through */ }
+  // 3) MLB live feed basics
+  return summarizeGame(await mlbFeedPitches(gamePk), 'mlb-feed');
+}
+
+// ── Leaderboards
+async function percentileRow(type, id, year) {
+  const rows = await csv('https://baseballsavant.mlb.com/leaderboard/percentile-rankings?type=' + type + '&year=' + year + '&position=&team=&csv=true');
+  return rows.find(r => String(r.player_id) === String(id)) || null;
+}
+const BATTER_PCT = [['xwoba', 'xwOBA'], ['xba', 'xBA'], ['exit_velocity', 'Avg exit velo'], ['brl_percent', 'Barrel %'], ['hard_hit_percent', 'Hard-hit %'], ['bat_speed', 'Bat speed'], ['squared_up_rate', 'Squared-up %'], ['chase_percent', 'Chase rate'], ['whiff_percent', 'Whiff %'], ['k_percent', 'K %'], ['bb_percent', 'BB %'], ['sprint_speed', 'Sprint speed'], ['oaa', 'Outs above avg'], ['arm_strength', 'Arm strength']];
+const PITCHER_PCT = [['xera', 'xERA'], ['xba', 'xBA'], ['fb_velocity', 'Fastball velo'], ['fb_spin', 'Fastball spin'], ['curve_spin', 'Curve spin'], ['exit_velocity', 'Avg exit velo'], ['chase_percent', 'Chase rate'], ['whiff_percent', 'Whiff %'], ['k_percent', 'K %'], ['bb_percent', 'BB %'], ['brl_percent', 'Barrel %'], ['hard_hit_percent', 'Hard-hit %'], ['extension', 'Extension']];
+function pctList(row, spec) {
+  if (!row) return [];
+  return spec.map(([k, label]) => ({ key: k, label: label, pct: num(row[k]) })).filter(x => x.pct != null);
+}
+
+const SPEED_COLS = { FF: 'ff', SI: 'si', FC: 'fc', SL: 'sl', CH: 'ch', CU: 'cu', FS: 'fs', KN: 'kn', ST: 'st', SV: 'sv', KC: 'cu' };
+async function arsenal(id, year) {
+  const [stats, speeds] = await Promise.all([
+    csv('https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&pitchType=&year=' + year + '&team=&min=1&csv=true').catch(() => []),
+    csv('https://baseballsavant.mlb.com/leaderboard/pitch-arsenals?year=' + year + '&min=1&type=avg_speed&hand=&csv=true').catch(() => [])
+  ]);
+  const sp = speeds.find(r => String(r.pitcher || r.player_id) === String(id)) || {};
+  const avg = {};
+  Object.keys(SPEED_COLS).forEach(code => { const v = num(sp[SPEED_COLS[code] + '_avg_speed']); if (v != null) avg[code] = v; });
+  const mix = stats.filter(r => String(r.player_id) === String(id)).map(r => ({
+    code: r.pitch_type, name: r.pitch_name || r.pitch_type,
+    usage: num(r.pitch_usage), whiff: num(r.whiff_percent), rv100: num(r.run_value_per_100),
+    mph: avg[r.pitch_type] != null ? avg[r.pitch_type] : null
+  })).sort((a, b) => (b.usage || 0) - (a.usage || 0));
+  return { avgSpeed: avg, mix: mix };
+}
+
+const HIT_EV = /^(single|double|triple|home_run)$/;
+const AB_EV = /^(single|double|triple|home_run|field_out|strikeout|grounded_into_double_play|double_play|force_out|fielders_choice|fielders_choice_out|field_error|strikeout_double_play|triple_play)$/;
+async function batterSeason(id, year) {
+  const url = 'https://baseballsavant.mlb.com/statcast_search/csv?all=true&hfGT=R%7C&hfSea=' + year + '%7C&player_type=batter&batters_lookup%5B%5D=' + encodeURIComponent(id) + '&type=details';
+  const rows = await csv(url, 6 * 3600 * 1000, 7200);
+  const spray = [], zones = {};
+  let bsSum = 0, bsN = 0;
+  rows.forEach(r => {
+    const ev = String(r.events || '');
+    const bs = num(r.bat_speed); if (bs != null && bs > 40) { bsSum += bs; bsN++; }
+    if (ev && num(r.hc_x) != null && num(r.hc_y) != null && spray.length < 500) spray.push({ x: num(r.hc_x), y: num(r.hc_y), ev: ev });
+    const z = num(r.zone);
+    if (ev && AB_EV.test(ev) && z >= 1 && z <= 9) {
+      const b = zones[z] || (zones[z] = { ab: 0, h: 0 });
+      b.ab++; if (HIT_EV.test(ev)) b.h++;
+    }
+  });
+  const zoneAvg = {};
+  Object.keys(zones).forEach(z => { if (zones[z].ab >= 3) zoneAvg[z] = { avg: Math.round(zones[z].h / zones[z].ab * 1000) / 1000, ab: zones[z].ab }; });
+  return { spray: spray, zones: zoneAvg, avgBatSpeed: bsN ? round1(bsSum / bsN) : null };
+}
+async function sprint(id, year) {
+  const rows = await csv('https://baseballsavant.mlb.com/leaderboard/sprint_speed?year=' + year + '&position=&team=&min=0&csv=true').catch(() => []);
+  const r = rows.find(x => String(x.player_id) === String(id));
+  return r ? num(r.sprint_speed) : null;
+}
+
+return async function handler(req, res) {
+  const mode = req.query.smode || req.query.mode;
+  const year = yearOf(req.query.year);
+  const id = req.query.id;
+  try {
+    // GET /api/savant?mode=ping — quick check that this server can reach
+    // Baseball Savant at all (status + first bytes of each source).
+    if (mode === 'ping') {
+      const probe = async (name, url) => {
+        const t0 = Date.now();
+        try {
+          const r = await fetch(url, { headers: UA });
+          const txt = await r.text();
+          return { name: name, status: r.status, ms: Date.now() - t0, bytes: txt.length, starts: txt.slice(0, 80) };
+        } catch (e) { return { name: name, error: String(e && e.message || e), ms: Date.now() - t0 }; }
+      };
+      const y = new Date().getFullYear();
+      const out = await Promise.all([
+        probe('percentiles', 'https://baseballsavant.mlb.com/leaderboard/percentile-rankings?type=batter&year=' + y + '&position=&team=&csv=true'),
+        probe('sprint', 'https://baseballsavant.mlb.com/leaderboard/sprint_speed?year=' + y + '&position=&team=&min=0&csv=true'),
+        probe('mlb', 'https://statsapi.mlb.com/api/v1/sports/1')
+      ]);
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({ node: process.version, results: out });
+      return;
+    }
+    if (mode === 'game') {
+      const pk = req.query.gamePk;
+      if (!pk) { res.status(400).json({ error: 'Missing gamePk' }); return; }
+      const out = await gameMode(pk);
+      res.setHeader('Cache-Control', req.query.live ? 's-maxage=15, stale-while-revalidate=15' : 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+    if (!id) { res.status(400).json({ error: 'Missing id' }); return; }
+    if (mode === 'arsenal') {
+      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+      res.status(200).json(await arsenal(id, year));
+      return;
+    }
+    if (mode === 'batter') {
+      const budget = new Promise(r => setTimeout(() => r(null), 7500));
+      const [season, sp] = await Promise.all([Promise.race([batterSeason(id, year).catch(() => null), budget]), Promise.race([sprint(id, year).catch(() => null), budget])]);
+      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+      res.status(200).json(Object.assign({ sprintSpeed: sp }, season || {}));
+      return;
+    }
+    if (mode === 'player') {
+      // v5.89.0: everything starts at once and the answer goes out within a
+      // time budget (Vercel stops functions at ~10s) — whatever arrived is
+      // sent, and a partial answer is only cached briefly so it fills in.
+      const dbg = {};
+      const track = (name, p) => p.then(v => { dbg[name] = 'ok'; return v; }, e => { dbg[name] = 'error: ' + (e && e.message || e); return null; });
+      const got = {};
+      const jobs = {
+        bRow: track('percentiles-batter', percentileRow('batter', id, year)),
+        pRow: track('percentiles-pitcher', percentileRow('pitcher', id, year)),
+        ars: track('arsenal', arsenal(id, year)),
+        season: track('batter-season', batterSeason(id, year)),
+        sprint: track('sprint', sprint(id, year))
+      };
+      Object.keys(jobs).forEach(k => jobs[k].then(v => { got[k] = v; }));
+      const all = Promise.all(Object.values(jobs));
+      const done = await Promise.race([all.then(() => true), new Promise(r => setTimeout(() => r(false), 7500))]);
+      const out = { year: year, partial: !done, batter: null, pitcher: null, sprintSpeed: got.sprint != null ? got.sprint : null };
+      if (got.pRow || (got.ars && got.ars.mix && got.ars.mix.length)) out.pitcher = { percentiles: pctList(got.pRow, PITCHER_PCT), arsenal: got.ars ? got.ars.mix : [] };
+      if (got.bRow || (got.season && got.season.spray && got.season.spray.length)) out.batter = Object.assign({ percentiles: pctList(got.bRow, BATTER_PCT) }, got.season || {});
+      if (req.query.debug) out.debug = dbg;
+      res.setHeader('Cache-Control', done ? 's-maxage=21600, stale-while-revalidate' : 's-maxage=60, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+    res.status(400).json({ error: 'Unknown mode — use game, arsenal, batter or player' });
+  } catch (err) {
+    console.error('[savant]', mode, err && err.message);
+    res.status(502).json({ error: 'Baseball Savant unavailable', detail: String(err && err.message || err) });
+  }
+};
+
+})();
