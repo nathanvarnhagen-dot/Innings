@@ -25,7 +25,7 @@
 // instance and at the edge; finished games are immutable so they cache for
 // a day; live games for 15 seconds.
 
-const UA = { 'User-Agent': 'Mozilla/5.0 (Innings app)', 'Accept': 'text/csv,application/json,*/*' };
+const UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15', 'Accept': 'text/csv,application/json,text/plain,*/*', 'Accept-Language': 'en-US,en;q=0.9', 'Referer': 'https://baseballsavant.mlb.com/' };
 const MEM = global.__inningsSavantCache || (global.__inningsSavantCache = new Map());
 
 function memGet(k) { const e = MEM.get(k); if (!e) return null; if (Date.now() > e.exp) { MEM.delete(k); return null; } return e.v; }
@@ -68,7 +68,7 @@ function parseCsv(text) {
 async function csv(url, ttlMs, ms) {
   const hit = memGet(url);
   if (hit) return hit;
-  return memSet(url, parseCsv(await fetchText(url, ms || 9000)), ttlMs || 3 * 3600 * 1000);
+  return memSet(url, parseCsv(await fetchText(url, ms || 7000)), ttlMs || 3 * 3600 * 1000);
 }
 
 const num = v => { if (v == null || v === '' || v === 'null') return null; const n = Number(v); return isFinite(n) ? n : null; };
@@ -239,7 +239,7 @@ const HIT_EV = /^(single|double|triple|home_run)$/;
 const AB_EV = /^(single|double|triple|home_run|field_out|strikeout|grounded_into_double_play|double_play|force_out|fielders_choice|fielders_choice_out|field_error|strikeout_double_play|triple_play)$/;
 async function batterSeason(id, year) {
   const url = 'https://baseballsavant.mlb.com/statcast_search/csv?all=true&hfGT=R%7C&hfSea=' + year + '%7C&player_type=batter&batters_lookup%5B%5D=' + encodeURIComponent(id) + '&type=details';
-  const rows = await csv(url, 6 * 3600 * 1000, 9500);
+  const rows = await csv(url, 6 * 3600 * 1000, 7200);
   const spray = [], zones = {};
   let bsSum = 0, bsN = 0;
   rows.forEach(r => {
@@ -282,20 +282,34 @@ module.exports = async function handler(req, res) {
       return;
     }
     if (mode === 'batter') {
-      const [season, sp] = await Promise.all([batterSeason(id, year).catch(() => null), sprint(id, year)]);
+      const budget = new Promise(r => setTimeout(() => r(null), 7500));
+      const [season, sp] = await Promise.all([Promise.race([batterSeason(id, year).catch(() => null), budget]), Promise.race([sprint(id, year).catch(() => null), budget])]);
       res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
       res.status(200).json(Object.assign({ sprintSpeed: sp }, season || {}));
       return;
     }
     if (mode === 'player') {
-      const [bRow, pRow] = await Promise.all([percentileRow('batter', id, year).catch(() => null), percentileRow('pitcher', id, year).catch(() => null)]);
-      const out = { year: year, batter: bRow ? { percentiles: pctList(bRow, BATTER_PCT) } : null, pitcher: pRow ? { percentiles: pctList(pRow, PITCHER_PCT) } : null };
-      const jobs = [];
-      if (pRow || req.query.type === 'pitcher') jobs.push(arsenal(id, year).then(a => { out.pitcher = Object.assign(out.pitcher || { percentiles: [] }, { arsenal: a.mix }); }).catch(() => {}));
-      if (bRow || req.query.type === 'batter' || !pRow) jobs.push(batterSeason(id, year).then(s => { out.batter = Object.assign(out.batter || { percentiles: [] }, s); }).catch(() => {}));
-      jobs.push(sprint(id, year).then(v => { out.sprintSpeed = v; }).catch(() => {}));
-      await Promise.all(jobs);
-      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+      // v5.89.0: everything starts at once and the answer goes out within a
+      // time budget (Vercel stops functions at ~10s) — whatever arrived is
+      // sent, and a partial answer is only cached briefly so it fills in.
+      const dbg = {};
+      const track = (name, p) => p.then(v => { dbg[name] = 'ok'; return v; }, e => { dbg[name] = 'error: ' + (e && e.message || e); return null; });
+      const got = {};
+      const jobs = {
+        bRow: track('percentiles-batter', percentileRow('batter', id, year)),
+        pRow: track('percentiles-pitcher', percentileRow('pitcher', id, year)),
+        ars: track('arsenal', arsenal(id, year)),
+        season: track('batter-season', batterSeason(id, year)),
+        sprint: track('sprint', sprint(id, year))
+      };
+      Object.keys(jobs).forEach(k => jobs[k].then(v => { got[k] = v; }));
+      const all = Promise.all(Object.values(jobs));
+      const done = await Promise.race([all.then(() => true), new Promise(r => setTimeout(() => r(false), 7500))]);
+      const out = { year: year, partial: !done, batter: null, pitcher: null, sprintSpeed: got.sprint != null ? got.sprint : null };
+      if (got.pRow || (got.ars && got.ars.mix && got.ars.mix.length)) out.pitcher = { percentiles: pctList(got.pRow, PITCHER_PCT), arsenal: got.ars ? got.ars.mix : [] };
+      if (got.bRow || (got.season && got.season.spray && got.season.spray.length)) out.batter = Object.assign({ percentiles: pctList(got.bRow, BATTER_PCT) }, got.season || {});
+      if (req.query.debug) out.debug = dbg;
+      res.setHeader('Cache-Control', done ? 's-maxage=21600, stale-while-revalidate' : 's-maxage=60, stale-while-revalidate');
       res.status(200).json(out);
       return;
     }
