@@ -15,13 +15,21 @@ module.exports = async function handler(req, res) {
       const date = req.query.date;
       if (!date) { res.status(400).json({ error: 'Missing date' }); return; }
       // v6.8.0: team + seriesStatus hydrated for postseason games
-      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus&date=' + encodeURIComponent(date);
+      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus,probablePitcher&date=' + encodeURIComponent(date);
       const r = await fetch(url);
       const data = await r.json();
       const games = [];
+      // v6.9.0: probable starters' season lines (one people request for the whole day)
+      const spIds = [];
+      (data.dates || []).forEach(function (d) { (d.games || []).forEach(function (g) {
+        ['away', 'home'].forEach(function (k) { var pp = g.teams && g.teams[k] && g.teams[k].probablePitcher; if (pp && pp.id && spIds.indexOf(pp.id) === -1) spIds.push(pp.id); });
+      }); });
+      const spLines = await _probableLines(spIds, String(date).slice(0, 4));
       (data.dates || []).forEach(function (d) {
         (d.games || []).forEach(function (g) {
-          games.push(Object.assign({
+          var sp = {};
+          ['away', 'home'].forEach(function (k) { var pp = g.teams && g.teams[k] && g.teams[k].probablePitcher; if (pp && pp.id) sp[k + 'Probable'] = Object.assign({ id: pp.id, name: pp.fullName || null }, spLines[pp.id] || {}); });
+          games.push(Object.assign(sp, {
             gamePk: g.gamePk,
             status: g.status && g.status.detailedState,
             away: g.teams && g.teams.away && g.teams.away.team && g.teams.away.team.name,
@@ -1627,5 +1635,30 @@ function _postseasonFields(g) {
     out.series = { wins: ss.wins != null ? ss.wins : null, losses: ss.losses != null ? ss.losses : null, tied: !!ss.isTied, over: !!ss.isOver,
       leader: winId == null ? null : (winId === aT.id ? 'away' : winId === hT.id ? 'home' : null), text: ss.description || ss.shortDescription || null };
   }
+  return out;
+}
+
+
+// ── PROBABLE STARTERS (v6.9.0) ────────────────────────────────────────────
+// Season pitching lines for the day's probable starters in one request:
+// W-L, ERA, innings, and throwing hand. Missing or failed: no lines, and the
+// card just shows names.
+async function _probableLines(ids, season) {
+  var out = {};
+  if (!ids || !ids.length) return out;
+  try {
+    var url = 'https://statsapi.mlb.com/api/v1/people?personIds=' + ids.join(',') + '&hydrate=' + encodeURIComponent('stats(group=[pitching],type=[season],season=' + (parseInt(season, 10) || new Date().getFullYear()) + ')');
+    var r = await fetch(url);
+    var j = await r.json();
+    (j.people || []).forEach(function (p) {
+      var st = null;
+      (p.stats || []).forEach(function (b) { (b.splits || []).forEach(function (sp) { if (sp.stat && (!sp.sport || sp.sport.id === 1)) st = sp.stat; }); });
+      out[p.id] = {
+        hand: p.pitchHand && p.pitchHand.code ? p.pitchHand.code + 'HP' : null,
+        w: st && st.wins != null ? st.wins : null, l: st && st.losses != null ? st.losses : null,
+        era: st && st.era ? st.era : null, ip: st && st.inningsPitched ? st.inningsPitched : null
+      };
+    });
+  } catch (e) {}
   return out;
 }
