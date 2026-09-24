@@ -1639,7 +1639,10 @@ html.desk .gatt-sheet{max-width:560px}
 .sav-pct-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
 .sav-pct-bar b{position:absolute;top:-8px;width:22px;height:22px;border-radius:50%;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .sav-ars{display:grid;grid-template-columns:1fr 50px 50px 50px;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid rgba(168,159,232,.12)}
-.sav-ars span:not(:first-child){text-align:right}
+.sav-ars{color:#FFFFFF}
+.sav-ars span:first-child{font-weight:700;color:#FFFFFF}
+.sav-ars span:not(:first-child){text-align:right;color:#D9D4FA;font-variant-numeric:tabular-nums}
+.sav-ars-h span,.sav-ars-h span:first-child{color:#9C95D0;font-weight:700}
 .sav-ars-h{font-size:10px;font-weight:700;letter-spacing:.12em;color:#9C95D0;text-transform:uppercase;border-top:0;padding:0}
 .bp-card{display:flex;flex-direction:column;gap:12px;margin:4px 0 14px;padding:16px;border-radius:20px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2)}
 .bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -10029,7 +10032,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.91.0-walks-inning-breaks';
+window.INNINGS_BUILD = 'v5.92.0-arsenal-readable';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
