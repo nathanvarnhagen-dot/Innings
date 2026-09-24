@@ -170,6 +170,7 @@ function summarize(data, gamePk, wantAllPlays) {
   var linescore = liveData.linescore || {};
   var teams = gameData.teams || {};
   _absTeamIds = { away: teams.away && teams.away.id, home: teams.home && teams.home.id }; // v6.3.0
+  _gameType = (gameData.game && gameData.game.type) || null; // v6.7.1: R regular, S spring, F/D/L/W postseason
   var decisions = liveData.decisions || {};
   var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
   var abstractState = (gameData.status && gameData.status.abstractGameState) || null;
@@ -1118,6 +1119,11 @@ function _playAnimSummary(p, prev) {
   var sameHalf = prev && prev.about && prev.about.inning === p.about.inning && prev.about.isTopInning === p.about.isTopInning;
   var pm = (sameHalf && prev.matchup) || {};
   var pre = { '1B': !!pm.postOnFirst, '2B': !!pm.postOnSecond, '3B': !!pm.postOnThird };
+  // v6.7.1: extra innings in the regular season start with a runner on
+  // second. He isn't in the previous play (there isn't one this half), and
+  // he only shows up in this play if he moved — so put him on second for
+  // the first at-bat of every extra half-inning.
+  if (!sameHalf && (p.about.inning || 0) >= 10 && _ghostRunnerRule()) pre['2B'] = true;
   // v6.1.0: bases as they stood when the final pitch was thrown — after any
   // between-pitch scenes (a runner caught stealing is gone, a steal moved up)
   actions.forEach(function (a) {
@@ -1560,3 +1566,11 @@ function _callText(e, play, dk) {
   if (dk && e === last) return c.replace(/\s*\(Blocked\)/, '') + ' (Dropped)';
   return c.replace(/\(Blocked\)/, '(In Dirt)');
 }
+
+
+// ── EXTRA-INNING RUNNER (v6.7.1) ──────────────────────────────────────────
+// The automatic runner on second is a regular-season (and spring) rule; the
+// postseason plays extra innings without it. Unknown game type: assume the
+// regular season, the only case you'll see day to day.
+var _gameType = null;
+function _ghostRunnerRule() { return !_gameType || _gameType === 'R' || _gameType === 'S' || _gameType === 'E'; }
