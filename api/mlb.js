@@ -7,6 +7,8 @@
 
 module.exports = async function handler(req, res) {
   const mode = req.query.mode;
+  // v5.91.0: Baseball Savant runs inside this function (see api/_savant.js)
+  if (mode === 'savant') return require('./_savant.js')(req, res);
 
   try {
     if (mode === 'schedule') {
@@ -175,7 +177,12 @@ function summarize(data, gamePk, wantAllPlays) {
     return {
       num: inn.num != null ? inn.num : null,
       away: (inn.away && inn.away.runs != null) ? inn.away.runs : null,
-      home: (inn.home && inn.home.runs != null) ? inn.home.runs : null
+      home: (inn.home && inn.home.runs != null) ? inn.home.runs : null,
+      // v5.91.0: per half-inning hits / left on base for the inning-break card
+      awayH: (inn.away && inn.away.hits != null) ? inn.away.hits : null,
+      homeH: (inn.home && inn.home.hits != null) ? inn.home.hits : null,
+      awayLob: (inn.away && inn.away.leftOnBase != null) ? inn.away.leftOnBase : null,
+      homeLob: (inn.home && inn.home.leftOnBase != null) ? inn.home.leftOnBase : null
     };
   });
 
@@ -209,7 +216,10 @@ function summarize(data, gamePk, wantAllPlays) {
       outs: linescore.outs != null ? linescore.outs : null,
       inning: linescore.currentInning || null,
       half: linescore.isTopInning ? 'top' : 'bottom',
-      bases: { first: !!offense.first, second: !!offense.second, third: !!offense.third }
+      bases: { first: !!offense.first, second: !!offense.second, third: !!offense.third },
+      // v5.91.0: "Middle"/"End" between halves, plus who's due up next
+      inningState: linescore.inningState || null,
+      dueUp: [offense.batter, offense.onDeck, offense.inHole].filter(Boolean).map(function (p) { return p.fullName; })
     };
     matchup = {
       pitcher: defense.pitcher ? _liveParticipant(defense.pitcher, boxTeams, 'pitching') : null,
