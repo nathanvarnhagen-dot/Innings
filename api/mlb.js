@@ -284,7 +284,7 @@ function summarize(data, gamePk, wantAllPlays) {
         pitches: (p.playEvents || []).filter(function (e) { return e && e.isPitch; }).map(function (e) {
           var d = e.details || {};
           return {
-            call: (d.call && d.call.description) || d.description || null,
+            call: _callText(e, p, _droppedK(p)),
             type: (d.type && d.type.description) || null,
             speed: (e.pitchData && e.pitchData.startSpeed != null) ? Math.round(e.pitchData.startSpeed) : null
           };
@@ -313,13 +313,14 @@ function summarize(data, gamePk, wantAllPlays) {
     var currentPlay = (liveData.plays && liveData.plays.currentPlay) || allPlays[allPlays.length - 1];
     if (currentPlay && currentPlay.matchup && currentPlay.matchup.batter) {
       var pitchEvents = (currentPlay.playEvents || []).filter(function (e) { return e.isPitch && e.pitchData && e.pitchData.coordinates; });
+      var _dkCur = _droppedK(currentPlay);
       var pitches = pitchEvents.map(function (e, i) {
         var coords = e.pitchData.coordinates || {};
         return {
           num: e.pitchNumber || (i + 1),
           px: coords.pX != null ? coords.pX : null,
           pz: coords.pZ != null ? coords.pZ : null,
-          call: (e.details && e.details.call && e.details.call.description) || null,
+          call: _callText(e, currentPlay, _dkCur),
           type: (e.details && e.details.type && e.details.type.description) || null,
           code: (e.details && e.details.type && e.details.type.code) || null,   // v5.87.0: FF, SL… for "vs his normal"
           mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null,
@@ -1053,7 +1054,7 @@ function _playAnimSummary(p, prev) {
   var pitches = pitchEvs.filter(function (e) { return e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX != null && e.pitchData.coordinates.pZ != null; }).map(function (e, i) {
     var d = e.details || {};
     return { num: e.pitchNumber || (i + 1), px: e.pitchData.coordinates.pX, pz: e.pitchData.coordinates.pZ,
-      call: (d.call && d.call.description) || d.description || null, type: (d.type && d.type.description) || null, code: (d.type && d.type.code) || null,
+      call: _callText(e, p, _droppedK(p)), type: (d.type && d.type.description) || null, code: (d.type && d.type.code) || null,
       speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null, abs: _absOf(e) };
   });
   var lastPd = null;
@@ -1147,6 +1148,7 @@ function _playAnimSummary(p, prev) {
     fielders: fielders,
     errorPos: errorPos,
     deflected: deflected,
+    droppedK: _droppedK(p),   // v6.4.0: 'out' (thrown out at first) | 'safe' | null
     actions: actions
   };
 }
@@ -1518,4 +1520,43 @@ function _absOf(e) {
   var id = rv.challengeTeamId != null ? rv.challengeTeamId : null;
   var side = id == null ? null : (id === _absTeamIds.away ? 'away' : (id === _absTeamIds.home ? 'home' : null));
   return { overturned: !!rv.isOverturned, inProgress: !!rv.inProgress, teamId: id, side: side };
+}
+
+
+// ── DROPPED THIRD STRIKE (v6.4.0) ─────────────────────────────────────────
+// MLB labels a strike in the dirt "(Blocked)" — a pitch location, not what
+// the catcher did — so on its own it reads wrong. When strike three gets
+// by the catcher, the batter's own runner record shows it: thrown out at
+// first by the catcher (a putout/assist by someone other than the catcher
+// alone) or safe at first.
+function _droppedK(play) {
+  if (!play) return null;
+  var bat = play.matchup && play.matchup.batter && play.matchup.batter.id;
+  var et = (play.result && play.result.eventType) || '';
+  var last = null;
+  (play.playEvents || []).forEach(function (e) { if (e && e.isPitch) last = e; });
+  if (!last) return null;
+  var lastCall = String((last.details && last.details.call && last.details.call.description) || '');
+  var third = /^strikeout/.test(et) || (last.count && last.count.strikes === 3 && /strike/i.test(lastCall));
+  if (!third) return null;
+  var res = null;
+  (play.runners || []).forEach(function (r) {
+    var id = r.details && r.details.runner && r.details.runner.id;
+    if (bat == null || id !== bat) return;
+    var mv = r.movement || {};
+    if (mv.isOut) {
+      var others = (r.credits || []).some(function (c) { return c.position && c.position.code && c.position.code !== '2' && !/deflect/.test(c.credit || ''); });
+      if (others) res = 'out';
+    } else if (mv.end === '1B' || mv.end === '2B') res = 'safe';
+  });
+  return res;
+}
+function _callText(e, play, dk) {
+  var d = (e && e.details) || {};
+  var c = (d.call && d.call.description) || d.description || null;
+  if (!c) return c;
+  var last = null;
+  ((play && play.playEvents) || []).forEach(function (x) { if (x && x.isPitch) last = x; });
+  if (dk && e === last) return c.replace(/\s*\(Blocked\)/, '') + ' (Dropped)';
+  return c.replace(/\(Blocked\)/, '(In Dirt)');
 }
