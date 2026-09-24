@@ -807,6 +807,26 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ PROBABLE STARTERS (v6.9.0) — upcoming games only ═══ */
+.sp-h2h{border-top:1px solid rgba(255,255,255,.07);margin-top:11px;padding-top:9px}
+.sp-h2h .hd{font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;text-align:center;margin-bottom:6px}
+.sp-h2h .g{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);column-gap:10px;row-gap:5px;align-items:center}
+.sp-h2h .nm{font-size:13px;font-weight:700;color:#F5F3FF;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-h2h .nm.r{text-align:right}
+.sp-h2h .nm small{font-size:10px;font-weight:800;color:#9C95D0;margin:0 4px}
+.sp-h2h .v{font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.sp-h2h .v.r{text-align:right}
+.sp-h2h .v.best{color:#7CF29C}
+.sp-h2h .k{font-size:9px;font-weight:800;letter-spacing:.14em;color:#9C95D0;text-align:center}
+.sp-h2h .tbd{font-size:12.5px;color:#6E68A6;font-style:italic}
+.sp-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.sp-row .lo{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:900;flex-shrink:0}
+.sp-row .t{min-width:0;display:flex;flex-direction:column}
+.sp-row .t b{font-size:13px;font-weight:700;color:#F5F3FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-row .t span{font-size:12px;color:#D9D4FA;font-variant-numeric:tabular-nums}
+.sp-row .t b small{font-size:10px;font-weight:800;color:#9C95D0;margin-left:5px}
+.sp-row .t b span{font-size:inherit;color:inherit}
+
 /* ═══ POSTSEASON (v6.8.0) ═══ */
 .ps-lc{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .ps-chip{display:inline-flex;align-items:center;font-size:10px;font-weight:900;letter-spacing:.14em;padding:4px 8px;border-radius:8px}
@@ -10322,7 +10342,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.8.0-postseason';
+window.INNINGS_BUILD = 'v6.9.0-probable-starters';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -18800,7 +18820,7 @@ function loadGamesList(date, opts) {
       '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
       (wMode ? '<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 8px;border-radius:999px;background:' + (watchingNow ? 'rgba(124,242,156,.16)' : 'rgba(168,159,232,.18)') + ';color:' + (watchingNow ? '#9BE8AC' : '#D9D4FA') + ';font-size:10.5px;font-weight:800;letter-spacing:.04em">' + (wMode === 'attend' ? (gDone ? 'ATTENDED' : 'ATTENDING') : (gDone ? 'WATCHED' : 'WATCHING')) + '</div>' : '') +
       '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
-      _gameBadgeHtml(g) + '</div>' + (!_isGameConcluded(g.status) && (window._glanceCache || {})[requestedSport + ':' + g.gamePk] ? window._glanceCache[requestedSport + ':' + g.gamePk] : '') + '</div>';
+      _gameBadgeHtml(g) + '</div>' + (requestedSport === 'mlb' && typeof _spCardHtml === 'function' ? _spCardHtml(g) : '') + (!_isGameConcluded(g.status) && (window._glanceCache || {})[requestedSport + ':' + g.gamePk] ? window._glanceCache[requestedSport + ':' + g.gamePk] : '') + '</div>';
   }
 }
 
@@ -27657,6 +27677,48 @@ function _paFieldSvg(lp, land, E) {
   s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
   s._t1 = t1; // v6.0.0: when the ball finishes its flight
   return g + '</svg>';
+}
+
+// ═══ PROBABLE STARTERS (v6.9.0) ═════════════════════════════════════════
+// Upcoming MLB games (not live, not final): both announced starters head to
+// head — W-L, ERA and IP side by side, the better number in each row green.
+// One starter known: a row for him and "to be announced" for the other.
+function _spUpcoming(g) { return !_isGameConcluded(g.status) && /scheduled|pre-game|warmup|delayed start/i.test(g.status || ''); }
+function _spName(p, noHand) {
+  var inner = '<span onclick="event.stopPropagation()">' + (typeof _clickablePlayerNameHtml === 'function' ? _clickablePlayerNameHtml({ id: p.id, name: p.name }, 'mlb') : _escapeHtml(p.name || '')) + '</span>';
+  return inner + (p.hand && !noHand ? '<small>' + _escapeHtml(p.hand) + '</small>' : '');
+}
+function _spLine(p) {
+  var b = [];
+  if (p.w != null && p.l != null) b.push(p.w + '-' + p.l);
+  if (p.era) b.push(p.era + ' ERA');
+  if (p.ip) b.push(p.ip + ' IP');
+  return b.join(' \u00b7 ');
+}
+function _spCardHtml(g) {
+  var a = g.awayProbable, h = g.homeProbable;
+  if (!_spUpcoming(g) || (!a && !h)) return '';
+  if (a && h) {
+    var num = function (x) { var n = parseFloat(x); return isNaN(n) ? null : n; };
+    var cmp = function (x, y, lowWins) { x = num(x); y = num(y); if (x == null || y == null || x === y) return 0; return (lowWins ? x < y : x > y) ? 1 : -1; };
+    var wl = function (p) { return p.w != null && p.l != null ? p.w - p.l : null; };
+    var rows = [
+      ['W-L', a.w != null ? a.w + '-' + a.l : '\u2014', h.w != null ? h.w + '-' + h.l : '\u2014', cmp(wl(a), wl(h), false)],
+      ['ERA', a.era || '\u2014', h.era || '\u2014', cmp(a.era, h.era, true)],
+      ['IP', a.ip || '\u2014', h.ip || '\u2014', cmp(a.ip, h.ip, false)]
+    ];
+    return '<div class="sp-h2h"><div class="hd">PROBABLE STARTERS</div><div class="g">' +
+      '<span class="nm">' + _spName(a, true) + '</span><span></span><span class="nm r">' + _spName(h, true) + '</span>' +
+      rows.map(function (r) { return '<span class="v' + (r[3] > 0 ? ' best' : '') + '">' + _escapeHtml(r[1]) + '</span><span class="k">' + r[0] + '</span><span class="v r' + (r[3] < 0 ? ' best' : '') + '">' + _escapeHtml(r[2]) + '</span>'; }).join('') + '</div></div>';
+  }
+  // only one announced
+  var row = function (p, side) {
+    var ab = side === 'away' ? (g.awayAbbr || _ghAbbrFallback(g.away || '')) : (g.homeAbbr || _ghAbbrFallback(g.home || ''));
+    var c = typeof _ghTeamColors === 'function' ? _ghTeamColors(ab) : { bg: '#3D3580', fg: '#fff' };
+    return '<div class="sp-row"><span class="lo" style="background:' + c.bg + ';color:' + c.fg + '">' + _escapeHtml(ab) + '</span>' +
+      (p ? '<span class="t"><b>' + _spName(p) + '</b><span>' + _escapeHtml(_spLine(p)) + '</span></span>' : '<span class="tbd">Starter to be announced</span>') + '</div>';
+  };
+  return '<div class="sp-h2h"><div class="hd">PROBABLE STARTERS</div>' + row(a, 'away') + row(h, 'home') + '</div>';
 }
 
 // ═══ POSTSEASON (v6.8.0) ═══════════════════════════════════════════════
