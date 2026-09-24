@@ -326,6 +326,24 @@ function summarize(data, gamePk, wantAllPlays) {
         };
       }).filter(function (p) { return p.px != null && p.pz != null; });
       var lastEvent = pitchEvents.length ? pitchEvents[pitchEvents.length - 1] : null;
+      // v5.97.0: things that happen between pitches — steals, caught
+      // stealing, wild pitches, passed balls, pickoffs (and attempts), balks,
+      // throwing errors — each with the runners it moved and who touched it.
+      var ACT = /stolen_base|caught_stealing|wild_pitch|passed_ball|pickoff|balk|defensive_indiff|other_advance|error/;
+      var actions = (currentPlay.playEvents || []).filter(function (e) { return e && !e.isPitch && (e.type === 'action' || e.type === 'pickoff'); }).map(function (e) {
+        var d = e.details || {};
+        var et = d.eventType || (e.type === 'pickoff' ? 'pickoff_attempt' : '');
+        var mv = (currentPlay.runners || []).filter(function (r) { return r.details && r.details.playIndex === e.index; });
+        var codes = [];
+        mv.forEach(function (r) { (r.credits || []).forEach(function (c) { var k = c.position && c.position.code; if (k && codes.indexOf(k) === -1) codes.push(k); }); });
+        var baseM = String(d.description || '').match(/\b(1B|2B|3B)\b/);
+        return {
+          index: e.index, eventType: et, description: d.description || '', isOut: !!d.isOut,
+          base: baseM ? baseM[1] : null,
+          runners: mv.map(function (r) { var m = r.movement || {}; return { start: m.start || null, end: m.end || null, out: !!m.isOut, outBase: m.outBase || null, name: (r.details && r.details.runner && r.details.runner.fullName) || null }; }),
+          fielders: codes
+        };
+      }).filter(function (a) { return ACT.test(a.eventType); });
       pitchSequence = {
         batter: currentPlay.matchup.batter.fullName || null,
         batterId: currentPlay.matchup.batter.id || null,
@@ -335,7 +353,9 @@ function summarize(data, gamePk, wantAllPlays) {
         batSide: (currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
         zoneTop: (lastEvent && lastEvent.pitchData.strikeZoneTop != null) ? lastEvent.pitchData.strikeZoneTop : 3.5,
         zoneBottom: (lastEvent && lastEvent.pitchData.strikeZoneBottom != null) ? lastEvent.pitchData.strikeZoneBottom : 1.5,
-        pitches: pitches
+        pitches: pitches,
+        actions: actions,
+        bases: { '1B': !!(linescore.offense && linescore.offense.first), '2B': !!(linescore.offense && linescore.offense.second), '3B': !!(linescore.offense && linescore.offense.third) }
       };
     }
   }
