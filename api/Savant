@@ -267,6 +267,27 @@ module.exports = async function handler(req, res) {
   const year = yearOf(req.query.year);
   const id = req.query.id;
   try {
+    // GET /api/savant?mode=ping — quick check that this server can reach
+    // Baseball Savant at all (status + first bytes of each source).
+    if (mode === 'ping') {
+      const probe = async (name, url) => {
+        const t0 = Date.now();
+        try {
+          const r = await fetch(url, { headers: UA });
+          const txt = await r.text();
+          return { name: name, status: r.status, ms: Date.now() - t0, bytes: txt.length, starts: txt.slice(0, 80) };
+        } catch (e) { return { name: name, error: String(e && e.message || e), ms: Date.now() - t0 }; }
+      };
+      const y = new Date().getFullYear();
+      const out = await Promise.all([
+        probe('percentiles', 'https://baseballsavant.mlb.com/leaderboard/percentile-rankings?type=batter&year=' + y + '&position=&team=&csv=true'),
+        probe('sprint', 'https://baseballsavant.mlb.com/leaderboard/sprint_speed?year=' + y + '&position=&team=&min=0&csv=true'),
+        probe('mlb', 'https://statsapi.mlb.com/api/v1/sports/1')
+      ]);
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({ node: process.version, results: out });
+      return;
+    }
     if (mode === 'game') {
       const pk = req.query.gamePk;
       if (!pk) { res.status(400).json({ error: 'Missing gamePk' }); return; }
