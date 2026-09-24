@@ -1591,6 +1591,7 @@ html.desk .gatt-sheet{max-width:560px}
 @keyframes paOut{from{opacity:1}to{opacity:0}}
 @keyframes paDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 @keyframes paPulse{0%{transform:scale(1)}40%{transform:scale(1.7)}100%{transform:scale(1)}}
+@keyframes ibUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes paPop{0%{opacity:0;transform:scale(.55)}60%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
 @keyframes paRing{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(2.1)}}
 @keyframes paIncoming{from{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}to{opacity:1;transform:none}}
@@ -10028,7 +10029,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.90.0-bvp-columns';
+window.INNINGS_BUILD = 'v5.91.0-walks-inning-breaks';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -21286,6 +21287,33 @@ function _ghPitcherTodayHtml(t) {
     cols.map(function (c) { return '<span style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9C95D0">' + c[0] + '</span>'; }).join('') + '</span>';
 }
 
+
+// ══ INNING BREAK CARD (v5.91.0) — "Middle of the 1st", "End of the 5th"
+// Fills the at-bat square between halves: the score, what the half that
+// just ended did (R · H · LOB), and who's due up next. Animates in once
+// per break; later refreshes just show it.
+function _ghInningBreakHtml(box, m, s) {
+  var n = s.inning || 1, mid = s.inningState === 'Middle';
+  var inn = (box.innings || [])[n - 1] || {};
+  var done = mid ? m.away : m.home, next = mid ? m.home : m.away;
+  var R = mid ? inn.away : inn.home, H = mid ? inn.awayH : inn.homeH, L = mid ? inn.awayLob : inn.homeLob;
+  var key = (window._activeBrowseGame ? window._activeBrowseGame.gamePk : '') + ':' + n + ':' + s.inningState;
+  var seen = window._ibSeen || (window._ibSeen = {});
+  var anim = !seen[key] && !(typeof _ghReducedMotion === 'function' && _ghReducedMotion());
+  seen[key] = 1;
+  var a = function (d) { return anim ? 'animation:ibUp .5s cubic-bezier(.2,.8,.2,1) ' + d + 's both;' : ''; };
+  var badge = function (t) { return '<span style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:' + t.colors.bg + ';color:' + t.colors.fg + ';box-shadow:0 0 0 3px rgba(255,255,255,.08)">' + _escapeHtml(t.abbr) + '</span>'; };
+  var line = [R != null ? R + ' R' : null, H != null ? H + ' H' : null, L != null ? L + ' LOB' : null].filter(Boolean).join(' · ');
+  var due = (s.dueUp || []).map(function (x) { return _ghLastName(x); });
+  return '<div style="height:220px;box-sizing:border-box;padding:14px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:radial-gradient(120% 90% at 50% 0%,rgba(168,159,232,.18),transparent 70%)">' +
+    '<span class="gh-eyebrow" style="font-size:11px;color:#D9D4FA;' + a(0) + '">' + (mid ? 'Middle' : 'End') + ' of the ' + _ordinalSuffix(n) + '</span>' +
+    '<div style="display:flex;align-items:center;gap:16px;' + a(.08) + '">' + badge(m.away) + '<span class="gh-num" style="font-size:40px">' + (m.away.score != null ? m.away.score : '') + '</span>' +
+      '<span style="width:14px;height:2px;background:rgba(168,159,232,.4)"></span><span class="gh-num" style="font-size:40px">' + (m.home.score != null ? m.home.score : '') + '</span>' + badge(m.home) + '</div>' +
+    (line ? '<span style="font-size:13px;color:#D9D4FA;' + a(.16) + '"><b style="color:' + done.colors.accent + '">' + _escapeHtml(done.short || done.abbr) + '</b> ' + _escapeHtml(line) + '</span>' : '') +
+    (due.length ? '<span style="font-size:12.5px;color:#B9B3E6;' + a(.24) + '">Due up for the ' + _escapeHtml(next.short || next.abbr) + ': <b style="color:#fff">' + _escapeHtml(due.join(', ')) + '</b></span>' : '') +
+  '</div>';
+}
+
 function _ghLiveDetailHtml(box) {
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
@@ -21323,6 +21351,9 @@ function _ghLiveDetailHtml(box) {
       var parts = _strikeZoneSectionHtml(flyE != null ? Object.assign({}, seq, { pitches: seq.pitches.slice(0, -1) }) : seq, 'rgba(255,255,255,.1)', sub, '#fff', true);
       var svg = parts.svg;
       if (flyE != null && lastP) svg = svg.replace(/<\/svg>$/, _pitchFlightSvg(lastP, 0, flyE, seq.pitchHand, 'live') + '</svg>');
+      // v5.91.0: between halves the square becomes the inning-break card
+      var brk = !!(s && (s.inningState === 'Middle' || s.inningState === 'End'));
+      if (brk && typeof _ghInningBreakHtml === 'function') svg = _ghInningBreakHtml(box, m, s);
       if (lastP && !_ghReducedMotion()) {
         svg = svg.replace(/<\/svg>$/, '<circle class="gh-ring-pitch" cx="' + _szX(lastP.px).toFixed(1) + '" cy="' + _szY(lastP.pz).toFixed(1) + '" r="17" fill="none" stroke="' + _pitchCallColor(lastP.call) + '" stroke-width="3"/></svg>');
       }
@@ -21330,7 +21361,7 @@ function _ghLiveDetailHtml(box) {
       // filled after each render so a refresh picks the animation up mid-way).
       // Tap a play in the play-by-play to replay it here.
       out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div></div>';
-      if (seq.pitches.length) {
+      if (!brk && seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
           var c = _pitchCallColor(p.call);
           return '<div style="display:flex;align-items:center;gap:10px;min-height:26px">' +
@@ -21340,10 +21371,10 @@ function _ghLiveDetailHtml(box) {
             (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
             (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
         }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '');
-      } else {
+      } else if (!brk) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
       }
-      out += '<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11px;color:#B9B3E6">' +
+      if (!brk) out += '<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:11px;color:#B9B3E6">' +
         ['Ball', 'Strike', 'In play'].map(function (label) {
           return '<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:' + _pitchCallColor(label) + '"></span>' + label + '</span>';
         }).join('') + '</div>';
@@ -26087,7 +26118,7 @@ function _reelFill() {
   window._pa = tmp;
   var html = '';
   try { html = _paOverlayHtml(); } finally { window._pa = saved; }
-  var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(it.lp.eventType || ''));
+  var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(it.lp.eventType || ''));
   var off = Math.max(0, (it.lp.pitches || []).length - 1) * .85;
   var resolveAt = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4);
   var dur = resolveAt + 3.4; // hold on the result a little longer
@@ -26356,12 +26387,16 @@ function _paOverlayHtml() {
   var E = (Date.now() - s.startAt) / 1000;
   if (reduce) E = Math.max(E, 30);
   var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error/.test(lp.eventType || ''));
+  // v5.91.0: walks and hit-by-pitches also go to the field — no ball, just
+  // the batter taking first and anyone forced moving up.
+  var walkish = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(lp.eventType || '');
+  var showField = inPlay || walkish;
   var allP = (lp.pitches || []).slice();
   // v5.75.0: a replay you tapped shows every pitch coming in one at a
   // time first; everything after the pitches shifts later by that much.
   var GAP = .85; // v5.78.0: a touch slower between pitches
   var OFF = s.seq ? Math.max(0, allP.length - 1) * GAP : 0;
-  var END = (inPlay ? PA.END : 9) + OFF;
+  var END = (showField ? PA.END : 9) + OFF;
   s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
   else if (E > END + 0.6) return '';
@@ -26390,11 +26425,11 @@ function _paOverlayHtml() {
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
   pv = pv.replace(/<\/svg>$/, groups + '</svg>');
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
-  out += '<div style="position:absolute;inset:0;' + (inPlay ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
-    (inPlay ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">In play</div>' : '') + '</div>';
-  if (inPlay) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW, null, Es) + '">' + _paFieldSvg(lp, land, Es) + '</div>';
+  out += '<div style="position:absolute;inset:0;' + (showField ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
+    (showField ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">' + (walkish ? ({ hit_by_pitch: 'Hit by pitch', intent_walk: 'Intentional walk', catcher_interf: 'Interference' }[lp.eventType] || 'Ball four') : 'In play') + '</div>' : '') + '</div>';
+  if (showField) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW, null, Es) + '">' + _paFieldSvg(lp, land, Es) + '</div>';
   // title at the top
-  var tT = inPlay ? (s._titleAt || PA.T0 + 2) : 1.4;
+  var tT = showField ? (s._titleAt || PA.T0 + 2) : 1.4;
   out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT, null, Es) + '">' +
     '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
     (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div>';
@@ -26423,6 +26458,8 @@ function _paFieldSvg(lp, land, E) {
   var groundOut = /ground|bunt_grounder/.test(tr) && land && Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150;
   var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
+  var noBall = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(t);
+  if (noBall) t1 = T0;
   // v5.73.0: fielders only move when the play has an out in it. A hit
   // that drops stays where it landed — unless someone is thrown out on
   // it, in which case the ball lands, the fielder gets to it, and then
@@ -26499,9 +26536,9 @@ function _paFieldSvg(lp, land, E) {
   }
   var flightD = hopD ? hopD : ctrl ? 'M ' + PA_H[0] + ' ' + PA_H[1] + ' Q ' + ctrl[0].toFixed(1) + ' ' + ctrl[1].toFixed(1) + ' ' + first[0].toFixed(1) + ' ' + first[1].toFixed(1) : _paPath(fly);
   var flightRel = hopRel ? hopRel : ctrl ? 'M 0 0 Q ' + (ctrl[0] - PA_H[0]).toFixed(1) + ' ' + (ctrl[1] - PA_H[1]).toFixed(1) + ' ' + (first[0] - PA_H[0]).toFixed(1) + ' ' + (first[1] - PA_H[1]).toFixed(1) : _paRel(fly);
-  g += '<path d="' + flightD + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#F5F3FF" stroke-opacity=".6" stroke-width="2" style="animation:paDraw ' + flight + 's linear ' + _paSec(T0, E) + ' both"/>';
-  if (throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(tThrow, E) + ' both"/>';
-  g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' forwards' : '') + '">' +
+  if (!noBall) g += '<path d="' + flightD + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#F5F3FF" stroke-opacity=".6" stroke-width="2" style="animation:paDraw ' + flight + 's linear ' + _paSec(T0, E) + ' both"/>';
+  if (!noBall && throwPts.length > 1) g += '<path d="' + _paPath(throwPts) + '" pathLength="100" stroke-dasharray="4 3" fill="none" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" style="animation:paIn .2s linear ' + _paSec(tThrow, E) + ' both"/>';
+  if (!noBall) g += '<circle cx="' + PA_H[0] + '" cy="' + PA_H[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 6px #fff);animation:paIn .1s linear ' + _paSec(T0, E) + ' both' + (hr ? ',paOut .3s linear ' + _paSec(t1, E) + ' forwards' : '') + '">' +
     '<animateMotion dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze" path="' + flightRel + '"/>' +
     (hopD ? '<animate attributeName="r" values="6;9;6;8;6;7;6;6.5;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
     ((air || hr) ? '<animate attributeName="r" values="6;11;6" dur="' + flight + 's" begin="' + _paSec(T0, E) + '" fill="freeze"/>' : '') +
@@ -26613,14 +26650,14 @@ function _savRerender() {
 }
 function _savGame(pk, live) {
   if (pk == null) return null;
-  return _savGet('game', String(pk), '/api/savant?mode=game&gamePk=' + encodeURIComponent(pk) + (live ? '&live=1' : ''), live ? 20000 : null, live ? _savRerender : null);
+  return _savGet('game', String(pk), '/api/mlb?mode=savant&smode=game&gamePk=' + encodeURIComponent(pk) + (live ? '&live=1' : ''), live ? 20000 : null, live ? _savRerender : null);
 }
 function _savPlay(pk, atBatIndex) {
   var g = pk != null ? (window._sav.game[String(pk)] || {}).data : null;
   return g && g.plays ? g.plays[String(atBatIndex)] || null : null;
 }
-function _savArsenal(id) { return id ? _savGet('arsenal', String(id), '/api/savant?mode=arsenal&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
-function _savBatter(id) { return id ? _savGet('batter', String(id), '/api/savant?mode=batter&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
+function _savArsenal(id) { return id ? _savGet('arsenal', String(id), '/api/mlb?mode=savant&smode=arsenal&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
+function _savBatter(id) { return id ? _savGet('batter', String(id), '/api/mlb?mode=savant&smode=batter&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender) : null; }
 
 
 // ── Batter vs pitcher (v5.89.0) — career line from the MLB Stats API
@@ -26764,13 +26801,13 @@ function _savPlayerSheetFill(id) {
   if (!box) return;
   box.innerHTML = '<div class="sav-loading">Loading Statcast…</div>';
   var want = String(id);
-  _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); });
+  _savGet('player', want, '/api/mlb?mode=savant&smode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); });
   var e = window._sav.player[want];
   if (!e) { box.innerHTML = _savMatchupHtml(id) + box.innerHTML; return; }
   var d = e.data;
   if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' + (e.why ? '<span style="display:block;margin-top:4px;font-size:11px;color:#6F6A98">(' + _escapeHtml(String(e.why).slice(0, 140)) + ')</span>' : '') : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
   // a partial answer (Savant was slow) fills in with one more try
-  if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/savant?mode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
+  if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/mlb?mode=savant&smode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
   var html = _savMatchupHtml(id);
   var pctBlock = function (title, list) {
     if (!list || !list.length) return '';
@@ -26828,7 +26865,7 @@ function _savMemoryFill(pk) {
 function _savGameSummary(pk, onArrive) {
   var key = 'innings_sav_sum_' + pk;
   try { var ls = localStorage.getItem(key); if (ls) return JSON.parse(ls); } catch (e) {}
-  var d = _savGet('game', String(pk), '/api/savant?mode=game&gamePk=' + encodeURIComponent(pk), null, function (data) {
+  var d = _savGet('game', String(pk), '/api/mlb?mode=savant&smode=game&gamePk=' + encodeURIComponent(pk), null, function (data) {
     if (data && data.summary) { try { localStorage.setItem(key, JSON.stringify(data.summary)); } catch (e) {} }
     if (onArrive) onArrive();
   });
