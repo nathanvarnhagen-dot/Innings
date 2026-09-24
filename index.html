@@ -10034,7 +10034,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.93.0-small-fixes';
+window.INNINGS_BUILD = 'v5.94.0-grounder-bounce';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -26463,6 +26463,20 @@ function _paFieldSvg(lp, land, E) {
   var first = land ? [land.x, land.y] : (fl[0] && PA_F[fl[0]] ? PA_F[fl[0]] : [250, 150]);
   if (!hr && land) { var rr = Math.hypot(first[0] - PA_H[0], first[1] - PA_H[1]); if (rr > 262) { var k = 262 / rr; first = [PA_H[0] + (first[0] - PA_H[0]) * k, PA_H[1] + (first[1] - PA_H[1]) * k]; } }
   var groundOut = /ground|bunt_grounder/.test(tr) && land && Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150;
+  // v5.94.0: a grounder an infielder fields. The hit coordinates are often
+  // where the ball first hit the dirt, not where he got it — so the ball
+  // bounces there, keeps going along the same line, and the fielder meets
+  // it at his depth (moving over to the line), then throws from there.
+  var bounceAt = null;
+  var fieldedGrounder = /ground|bunt_grounder/.test(tr) && fl.length && PA_F[fl[0]] && !/^(single|double|triple|field_error)$/.test(t) && fl[0] !== '7' && fl[0] !== '8' && fl[0] !== '9';
+  if (fieldedGrounder) {
+    var fpos = PA_F[fl[0]], dF = Math.hypot(fpos[0] - PA_H[0], fpos[1] - PA_H[1]);
+    var gAng = land ? Math.atan2(land.x - PA_H[0], PA_H[1] - land.y) : Math.atan2(fpos[0] - PA_H[0], PA_H[1] - fpos[1]);
+    var bR = land ? Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) : dF * .5;
+    var reach = Math.max(dF, bR + 25);
+    first = [PA_H[0] + reach * Math.sin(gAng), PA_H[1] - reach * Math.cos(gAng)];
+    bounceAt = Math.max(.25, Math.min(.8, bR / reach));
+  }
   var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
   var noBall = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(t);
@@ -26529,11 +26543,12 @@ function _paFieldSvg(lp, land, E) {
   }
   // grounders into the outfield: three hops, each smaller, along the line
   var hopD = null, hopRel = null;
-  if (groundOut && !ctrl) {
+  if ((groundOut || bounceAt != null) && !ctrl) {
     var hx = first[0] - PA_H[0], hy = first[1] - PA_H[1], hl = Math.hypot(hx, hy) || 1, nx = -hy / hl, ny = hx / hl;
     var cuts = [0, .34, .64, .86, 1], sizes = [22, 14, 8, 4];
+    if (bounceAt != null) { cuts = [0, bounceAt, bounceAt + (1 - bounceAt) * .6, 1]; sizes = [16, 8, 3]; } // first bounce where it hit the dirt, then into his glove
     var segs = '', rel = '';
-    for (var hi = 0; hi < 4; hi++) {
+    for (var hi = 0; hi < cuts.length - 1; hi++) {
       var a0 = cuts[hi], a1 = cuts[hi + 1], am = (a0 + a1) / 2;
       var ex = hx * a1, ey = hy * a1, cx = hx * am + nx * sizes[hi], cy = hy * am + ny * sizes[hi];
       segs += ' Q ' + (PA_H[0] + cx).toFixed(1) + ' ' + (PA_H[1] + cy).toFixed(1) + ' ' + (PA_H[0] + ex).toFixed(1) + ' ' + (PA_H[1] + ey).toFixed(1);
