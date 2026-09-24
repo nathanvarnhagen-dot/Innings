@@ -807,6 +807,41 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ GAME WINNER / WALK-OFF (v6.7.0) — closes the highlights reel ═══ */
+.gw{position:absolute;inset:0;z-index:8;border-radius:16px;overflow:hidden;pointer-events:none}
+.gw-win{clip-path:inset(0 100% 0 0);animation:gwWipe .55s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes gwWipe{to{clip-path:inset(0 0 0 0)}}
+.gw-win .bg{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 115%,var(--wc) 0%,transparent 62%),linear-gradient(160deg,var(--wd) 0%,#141218 60%,#0B0A0E 100%)}
+.gw .sw{position:absolute;top:-20%;bottom:-20%;width:40%;left:-45%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:skewX(-18deg);animation:gwSweep .8s ease-out both;animation-delay:calc(var(--t0) + 550ms)}
+@keyframes gwSweep{to{left:125%}}
+.gw .ct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:0 14px}
+.gw .ct>*{animation:gwUp .5s cubic-bezier(.22,1,.36,1) both}
+@keyframes gwUp{from{opacity:0;transform:translateY(8px)}}
+.gw .fin{font-size:10.5px;font-weight:900;letter-spacing:.34em;color:var(--wa)}
+.gw .team{font-size:26px;font-weight:900;font-style:italic;letter-spacing:-.01em;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.4);line-height:1.05}
+.gw .sc{display:flex;align-items:center;gap:12px}
+.gw .s{display:flex;align-items:center;gap:7px}
+.gw .s i{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;font-style:normal}
+.gw .s b{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;color:#fff}
+.gw .s.lo b{color:rgba(255,255,255,.45)}.gw .s.lo i{opacity:.6}
+.gw .dash{width:12px;height:2px;background:rgba(255,255,255,.3)}
+.gw .ln{font-size:12px;font-weight:700;color:#F5F3FF}
+.gw .rec{font-size:11px;color:rgba(255,255,255,.6)}
+.gw-wo{opacity:0;animation:gwFade .4s ease-out both;animation-delay:var(--t0);background:radial-gradient(120% 100% at 50% 100%,var(--wd) 0%,#140C08 55%,#08060A 100%)}
+@keyframes gwFade{to{opacity:1}}
+.gw-wo .rays{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 100%;animation:gwRays .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes gwRays{from{transform:scale(.4)}}
+.gw-wo .big{font-size:34px;font-weight:900;font-style:italic;letter-spacing:.04em;background:linear-gradient(180deg,#FFE7A3,#F2C869 55%,#C8912F);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 18px rgba(242,200,105,.35));line-height:1.1}
+.gw-wo .who{font-size:12.5px;font-weight:900;letter-spacing:.18em;color:#fff}
+.gw-wo .what{font-size:11.5px;font-weight:700;color:#FDB590}
+.gw-conf i{position:absolute;top:-12px;width:6px;height:10px;border-radius:1px;opacity:0;animation:gwFall var(--d) linear both;animation-delay:calc(var(--t0) + var(--o))}
+@keyframes gwFall{0%{opacity:.95;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),250px) rotate(var(--r))}}
+.gh-reel-cap{flex-wrap:wrap}
+.gw-save{flex:1 0 100%;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:40px;margin-top:10px;padding:8px 14px;border:0;border-radius:999px;background:#F2C869;color:#2A1A00;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.gw-save b{font-weight:800}
+.gw-save:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.gw-win{animation:none;clip-path:none}.gw-wo{animation:none;opacity:1}.gw .ct>*,.gw .sw,.gw-wo .rays{animation:none}.gw-conf{display:none}}
+
 /* ═══ SPRAY CHART FILTERS (v6.6.0) ═══ */
 .sp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .sp-chip{display:flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:999px;border:1px solid rgba(168,159,232,.2);background:transparent;color:#9C95D0;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;opacity:.6}
@@ -10225,7 +10260,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.6.0-spray-filters';
+window.INNINGS_BUILD = 'v6.7.0-game-winner';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -26709,17 +26744,35 @@ function _reelItems(m) {
   if (!box || !box.allPlays) return [];
   var byIdx = {};
   box.allPlays.forEach(function (p) { if (p && p.anim && p.atBatIndex != null) { byIdx[p.atBatIndex] = p.anim; if (!p.anim.desc && p.text) p.anim.desc = p.text; } });
-  return (m.plays || []).filter(function (p) { return p.atBatIndex != null && byIdx[p.atBatIndex]; }).map(function (p) {
+  var items = (m.plays || []).filter(function (p) { return p.atBatIndex != null && byIdx[p.atBatIndex]; }).map(function (p) {
     return { lp: byIdx[p.atBatIndex], tag: (p.half === 'top' ? 'T' : 'B') + (p.inning || ''), half: p.half,
       headline: _ghPlayHeadline(p), chip: _ghScoreChip(p, m.away.abbr, m.home.abbr), text: p.text || '', inning: p.inning, away: m.away, home: m.home, after: [p.awayScore, p.homeScore],
       col: (p.half === 'top' ? m.away : m.home).colors.accent };
   });
+  // v6.7.0: end on the last out (or the walk-off) and the win graphic
+  var end = typeof _gwEndInfo === 'function' ? _gwEndInfo(box) : null;
+  if (end) {
+    var last = items[items.length - 1];
+    if (last && last.lp && last.lp.atBatIndex === end.lp.atBatIndex) last.end = end;
+    else {
+      var lp = end.lp;
+      items.push({ lp: lp, tag: (lp.half === 'top' ? 'T' : 'B') + (lp.inning || ''), half: lp.half,
+        headline: end.walkoff ? 'Walk-off' : 'Final out · ' + _paTitle(lp).charAt(0) + _paTitle(lp).slice(1).toLowerCase(),
+        chip: '', text: lp.description || lp.desc || '', inning: lp.inning, away: m.away, home: m.home, after: [lp.awayScore, lp.homeScore],
+        col: (lp.half === 'top' ? m.away : m.home).colors.accent, end: end });
+    }
+  }
+  return items;
 }
 function _reelHtml(m) {
   var items = _reelItems(m);
   if (!items.length) return '';
   var g = window._activeBrowseGame, key = g ? String(g.gamePk) : 'x', r = window._reel;
-  if (r.key !== key) { r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = !_ghIsWatchingThis(); } // plays once on first view; after that only the Highlights button opens it
+  if (r.key !== key) {
+    r.key = key; r.idx = 0; r.startAt = Date.now(); r.open = !_ghIsWatchingThis(); // plays once on first view; after that only the Highlights button opens it
+    // v6.7.0: if you were watching when it ended, it opens right on the last out and the win
+    if (!r.open && items.length && items[items.length - 1].end) { r.open = true; r.idx = items.length - 1; }
+  }
   r.items = items; r.box = typeof _gcBox === 'function' ? _gcBox() : null;
   return '<div class="gh-reel" id="gh-reel" style="display:' + (r.open ? 'flex' : 'none') + '">' +
     '<div class="gh-reel-bars" id="gh-reel-bars"></div>' +
@@ -26842,6 +26895,8 @@ function _reelFill() {
   var off = Math.max(0, (it.lp.pitches || []).length - 1) * .85 + _paActExtra(it.lp, (it.lp.pitches || []).length);
   var resolveAt = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4);
   var dur = resolveAt + 3.4; // hold on the result a little longer
+  // v6.7.0: the last item plays the win (or walk-off) graphic and stays on it
+  if (it.end && typeof _gwGraphicHtml === 'function') { html += _gwGraphicHtml(it.end, r.box || saved.box, resolveAt + .7, (Date.now() - r.startAt) / 1000); dur = resolveAt + 6; }
   slot.innerHTML = html;
   var list = document.getElementById('gh-reel-list');
   if (list) list.innerHTML = _reelPitchListHtml(it, (Date.now() - r.startAt) / 1000);
@@ -26858,6 +26913,7 @@ function _reelFill() {
       return '<span>' + fill + '</span>';
     }).join('');
   }
+  if (it.end) { if (cap && it.end.walkoff) cap.innerHTML += '<button class="gw-save" onclick="event.stopPropagation();gwSaveWalkoff()">Were you watching? <b>Save this walk-off</b></button>'; return; } // holds until tapped
   r.timer = setTimeout(function () {
     if (!document.getElementById('gh-reel-slot')) return;
     r.idx++; r.startAt = Date.now();
@@ -27536,6 +27592,87 @@ function _paFieldSvg(lp, land, E) {
   s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
   s._t1 = t1; // v6.0.0: when the ball finishes its flight
   return g + '</svg>';
+}
+
+// ═══ GAME WINNER / WALK-OFF (v6.7.0) ═══════════════════════════════════
+// The last play of a finished game closes the highlights reel: the last
+// at-bat (pitches, then the field if the ball was in play), then the win —
+// the winner's panel with the final score, who closed it out and their
+// record — or, for a walk-off, its own version with light from home plate,
+// one fall of confetti and a button to save the moment.
+function _gwEndInfo(box) {
+  if (!box || box.gameState !== 'Final') return null;
+  var lp = box.lastPlay;
+  if (!lp || lp.awayScore == null || lp.homeScore == null || lp.awayScore === lp.homeScore) return null;
+  var winner = lp.homeScore > lp.awayScore ? 'home' : 'away';
+  var runs = (lp.runners || []).filter(function (r) { return r.end === 'score'; }).length;
+  var walkoff = lp.half === 'bottom' && (lp.inning || 0) >= 9 && winner === 'home' && (lp.homeScore - runs) <= lp.awayScore;
+  return { lp: lp, winner: winner, walkoff: walkoff };
+}
+function _gwTeam(box, side) {
+  var abbr = side === 'away' ? (box.awayAbbr || _ghAbbrFallback(box.away || '')) : (box.homeAbbr || _ghAbbrFallback(box.home || ''));
+  var name = String(_teamShortName((side === 'away' ? box.away : box.home) || '') || abbr);
+  return { abbr: abbr, name: name, c: _ghTeamColors(abbr), rec: side === 'away' ? box.awayRecord : box.homeRecord };
+}
+function _gwWalkoffWhat(lp) {
+  var t = lp.eventType || '', rbi = lp.rbi || 0, h = lp.hit || {};
+  var word = t === 'home_run' ? (rbi >= 4 ? 'Grand slam' : rbi === 1 ? 'Solo homer' : rbi + '-run homer')
+    : ({ single: 'Single', double: 'Double', triple: 'Triple', walk: 'Walk', intent_walk: 'Walk', hit_by_pitch: 'Hit by pitch', sac_fly: 'Sac fly', sac_bunt: 'Sac bunt', field_error: 'Error', fielders_choice: 'Fielder\u2019s choice', force_out: 'Force out', grounded_into_double_play: 'Ground ball' }[t] || String(lp.event || 'Walk-off'));
+  var bits = [word];
+  if (t === 'home_run') { if (h.distance) bits.push(h.distance + ' ft'); if (h.speed) bits.push(h.speed + ' mph'); }
+  else if (rbi) bits.push(rbi + ' RBI');
+  return bits.join(' \u00b7 ');
+}
+function _gwGraphicHtml(end, box, startSec, E) {
+  if (!box) return '';
+  var lp = end.lp, W = _gwTeam(box, end.winner), L = _gwTeam(box, end.winner === 'home' ? 'away' : 'home');
+  var ws = end.winner === 'home' ? lp.homeScore : lp.awayScore, ls = end.winner === 'home' ? lp.awayScore : lp.homeScore;
+  var t0 = (startSec - E).toFixed(2) + 's';
+  var d = function (ms) { return 'style="animation-delay:calc(var(--t0) + ' + ms + 'ms)"'; };
+  var logo = function (T) { return '<i style="background:' + T.c.bg + ';color:' + T.c.fg + '">' + _escapeHtml(T.abbr) + '</i>'; };
+  var score = '<div class="sc" ' + d(end.walkoff ? 720 : 240) + '><span class="s">' + logo(W) + '<b>' + ws + '</b></span><span class="dash"></span><span class="s lo"><b>' + ls + '</b>' + logo(L) + '</span></div>';
+  var acc = (W.c.accent && W.c.accent !== W.c.bg) ? W.c.accent : W.c.bg;
+  if (end.walkoff) {
+    var rays = '', N = 18;
+    for (var i = 0; i < N; i++) {
+      var a = (-80 + i * (160 / (N - 1))) * Math.PI / 180, b = a + .045;
+      rays += '<polygon points="200,300 ' + (200 + Math.sin(a) * 520).toFixed(0) + ',' + (300 - Math.cos(a) * 520).toFixed(0) + ' ' + (200 + Math.sin(b) * 520).toFixed(0) + ',' + (300 - Math.cos(b) * 520).toFixed(0) + '" fill="' + (i % 2 ? W.c.bg : '#F2C869') + '" opacity="' + (i % 2 ? .2 : .1) + '"/>';
+    }
+    var conf = '', cols = [W.c.bg, '#F2C869', '#FFFFFF', acc];
+    for (var k = 0; k < 40; k++) {
+      var r1 = ((k * 37) % 100), o = 300 + ((k * 53) % 700), dur = 1.8 + ((k * 29) % 12) / 10, dx = ((k * 17) % 60) - 30, rot = ((k * 71) % 720) - 360;
+      conf += '<i style="left:' + r1 + '%;background:' + cols[k % 4] + ';--o:' + o + 'ms;--d:' + dur.toFixed(1) + 's;--dx:' + dx + 'px;--r:' + rot + 'deg"></i>';
+    }
+    var who = String(_ghLastName(lp.batter || '') || '').toUpperCase();
+    return '<div class="gw gw-wo" style="--t0:' + t0 + ';--wd:' + _fbxDark(W.c.bg, .55) + '">' +
+      '<svg class="rays" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' + rays + '</svg>' +
+      '<div class="gw-conf" aria-hidden="true">' + conf + '</div>' +
+      '<div class="ct"><span class="big" ' + d(180) + '>WALK-OFF</span>' +
+      (who ? '<span class="who" ' + d(400) + '>' + _escapeHtml(who) + ' WALKS IT OFF</span>' : '') +
+      '<span class="what" ' + d(560) + '>' + _escapeHtml(_gwWalkoffWhat(lp)) + '</span>' + score + '</div></div>';
+  }
+  var dd = box.decisionsDetail || {};
+  var line = dd.save && dd.save.name ? _ghLastName(dd.save.name) + ' closed it out' + (dd.save.rec ? ' \u00b7 save #' + dd.save.rec : '')
+    : dd.winner && dd.winner.name ? 'W: ' + dd.winner.name + (dd.winner.rec ? ' (' + dd.winner.rec + ')' : '') : '';
+  var rec = W.rec && W.rec.w != null ? W.name + ' ' + W.rec.w + '\u2013' + W.rec.l : '';
+  return '<div class="gw gw-win" style="--t0:' + t0 + ';--wc:' + _ghHexAlpha(W.c.bg, .55) + ';--wd:' + _fbxDark(W.c.bg, .6) + ';--wa:' + acc + '">' +
+    '<div class="bg"></div><div class="sw"></div>' +
+    '<div class="ct"><span class="fin" ' + d(0) + '>FINAL</span><span class="team" ' + d(110) + '>' + _escapeHtml(W.name.toUpperCase()) + ' WIN</span>' + score +
+    (line ? '<span class="ln" ' + d(420) + '>' + _escapeHtml(line) + '</span>' : '') +
+    (rec ? '<span class="rec" ' + d(520) + '>' + _escapeHtml(rec) + '</span>' : '') + '</div></div>';
+}
+// "Save this walk-off": pick Watching if you haven't picked anything, then
+// open the memory sheet with a note started for you.
+function gwSaveWalkoff() {
+  var s = window._gatt;
+  if (!s) return;
+  var open = function () {
+    if (typeof gattOpenSheet !== 'function') return;
+    gattOpenSheet();
+    var r = window._reel, it = r && r.items && r.items[r.idx];
+    if (s.draft && !s.draft.note && it && it.end) { s.draft.note = 'Walk-off! ' + _gwWalkoffWhat(it.end.lp); if (typeof _gattRenderSheet === 'function') _gattRenderSheet(); }
+  };
+  if (!s.mode) { gattChoose('watch'); setTimeout(open, 60); } else open();
 }
 
 // ═══ SLIM SCORE BAR (v6.5.0) ══════════════════════════════════════════
