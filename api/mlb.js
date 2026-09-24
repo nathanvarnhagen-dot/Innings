@@ -14,13 +14,14 @@ module.exports = async function handler(req, res) {
     if (mode === 'schedule') {
       const date = req.query.date;
       if (!date) { res.status(400).json({ error: 'Missing date' }); return; }
-      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + encodeURIComponent(date);
+      // v6.8.0: team + seriesStatus hydrated for postseason games
+      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus&date=' + encodeURIComponent(date);
       const r = await fetch(url);
       const data = await r.json();
       const games = [];
       (data.dates || []).forEach(function (d) {
         (d.games || []).forEach(function (g) {
-          games.push({
+          games.push(Object.assign({
             gamePk: g.gamePk,
             status: g.status && g.status.detailedState,
             away: g.teams && g.teams.away && g.teams.away.team && g.teams.away.team.name,
@@ -29,12 +30,42 @@ module.exports = async function handler(req, res) {
             homeScore: g.teams && g.teams.home ? g.teams.home.score : null,
             venue: g.venue && g.venue.name,
             startTime: g.gameDate || null
-          });
+          }, _postseasonFields(g)));
         });
       });
       // v5.85.0: scores on the schedule list refresh within ~15s (was 5 min).
       res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=15');
       res.status(200).json({ games: games });
+      return;
+    }
+
+    // GET /api/mlb?mode=postseason&season=YYYY  (v6.8.0)
+    // Every postseason game of the season (Wild Card → World Series), for
+    // the bracket and each series' game-by-game strip.
+    if (mode === 'postseason') {
+      const season = parseInt(req.query.season, 10) || new Date().getFullYear();
+      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=' + season + '&gameType=F,D,L,W&hydrate=team,seriesStatus';
+      const r = await fetch(url);
+      const data = await r.json();
+      const games = [];
+      (data.dates || []).forEach(function (d) {
+        (d.games || []).forEach(function (g) {
+          games.push(Object.assign({
+            gamePk: g.gamePk, date: d.date || null,
+            status: g.status && g.status.detailedState,
+            state: g.status && g.status.abstractGameState,
+            away: g.teams && g.teams.away && g.teams.away.team && g.teams.away.team.name,
+            home: g.teams && g.teams.home && g.teams.home.team && g.teams.home.team.name,
+            awayScore: g.teams && g.teams.away ? g.teams.away.score : null,
+            homeScore: g.teams && g.teams.home ? g.teams.home.score : null,
+            awaySeed: g.teams && g.teams.away && g.teams.away.seriesNumber != null ? g.teams.away.seriesNumber : null,
+            homeSeed: g.teams && g.teams.home && g.teams.home.seriesNumber != null ? g.teams.home.seriesNumber : null,
+            startTime: g.gameDate || null, venue: g.venue && g.venue.name
+          }, _postseasonFields(g)));
+        });
+      });
+      res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
+      res.status(200).json({ season: season, games: games });
       return;
     }
 
@@ -1574,3 +1605,27 @@ function _callText(e, play, dk) {
 // regular season, the only case you'll see day to day.
 var _gameType = null;
 function _ghostRunnerRule() { return !_gameType || _gameType === 'R' || _gameType === 'S' || _gameType === 'E'; }
+
+
+// ── POSTSEASON (v6.8.0) ───────────────────────────────────────────────────
+// gameType F = Wild Card, D = Division Series, L = League Championship
+// Series, W = World Series. League from the teams (103 AL, 104 NL).
+function _postseasonFields(g) {
+  var t = g && g.gameType;
+  var aT = g.teams && g.teams.away && g.teams.away.team || {}, hT = g.teams && g.teams.home && g.teams.home.team || {};
+  var out = { awayAbbr: aT.abbreviation || null, homeAbbr: hT.abbreviation || null, awayId: aT.id || null, homeId: hT.id || null };
+  if (!/^[FDLW]$/.test(t || '')) return out;
+  var lgId = (aT.league && aT.league.id) || (hT.league && hT.league.id) || null;
+  out.gameType = t;
+  out.league = t === 'W' ? null : (lgId === 103 ? 'AL' : lgId === 104 ? 'NL' : null);
+  out.seriesGameNumber = g.seriesGameNumber != null ? g.seriesGameNumber : null;
+  out.gamesInSeries = g.gamesInSeries != null ? g.gamesInSeries : null;
+  out.seriesDescription = g.seriesDescription || null;
+  var ss = g.seriesStatus;
+  if (ss) {
+    var winId = ss.winningTeam && ss.winningTeam.id;
+    out.series = { wins: ss.wins != null ? ss.wins : null, losses: ss.losses != null ? ss.losses : null, tied: !!ss.isTied, over: !!ss.isOver,
+      leader: winId == null ? null : (winId === aT.id ? 'away' : winId === hT.id ? 'home' : null), text: ss.description || ss.shortDescription || null };
+  }
+  return out;
+}
