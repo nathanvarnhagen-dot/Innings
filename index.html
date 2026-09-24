@@ -807,6 +807,19 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ INLINE PLAY REPLAYS (v6.2.0) ═══ */
+.pai{margin:6px 0 14px;padding:12px;border-radius:18px;background:linear-gradient(180deg,#171238 0%,#110C2C 100%);border:1px solid rgba(168,159,232,.16);display:flex;flex-direction:column;gap:10px;animation:paiIn .35s cubic-bezier(.22,1,.36,1)}
+@keyframes paiIn{from{opacity:0;transform:translateY(-6px)}}
+.pai-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pai-hd span{font-size:10.5px;font-weight:800;letter-spacing:.16em;color:#9C95D0}
+.pai-hide{display:flex;align-items:center;gap:6px;min-height:32px;padding:6px 12px;border:0;border-radius:999px;background:rgba(168,159,232,.14);color:#E9E5FF;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.pai-hide:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.pai-box{position:relative;height:220px;border-radius:14px;overflow:hidden;background:#120E2B;border:1px solid rgba(168,159,232,.14)}
+.pai .bbc{margin:0}
+.pai-list{display:flex;flex-direction:column;gap:6px}
+.pai-row{display:flex;align-items:center;gap:10px;min-height:26px;opacity:0;animation:paIn .25s linear both}
+@media (prefers-reduced-motion: reduce){.pai{animation:none}.pai-row{animation:none;opacity:1}}
+
 /* ═══ BASEBALL LIVE REDESIGN (v6.0.0) — count panel, zone glow, park,
    play label above the square, Statcast strip under it, home run takeover.
    Everything that already animated keeps its timing; this restyles and adds. ═══ */
@@ -10168,7 +10181,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.1.1-infield-single-fix';
+window.INNINGS_BUILD = 'v6.2.0-inline-replays';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -26856,27 +26869,13 @@ function ghPaReplayPlay(playId, rowEl) {
   list.forEach(function (p) { if (String(p.atBatIndex) === abi && p.anim) { hit = p.anim; if (!hit.desc && p.text) hit.desc = p.text; } });
   if (!hit && box.lastPlay && String(box.lastPlay.atBatIndex) === abi) hit = box.lastPlay;
   if (!hit) { if (typeof ib_toast === 'function') ib_toast('No replay for that play'); return; }
-  var s = window._pa;
-  // v5.74.0: after the game (no live at-bat square), the replay opens
-  // right under the play you tapped: its pitches first, then the field
-  // if the ball was put in play. Tapping the same play again closes it.
-  var live = document.getElementById('gh-pa-slot');
-  if (!live || live.getAttribute('data-inline')) {
-    var prevBox = document.getElementById('pa-inline');
-    var sameRow = prevBox && rowEl && prevBox.previousElementSibling === rowEl;
-    if (prevBox) prevBox.remove();
-    if (sameRow || !rowEl) { s.play = null; return; }
-    var wrap = document.createElement('div');
-    wrap.id = 'pa-inline';
-    wrap.style.cssText = 'position:relative;height:220px;border-radius:16px;overflow:hidden;margin:4px 0 12px;background:#120E2B;border:1px solid rgba(168,159,232,.14)';
-    wrap.innerHTML = '<div id="gh-pa-slot" data-inline="1"></div>';
-    rowEl.parentNode.insertBefore(wrap, rowEl.nextSibling);
-    s.keep = true;
-  } else s.keep = false;
-  s.play = hit; s.startAt = Date.now(); s.box = box; s.seq = true;
-  _paFill();
-  var slot = document.getElementById('gh-pa-slot');
-  if (slot && slot.parentElement && slot.parentElement.scrollIntoView) slot.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // v6.2.0: a tapped play always replays right under its row — live or
+  // final — and the live at-bat square is left alone. Its count ticks and
+  // its pitches list below the box, and it stays up after the animation
+  // until Hide (or tapping the same play again).
+  if (window._pai && window._pai.playId === String(playId)) { _paiClose(); return; }
+  window._pai = { playId: String(playId), play: hit, box: box, startAt: Date.now() };
+  _paiMount(rowEl, true);
 }
 function _paFill() {
   var slot = document.getElementById('gh-pa-slot');
@@ -27248,6 +27247,7 @@ function _paOverlayHtml() {
     // a small running line under the zone: pitch n · speed · type · call
     if (!s.noCallout) allP.forEach(function (p, i) {
       var t0 = .35 + i * GAP + _paActExtra(lp, i), t1 = i < allP.length - 1 ? .35 + (i + 1) * GAP + _paActExtra(lp, i + 1) : null;
+      if (t1 != null && _paActExtra(lp, i + 1) > _paActExtra(lp, i)) t1 = t0 + .9; // a between-pitch scene starts: this line steps aside
       callout += '<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11.5px;font-weight:700;color:#D9D4FA;text-shadow:0 1px 6px rgba(11,8,32,.9);opacity:0;' + anim('paIn', .15, t0) + (t1 != null ? 'animation:paIn .15s linear ' + _paSec(t0, E) + ' both,paOut .15s linear ' + _paSec(t1, E) + ' forwards;' : '') + '">' +
         _escapeHtml([p.num + '.', p.speed ? p.speed + ' mph' : null, p.type, p.call].filter(Boolean).join(' ')) + '</div>';
     });
@@ -27487,6 +27487,119 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ── INLINE PLAY REPLAYS (v6.2.0) ────────────────────────────────────────
+// Separate from the live square's state (window._pa), so the live game keeps
+// going untouched while a past play replays under its row.
+window._pai = window._pai || null;
+function _paiRow(playId) {
+  var rows = document.querySelectorAll('[onclick*="_playDoubleTap"]');
+  for (var i = 0; i < rows.length; i++) { if ((rows[i].getAttribute('onclick') || '').indexOf("'" + playId + "'") !== -1) return rows[i]; }
+  return null;
+}
+function _paiClose() {
+  window._pai = null;
+  clearInterval(window._paiTick); window._paiTick = null;
+  var el = document.getElementById('pa-inline'); if (el) el.remove();
+}
+// Runs the shared play renderer against this replay's own state
+function _paiOverlay() {
+  var r = window._pai, saved = window._pa;
+  var tmp = { play: r.play, box: r.box, startAt: r.startAt, seq: true, keep: true };
+  window._pa = tmp;
+  var html = '';
+  try { html = _paOverlayHtml(); } finally { window._pa = saved; }
+  r._titleAt = tmp._titleAt; r._total = tmp.total;
+  return html;
+}
+function _paiTimes(lp) {
+  var GAP = .85, ps = lp.pitches || [], n = ps.length;
+  var land = ps.map(function (p, i) { return .35 + i * GAP + _paActExtra(lp, i) + .6; });
+  var OFF = Math.max(0, n - 1) * GAP + _paActExtra(lp, n);
+  var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(lp.eventType || ''));
+  var r = window._pai;
+  var resolve = OFF + (inPlay ? ((r && r._titleAt) || PA.T0 + 2) : 1.4);
+  return { land: land, resolve: resolve };
+}
+// Count as of E seconds into the replay: balls/strikes tick as each pitch
+// lands, outs go up when a between-pitch out happens and when the play ends.
+function _paiCountAt(lp, E) {
+  var T = _paiTimes(lp), b = 0, k = 0;
+  (lp.pitches || []).forEach(function (p, i) {
+    if (E < T.land[i]) return;
+    var c = String(p.call || '').toLowerCase();
+    if (/in play/.test(c) || /hit by pitch/.test(c)) return;
+    if (/ball/.test(c)) b = Math.min(4, b + 1);
+    else if (/foul/.test(c) && !/tip/.test(c)) { if (k < 2) k++; }
+    else if (/strike|foul tip/.test(c)) k = Math.min(3, k + 1);
+  });
+  var playOuts = (lp.runners || []).filter(function (x) { return x.out; }).length;
+  var acts = lp.actions || [], actOuts = 0;
+  acts.forEach(function (a) { actOuts += (a.runners || []).filter(function (x) { return x.out; }).length; });
+  var after = lp.outs != null ? lp.outs : playOuts + actOuts;
+  var o = Math.max(0, after - playOuts - actOuts);
+  acts.forEach(function (a) {
+    var tA = a.afterPitch > 0 ? .35 + (a.afterPitch - 1) * .85 + _paActExtra(lp, a.afterPitch - 1) + .9 : .1;
+    if (E >= tA + 1.6) o += (a.runners || []).filter(function (x) { return x.out; }).length;
+  });
+  if (E >= T.resolve) o = after;
+  return { b: b, k: k, o: Math.min(3, o) };
+}
+function _paiCountHtml(c) {
+  var tile = function (cls, n, slots, label, key) {
+    var caps = '';
+    for (var i = 0; i < slots; i++) caps += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+    return '<div class="bbc-t ' + cls + '"><span class="bbc-n" data-k="' + key + '">' + n + '</span><span class="bbc-caps" data-c="' + key + '">' + caps + '</span><span class="bbc-l">' + label + '</span></div>';
+  };
+  return '<div class="bbc" role="group" aria-label="Count">' + tile('bbc-b', c.b, 3, 'BALLS', 'b') + tile('bbc-s', c.k, 2, 'STRIKES', 'k') + tile('bbc-o', c.o, 2, 'OUTS', 'o') + '</div>';
+}
+function _paiListHtml(lp, E) {
+  var T = _paiTimes(lp), ps = lp.pitches || [];
+  if (!ps.length) return '';
+  return ps.map(function (p, i) {
+    var c = _pitchCallColor(p.call);
+    return '<div class="pai-row" style="animation-delay:' + (T.land[i] - .15 - E).toFixed(2) + 's">' +
+      '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + p.num + '</span>' +
+      (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
+      '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
+      (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
+  }).join('');
+}
+function _paiMount(rowEl, scroll) {
+  var r = window._pai;
+  if (!r) return;
+  var row = rowEl || _paiRow(r.playId);
+  var old = document.getElementById('pa-inline'); if (old) old.remove();
+  if (!row || !row.parentNode) return; // row not on screen (collapsed inning) — kept, shown again when it is
+  var wrap = document.createElement('div');
+  wrap.id = 'pa-inline';
+  wrap.className = 'pai';
+  if (!scroll) wrap.style.animation = 'none'; // re-mounted after a refresh: no entrance
+  var E = (Date.now() - r.startAt) / 1000;
+  var html = _paiOverlay();
+  wrap.innerHTML = '<div class="pai-hd"><span>REPLAY</span><button class="pai-hide" onclick="_paiClose()" aria-label="Hide this replay">Hide <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+    '<div class="pai-box"><div id="gh-pa-islot">' + html + '</div></div>' +
+    '<div id="pa-i-count">' + _paiCountHtml(_paiCountAt(r.play, E)) + '</div>' +
+    '<div class="pai-list">' + _paiListHtml(r.play, E) + '</div>';
+  row.parentNode.insertBefore(wrap, row.nextSibling);
+  clearInterval(window._paiTick);
+  window._paiTick = setInterval(function () {
+    var R = window._pai, box = document.getElementById('pa-i-count');
+    if (!R || !box) { clearInterval(window._paiTick); window._paiTick = null; return; }
+    var e = (Date.now() - R.startAt) / 1000, c = _paiCountAt(R.play, e);
+    ['b', 'k', 'o'].forEach(function (key) {
+      var n = box.querySelector('[data-k="' + key + '"]'), v = key === 'b' ? c.b : key === 'k' ? c.k : c.o;
+      if (n && n.textContent !== String(v)) {
+        n.textContent = v; n.classList.remove('hit'); void n.offsetWidth; n.classList.add('hit');
+        var caps = box.querySelectorAll('[data-c="' + key + '"] i');
+        for (var i = 0; i < caps.length; i++) caps[i].className = i < v ? 'on' : '';
+      }
+    });
+    if (e > (R._total || 20) + 1) { clearInterval(window._paiTick); window._paiTick = null; }
+  }, 120);
+  if (scroll && wrap.scrollIntoView) wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function _paiRemount() { if (window._pai) _paiMount(null, false); }
+
 // Hooks: a live refresh that lands mid-animation waits for it to finish
 // (so the play only ever runs once, start to end), and a single tap on a
 // play in the play-by-play replays it — a double tap still reacts.
@@ -27499,6 +27612,7 @@ function _paFieldSvg(lp, land, E) {
     var r = prevRender.apply(this, arguments);
     try { _paFill(); } catch (e) { console.error('[play anim]', e); }
     try { if (typeof _reelFill === 'function') _reelFill(); } catch (e) { console.error('[reel]', e); }
+    try { if (typeof _paiRemount === 'function') _paiRemount(); } catch (e) { console.error('[inline replay]', e); }
     return r;
   };
   var prevTap = _playDoubleTap;
