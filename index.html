@@ -807,6 +807,27 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ SLIM SCORE BAR (v6.5.0) — on the cheat sheet the game header scrolls
+   away with the page (it's laid over the top of the scroller and moved with
+   it), and once the big scoreboard scrolls off, a slim frosted bar with the
+   score slides down in its place. Not on the desktop two-column layout. ═══ */
+#screen-game.gsh-on #game-hd{position:absolute;left:0;right:0;top:0;z-index:20;will-change:transform}
+#screen-game.gsh-on #game-sheet-panel{padding-top:calc(var(--gsh-h, 120px) + 14px)!important}
+.gsb{position:absolute;left:0;right:0;top:0;z-index:22;padding-top:env(safe-area-inset-top,0px);background:rgba(26,22,64,.88);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid rgba(168,159,232,.18);box-shadow:0 10px 24px rgba(0,0,0,.35);transform:translateY(-100%);opacity:0;pointer-events:none;will-change:transform,opacity}
+.gsb.on{pointer-events:auto}
+.gsb-in{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;height:54px;padding:0 14px}
+.gsb-t{display:flex;align-items:center;gap:8px;min-width:0}
+.gsb-t.r{justify-content:flex-end}
+.gsb-lg{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0}
+.gsb-t b{font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:#fff}
+.gsb-mid{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:#F5F3FF;white-space:nowrap}
+.gsb-mid .tri{color:#A89FE8;font-size:10px}
+.gsb-mid .sub{color:#9C95D0;font-weight:700}
+.gsb-od{display:flex;gap:3px}.gsb-od i{width:6px;height:6px;border-radius:50%;border:1.3px solid #9C95D0}.gsb-od i.on{background:#F08A7E;border-color:#F08A7E}
+.gsb-back{width:28px;height:28px;border-radius:50%;background:rgba(13,8,32,.6);border:0;display:flex;align-items:center;justify-content:center;color:#C7C0E8;flex-shrink:0;cursor:pointer;margin-right:2px}
+.gsb-back:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.gsb{transition:none}}
+
 /* ═══ ABS CHALLENGES (v6.3.0) ═══ */
 .abs-line{display:flex;align-items:center;gap:8px;margin:-2px 0 4px 30px;font-size:12px;color:#B9B3E6;min-width:0}
 .abs-line>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -860,9 +881,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes paScIn{to{max-height:90px;opacity:1;padding:20px 12px 10px;margin-top:12px}}
 .pa-sc .ps-m{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
 .pa-sc .ps-m+.ps-m{border-left:1px solid rgba(255,255,255,.08)}
-.pa-sc .ps-m b{font-size:17px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
-.pa-sc .ps-m b small{font-size:10px;font-weight:700;color:#9C95D0;margin-left:1px}
-.pa-sc .ps-m span{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;white-space:nowrap}
+.pa-sc .ps-m b{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;color:#FFFFFF}
+.pa-sc .ps-m b span{font:inherit;letter-spacing:inherit;color:#FFFFFF}  /* v6.5.0: the number itself, not a label */
+.pa-sc .ps-m b small{font-size:11px;font-weight:700;color:#9C95D0;margin-left:2px;letter-spacing:.04em}
+.pa-sc .ps-m > span{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;white-space:nowrap}
 .pa-sc .ps-tr{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:.14em;padding:4px 9px;border-radius:8px;background:#2A2460;border:1px solid rgba(168,159,232,.35);color:#E9E5FF;white-space:nowrap}
 /* home run takeover inside the square (reuses the football takeover's motion) */
 .fbx-to.pa-to{top:0;bottom:0;border-radius:16px;z-index:6}
@@ -3953,7 +3975,7 @@ html.desk .gatt-sheet{max-width:560px}
      screen above or from a Live Feed card on Feed. One instance re-used
      per game; window._activeBrowseGame tracks which. ═══ -->
 <div class="screen" id="screen-game">
-  <div style="background:var(--card);padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);flex-shrink:0">
+  <div id="game-hd" style="background:var(--card);padding-top:calc(env(safe-area-inset-top, 20px) + 14px);border-bottom:0.5px solid var(--rule);flex-shrink:0">
     <div style="padding:0 16px 12px;display:flex;align-items:center;gap:12px">
       <button onclick="navBack()" style="background:var(--bg);border:0.5px solid var(--rule);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
         <svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="var(--mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg>
@@ -10193,7 +10215,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.4.0-dropped-third-strike';
+window.INNINGS_BUILD = 'v6.5.0-slim-score-bar';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19732,6 +19754,7 @@ function gameDetailTab(key) {
   if (sheetPanel) sheetPanel.style.display = key === 'sheet' ? 'block' : 'none';
   if (chatPanel) chatPanel.style.display = key === 'chat' ? 'flex' : 'none';
   if (rulesPanel) rulesPanel.style.display = key === 'rules' ? 'block' : 'none';
+  if (typeof _gshSetup === 'function') setTimeout(_gshSetup, 0); // v6.5.0
   if (inputZone) inputZone.style.display = key === 'chat' ? 'flex' : 'none';
   if (key === 'chat') {
     var gamePk = window._activeBrowseGame && window._activeBrowseGame.gamePk;
@@ -20728,7 +20751,7 @@ function _ptrAttach(panel, onRefresh) {
   var txt = ind.querySelector('.ptr-txt'), spin = ind.querySelector('.ptr-spin');
   var startY = null, pull = 0, busy = false, TRIGGER = 64;
   var show = function (y, label) {
-    ind.style.top = (panel.offsetTop + 6) + 'px';
+    ind.style.top = (panel.offsetTop + 6 + (panel._ptrOffset || 0)) + 'px';
     ind.style.opacity = String(Math.min(1, y / 30));
     ind.style.transform = 'translate(-50%,' + (y - 24) + 'px)';
     if (label) txt.textContent = label;
@@ -27505,6 +27528,95 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ═══ SLIM SCORE BAR (v6.5.0) ══════════════════════════════════════════
+function _gshDesk() { return typeof _isDesk === 'function' && _isDesk(); }
+function _gshModel() {
+  var gp = window._gdPregame;
+  if (!gp) return null;
+  if (gp.gx) return { kind: 'gx', m: gp.gx };
+  if (gp.heroBox && typeof _ghModelFromMlbBox === 'function') { var m = _ghModelFromMlbBox(gp.heroBox); if (m) return { kind: 'mlb', m: m, box: gp.heroBox }; }
+  return null;
+}
+function _gshBarHtml() {
+  var o = _gshModel();
+  if (!o) return '';
+  var m = o.m, a = m.away, h = m.home;
+  var lg = function (t) { var c = t.colors || {}; return '<span class="gsb-lg" style="background:' + (c.bg || '#3D3580') + ';color:' + (c.fg || '#fff') + '">' + _escapeHtml(t.abbr || '') + '</span>'; };
+  var sc = function (t) { return t.score != null ? t.score : '\u2013'; };
+  var mid = '';
+  if (m.phase === 'final') mid = 'FINAL';
+  else if (m.phase === 'pre') mid = '<span class="sub">VS</span>';
+  else if (o.kind === 'mlb') {
+    var s = (o.box && o.box.situation) || {};
+    var b = s.bases || {};
+    var on = function (k) { return !!(b[k] || b[{ first: '1B', second: '2B', third: '3B' }[k]]); };
+    var dia = function (x, y, f) { return '<rect x="' + x + '" y="' + y + '" width="7" height="7" transform="rotate(45 ' + (x + 3.5) + ' ' + (y + 3.5) + ')" fill="' + (f ? '#A89FE8' : 'none') + '" stroke="#A89FE8" stroke-width="1.5"/>'; };
+    var od = ''; for (var i = 0; i < 3; i++) od += '<i class="' + (i < (s.outs || 0) ? 'on' : '') + '"></i>';
+    mid = '<span class="tri">' + (s.half === 'top' ? '&#9650;' : '&#9660;') + '</span>' + (s.inning || '') +
+      '<svg width="22" height="15" viewBox="0 0 26 18" aria-hidden="true">' + dia(9.5, 1, on('second')) + dia(2, 8.5, on('third')) + dia(17, 8.5, on('first')) + '</svg>' +
+      '<span class="gsb-od">' + od + '</span>' + (s.balls != null ? s.balls : 0) + '\u2013' + (s.strikes != null ? s.strikes : 0);
+  } else {
+    var pt = typeof _gxPeriodText === 'function' ? _gxPeriodText(m) : { big: '', small: '' };
+    mid = _escapeHtml(pt.big || '') + (pt.small ? ' <span class="sub">' + _escapeHtml(pt.small) + '</span>' : '');
+  }
+  return '<div class="gsb-in"><div class="gsb-t"><button class="gsb-back" onclick="navBack()" aria-label="Back"><svg width="7" height="12" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg></button>' + lg(a) + '<b>' + sc(a) + '</b></div>' +
+    '<div class="gsb-mid">' + mid + '</div><div class="gsb-t r"><b>' + sc(h) + '</b>' + lg(h) + '</div></div>';
+}
+function _gshSetup() {
+  var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel');
+  if (!scr || !hd || !panel) return;
+  if (!document.getElementById('game-sb')) {
+    var bar = document.createElement('div'); bar.id = 'game-sb'; bar.className = 'gsb'; bar.setAttribute('role', 'status');
+    scr.appendChild(bar);
+    panel.style.position = 'relative';
+    panel.addEventListener('scroll', _gshUpdate, { passive: true });
+    if (window.ResizeObserver) new ResizeObserver(function () { _gshMeasure(); _gshUpdate(); }).observe(hd);
+    window.addEventListener('resize', function () { _gshApply(); });
+  }
+  _gshApply();
+}
+function _gshMeasure() {
+  var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd');
+  if (scr && hd && scr.classList.contains('gsh-on')) scr.style.setProperty('--gsh-h', hd.offsetHeight + 'px');
+  var panel = document.getElementById('game-sheet-panel');
+  if (panel) panel._ptrOffset = (scr && scr.classList.contains('gsh-on') && hd) ? hd.offsetHeight : 0;
+}
+// On for the cheat sheet (phone and iPad), off for chat/rules and desktop
+function _gshApply() {
+  var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel');
+  if (!scr || !hd || !panel) return;
+  var want = !_gshDesk() && panel.style.display !== 'none';
+  scr.classList.toggle('gsh-on', want);
+  if (!want) { hd.style.transform = ''; var b = document.getElementById('game-sb'); if (b) { b.style.transform = ''; b.style.opacity = ''; b.classList.remove('on'); } }
+  _gshMeasure();
+  _gshUpdate();
+}
+// The header moves with the content; the bar slides in over the 60px as the
+// scoreboard leaves the top, and back out the same way.
+function _gshUpdate() {
+  var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel'), bar = document.getElementById('game-sb');
+  if (!scr || !hd || !panel || !bar || !scr.classList.contains('gsh-on')) return;
+  var y = panel.scrollTop, H = hd.offsetHeight;
+  hd.style.transform = 'translateY(' + (-Math.min(y, H)) + 'px)';
+  var hero = panel.querySelector('.gh');
+  var p = 0;
+  if (hero) {
+    var bottom = hero.offsetTop + hero.offsetHeight;
+    var barH = bar.offsetHeight || 60;
+    p = Math.max(0, Math.min(1, (y - (bottom - barH - 60)) / 60));
+  }
+  if (p > 0 && !bar.innerHTML) bar.innerHTML = _gshBarHtml();
+  bar.style.transform = 'translateY(' + (-(1 - p) * 100) + '%)';
+  bar.style.opacity = p;
+  bar.classList.toggle('on', p > .5);
+}
+function _gshRefresh() {
+  var bar = document.getElementById('game-sb');
+  if (bar) bar.innerHTML = _gshBarHtml();
+  _gshMeasure();
+  _gshUpdate();
+}
+
 // ── ABS CHALLENGES (v6.3.0) ────────────────────────────────────────────
 // From the Stats API: a challenged pitch carries `abs` {overturned,
 // inProgress, side} (reviewType "MJ"); the box carries each team's
@@ -27696,6 +27808,7 @@ function _paiRemount() { if (window._pai) _paiMount(null, false); }
     try { _paFill(); } catch (e) { console.error('[play anim]', e); }
     try { if (typeof _reelFill === 'function') _reelFill(); } catch (e) { console.error('[reel]', e); }
     try { if (typeof _paiRemount === 'function') _paiRemount(); } catch (e) { console.error('[inline replay]', e); }
+    try { if (typeof _gshRefresh === 'function') _gshRefresh(); } catch (e) { console.error('[score bar]', e); }
     return r;
   };
   var prevTap = _playDoubleTap;
