@@ -10193,7 +10193,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.3.0-abs-challenges';
+window.INNINGS_BUILD = 'v6.4.0-dropped-third-strike';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -26805,7 +26805,7 @@ function _reelFill() {
   window._pa = tmp;
   var html = '';
   try { html = _paOverlayHtml(); } finally { window._pa = saved; }
-  var inPlay = !!(it.lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(it.lp.eventType || ''));
+  var inPlay = !!(it.lp.hit || it.lp.droppedK || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(it.lp.eventType || ''));
   var off = Math.max(0, (it.lp.pitches || []).length - 1) * .85 + _paActExtra(it.lp, (it.lp.pitches || []).length);
   var resolveAt = off + (inPlay ? (tmp._titleAt || PA.T0 + 2) : 1.4);
   var dur = resolveAt + 3.4; // hold on the result a little longer
@@ -26986,6 +26986,8 @@ function _paNote2(lp, box, land) {
   if (t === 'strikeout' || t === 'strikeout_double_play') {
     var last = (lp.pitches || [])[lp.pitches.length - 1];
     bits.push(last && /called/i.test(last.call || '') ? '\u24C0K looking' : 'K swinging'); // marker → mirrored K when drawn
+    if (lp.droppedK === 'out') bits.push('Dropped third strike' + (f.length > 1 ? ' \u00b7 ' + f.join('-') : ''));
+    else if (lp.droppedK === 'safe') bits.push('Reached on dropped third strike');
   } else if (t === 'walk' || t === 'intent_walk') bits.push(t === 'intent_walk' ? 'IBB' : 'BB');
   else if (t === 'home_run') { if (land) bits.push('To ' + _paDir(land.ang)); if (lp.hit && lp.hit.distance) bits.push(lp.hit.distance + ' ft'); }
   else if (t === 'single' && _paInfieldHitPos(lp)) { bits.push('Infield single to ' + ({ '1': 'the pitcher', '2': 'the catcher', '3': 'first', '4': 'second', '5': 'third', '6': 'short' })[_paInfieldHitPos(lp)] + ' · beat the throw'); }
@@ -27236,7 +27238,7 @@ function _paOverlayHtml() {
   // v5.91.0: walks and hit-by-pitches also go to the field — no ball, just
   // the batter taking first and anyone forced moving up.
   var walkish = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(lp.eventType || '');
-  var showField = inPlay || walkish;
+  var showField = inPlay || walkish || !!lp.droppedK; // v6.4.0: strike three got by the catcher
   var allP = (lp.pitches || []).slice();
   // v5.75.0: a replay you tapped shows every pitch coming in one at a
   // time first; everything after the pitches shifts later by that much.
@@ -27343,6 +27345,10 @@ function _paFieldSvg(lp, land, E) {
   // where the ball goes first: the landing spot, or the first fielder
   var first = land ? [land.x, land.y] : (fl[0] && PA_F[fl[0]] ? PA_F[fl[0]] : [250, 150]);
   if (!hr && land) { var rr = Math.hypot(first[0] - PA_H[0], first[1] - PA_H[1]); if (rr > 262) { var k = 262 / rr; first = [PA_H[0] + (first[0] - PA_H[0]) * k, PA_H[1] + (first[1] - PA_H[1]) * k]; } }
+  // v6.4.0: dropped third strike — the ball gets by the catcher toward the
+  // backstop; he chases it and throws to first (or the batter makes it).
+  var droppedK = !!lp.droppedK;
+  if (droppedK) first = [212, 381];
   var groundOut = /ground|bunt_grounder/.test(tr) && land && Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150;
   // v5.94.0: a grounder an infielder fields. The hit coordinates are often
   // where the ball first hit the dirt, not where he got it — so the ball
@@ -27358,7 +27364,7 @@ function _paFieldSvg(lp, land, E) {
     first = [PA_H[0] + reach * Math.sin(gAng), PA_H[1] - reach * Math.cos(gAng)];
     bounceAt = Math.max(.25, Math.min(.8, bR / reach));
   }
-  var flight = hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
+  var flight = droppedK ? .55 : hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
   var t1 = T0 + flight;
   var noBall = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(t);
   if (noBall) t1 = T0;
@@ -27592,7 +27598,7 @@ function _paiTimes(lp) {
   var GAP = .85, ps = lp.pitches || [], n = ps.length;
   var land = ps.map(function (p, i) { return .35 + i * GAP + _paActExtra(lp, i) + .6; });
   var OFF = Math.max(0, n - 1) * GAP + _paActExtra(lp, n);
-  var inPlay = !!(lp.hit || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(lp.eventType || ''));
+  var inPlay = !!(lp.hit || lp.droppedK || /single|double|triple|home_run|field_out|double_play|triple_play|force_out|fielders_choice|sac_|field_error|walk|hit_by_pitch|catcher_interf/.test(lp.eventType || ''));
   var r = window._pai;
   var resolve = OFF + (inPlay ? ((r && r._titleAt) || PA.T0 + 2) : 1.4);
   return { land: land, resolve: resolve };
