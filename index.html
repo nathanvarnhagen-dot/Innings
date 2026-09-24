@@ -807,6 +807,96 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ NEW MOMENT (v7.1.0) — the refined first screen, "happening now" radar
+   with typing, and ticket stubs for games, concerts and festivals. Stubs
+   fill the same fields the guided story uses and save through the same
+   saveNewMoment(); their extra details ride along as `stub` on the memory. ═══ */
+.mn-when{position:relative;display:flex;align-items:center;gap:14px;padding:18px;border-radius:22px;border:1px solid rgba(255,255,255,.1);overflow:hidden;text-align:left;width:100%;cursor:pointer;font-family:inherit;color:#fff;box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.mn-when .ic{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:22px}
+.mn-when b{font-size:17px;font-weight:800;display:block}
+.mn-when span.s{font-size:13px;color:rgba(255,255,255,.72);line-height:1.4;display:block;margin-top:2px}
+.mn-when .go{margin-left:auto;font-size:20px;color:rgba(255,255,255,.5)}
+.mn-past{background:linear-gradient(135deg,#231C52,#171236)}
+.mn-now{background:linear-gradient(135deg,#3B2A7A,#241A58)}
+.mn-now::after{content:'';position:absolute;right:-30px;top:50%;width:120px;height:120px;margin-top:-60px;border-radius:50%;border:1px solid rgba(124,242,156,.35);animation:mnRing 2.4s ease-out infinite;pointer-events:none}
+@keyframes mnRing{from{transform:scale(.3);opacity:1}to{transform:scale(1.4);opacity:0}}
+.mn-next{background:linear-gradient(135deg,#6C62C8,#9A8FE6);color:#1A1640}
+.mn-next span.s{color:rgba(26,22,64,.72)}.mn-next .go{color:#1A1640}
+.mn-next .ic{background:rgba(26,22,64,.12);border-color:rgba(26,22,64,.2)}
+.mn-livedot{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:900;letter-spacing:.16em;color:#FFD0C9;background:rgba(255,90,70,.18);border-radius:999px;padding:3px 8px;margin-right:6px;vertical-align:2px}
+.mn-livedot i{width:6px;height:6px;border-radius:50%;background:#FF6A58;animation:mnPulse 1.6s ease-in-out infinite}
+@keyframes mnPulse{50%{opacity:.3}}
+/* happening now */
+.mn-radar{position:relative;width:220px;height:220px;margin:8px auto 4px}
+.mn-radar .rg{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(124,242,156,.25)}
+.mn-radar .rg:nth-child(2){inset:36px}.mn-radar .rg:nth-child(3){inset:72px}
+.mn-radar .sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(124,242,156,.32),transparent 70deg,transparent);animation:mnSweep 2.6s linear infinite}
+@keyframes mnSweep{to{transform:rotate(360deg)}}
+.mn-radar .me{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#7CF29C;box-shadow:0 0 0 6px rgba(124,242,156,.2),0 0 20px #7CF29C}
+.mn-cta{width:100%;min-height:52px;border:0;border-radius:16px;background:linear-gradient(180deg,#B8B0F0,#A89FE8);color:#1A1640;font-size:15.5px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 10px 26px rgba(168,159,232,.28)}
+.mn-cta:disabled{opacity:.6}
+.mn-link{width:100%;min-height:40px;background:none;border:0;color:var(--subtle,#9C95D0);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.mn-typed{display:flex;align-items:center;gap:8px;margin:14px 20px 0;padding:0 6px 0 14px;min-height:52px;border-radius:16px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(168,159,232,.4)}
+.mn-typed input{flex:1;min-width:0;background:transparent;border:0;outline:none;font-size:15px;color:#F5F3FF;font-family:inherit;padding:12px 0}
+.mn-typed input::placeholder{color:rgba(255,255,255,.4)}
+.mn-typed button{min-height:40px;padding:0 14px;border:0;border-radius:12px;background:#A89FE8;color:#1A1640;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer}
+/* what was it */
+.mn-kinds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mn-kind{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:112px;padding:14px;border-radius:20px;text-align:left;border:1px solid rgba(255,255,255,.1);color:#fff;font-family:inherit;cursor:pointer}
+.mn-kind .e{font-size:28px;line-height:1}.mn-kind b{font-size:15px;margin-top:auto}.mn-kind small{font-size:11.5px;color:rgba(255,255,255,.75);line-height:1.3}
+.mn-kind.wide{grid-column:1/-1;min-height:74px;flex-direction:row;align-items:center;gap:14px}.mn-kind.wide b{margin-top:0}
+/* the stub */
+.mn-stub{position:relative;border-radius:22px;overflow:hidden;color:#fff;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.mn-stub .main{position:relative;padding:18px 18px 16px}
+.mn-stub .kk{font-size:10px;font-weight:900;letter-spacing:.3em;opacity:.85}
+.mn-stub .tt,.mn-stub .sub,.mn-stub .fi{background:transparent;border:0;outline:none;color:inherit;font-family:inherit;border-bottom:1.5px dashed rgba(255,255,255,.5);padding:2px 0;width:100%}
+.mn-stub .tt{font-size:26px;font-weight:900;font-style:italic;line-height:1.1;margin-top:6px}
+.mn-stub .tt::placeholder,.mn-stub .sub::placeholder,.mn-stub .fi::placeholder{color:rgba(255,255,255,.55)}
+.mn-stub .subrow{display:flex;gap:10px;margin-top:6px}
+.mn-stub .sub{font-size:13px;font-weight:700}
+.mn-stub .sub[type=date]{max-width:150px;color-scheme:dark}
+.mn-stub .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.mn-stub .meta span{font-size:9px;font-weight:800;letter-spacing:.16em;opacity:.7;display:block}
+.mn-stub .fi{font-size:15px;font-weight:800}
+.mn-stub .final{display:flex;align-items:baseline;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2);font-size:15px;font-weight:800}
+.mn-stub .final span{font-size:9px;font-weight:800;letter-spacing:.16em;opacity:.7}
+.mn-stub .attach{margin-top:12px;min-height:40px;width:100%;border:1.5px dashed rgba(255,255,255,.5);border-radius:12px;background:rgba(0,0,0,.15);color:#fff;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer}
+.mn-stub .perf{position:relative;height:0;border-top:2px dashed rgba(255,255,255,.35);margin:0 14px}
+.mn-stub .perf::before,.mn-stub .perf::after{content:'';position:absolute;top:-13px;width:24px;height:24px;border-radius:50%;background:var(--bg,#0B0720)}
+.mn-stub .perf::before{left:-26px}.mn-stub .perf::after{right:-26px}
+.mn-stub .bottom{padding:14px 18px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(0,0,0,.14)}
+.mn-stub .bars{display:flex;gap:2px;height:30px}.mn-stub .bars i{width:2px;background:rgba(255,255,255,.85)}
+.mn-stub .who{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}
+.mn-stub .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:rgba(255,255,255,.22);border:2px solid rgba(0,0,0,.2)}
+.mn-stub .addw{min-height:30px;padding:0 10px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.55);background:none;color:#fff;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer}
+.mn-stub .punch{position:absolute;right:16px;top:16px;width:66px;height:66px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;letter-spacing:.12em;text-align:center;line-height:1.15;transform:rotate(-14deg) scale(0);opacity:0;pointer-events:none}
+.mn-stub.saved .punch{animation:mnStamp .5s cubic-bezier(.22,1,.36,1) .1s both}
+@keyframes mnStamp{0%{transform:rotate(-14deg) scale(1.8);opacity:0}100%{transform:rotate(-14deg) scale(1);opacity:1}}
+.mn-stub.concert{background:linear-gradient(160deg,#1A1238 0%,#2B1655 55%,#12091F 100%)}
+.mn-stub.concert .holo{position:absolute;left:0;right:0;top:0;height:6px;background:linear-gradient(90deg,#7CF2E8,#A89FE8,#FF8AD8,#F2C869,#7CF2E8);background-size:200% 100%;animation:mnHolo 3s linear infinite}
+.mn-stub.concert::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.1) 45%,rgba(168,255,240,.08) 50%,rgba(255,138,216,.08) 55%,transparent 70%);background-size:250% 100%;animation:mnHolo 4s linear infinite;pointer-events:none}
+@keyframes mnHolo{to{background-position:-200% 0}}
+.mn-stub.concert .tt{color:#E8DEFF}
+.mn-stub.fest{background:linear-gradient(90deg,#1E6F6A,#2A5E9C 50%,#6E3A9C)}
+.mn-stub.fest .weave{position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 2px,transparent 2px 6px),repeating-linear-gradient(-45deg,rgba(0,0,0,.08) 0 2px,transparent 2px 6px);pointer-events:none}
+.mn-stub.fest .main{padding-right:56px}
+.mn-stub.fest .clasp{position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(180deg,#D9D4E8,#8C88A0);box-shadow:inset 3px 0 6px rgba(0,0,0,.35)}
+.mn-stub.fest .clasp::after{content:'';position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#9C98B0)}
+.mn-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mn-day{min-height:32px;padding:0 10px;border-radius:8px;border:1.5px dashed rgba(255,255,255,.6);background:none;color:#fff;font-size:11px;font-weight:900;letter-spacing:.1em;font-family:inherit;cursor:pointer}
+.mn-day.on{background:#fff;color:#2A5E9C;border-style:solid}
+.mn-card{color:#F5F3FF;border-radius:18px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;gap:8px}
+.mn-card .q{font-size:11px;font-weight:800;letter-spacing:.14em;color:#A89FE8}
+.mn-card textarea,.mn-card input{width:100%;background:transparent;border:0;outline:none;color:#F5F3FF;font-size:15px;font-family:inherit;line-height:1.45;resize:none}
+.mn-set b{color:#F5F3FF}
+.mn-set{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:.5px solid rgba(255,255,255,.08);font-size:14px}
+.mn-set:first-of-type{border-top:0}
+.mn-set button{margin-left:auto;width:28px;height:28px;border-radius:50%;border:0;background:rgba(255,255,255,.07);color:#9C95D0;cursor:pointer}
+.mn-photos{display:flex;gap:8px;overflow-x:auto}
+.mn-photos img{width:72px;height:72px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.mn-photos button{width:72px;height:72px;border-radius:12px;border:1.5px dashed rgba(168,159,232,.45);background:none;color:#A89FE8;font-size:22px;flex-shrink:0;cursor:pointer}
+@media (prefers-reduced-motion: reduce){.mn-now::after,.mn-radar .sweep,.mn-stub.concert .holo,.mn-stub.concert::after{animation:none}.mn-stub.saved .punch{animation:none;opacity:1;transform:rotate(-14deg)}}
+
 /* ═══ PLAN BUILDER (v7.0.0) — "It's coming up": templates, blocks, style,
    casual hang. Saves to futureMoments (the existing plan screen, RSVPs and
    chat keep working); the extra pieces live under the doc's `pb` field. ═══ */
@@ -2354,29 +2444,11 @@ html.desk .gatt-sheet{max-width:560px}
 
     <!-- ── STEP 0: WHEN IS THIS ── -->
     <div id="create-step-0" style="display:flex;flex-direction:column;padding:24px 20px;gap:14px">
-      <div style="font-size:20px;font-weight:800;color:var(--black);letter-spacing:-0.4px">When is this?</div>
-      <div style="font-size:13px;color:var(--subtle);margin-bottom:6px;line-height:1.5">Happening right now? We can find the game or venue for you. Already happened? Log it as a memory. Coming up? Send an invite.</div>
-      <div onclick="chooseMomentType('past')" style="background:linear-gradient(135deg,#2A2460,#1A1640);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25)">
-        <div style="font-size:30px">🕰️</div>
-        <div>
-          <div style="font-size:16px;font-weight:700;color:white">It already happened</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px">Log a memory — highlights, photos, who was there</div>
-        </div>
-      </div>
-      <div onclick="chooseMomentType('now')" style="background:linear-gradient(135deg,#3D3580,#5B4FA0);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(61,53,128,0.3)">
-        <div style="font-size:30px">📍</div>
-        <div>
-          <div style="font-size:16px;font-weight:700;color:white"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6FE0A0;margin-right:6px;vertical-align:middle"></span>It's happening now</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px">We'll ask for your location once, to fill in the game or venue</div>
-        </div>
-      </div>
-      <div onclick="typeof pbOpen==='function'?pbOpen():chooseMomentType('future')" style="background:linear-gradient(135deg,#6B5FC7,#A89FE8);border-radius:20px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 20px rgba(168,159,232,0.25)">
-        <div style="font-size:30px">🎉</div>
-        <div>
-          <div style="font-size:16px;font-weight:700;color:#1A0A2E">It's coming up</div>
-          <div style="font-size:12px;color:rgba(26,10,46,0.7);margin-top:2px">Send an invite and collect RSVPs</div>
-        </div>
-      </div>
+      <div style="font-size:28px;font-weight:800;color:var(--black);letter-spacing:-.6px;line-height:1.1">When is this?</div>
+      <div style="font-size:14px;color:var(--subtle);margin-bottom:4px;line-height:1.5">Every moment deserves a home — whether it happened, is happening, or is coming up.</div>
+      <button class="mn-when mn-past" onclick="chooseMomentType('past')"><span class="ic">⏳</span><span><b>It already happened</b><span class="s">A ticket stub for games and shows, a story for everything else</span></span><span class="go">›</span></button>
+      <button class="mn-when mn-now" onclick="chooseMomentType('now')"><span class="ic">📍</span><span><b><span class="mn-livedot"><i></i>NOW</span>It’s happening now</b><span class="s">We’ll find where you are, or type it in</span></span><span class="go">›</span></button>
+      <button class="mn-when mn-next" onclick="typeof pbOpen==='function'?pbOpen():null"><span class="ic">🎟️</span><span><b>It’s coming up</b><span class="s">Invite friends, pick a night, collect RSVPs</span></span><span class="go">›</span></button>
     </div>
 
     <!-- ── HAPPENING NOW ── location is asked fresh every time (never
@@ -2385,18 +2457,21 @@ html.desk .gatt-sheet{max-width:560px}
          there's no general geocoding here, so it only recognizes places
          explicitly taught to it. -->
     <div id="create-step-now" style="display:none;flex-direction:column">
-      <div id="now-ask" style="padding:24px 20px">
-        <div style="background:rgba(255,255,255,0.06);border:1px solid var(--rule);border-radius:18px;padding:20px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">📍</div>
-          <div style="font-size:16px;font-weight:700;color:var(--black)">Use your location?</div>
-          <div style="font-size:12.5px;color:var(--subtle);margin-top:8px;line-height:1.5">This helps fill in the game, score, or venue automatically. Asked fresh every time — never stored, never tracked in the background.</div>
-          <button id="now-use-location-btn" onclick="requestNowLocation()" style="width:100%;margin-top:16px;background:var(--indigo);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Use My Location</button>
-          <button onclick="skipNowLocation()" style="width:100%;margin-top:8px;background:none;border:none;color:var(--subtle);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Skip — I'll fill it in myself</button>
-          <button onclick="backToStep0()" style="width:100%;margin-top:4px;background:none;border:none;color:var(--subtle);font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;opacity:0.7">← Back</button>
-        </div>
+      <div id="now-ask" style="padding:20px 20px 0;text-align:center">
+        <div class="mn-radar" aria-hidden="true"><div class="rg"></div><div class="rg"></div><div class="rg"></div><div class="sweep"></div><div class="me"></div></div>
+        <div style="font-size:22px;font-weight:800;color:var(--black);letter-spacing:-.4px">Where are you?</div>
+        <div style="font-size:13px;color:var(--subtle);margin:6px 0 16px;line-height:1.5">We’ll find the game or place. Asked fresh every time — never stored, never tracked.</div>
+        <button id="now-use-location-btn" class="mn-cta" onclick="requestNowLocation()">Find where I am</button>
+        <button class="mn-link" onclick="skipNowLocation()">Skip — I’ll fill it in myself</button>
+        <button class="mn-link" style="opacity:.7" onclick="backToStep0()">← Back</button>
       </div>
       <div id="now-result" style="display:none"></div>
+      <div class="mn-typed"><span aria-hidden="true">✎</span><input id="now-typed" placeholder="Somewhere else? Type a place or address" aria-label="Type a place or address" onkeydown="if(event.key==='Enter'){event.preventDefault();mnNowTyped()}"><button onclick="mnNowTyped()">Use it</button></div>
     </div>
+
+    <!-- ── WHAT WAS IT? + TICKET STUB (v7.1.0) ── -->
+    <div id="create-step-kind" style="display:none;flex-direction:column"></div>
+    <div id="create-step-stub" style="display:none;flex-direction:column"></div>
 
     <!-- ── STEP 1: THE MOMENT ── -->
     <div id="create-step-1" style="display:none;flex-direction:column">
@@ -2575,123 +2650,6 @@ html.desk .gatt-sheet{max-width:560px}
         <button onclick="saveNewMoment()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Save this moment</button>
         <button onclick="saveNewMoment()" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Skip — save without a dedication</button>
         <button onclick="goToStep(3)" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
-      </div>
-    </div>
-
-    <!-- ── FUTURE STEP 1: INVITE DETAILS ── -->
-    <div id="create-step-f1" style="display:none;flex-direction:column">
-      <div id="future-hero" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);padding:28px 20px;position:relative;overflow:hidden">
-        <div id="future-hero-bg-photo" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 0.2s"></div>
-        <div id="future-hero-overlay" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.55));opacity:0;transition:opacity 0.2s;pointer-events:none"></div>
-        <div style="position:relative;z-index:2">
-          <input id="future-title" placeholder="Give this a name" style="width:100%;background:transparent;border:none;outline:none;font-size:24px;font-weight:800;color:white;-webkit-text-fill-color:white;caret-color:white;font-family:inherit;letter-spacing:-0.5px">
-          <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">e.g. "Giants vs Dodgers" or "Beach day"</div>
-        </div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Theme</div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px" id="future-theme-pills">
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%);cursor:pointer;border:2px solid #0D0820;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4ADE80 0%,#22D3EE 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F472B6 0%,#FB923C 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F472B6 0%,#FB923C 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#60A5FA 0%,#A78BFA 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FBBF24 0%,#F87171 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FBBF24 0%,#F87171 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#34D399 0%,#3B82F6 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#34D399 0%,#3B82F6 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#F87171 0%,#EC4899 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F87171 0%,#EC4899 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#A78BFA 0%,#38BDF8 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#FACC15 0%,#4ADE80 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FACC15 0%,#4ADE80 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-          <div onclick="selectFutureTheme(this,'linear-gradient(135deg,#818CF8 0%,#F472B6 100%)')" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#818CF8 0%,#F472B6 100%);cursor:pointer;border:2px solid transparent;flex-shrink:0"></div>
-        </div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Cover photo</div>
-        <input type="file" id="future-cover-input" accept="image/*" style="display:none" onchange="previewFutureCoverPhoto(this)">
-        <div style="position:relative">
-          <div id="future-cover-preview" style="width:100%;height:110px;border-radius:14px;background:var(--bg);border:1.5px dashed var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;overflow:hidden;background-size:cover;background-position:center" onclick="document.getElementById('future-cover-input').click()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <div style="font-size:12px;color:var(--subtle);font-weight:500">Add a cover photo</div>
-            <div style="font-size:10px;color:var(--subtle);opacity:0.6;text-align:center;padding:0 12px">optional — shown wherever this plan appears</div>
-          </div>
-          <button id="future-cover-remove" onclick="event.stopPropagation();removeFutureCoverPhoto()" style="display:none;position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(10,10,15,0.6);border:none;color:white;font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;font-family:inherit">✕</button>
-        </div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:14px;font-weight:600;color:var(--black)">Date</div>
-        <input type="date" id="future-date" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">
-      </div>
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:14px;font-weight:600;color:var(--black)">Time</div>
-        <input type="time" id="future-time" style="font-size:14px;color:var(--indigo);font-weight:600;border:none;outline:none;background:transparent;font-family:inherit">
-      </div>
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Where</div>
-        <input id="future-location" placeholder="Add a location" oninput="_updateLocationLinks('future', this.value)" style="width:100%;font-size:15px;color:var(--black);border:none;outline:none;background:transparent;font-family:inherit">
-        <div id="future-loc-quickbtn" onclick="useFutureCurrentLocation()" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--lav);background:rgba(168,159,232,.1);border:1px solid rgba(168,159,232,.25);border-radius:10px;padding:6px 10px;margin-top:8px;cursor:pointer">📍 Use my current location</div>
-        <div id="future-location-preview" style="display:none;margin-top:12px;border-radius:14px;border:0.5px solid var(--rule);padding:12px 14px;background:var(--bg)">
-          <div id="future-location-preview-text" style="font-size:13px;font-weight:600;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px"></div>
-          <div style="display:flex;gap:8px">
-            <a id="future-location-google" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Google Maps</a>
-            <a id="future-location-apple" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Apple Maps</a>
-            <a id="future-location-waze" target="_blank" rel="noopener" style="flex:1;text-align:center;background:var(--card);border:0.5px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--indigo);text-decoration:none">Waze</a>
-          </div>
-        </div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">What kind of plan</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px" id="future-vibe-pills"></div>
-        <div id="future-other-input-row" style="display:none;gap:8px;margin-top:10px">
-          <input id="future-other-emoji" style="width:56px;font-size:20px;text-align:center;border:0.5px solid var(--rule);border-radius:12px;padding:12px 0;outline:none;font-family:inherit;background:var(--bg)" placeholder="🏷️" oninput="_syncFutureOtherVibe()">
-          <input id="future-other-label" style="flex:1;font-size:15px;font-weight:500;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:12px 14px;outline:none;background:var(--bg);font-family:inherit" placeholder="What kind of plan is this?" oninput="_syncFutureOtherVibe()">
-        </div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Tickets</div>
-        <input id="future-ticket-link" placeholder="Paste a ticket link (SeatGeek, Ticketmaster, etc.)" style="width:100%;font-size:14px;color:var(--black);border:0.5px solid var(--rule);border-radius:12px;padding:11px 14px;outline:none;background:var(--bg);font-family:inherit">
-        <div id="future-ticket-hint" style="font-size:11px;color:var(--subtle);margin-top:6px;line-height:1.4">Optional — everyone invited will see a "Get Tickets" button that opens this link.</div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Stops</div>
-        <div id="stops-editor-create"></div>
-      </div>
-
-      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
-        <button onclick="goToFutureStep(2)" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Next — Who's invited</button>
-        <button onclick="backToStep0()" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
-      </div>
-    </div>
-
-    <!-- ── FUTURE STEP 2: WHO'S INVITED ── -->
-    <div id="create-step-f2" style="display:none;flex-direction:column">
-      <div style="background:var(--card);padding:20px;border-bottom:0.5px solid var(--rule)">
-        <div style="font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.4px;margin-bottom:4px">Who's invited?</div>
-        <div style="font-size:13px;color:var(--subtle);line-height:1.55">Tag friends to invite them — they'll get real Going / Maybe / Can't go buttons.</div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule)">
-        <div id="future-friend-picker" style="display:flex;flex-direction:column"></div>
-        <div onclick="if(typeof sendInviteText==='function')sendInviteText()" style="font-size:12px;color:var(--indigo);font-weight:600;margin-top:12px;cursor:pointer">＋ Text an invite link to someone not on Innings yet</div>
-        <div style="font-size:12px;color:var(--subtle);margin-top:8px">Only Innings friends can RSVP directly right now — texted invites won't show a live RSVP.</div>
-      </div>
-
-      <div style="background:var(--card);padding:16px 20px;border-bottom:0.5px solid var(--rule);display:flex;align-items:center;justify-content:space-between">
-        <div style="max-width:220px">
-          <div style="font-size:14px;font-weight:600;color:var(--black)">Make it public</div>
-          <div style="font-size:12px;color:var(--subtle);margin-top:2px;line-height:1.4">Anyone in your Innings circle can see it in their feed and ask to come — not just people you tag.</div>
-        </div>
-        <div id="future-public-toggle" onclick="toggleFuturePublic()" style="width:46px;height:28px;border-radius:20px;background:var(--rule);position:relative;cursor:pointer;flex-shrink:0">
-          <div id="future-public-knob" style="width:22px;height:22px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:left 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
-        </div>
-      </div>
-
-      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
-        <button onclick="saveFutureMoment()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Send the invite</button>
-        <button onclick="goToFutureStep(1)" style="width:100%;background:transparent;color:var(--subtle);border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">← Back</button>
       </div>
     </div>
 
@@ -6557,13 +6515,6 @@ function closeActAlbum() {
   if (box) box.style.display = 'none';
 }
 
-function renderActAlbum(photos) {
-  var grid = document.getElementById('act-album-grid');
-  if (!grid) return;
-  grid.innerHTML = photos.length
-    ? photos.map(function(p, i){ return '<div onclick="openActPhoto(' + i + ')" style="width:100%;aspect-ratio:1/1;border-radius:8px;background-image:url(' + p.photo + ');background-size:cover;background-position:center;cursor:pointer"></div>'; }).join('')
-    : '<div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;padding:40px 0">No photos yet — be the first to add one</div>';
-}
 
 function openActDetail(actName, actTime, isHeadliner) {
   var actId = _slugifyAct(actName);
@@ -10438,7 +10389,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.0.1-trim';
+window.INNINGS_BUILD = 'v7.1.0-new-moment';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11009,15 +10960,18 @@ function _matchNearbyVenue(lat, lng) {
 
 function chooseMomentType(type) {
   window._momentType = type;
+  window._stubMode = null; // v7.1.0
   var step0 = document.getElementById('create-step-0');
   if (step0) step0.style.display = 'none';
   var indBar = document.getElementById('moment-step-indicator');
   if (type === 'past') {
+    // v7.1.0: ask what it was first (stub for games/concerts/festivals)
+    if (typeof mnShowKind === 'function') { mnShowKind(); return; }
     if (indBar) indBar.style.display = 'flex';
     goToStep(1);
   } else if (type === 'future') {
-    if (indBar) indBar.style.display = 'none';
-    goToFutureStep(1);
+    window._momentType = null;
+    if (typeof pbOpen === 'function') pbOpen();
   } else if (type === 'now') {
     if (indBar) indBar.style.display = 'none';
     startHappeningNow();
@@ -11032,7 +10986,7 @@ function startHappeningNow() {
   if (ask) ask.style.display = 'block';
   if (result) { result.style.display = 'none'; result.innerHTML = ''; }
   var btn = document.getElementById('now-use-location-btn');
-  if (btn) { btn.textContent = 'Use My Location'; btn.disabled = false; }
+  if (btn) { btn.textContent = 'Find where I am'; btn.disabled = false; }
 }
 
 function requestNowLocation() {
@@ -11283,7 +11237,7 @@ function _proceedToMemoryForm() {
 }
 
 function backToStep0() {
-  ['create-step-1','create-step-2','create-step-3','create-step-4','create-step-now','create-step-f1','create-step-f2'].forEach(function(id){
+  ['create-step-1','create-step-2','create-step-3','create-step-4','create-step-now'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -11294,29 +11248,7 @@ function backToStep0() {
   window._momentType = null;
 }
 
-function goToFutureStep(n) {
-  var s1 = document.getElementById('create-step-f1');
-  var s2 = document.getElementById('create-step-f2');
-  if (s1) s1.style.display = n === 1 ? 'flex' : 'none';
-  if (s2) s2.style.display = n === 2 ? 'flex' : 'none';
-  if (n === 1 && typeof renderFutureVibePills === 'function') renderFutureVibePills();
-  if (n === 1) { window._stopsEditorContainerId = 'stops-editor-create'; if (typeof renderStopsEditor === 'function') renderStopsEditor(); }
-  if (n === 2 && typeof loadFutureFriendPicker === 'function') loadFutureFriendPicker();
-  var container = document.getElementById('screen-create-group');
-  if (container) {
-    var scrollable = container.querySelector('div[style*="overflow-y:auto"], div[style*="overflow-y: auto"]');
-    if (scrollable) scrollable.scrollTop = 0;
-    else container.scrollTop = 0;
-  }
-}
 
-function selectFutureTheme(el, gradient) {
-  document.querySelectorAll('#future-theme-pills > div').forEach(function(p){ p.style.borderColor = 'transparent'; });
-  el.style.borderColor = '#0D0820';
-  window._futureTheme = gradient;
-  var hero = document.getElementById('future-hero');
-  if (hero) hero.style.background = gradient;
-}
 
 // ── COVER PHOTO — an optional photo shown behind the title in the hero,
 // and used as the card background everywhere this plan appears (Feed,
@@ -11324,105 +11256,17 @@ function selectFutureTheme(el, gradient) {
 // gradient when none is set. Mirrors the main-photo-preview pattern from
 // Create Moment: a dashed placeholder tile that becomes the photo once
 // picked, with a small ✕ overlay to clear it.
-function previewFutureCoverPhoto(input) {
-  if (!input.files || !input.files[0]) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    _downscaleImage(e.target.result, 1200, function(small) {
-      window._futureCoverPhoto = small;
-      var preview = document.getElementById('future-cover-preview');
-      if (preview) {
-        preview.style.backgroundImage = 'url(' + small + ')';
-        preview.style.border = 'none';
-        preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = 'none'; });
-      }
-      var removeBtn = document.getElementById('future-cover-remove');
-      if (removeBtn) removeBtn.style.display = 'flex';
-      _applyFutureHeroCoverPhoto(small);
-    });
-  };
-  reader.readAsDataURL(input.files[0]);
-}
 
-function _resetFutureCoverPreviewUI() {
-  var preview = document.getElementById('future-cover-preview');
-  if (preview) {
-    preview.style.backgroundImage = '';
-    preview.style.border = '1.5px dashed var(--rule)';
-    preview.querySelectorAll('svg, div').forEach(function(el) { el.style.display = ''; });
-  }
-  var removeBtn = document.getElementById('future-cover-remove');
-  if (removeBtn) removeBtn.style.display = 'none';
-  var input = document.getElementById('future-cover-input');
-  if (input) input.value = '';
-  _applyFutureHeroCoverPhoto('');
-}
 
-function removeFutureCoverPhoto() {
-  window._futureCoverPhoto = null;
-  _resetFutureCoverPreviewUI();
-}
 
-function _applyFutureHeroCoverPhoto(url) {
-  var bgEl = document.getElementById('future-hero-bg-photo');
-  var overlayEl = document.getElementById('future-hero-overlay');
-  if (bgEl) {
-    bgEl.style.backgroundImage = url ? 'url(' + url + ')' : '';
-    bgEl.style.opacity = url ? '1' : '0';
-  }
-  if (overlayEl) overlayEl.style.opacity = url ? '1' : '0';
-}
 
-// ── FUTURE PLAN VIBES — fixed categories, plus any custom vibes the person
-// has created (shared with the past-moment "vibe" bank via customVibes on
-// their user doc, so a vibe made here shows up there too and vice versa),
-// plus an always-present "+ Other" that reveals an emoji + label pair for
-// defining a one-off (or new reusable) vibe on the spot.
+// ── FUTURE PLAN VIBES — the fixed categories a plan's vibe can be; a custom
+// one gets saved to the shared customVibes bank (see below).
 var FUTURE_VIBE_FIXED = ['⚾ Game','🎪 Festival','🎵 Concert','🍺 Hangout','✈️ Trip'];
-window._futureVibe = window._futureVibe || '';
-window._futureVibeMode = window._futureVibeMode || 'fixed';
 
-function renderFutureVibePills() {
-  var container = document.getElementById('future-vibe-pills');
-  if (!container) return;
-  var custom = (window.userData && window.userData.customVibes) || [];
-  var customStrs = custom.map(function(v){ return (v.emoji || '🏷️') + ' ' + v.label; });
-  var all = FUTURE_VIBE_FIXED.concat(customStrs);
-  var current = window._futureVibe || '';
-  var isOther = window._futureVibeMode === 'other';
-  container.innerHTML = all.map(function(v){
-    var active = !isOther && v === current;
-    return '<div onclick="selectFutureVibe(this,\'' + v.replace(/'/g, "\\'") + '\')" style="padding:8px 14px;border-radius:20px;background:' + (active ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (active ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (active ? '600' : '500') + ';color:' + (active ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">' + _escapeHtml(v) + '</div>';
-  }).join('') +
-  '<div onclick="selectFutureOther()" style="padding:8px 14px;border-radius:20px;background:' + (isOther ? 'var(--indigo-light)' : 'var(--bg)') + ';border:0.5px solid ' + (isOther ? 'transparent' : 'var(--rule)') + ';font-size:13px;font-weight:' + (isOther ? '600' : '500') + ';color:' + (isOther ? 'var(--indigo)' : 'var(--subtle)') + ';cursor:pointer">+ Other</div>';
-  var row = document.getElementById('future-other-input-row');
-  if (row) row.style.display = isOther ? 'flex' : 'none';
-}
 
-function selectFutureVibe(el, v) {
-  window._futureVibeMode = 'fixed';
-  window._futureVibe = v;
-  renderFutureVibePills();
-}
 
-function selectFutureOther() {
-  window._futureVibeMode = 'other';
-  var emojiEl = document.getElementById('future-other-emoji');
-  var labelEl = document.getElementById('future-other-label');
-  if (emojiEl) emojiEl.value = '';
-  if (labelEl) labelEl.value = '';
-  window._futureVibe = '';
-  renderFutureVibePills();
-  if (labelEl) setTimeout(function(){ labelEl.focus(); }, 50);
-}
 
-function _syncFutureOtherVibe() {
-  var emojiEl = document.getElementById('future-other-emoji');
-  var labelEl = document.getElementById('future-other-label');
-  var emoji = emojiEl ? emojiEl.value.trim() : '';
-  var label = labelEl ? labelEl.value.trim() : '';
-  window._futureVibe = label ? (emoji || '🏷️') + ' ' + label : '';
-}
 
 // A custom "Other" vibe gets saved to the shared bank so it shows up as its
 // own quick-pick pill next time — here and in the past-moment flow. Guards
@@ -11629,27 +11473,6 @@ function renderStopsEditor() {
 // wiring up automatically like this. So instead: a clean stylized location
 // card plus three deep links that all work with zero setup, using each
 // service's own documented, key-free URL scheme.
-function useFutureCurrentLocation() {
-  if (!navigator.geolocation) { if (typeof ib_toast === 'function') ib_toast('Location not available on this device'); return; }
-  var btn = document.getElementById('future-loc-quickbtn');
-  if (btn) btn.textContent = 'Finding you…';
-  navigator.geolocation.getCurrentPosition(function(pos){
-    if (btn) btn.innerHTML = '📍 Use my current location';
-    var match = _matchNearbyVenue(pos.coords.latitude, pos.coords.longitude);
-    var name = match.type === 'ballpark' ? match.venue.name : (match.type === 'multisport' ? match.venueName : (match.type === 'festival' ? match.venue.name : ''));
-    var locEl = document.getElementById('future-location');
-    if (name && locEl) {
-      locEl.value = name;
-      _updateLocationLinks('future', name);
-    } else if (typeof ib_toast === 'function') {
-      ib_toast("Didn't recognize this spot — type it in yourself");
-    }
-  }, function(err){
-    console.error('Geolocation error:', err);
-    if (btn) btn.innerHTML = '📍 Use my current location';
-    if (typeof ib_toast === 'function') ib_toast("Couldn't get your location");
-  }, { timeout: 10000, maximumAge: 0 });
-}
 
 function _updateLocationLinks(prefix, address) {
   var previewEl = document.getElementById(prefix + '-location-preview');
@@ -11668,142 +11491,16 @@ function _updateLocationLinks(prefix, address) {
   if (wazeEl) wazeEl.href = 'https://waze.com/ul?q=' + encoded + '&navigate=yes';
 }
 
-window._futurePublic = false;
-function toggleFuturePublic() {
-  window._futurePublic = !window._futurePublic;
-  var track = document.getElementById('future-public-toggle');
-  var knob = document.getElementById('future-public-knob');
-  if (track) track.style.background = window._futurePublic ? 'var(--indigo)' : 'var(--rule)';
-  if (knob) knob.style.left = window._futurePublic ? '21px' : '3px';
-}
 
-window._futureInvitees = [];
-function loadFutureFriendPicker() {
-  var user = window.currentUser || (window.auth && window.auth.currentUser);
-  var listEl = document.getElementById('future-friend-picker');
-  if (!user || !window.db || !listEl) return;
-  listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Loading friends…</div>';
-  Promise.all([
-    window.db.collection('friendRequests').where('fromUid','==',user.uid).where('status','==','accepted').get(),
-    window.db.collection('friendRequests').where('toUid','==',user.uid).where('status','==','accepted').get()
-  ]).then(function(results){
-    var uids = [];
-    results[0].forEach(function(d){ uids.push(d.data().toUid); });
-    results[1].forEach(function(d){ uids.push(d.data().fromUid); });
-    uids = uids.filter(function(v,i){ return uids.indexOf(v) === i; });
-    if (!uids.length) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle);line-height:1.5">You haven\'t added any friends yet — add friends from a group first, then they\'ll show up here.</div>';
-      return;
-    }
-    Promise.all(uids.map(function(uid){ return window.db.collection('users').doc(uid).get(); })).then(function(docs){
-      listEl.innerHTML = docs.map(function(doc){
-        var d = doc.data() || {};
-        var nm = d.name || 'Friend';
-        var checked = window._futureInvitees.indexOf(doc.id) !== -1;
-        return '<div onclick="toggleFutureFriend(\'' + doc.id + '\', this)" data-uid="' + doc.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-bottom:0.5px solid var(--rule)">' +
-          '<div style="width:36px;height:36px;border-radius:50%;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--indigo)">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
-          '<div style="flex:1;font-size:14px;font-weight:600;color:var(--black)">' + _escapeHtml(nm) + '</div>' +
-          '<div class="future-friend-check" style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--rule);background:' + (checked ? 'var(--indigo)' : 'transparent') + ';border-color:' + (checked ? 'var(--indigo)' : 'var(--rule)') + '"></div>' +
-        '</div>';
-      }).join('');
-    });
-  }).catch(function(err){ console.error('Load friends error:', err); listEl.innerHTML = '<div style="font-size:12px;color:var(--subtle)">Could not load friends</div>'; });
-}
 
-function toggleFutureFriend(uid, el) {
-  var idx = window._futureInvitees.indexOf(uid);
-  var check = el.querySelector('.future-friend-check');
-  if (idx === -1) {
-    window._futureInvitees.push(uid);
-    if (check) { check.style.background = 'var(--indigo)'; check.style.borderColor = 'var(--indigo)'; }
-  } else {
-    window._futureInvitees.splice(idx, 1);
-    if (check) { check.style.background = 'transparent'; check.style.borderColor = 'var(--rule)'; }
-  }
-}
 
-var _savingFuture = false;
-function saveFutureMoment() {
-  if (_savingFuture) return;
-  var user = window.currentUser || (window.auth && window.auth.currentUser);
-  if (!user || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in first'); return; }
-  var titleEl = document.getElementById('future-title');
-  var title = titleEl && titleEl.value.trim() ? titleEl.value.trim() : 'Untitled plan';
-  var date = (document.getElementById('future-date') || {}).value || '';
-  var time = (document.getElementById('future-time') || {}).value || '';
-  var locEl = document.getElementById('future-location');
-  var location = locEl && locEl.value.trim() ? locEl.value.trim() : '';
-  var theme = window._futureTheme || 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
-  var vibe = window._futureVibe || '';
-  var ticketLinkEl = document.getElementById('future-ticket-link');
-  var ticketLink = ticketLinkEl && ticketLinkEl.value.trim() ? ticketLinkEl.value.trim() : '';
-  var coverPhoto = window._futureCoverPhoto || '';
-  var invitees = (window._futureInvitees || []).slice();
-  var ownerName = (window.userData && window.userData.name) || 'You';
-  var stops = _sanitizeForFirestore((window._stopsEditorList || []).slice()) || [];
 
-  _savingFuture = true;
-  if (typeof ib_toast === 'function') ib_toast('Sending invite…');
-  window.db.collection('futureMoments').add({
-    ownerUid: user.uid,
-    ownerName: ownerName,
-    title: title,
-    date: date,
-    time: time,
-    location: location,
-    theme: theme,
-    vibe: vibe,
-    ticketLink: ticketLink,
-    coverPhoto: coverPhoto,
-    taggedUids: invitees,
-    public: !!window._futurePublic,
-    rsvps: {},
-    stops: stops,
-    ts: Date.now()
-  }).then(function(){
-    _savingFuture = false;
-    _persistCustomVibeIfNewFromFuture(vibe);
-    resetFutureForm();
-    if (typeof ib_toast === 'function') ib_toast('Invite sent 🎉');
-    nav('feed');
-  }).catch(function(err){
-    _savingFuture = false;
-    console.error('Save future moment error:', err);
-    if (typeof ib_toast === 'function') ib_toast('Could not save — try again');
-  });
-}
-
-function resetFutureForm() {
-  var t = document.getElementById('future-title'); if (t) t.value = '';
-  var d = document.getElementById('future-date'); if (d) d.value = '';
-  var tm = document.getElementById('future-time'); if (tm) tm.value = '';
-  var l = document.getElementById('future-location'); if (l) l.value = '';
-  _updateLocationLinks('future', '');
-  var tl = document.getElementById('future-ticket-link'); if (tl) tl.value = '';
-  var oe = document.getElementById('future-other-emoji'); if (oe) oe.value = '';
-  var ol = document.getElementById('future-other-label'); if (ol) ol.value = '';
-  window._futureCoverPhoto = null;
-  _resetFutureCoverPreviewUI();
-  window._futureTheme = null;
-  var heroEl = document.getElementById('future-hero');
-  if (heroEl) heroEl.style.background = 'linear-gradient(135deg,#FF6B6B 0%,#FFA94D 45%,#845EF7 100%)';
-  window._futureVibe = '';
-  window._futureVibeMode = 'fixed';
-  window._futureInvitees = [];
-  window._futurePublic = false;
-  window._stopsEditorList = [];
-  window._stopsEditorContainerId = 'stops-editor-create';
-  if (typeof renderStopsEditor === 'function') renderStopsEditor();
-  var track = document.getElementById('future-public-toggle');
-  var knob = document.getElementById('future-public-knob');
-  if (track) track.style.background = 'var(--rule)';
-  if (knob) knob.style.left = '3px';
-  if (typeof backToStep0 === 'function') backToStep0();
-}
 
 function headerSaveMoment() {
   if (!window._momentType) return;
-  if (window._momentType === 'future') { saveFutureMoment(); } else { saveNewMoment(); }
+  // coming-up plans save from the plan builder now (v7.1.0)
+  if (window._stubMode && typeof mnPunch === 'function') { mnPunch(); return; }
+  saveNewMoment();
 }
 
 function goToStep(n) {
@@ -12576,6 +12273,7 @@ function saveNewMoment() {
       people: people,
       taggedUids: taggedUids,
       boxScore: _sanitizeForFirestore(window._momentBoxScore),
+      stub: window._stubMode ? _sanitizeForFirestore(Object.assign({ kind: window._stubMode }, window._stubData || {})) : null, // v7.1.0
       comments: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(ref) {
@@ -13749,10 +13447,7 @@ function loadFeedMoments() {
 }
 
 function startFuturePlan() {
-  // v7.0.0: the plan builder (the classic form is one tap away inside it)
-  if (typeof pbOpen === 'function') { pbOpen(); return; }
-  nav('create-group');
-  chooseMomentType('future');
+  pbOpen();
 }
 
 function futureRsvp(momentId, val) {
@@ -23760,22 +23455,6 @@ function renderGameCheatSheet() {
 // existing users/{uid}/moments and users/{uid}/private/friends, so it
 // should already fall under whatever rule covers those. Feed polls the
 // box score for anything on the list while the Feed screen is open.
-function _setWatchButtonState(on) {
-  var btn = document.getElementById('game-watch-btn');
-  var label = document.getElementById('game-watch-label');
-  if (!btn || !label) return;
-  if (on) {
-    btn.style.background = 'rgba(124,242,156,.18)';
-    btn.style.borderColor = 'rgba(124,242,156,.4)';
-    btn.style.color = '#9be8ac';
-    label.textContent = 'Watching';
-  } else {
-    btn.style.background = 'rgba(255,255,255,.1)';
-    btn.style.borderColor = 'rgba(255,255,255,.16)';
-    btn.style.color = 'rgba(255,255,255,.7)';
-    label.textContent = 'Watch';
-  }
-}
 
 function _refreshGameWatchButton(gamePk) {
   _gattLoad(gamePk);
@@ -27673,6 +27352,215 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ═══ NEW MOMENT (v7.1.0) ════════════════════════════════════════════════
+// "It already happened" asks what it was. Games, concerts and festivals get
+// a ticket stub (festivals a wristband); anything else goes to the guided
+// story (steps 1–4, unchanged). The stub writes into the same fields and
+// state the story uses — #moment-name, #moment-date, #highlight-text,
+// _momentPeople, _momentPhoto/_momentExtraPhotos, _momentBoxScore,
+// _momentVibe — and saves with saveNewMoment(), which adds `stub`.
+window._stubMode = null; window._stubData = {};
+var MN_KINDS = {
+  game:    { e: '\u26be', n: 'A game', d: 'Any sport \u2014 your seat, the final, the big moment', vibe: '\u26be Game', kick: 'ADMIT ONE \u00b7 GAME', cls: 'game', punch: 'Punch the ticket' },
+  concert: { e: '\ud83c\udfa4', n: 'A concert', d: 'Your section, the opener, song of the night', vibe: '\ud83c\udfa4 Concert', kick: 'LIVE \u00b7 ADMIT ONE', cls: 'concert', punch: 'Punch the ticket' },
+  fest:    { e: '\ud83c\udfaa', n: 'A festival', d: 'The days you went and the sets you saw', vibe: '\ud83c\udfaa Festival', kick: 'GENERAL ADMISSION', cls: 'fest', punch: 'Punch the wristband' },
+  other:   { e: '\u2728', n: 'Something else', d: 'A dinner, a trip, a hang \u2014 tell it as a story' }
+};
+function _mnHideAll() {
+  ['create-step-0', 'create-step-1', 'create-step-2', 'create-step-3', 'create-step-4', 'create-step-now', 'create-step-kind', 'create-step-stub'].forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  var ind = document.getElementById('moment-step-indicator'); if (ind) ind.style.display = 'none';
+}
+function mnShowKind() {
+  _mnHideAll();
+  window._stubMode = null; window._stubData = {};
+  var el = document.getElementById('create-step-kind');
+  if (!el) { if (typeof goToStep === 'function') goToStep(1); return; }
+  el.innerHTML = '<div style="padding:24px 20px;display:flex;flex-direction:column;gap:14px"><div style="font-size:24px;font-weight:800;color:var(--black);letter-spacing:-.4px">What was it?</div>' +
+    '<div style="font-size:13.5px;color:var(--subtle);line-height:1.5">Games, concerts and festivals become a ticket stub you keep. Anything else gets told as a story.</div><div class="mn-kinds">' +
+    [['game', 'linear-gradient(160deg,#FD5A1E,#27251F)'], ['concert', 'linear-gradient(160deg,#2B1655,#12091F)'], ['fest', 'linear-gradient(90deg,#1E6F6A,#2A5E9C 50%,#6E3A9C)'], ['other', 'linear-gradient(160deg,#241C4E,#15103A)']].map(function (x) {
+      var k = MN_KINDS[x[0]];
+      return '<button class="mn-kind' + (x[0] === 'other' ? ' wide' : '') + '" style="background:' + x[1] + '" onclick="mnPickKind(\'' + x[0] + '\')"><span class="e">' + k.e + '</span><span style="display:flex;flex-direction:column;gap:2px"><b>' + k.n + '</b><small>' + k.d + '</small></span></button>';
+    }).join('') + '</div><button class="mn-link" onclick="backToStep0()">\u2190 Back</button></div>';
+  el.style.display = 'flex';
+  _mnScrollTop();
+}
+function _mnScrollTop() { var c = document.getElementById('screen-create-group'); if (!c) return; var s = c.querySelector('div[style*="overflow-y:auto"], div[style*="overflow-y: auto"]'); (s || c).scrollTop = 0; }
+function mnPickKind(k) {
+  var stubVibes = [MN_KINDS.game.vibe, MN_KINDS.concert.vibe, MN_KINDS.fest.vibe];
+  if (window._momentVibe && stubVibes.indexOf(window._momentVibe) !== -1 && (k === 'other' || MN_KINDS[k].vibe !== window._momentVibe)) {
+    window._momentVibe = ''; var ve = document.getElementById('vibe-emoji-input'), vn = document.getElementById('vibe-name-input'); if (ve) ve.value = ''; if (vn) vn.value = '';
+  }
+  if (k !== 'game' && window._momentBoxScore && typeof momentBoxScoreClear === 'function') momentBoxScoreClear();
+  if (k === 'other') {
+    window._stubMode = null;
+    _mnHideAll();
+    var ind = document.getElementById('moment-step-indicator'); if (ind) ind.style.display = 'flex';
+    goToStep(1);
+    return;
+  }
+  window._stubMode = k;
+  window._stubData = k === 'fest' ? { days: [], sets: [] } : {};
+  if (typeof quickVibe === 'function') quickVibe(MN_KINDS[k].vibe);
+  var d = document.getElementById('moment-date'); if (d && !d.value) d.value = _todayLocal();
+  mnShowStub();
+}
+function mnShowStub() {
+  _mnHideAll();
+  var el = document.getElementById('create-step-stub');
+  if (!el) return;
+  el.style.display = 'flex';
+  mnRenderStub();
+  _mnScrollTop();
+}
+function _mnBoxLine(b) {
+  if (!b) return '';
+  var a = b.away || (b.teams && b.teams.away) || '', h = b.home || (b.teams && b.teams.home) || '';
+  var as = b.awayScore != null ? b.awayScore : (b.away_score != null ? b.away_score : null), hs = b.homeScore != null ? b.homeScore : (b.home_score != null ? b.home_score : null);
+  var sn = function (x) { return (typeof _teamShortName === 'function' && _teamShortName(x)) || x; };
+  if (!a && !h) return 'Game attached';
+  return sn(a) + (as != null ? ' ' + as : '') + ' \u00b7 ' + sn(h) + (hs != null ? ' ' + hs : '');
+}
+function _mnStubBg() {
+  var k = window._stubMode, b = window._momentBoxScore;
+  if (k !== 'game') return '';
+  var col = null;
+  try { var ab = b && (b.homeAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(b.home || '') : '')); if (ab && typeof _ghTeamColors === 'function') col = _ghTeamColors(ab).bg; } catch (e) {}
+  col = col || '#FD5A1E';
+  return 'background:linear-gradient(160deg,' + col + ' 0%,' + (typeof _fbxDark === 'function' ? _fbxDark(col, .35) : col) + ' 60%,' + (typeof _fbxDark === 'function' ? _fbxDark(col, .65) : '#140A08') + ' 100%)';
+}
+function mnRenderStub() {
+  var el = document.getElementById('create-step-stub');
+  if (!el || !window._stubMode) return;
+  var k = window._stubMode, K = MN_KINDS[k], D = window._stubData || {};
+  var nameEl = document.getElementById('moment-name'), dateEl = document.getElementById('moment-date'), hlEl = document.getElementById('highlight-text');
+  var title = nameEl ? nameEl.value : '', date = dateEl ? dateEl.value : '', back = hlEl ? hlEl.value : '';
+  var esc = _escapeHtml;
+  var fld = function (key, label, ph) { return '<div><span>' + label + '</span><input class="fi" value="' + esc(D[key] || '') + '" placeholder="' + ph + '" oninput="window._stubData.' + key + '=this.value" aria-label="' + label + '"></div>'; };
+  var people = (window._momentPeople || []);
+  var who = people.map(function (p) { return '<span class="av" title="' + esc(p.name) + '">' + esc(String(p.name || '?').slice(0, 1).toUpperCase()) + '</span>'; }).join('');
+  var box = window._momentBoxScore;
+  var h = '<div class="mn-stub ' + K.cls + '" id="mn-stub" style="' + _mnStubBg() + '">' + (k === 'concert' ? '<div class="holo"></div>' : '') + (k === 'fest' ? '<div class="weave"></div><div class="clasp"></div>' : '') +
+    '<div class="main"><div class="kk">' + K.kick + '</div>' +
+    '<input class="tt" value="' + esc(title) + '" placeholder="' + (k === 'game' ? 'Dodgers @ Giants' : k === 'concert' ? 'Who did you see?' : 'Which festival?') + '" oninput="var n=document.getElementById(\'moment-name\');if(n)n.value=this.value" aria-label="Title">' +
+    '<div class="subrow"><input class="sub" value="' + esc(D.venue || '') + '" placeholder="' + (k === 'game' ? 'Ballpark / stadium' : 'Venue') + '" oninput="window._stubData.venue=this.value" aria-label="Venue"><input class="sub" type="date" value="' + esc(date) + '" onchange="var d=document.getElementById(\'moment-date\');if(d)d.value=this.value" aria-label="Date"></div>';
+  if (k === 'game') {
+    h += '<div class="meta">' + fld('section', 'SECTION', '118') + fld('row', 'ROW', '12') + fld('seat', 'SEAT', '4') + '</div>';
+    h += box ? '<div class="final"><span>FINAL</span>' + esc(_mnBoxLine(box)) + '<button class="addw" style="margin-left:auto" onclick="mnAttachGame()">Change</button></div>'
+      : '<button class="attach" onclick="mnAttachGame()">\ud83c\udfc6 Attach the game \u2014 pulls the final score</button>';
+    h += '<div class="final" style="border-top:0;padding-top:4px"><span>BIG MOMENT</span><input class="fi" style="font-size:13px" value="' + esc(D.moment || '') + '" placeholder="Walk-off \u00b7 Bailey" oninput="window._stubData.moment=this.value" aria-label="Big moment"></div>';
+  }
+  if (k === 'concert') {
+    h += '<div class="meta">' + fld('section', 'SECTION', 'GA Floor') + fld('opener', 'OPENER', 'Opener') + fld('tour', 'TOUR', 'Tour name') + '</div>' +
+      '<div class="final"><span>SONG OF THE NIGHT</span><input class="fi" style="font-size:13px" value="' + esc(D.song || '') + '" placeholder="\u266a The one everyone sang" oninput="window._stubData.song=this.value" aria-label="Song of the night"></div>';
+  }
+  if (k === 'fest') {
+    var days = ['FRI', 'SAT', 'SUN', 'MON'].slice(0, D.nDays || 3);
+    h += '<div class="mn-days">' + days.map(function (d) { var on = (D.days || []).indexOf(d) !== -1; return '<button class="mn-day' + (on ? ' on' : '') + '" onclick="mnDay(\'' + d + '\')" aria-pressed="' + on + '">' + d + (on ? ' \u2713' : '') + '</button>'; }).join('') +
+      '<button class="mn-day" onclick="window._stubData.nDays=((window._stubData.nDays||3)%4)+1;mnRenderStub()" aria-label="Change number of days">\u00b1 day</button></div>';
+  }
+  h += '<div class="punch">KEPT<br>FOREVER</div></div>';
+  if (k !== 'fest') h += '<div class="perf"></div>';
+  h += '<div class="bottom"><div><div style="font-size:9px;font-weight:800;letter-spacing:.16em;opacity:.7">WITH</div><div class="who">' + who + '<button class="addw" onclick="mnWho()">' + (people.length ? '+ / edit' : '+ Add who was there') + '</button></div></div>' + (k === 'fest' ? '' : '<div class="bars">' + Array.from({ length: 22 }, function (_, i) { return '<i style="width:' + (i % 3 ? 2 : 4) + 'px"></i>'; }).join('') + '</div>') + '</div></div>';
+  if (k === 'fest') {
+    h += '<div class="mn-card"><div class="q">SETS YOU SAW</div>' + (D.sets || []).map(function (s, i) { return '<div class="mn-set">\u2713 <b>' + esc(s) + '</b><button onclick="window._stubData.sets.splice(' + i + ',1);mnRenderStub()" aria-label="Remove">\u2715</button></div>'; }).join('') +
+      '<div style="display:flex;gap:8px"><input id="mn-set-in" placeholder="Add an artist you saw" onkeydown="if(event.key===\'Enter\'){event.preventDefault();mnAddSet()}"><button class="addw" style="border-color:#A89FE8;color:#A89FE8" onclick="mnAddSet()">Add</button></div></div>';
+  }
+  var photos = [].concat(window._momentPhoto ? [window._momentPhoto] : [], window._momentExtraPhotos || []);
+  h += '<div class="mn-card"><div class="q">ON THE BACK</div><textarea rows="3" placeholder="The part you\u2019ll want to remember\u2026" oninput="var t=document.getElementById(\'highlight-text\');if(t)t.value=this.value">' + esc(back) + '</textarea></div>' +
+    '<div class="mn-photos">' + photos.map(function (u) { return '<img src="' + esc(typeof u === 'string' ? u : (u && (u.url || u.src)) || '') + '" alt="">'; }).join('') +
+    '<button onclick="mnAddPhoto()" aria-label="Add photos">+</button></div>' +
+    '<button class="mn-cta" id="mn-punch" onclick="mnPunch()">' + K.punch + '</button><button class="mn-link" onclick="mnShowKind()">\u2190 Not a ' + (k === 'fest' ? 'festival' : k) + '</button>';
+  el.innerHTML = '<div style="padding:20px 20px 30px;display:flex;flex-direction:column;gap:14px"><div style="font-size:13px;color:var(--subtle)">Tap anything dashed to fill it in.</div>' + h + '</div>';
+}
+function mnDay(d) { var a = window._stubData.days = window._stubData.days || []; var i = a.indexOf(d); if (i === -1) a.push(d); else a.splice(i, 1); mnRenderStub(); }
+function mnAddSet() { var i = document.getElementById('mn-set-in'); if (!i || !i.value.trim()) return; (window._stubData.sets = window._stubData.sets || []).push(i.value.trim()); mnRenderStub(); setTimeout(function () { var n = document.getElementById('mn-set-in'); if (n) n.focus(); }, 30); }
+function mnAttachGame() { var d = document.getElementById('moment-date'); openBoxScoreModal({ type: 'moment-create' }, d ? d.value : ''); }
+function mnWho() { _mnHideAll(); goToStep(2); }
+function mnAddPhoto() {
+  // the main photo first, then more — same inputs the story uses
+  var inp = document.getElementById(window._momentPhoto ? 'moment-photos' : 'main-photo-input');
+  if (!inp) return;
+  var once = function () { inp.removeEventListener('change', once); [400, 1200, 2500].forEach(function (t) { setTimeout(function () { if (window._stubMode) mnRenderStub(); }, t); }); };
+  inp.addEventListener('change', once);
+  inp.click();
+}
+function mnPunch() {
+  var n = document.getElementById('moment-name');
+  if (!n || !n.value.trim()) { if (typeof ib_toast === 'function') ib_toast('Give it a title first'); var t = document.querySelector('#mn-stub .tt'); if (t) t.focus(); return; }
+  var s = document.getElementById('mn-stub'), b = document.getElementById('mn-punch');
+  if (b) b.disabled = true;
+  if (s) s.classList.add('saved');
+  setTimeout(function () { saveNewMoment(); if (b) b.disabled = false; }, 750);
+}
+function mnNowTyped() {
+  var i = document.getElementById('now-typed');
+  var v = i ? i.value.trim() : '';
+  if (!v) { if (i) i.focus(); return; }
+  window._nowPinLabel = v;
+  _proceedToMemoryForm();
+}
+// the guided story's steps know about the stub: "Who was there" comes back to it
+(function () {
+  if (typeof goToStep === 'function') {
+    var orig = goToStep;
+    goToStep = function (n) {
+      if (window._stubMode && (n === 1 || n === 3)) { var s2 = document.getElementById('create-step-2'); if (s2) s2.style.display = 'none'; mnShowStub(); return; }
+      var r = orig.apply(this, arguments);
+      var ind = document.getElementById('moment-step-indicator'); if (ind && window._stubMode) ind.style.display = 'none';
+      return r;
+    };
+  }
+  if (typeof _renderMomentBoxScoreSelected === 'function') {
+    var origB = _renderMomentBoxScoreSelected;
+    _renderMomentBoxScoreSelected = function (box) {
+      var r = origB.apply(this, arguments);
+      if (window._stubMode === 'game') {
+        var n = document.getElementById('moment-name');
+        if (n && !n.value.trim() && box) { var sn = function (x) { return (typeof _teamShortName === 'function' && _teamShortName(x)) || x; }; if (box.away && box.home) n.value = sn(box.away) + ' @ ' + sn(box.home); }
+        if (box && box.venue && !window._stubData.venue) window._stubData.venue = box.venue;
+        var st = document.getElementById('create-step-stub'); if (st && st.style.display !== 'none') mnRenderStub();
+      }
+      return r;
+    };
+  }
+  if (typeof backToStep0 === 'function') {
+    var origBk = backToStep0;
+    backToStep0 = function () { window._stubMode = null; window._stubData = {}; ['create-step-kind', 'create-step-stub'].forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }); return origBk.apply(this, arguments); };
+  }
+})();
+
+
+// the memory screen shows its stub, punched, at the top (v7.1.0)
+function _mnStubViewHtml(m) {
+  var st = m && m.stub; if (!st || !MN_KINDS[st.kind]) return '';
+  var K = MN_KINDS[st.kind], esc = _escapeHtml, b = m.boxScore;
+  var bg = '';
+  if (st.kind === 'game') { var col = null; try { var ab = b && (b.homeAbbr || _ghAbbrFallback(b.home || '')); if (ab) col = _ghTeamColors(ab).bg; } catch (e) {} col = col || '#FD5A1E'; bg = 'background:linear-gradient(160deg,' + col + ' 0%,' + _fbxDark(col, .35) + ' 60%,' + _fbxDark(col, .65) + ' 100%)'; }
+  var cell = function (l, v) { return v ? '<div><span>' + l + '</span><b style="font-size:15px">' + esc(v) + '</b></div>' : ''; };
+  var d = m.date ? new Date(m.date + 'T12:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  var h = '<div class="mn-stub ' + K.cls + ' saved" style="' + bg + ';margin:0 0 14px">' + (st.kind === 'concert' ? '<div class="holo"></div>' : '') + (st.kind === 'fest' ? '<div class="weave"></div><div class="clasp"></div>' : '') +
+    '<div class="main"><div class="kk">' + K.kick + '</div><div style="font-size:26px;font-weight:900;font-style:italic;line-height:1.1;margin-top:6px">' + esc(m.name || '') + '</div>' +
+    '<div style="font-size:13px;font-weight:700;opacity:.9;margin-top:4px">' + esc([st.venue, d].filter(Boolean).join(' \u00b7 ')) + '</div>';
+  if (st.kind === 'game') h += '<div class="meta">' + cell('SECTION', st.section) + cell('ROW', st.row) + cell('SEAT', st.seat) + '</div>' + (b ? '<div class="final"><span>FINAL</span>' + esc(_mnBoxLine(b)) + (st.moment ? '<span style="margin-left:auto;font-size:12px;letter-spacing:0;opacity:.9">' + esc(st.moment) + '</span>' : '') + '</div>' : '');
+  if (st.kind === 'concert') h += '<div class="meta">' + cell('SECTION', st.section) + cell('OPENER', st.opener) + cell('TOUR', st.tour) + '</div>' + (st.song ? '<div class="final"><span>SONG OF THE NIGHT</span>\u266a ' + esc(st.song) + '</div>' : '');
+  if (st.kind === 'fest') h += (st.days && st.days.length ? '<div class="mn-days">' + st.days.map(function (x) { return '<span class="mn-day on">' + esc(x) + ' \u2713</span>'; }).join('') + '</div>' : '') + (st.sets && st.sets.length ? '<div style="margin-top:10px;font-size:12.5px;font-weight:700;opacity:.9">' + st.sets.map(esc).join(' \u00b7 ') + '</div>' : '');
+  h += '<div class="punch">KEPT<br>FOREVER</div></div></div>';
+  return h;
+}
+(function () {
+  if (typeof renderMemoryView !== 'function') return;
+  var orig = renderMemoryView;
+  renderMemoryView = function (m) {
+    var r = orig.apply(this, arguments);
+    try {
+      var scroll = document.getElementById('md-scroll'), html = _mnStubViewHtml(m);
+      var old = document.getElementById('md-stub'); if (old) old.remove();
+      if (scroll && html) { var w = document.createElement('div'); w.id = 'md-stub'; w.style.cssText = 'padding:0 16px'; w.innerHTML = html; scroll.insertBefore(w, scroll.firstChild); }
+    } catch (e) { console.error('[stub view]', e); }
+    return r;
+  };
+})();
+
 // ═══ PLAN BUILDER (v7.0.0) ═══════════════════════════════════════════════
 // "It's coming up" as a builder: pick a start (or a blank page), keep only
 // the blocks the plan needs, add any other block at any point, rename any
@@ -27775,7 +27663,6 @@ function pbOpen(existingId) {
   if (typeof _ensureMyFriendsLoaded === 'function') _ensureMyFriendsLoaded(function () { if (PB && (PB.sheet === 'crew' || PB.screen === 'hang')) _pbRender(); });
 }
 function pbClose() { var r = document.getElementById('pb-root'); if (r) r.classList.remove('on'); PB = null; }
-function pbClassic() { pbClose(); nav('create-group'); chooseMomentType('future'); }
 function pbUseTpl(k) {
   var keepTitle = PB && PB.title;
   PB = _pbBlank(k);
@@ -27987,7 +27874,7 @@ function _pbTplScreen() {
   var order = ['hang', 'game', 'watch', 'night', 'dinner', 'bday', 'trip', 'blank'];
   return '<div class="pb-top"><button class="x" onclick="pbClose()">Cancel</button><span class="t">It\u2019s coming up</span><span class="sv"></span></div><div class="pb-body"><div class="pb-h1">What are you planning?</div><div class="pb-p">Pick a start \u2014 every piece can be changed, renamed or removed after.</div><div class="pb-tpls">' +
     order.map(function (k) { var t = PB_TPL[k], w = k === 'hang' || k === 'blank'; return '<button class="pb-tpl' + (w ? ' wide' : '') + '" style="background:' + t.bg + '" onclick="pbUseTpl(\'' + k + '\')"><span class="e">' + t.e + '</span><span style="display:flex;flex-direction:column;gap:2px"><b>' + t.n + '</b><small>' + t.d + '</small></span></button>'; }).join('') +
-    '</div><button class="pb-p" style="text-decoration:underline;align-self:center;padding:8px" onclick="pbClassic()">Use the classic invite form</button></div>';
+    '</div></div>';
 }
 function _pbBuildScreen() {
   var blocks = PB.blocks.map(function (k, i) { return '<div class="pb-blk" id="pb-blk-' + k + '">' + _pbHead(k, i) + '<div class="pb-bb">' + _pbBody(k) + '</div></div>'; }).join('');
