@@ -1,4 +1,8 @@
-// Vercel Serverless Function — Baseball Savant (Statcast) for Innings (v5.87.0)
+// Baseball Savant (Statcast) for Innings — v5.91.0
+// Lives in api/_savant.js (the leading underscore means Vercel does NOT
+// deploy it as its own function — it runs inside /api/mlb, so it doesn't
+// count toward the plan's function limit). Called as:
+//   /api/mlb?mode=savant&smode=<game|arsenal|batter|player|ping>&…
 //
 //   GET /api/savant?mode=game&gamePk=<id>[&live=1]
 //       Every batted ball / pitch in one game: exit velo, launch angle,
@@ -263,7 +267,7 @@ async function sprint(id, year) {
 }
 
 module.exports = async function handler(req, res) {
-  const mode = req.query.mode;
+  const mode = req.query.smode || req.query.mode;
   const year = yearOf(req.query.year);
   const id = req.query.id;
   try {
