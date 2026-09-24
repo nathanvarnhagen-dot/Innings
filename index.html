@@ -10034,7 +10034,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.96.0-smaller-pitches';
+window.INNINGS_BUILD = 'v5.97.0-between-pitch-plays';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -26173,9 +26173,19 @@ function _paNote(box) {
   var lp = box && box.lastPlay, g = window._activeBrowseGame, s = window._pa;
   var pk = g ? String(g.gamePk) : null;
   s.box = box;
-  if (!lp || lp.atBatIndex == null) return;
+  // v5.97.0: a steal / wild pitch / pickoff… logged since the last refresh
+  var ps = box && box.pitchSequence, firstLoad = s.gamePk !== pk;
+  var A = s.actSeen || (s.actSeen = {}), newest = null;
+  ((ps && ps.actions) || []).forEach(function (a) {
+    var k = pk + ':' + ps.atBatIndex + ':' + a.index;
+    if (A[k]) return;
+    A[k] = 1;
+    if (!firstLoad) newest = a;
+  });
+  if (newest) { s.play = Object.assign({ kind: 'action' }, newest, { atBatIndex: ps.atBatIndex + ':a' + newest.index }); s.startAt = Date.now(); s.seq = false; s.keep = false; }
+  if (!lp || lp.atBatIndex == null) { if (firstLoad) { s.gamePk = pk; s.seen = null; } return; }
   if (s.gamePk !== pk) { s.gamePk = pk; s.seen = lp.atBatIndex; s.play = lp; s.startAt = 0; return; }
-  if (lp.atBatIndex !== s.seen) { s.seen = lp.atBatIndex; s.play = lp; s.startAt = Date.now(); s.seq = false; s.keep = false; }
+  if (lp.atBatIndex !== s.seen) { var wasNull = s.seen == null; s.seen = lp.atBatIndex; if (!wasNull || !firstLoad) { s.play = lp; s.startAt = Date.now(); s.seq = false; s.keep = false; } }
 }
 function _paActive() {
   var s = window._pa;
@@ -26389,9 +26399,144 @@ function _livePitchAnimE(seq) {
   return E < 1.6 ? E : null;
 }
 
+// ══ BETWEEN-PITCH PLAYS (v5.97.0) ══════════════════════════════════════
+// Steals, caught stealing, wild pitches, passed balls, pickoffs (and
+// attempts), balks, defensive indifference and throwing errors on those
+// throws. MLB logs each one inside the at-bat as it happens; each gets a
+// short (~5s) scene in the at-bat square, then the zone comes back.
+var PA_ACT_RE = /^(stolen_base|caught_stealing|pickoff|wild_pitch|passed_ball|balk|defensive_indiff|other_advance)/;
+function _paIsAction(lp) { return lp && (lp.kind === 'action' || (!lp.hit && PA_ACT_RE.test(lp.eventType || ''))); }
+function _paActionTitle(et) {
+  if (/^stolen_base/.test(et)) return 'STOLEN BASE';
+  if (/caught_stealing/.test(et)) return /^pickoff/.test(et) ? 'PICKED OFF' : 'CAUGHT STEALING';
+  if (/^pickoff_error/.test(et)) return 'PICKOFF ERROR';
+  if (/^pickoff_attempt/.test(et)) return 'PICKOFF ATTEMPT';
+  if (/^pickoff/.test(et)) return 'PICKED OFF';
+  if (et === 'wild_pitch') return 'WILD PITCH';
+  if (et === 'passed_ball') return 'PASSED BALL';
+  if (et === 'balk') return 'BALK';
+  if (et === 'defensive_indiff') return 'DEFENSIVE INDIFFERENCE';
+  if (/error/.test(et)) return 'THROWING ERROR';
+  return 'RUNNER ADVANCES';
+}
+function _paActionHtml(a, s, box) {
+  var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
+  var E = (Date.now() - s.startAt) / 1000;
+  if (reduce) E = 30;
+  var END = 5.4;
+  s.total = END;
+  if (s.keep) E = Math.min(E, END - .01);
+  else if (E > END + .6) return '';
+  var et = a.eventType || '', desc = String(a.description || '');
+  var err = /error/.test(et) || /throwing error|fielding error/i.test(desc);
+  var isSB = /^stolen_base/.test(et), isCS = /caught_stealing/.test(et), isPOA = /^pickoff_attempt/.test(et);
+  var isPO = /^pickoff/.test(et) && !isPOA, isWP = et === 'wild_pitch' || et === 'passed_ball', isBK = et === 'balk', isDI = et === 'defensive_indiff';
+  var runners = (a.runners || []).filter(function (r) { return r.start || r.end; });
+  if (!runners.length && /^pickoff/.test(et) && a.base) runners = [{ start: a.base, end: a.base }]; // attempt: the runner dives back
+  var lead = runners.slice().sort(function (x, y) { var o = { '3B': 3, '2B': 2, '1B': 1 }; return (o[y.start] || 0) - (o[x.start] || 0); })[0] || null;
+  var T = .35, sec = function (x) { return _paSec(x, E); };
+  // bases before it happened: movers' starts + anyone who stayed put
+  var occ = {}, now = (box && box.pitchSequence && box.pitchSequence.bases) || {};
+  runners.forEach(function (r) { if (r.start) occ[r.start] = 1; });
+  var endsNow = {}; runners.forEach(function (r) { if (r.end && r.end !== 'score') endsNow[r.end] = 1; });
+  ['1B', '2B', '3B'].forEach(function (b) { if (now[b] && !endsNow[b]) occ[b] = 1; });
+  var P = [250, 290], C = [250, 378];
+  var g = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
+    '<rect x="0" y="0" width="500" height="386" fill="#120E2B"/>' +
+    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
+    '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
+    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".7" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174" stroke-opacity=".5"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
+    '<ellipse cx="250" cy="290" rx="10" ry="5" fill="none" stroke="#D9D4FA" stroke-opacity=".5"/>' +
+    ['1B', '2B', '3B'].map(function (b) { var p = PA_B[b]; return '<rect x="' + (p[0] - 8) + '" y="' + (p[1] - 8) + '" width="16" height="16" transform="rotate(45 ' + p[0] + ' ' + p[1] + ')" fill="' + (occ[b] ? '#FD7A48' : '#F5F3FF') + '"/>'; }).join('') +
+    '<path d="M 240 361 L 260 361 L 260 368 L 250 374 L 240 368 Z" fill="#F5F3FF"/>';
+  var fl = a.fielders || [];
+  // the throw: catcher on steals, pitcher on pickoffs; wild pitch/passed ball: the ball gets by
+  var from = null, to = null, tStart = 0, tArrive = 0, targetBase = null, ballPath = null;
+  if (lead) targetBase = (isCS || isPO) ? (lead.outBase || lead.end) : (isPOA || /^pickoff_error/.test(et) ? lead.start : lead.end);
+  if (!targetBase && a.base) targetBase = a.base;
+  var runT0 = T + .1, runDur = .95;
+  if ((isSB || isCS) && targetBase && PA_B[targetBase === 'score' ? '3B' : targetBase]) {
+    from = C; to = PA_B[targetBase] || PA_H; tStart = T + .45; tArrive = isCS ? T + .1 + runDur * .82 - .05 : T + .1 + runDur + .12;
+  } else if ((isPO || isPOA || /^pickoff_error/.test(et)) && (targetBase || a.base)) {
+    var pb = PA_B[targetBase] || PA_B[a.base] || PA_B['1B'];
+    from = P; to = pb; tStart = T; tArrive = T + .38;
+  }
+  var tag = function (pos, text, ok, t) {
+    return '<g style="animation:paIn .2s linear ' + sec(t) + ' both"><rect x="' + (pos[0] - 28) + '" y="' + (pos[1] - 44) + '" width="56" height="22" rx="7" fill="' + (ok ? 'rgba(124,242,156,.18)' : 'rgba(255,122,107,.2)') + '" stroke="' + (ok ? 'rgba(124,242,156,.7)' : 'rgba(255,122,107,.7)') + '"/><text x="' + pos[0] + '" y="' + (pos[1] - 28) + '" text-anchor="middle" font-size="14" font-weight="800" fill="' + (ok ? '#9BE8AC' : '#FFB3A8') + '" letter-spacing="1">' + text + '</text></g>';
+  };
+  // fielders (thrower + whoever took it light up)
+  Object.keys(PA_F).forEach(function (code) {
+    var p = PA_F[code], hot = fl.indexOf(code) !== -1 || (from === C && code === '2') || (from === P && code === '1');
+    var when = code === '2' && from === C ? tStart : code === '1' && from === P ? tStart : (hot ? tArrive : null);
+    g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#5A9BE8" stroke="#CFE3FF" stroke-width="2"' + (when != null ? ' style="transform-box:fill-box;transform-origin:center;animation:paPulse .6s ease-out ' + sec(when) + ' both"' : '') + '/>';
+  });
+  // throw line + ball
+  if (from && to) {
+    var end = to;
+    if (err) { var dx = to[0] - from[0], dy = to[1] - from[1], l = Math.hypot(dx, dy) || 1; end = [to[0] + dx / l * 40, to[1] + dy / l * 40]; } // sails past the bag
+    g += '<path d="M ' + from[0] + ' ' + from[1] + ' L ' + end[0].toFixed(1) + ' ' + end[1].toFixed(1) + '" stroke="#F5F3FF" stroke-opacity=".55" stroke-width="2" stroke-dasharray="4 3" fill="none" style="animation:paIn .15s linear ' + sec(tStart) + ' both"/>' +
+      '<circle cx="' + from[0] + '" cy="' + from[1] + '" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 5px #fff);animation:paIn .1s linear ' + sec(tStart) + ' both' + (err ? ',paOut .3s linear ' + sec(tArrive + .35) + ' forwards' : '') + '">' +
+      '<animateMotion dur="' + Math.max(.25, (err ? tArrive + .25 : tArrive) - tStart).toFixed(2) + 's" begin="' + sec(tStart) + '" fill="freeze" path="M 0 0 L ' + (end[0] - from[0]).toFixed(1) + ' ' + (end[1] - from[1]).toFixed(1) + '"/></circle>';
+  }
+  if (isWP) {
+    // the pitch gets by the catcher and skips toward the backstop
+    ballPath = 'M 0 0 L 0 70 Q -10 86 -40 100';
+    g += '<circle cx="250" cy="290" r="6" fill="#FFFFFF" style="filter:drop-shadow(0 0 5px #fff);animation:paIn .1s linear ' + sec(T) + ' both,paOut .3s linear ' + sec(T + .75) + ' forwards">' +
+      '<animateMotion dur=".7s" begin="' + sec(T) + '" fill="freeze" path="' + ballPath + '"/></circle>';
+    runT0 = T + .45;
+  }
+  if (isBK) runT0 = T + .3;
+  // runners
+  runners.forEach(function (r) {
+    if (!r.start) return;
+    var p0 = PA_B[r.start];
+    if (!p0) return;
+    var pts, st = runT0, dur;
+    if (isPOA || (isPO && !r.out) || (/^pickoff_error/.test(et) && false)) {
+      // leading off, dives back
+      var nx = r.start === '3B' ? PA_H : PA_B[{ '1B': '2B', '2B': '3B' }[r.start]];
+      var off = [p0[0] + (nx[0] - p0[0]) * .14, p0[1] + (nx[1] - p0[1]) * .14];
+      pts = [off, p0]; st = tStart + .05; dur = .35;
+      g += '<circle cx="' + off[0].toFixed(1) + '" cy="' + off[1].toFixed(1) + '" r="9" fill="#FD7A48" stroke="#FFFFFF" stroke-width="2.5"><animateMotion dur="' + dur + 's" begin="' + sec(st) + '" fill="freeze" path="M 0 0 L ' + (p0[0] - off[0]).toFixed(1) + ' ' + (p0[1] - off[1]).toFixed(1) + '"/></circle>';
+      if (r === lead || isPOA) g += tag(p0, 'SAFE', true, tArrive + .05);
+      return;
+    }
+    var goal = r.out ? (r.outBase || r.end) : r.end;
+    pts = goal ? _paBasesBetween(r.start, goal) : [p0];
+    if (r.out && pts.length >= 2) { var aa = pts[pts.length - 2], bb = pts[pts.length - 1]; pts[pts.length - 1] = [aa[0] + (bb[0] - aa[0]) * .82, aa[1] + (bb[1] - aa[1]) * .82]; }
+    if (isPO && r.out) { // picked off: caught leaning the wrong way
+      var nx2 = r.start === '3B' ? PA_H : PA_B[{ '1B': '2B', '2B': '3B' }[r.start]];
+      var off2 = [p0[0] + (nx2[0] - p0[0]) * .18, p0[1] + (nx2[1] - p0[1]) * .18];
+      g += '<circle cx="' + off2[0].toFixed(1) + '" cy="' + off2[1].toFixed(1) + '" r="9" fill="#FD7A48" stroke="#FFFFFF" stroke-width="2.5" style="animation:paOut .3s linear ' + sec(tArrive + .2) + ' forwards"><animateMotion dur=".3s" begin="' + sec(tStart + .05) + '" fill="freeze" path="M 0 0 L ' + ((p0[0] - off2[0]) * .6).toFixed(1) + ' ' + ((p0[1] - off2[1]) * .6).toFixed(1) + '"/></circle>';
+      g += tag(p0, 'OUT', false, tArrive);
+      return;
+    }
+    var legs = Math.max(1, pts.length - 1);
+    dur = r === lead && (isSB || isCS) ? runDur * (r.out ? .82 : 1) : .8 * legs;
+    var done = st + dur;
+    g += '<circle cx="' + p0[0] + '" cy="' + p0[1] + '" r="9" fill="#FD7A48" stroke="#FFFFFF" stroke-width="2.5"' + ((r.out || goal === 'score') ? ' style="animation:paOut .3s linear ' + sec(done + .25) + ' forwards"' : '') + '>' +
+      (pts.length > 1 ? '<animateMotion dur="' + dur.toFixed(2) + 's" begin="' + sec(st) + '" fill="freeze" path="' + _paRel(pts) + '"/>' : '') + '</circle>';
+    if (r === lead && (isSB || isCS) && goal && goal !== 'score') g += tag(PA_B[goal] || PA_H, r.out ? 'OUT' : 'SAFE', !r.out, r.out ? tArrive : Math.max(done, tArrive) + .02);
+    if (r.out && !isCS && !isPO) g += tag(PA_B[r.outBase] || PA_H, 'OUT', false, done);
+  });
+  g += '</svg>';
+  // words: the play name, plus MLB's line for it (without the season count)
+  var title = _paActionTitle(et);
+  var note = desc.replace(/\s*\(\d+\)/g, '').replace(/\s+/g, ' ').trim();
+  if ((isCS || isPO) && fl.length) note = (isCS ? 'CS ' : 'PO ') + fl.join('-') + (note ? ' · ' + note : '');
+  if (note.length > 90) note = note.slice(0, 88) + '…';
+  var tT = Math.max(tArrive, runT0 + .9) + .1;
+  return '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : 'animation:paOut .5s ease ' + sec(END) + ' both;') + '">' +
+    '<div style="position:absolute;inset:0;animation:paIn .35s linear ' + sec(0) + ' both">' + g + '</div>' +
+    '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;animation:paIn .4s linear ' + sec(Math.min(tT, 1.4)) + ' both">' +
+      '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
+      (note ? '<div style="margin:2px 12px 0;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div></div>';
+}
+
 function _paOverlayHtml() {
   var s = window._pa, lp = s.play, box = s.box;
   if (!lp || !box || !s.startAt) return '';
+  if (typeof _paIsAction === 'function' && _paIsAction(lp)) return _paActionHtml(lp, s, box);
   var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
   var E = (Date.now() - s.startAt) / 1000;
   if (reduce) E = Math.max(E, 30);
