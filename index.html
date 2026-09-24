@@ -10034,7 +10034,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.95.0-infield-singles';
+window.INNINGS_BUILD = 'v5.96.0-smaller-pitches';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -11820,8 +11820,9 @@ function _strikeZoneSectionHtml(seq, ruleColor, subColor, color, partsOnly) {
     (typeof _savZonesSvg === 'function' ? _savZonesSvg(seq, zoneX1, zoneY1, zoneX2, zoneY2) : '') + gridSvg + plateSvg;
   seq.pitches.forEach(function (p) {
     var x = _szX(p.px), y = _szY(p.pz), pColor = _pitchCallColor(p.call);
-    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="17" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.5"/>' +
-      '<text x="' + x.toFixed(1) + '" y="' + (y + 5.5).toFixed(1) + '" text-anchor="middle" font-size="16" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
+    // v5.96.0: drawn close to a real baseball's size so edge calls read right
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="10.5" fill="' + pColor + '" stroke="#0D0820" stroke-width="1.2"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>';
   });
   svg += '</svg>';
 
@@ -21362,7 +21363,7 @@ function _ghLiveDetailHtml(box) {
       var brk = !!(s && (s.inningState === 'Middle' || s.inningState === 'End'));
       if (brk && typeof _ghInningBreakHtml === 'function') svg = _ghInningBreakHtml(box, m, s);
       if (lastP && !_ghReducedMotion()) {
-        svg = svg.replace(/<\/svg>$/, '<circle class="gh-ring-pitch" cx="' + _szX(lastP.px).toFixed(1) + '" cy="' + _szY(lastP.pz).toFixed(1) + '" r="17" fill="none" stroke="' + _pitchCallColor(lastP.call) + '" stroke-width="3"/></svg>');
+        svg = svg.replace(/<\/svg>$/, '<circle class="gh-ring-pitch" cx="' + _szX(lastP.px).toFixed(1) + '" cy="' + _szY(lastP.pz).toFixed(1) + '" r="10.5" fill="none" stroke="' + _pitchCallColor(lastP.call) + '" stroke-width="3"/></svg>');
       }
       // v5.70.0: the square is also where the last play animates (#gh-pa-slot,
       // filled after each render so a refresh picks the animation up mid-way).
@@ -26361,10 +26362,10 @@ function _pitchFlightSvg(p, t, E, hand, style) {
   var rel = 'M 0 0 Q ' + f(C[0] - R[0]) + ' ' + f(C[1] - R[1]) + ' ' + f(X - R[0]) + ' ' + f(Y - R[1]);
   var TRAVEL = .6, sec = function (x) { return _paSec(x, E); };
   var live = style === 'live', big = style === 'last';
-  var r = live ? 17 : (big ? 15 : 14);
+  var r = live ? 10.5 : (big ? 11 : 10.5);
   var dot = live
-    ? '<circle cx="' + f(X) + '" cy="' + f(Y) + '" r="17" fill="' + c + '" stroke="#0D0820" stroke-width="1.5"/><text x="' + f(X) + '" y="' + f(Y + 5.5) + '" text-anchor="middle" font-size="16" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>'
-    : '<circle cx="' + f(X) + '" cy="' + f(Y) + '" r="' + r + '" fill="' + c + '" stroke="' + (big ? 'rgba(255,255,255,.35)' : '#0D0820') + '" stroke-width="' + (big ? 4 : 1.5) + '"/><text x="' + f(X) + '" y="' + f(Y + 5) + '" text-anchor="middle" font-size="15" font-weight="800" fill="#0D0820">' + p.num + '</text>';
+    ? '<circle cx="' + f(X) + '" cy="' + f(Y) + '" r="10.5" fill="' + c + '" stroke="#0D0820" stroke-width="1.2"/><text x="' + f(X) + '" y="' + f(Y + 4.2) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#0D0820" font-family="-apple-system,sans-serif">' + p.num + '</text>'
+    : '<circle cx="' + f(X) + '" cy="' + f(Y) + '" r="' + r + '" fill="' + c + '" stroke="' + (big ? 'rgba(255,255,255,.35)' : '#0D0820') + '" stroke-width="' + (big ? 2.5 : 1.2) + '"/><text x="' + f(X) + '" y="' + f(Y + 4.2) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#0D0820">' + p.num + '</text>';
   return '<path d="' + d + '" pathLength="100" stroke-dasharray="100" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2" stroke-linecap="round" style="animation:paDraw ' + TRAVEL + 's linear ' + sec(t) + ' both,paOut .5s linear ' + sec(t + TRAVEL + .35) + ' forwards"/>' +
     '<circle cx="' + f(R[0]) + '" cy="' + f(R[1]) + '" r="2.5" fill="#FFFFFF" style="filter:drop-shadow(0 0 4px #fff);animation:paIn .08s linear ' + sec(t) + ' both,paOut .12s linear ' + sec(t + TRAVEL) + ' forwards">' +
       '<animateMotion dur="' + TRAVEL + 's" begin="' + sec(t) + '" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".45 0 .9 .6" path="' + rel + '"/>' +
