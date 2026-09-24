@@ -10168,7 +10168,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.1.0-between-pitch-order';
+window.INNINGS_BUILD = 'v6.1.1-infield-single-fix';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -27297,8 +27297,16 @@ function _paInfieldHitPos(lp) {
   var tr = (lp.hit && lp.hit.trajectory) || '';
   if (tr && !/ground|bunt/.test(tr)) return null;
   var desc = String(lp.description || lp.desc || '').toLowerCase();
+  // v6.1.1: a ball that reaches an outfielder, or was fielded out past the
+  // infield dirt, is a regular single even if an infielder got a glove on it
+  // (e.g. "singles on a ground ball to center fielder …, deflected by
+  // second baseman …") — no throw to first, nobody covers the bag.
+  if (/\bto (left|center|right) fielder\b/.test(desc)) return null;
+  var hh = lp.hit || {};
+  if (hh.x != null && hh.y != null && Math.hypot(hh.x - 125.42, 198.27 - hh.y) * 2.5 > 170) return null;
   var m = desc.match(/(?:ground ball|grounder|bunt|chopper|roller)[^.]*?\bto (pitcher|catcher|first baseman|second baseman|third baseman|shortstop)\b/) || desc.match(/\bto (pitcher|catcher|first baseman|second baseman|third baseman|shortstop)\b/);
   if (m) return _PA_POS_WORDS[m[1]];
+  if (/deflect/.test(desc)) return null; // a deflection alone isn't who fielded it
   var f0 = (lp.fielders || [])[0];
   return f0 && /^[1-6]$/.test(f0) && tr ? f0 : null;
 }
