@@ -36,6 +36,36 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=bvp&batter=<id>&pitcher=<id>  (v5.89.0)
+    // A hitter's career line against one pitcher (MLB Stats API vsPlayer).
+    if (mode === 'bvp') {
+      const b = req.query.batter, p = req.query.pitcher;
+      if (!b || !p) { res.status(400).json({ error: 'Missing batter or pitcher' }); return; }
+      const url = 'https://statsapi.mlb.com/api/v1/people/' + encodeURIComponent(b) + '/stats?stats=vsPlayer&opposingPlayerId=' + encodeURIComponent(p) + '&group=hitting&sportId=1';
+      const r = await fetch(url);
+      const data = await r.json();
+      const blocks = data.stats || [];
+      const total = blocks.find(x => x.type && /total/i.test(x.type.displayName || '')) || null;
+      let st = total && total.splits && total.splits[0] && total.splits[0].stat;
+      if (!st) {
+        // no total block: add up the per-season rows
+        const rows = [].concat.apply([], blocks.map(x => x.splits || [])).map(x => x.stat || {});
+        if (rows.length) {
+          st = {};
+          ['plateAppearances', 'atBats', 'hits', 'doubles', 'triples', 'homeRuns', 'baseOnBalls', 'strikeOuts', 'rbi', 'hitByPitch'].forEach(k => { st[k] = rows.reduce((a, x) => a + (Number(x[k]) || 0), 0); });
+        }
+      }
+      const n = v => v == null ? 0 : Number(v) || 0;
+      const out = st ? {
+        pa: n(st.plateAppearances), ab: n(st.atBats), h: n(st.hits), d: n(st.doubles), t: n(st.triples), hr: n(st.homeRuns),
+        bb: n(st.baseOnBalls), so: n(st.strikeOuts), rbi: n(st.rbi),
+        avg: st.avg || null, obp: st.obp || null, slg: st.slg || null, ops: st.ops || null
+      } : { pa: 0 };
+      res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+
     if (mode === 'boxscore') {
       const gamePk = req.query.gamePk;
       if (!gamePk) { res.status(400).json({ error: 'Missing gamePk' }); return; }
