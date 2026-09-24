@@ -280,6 +280,8 @@ function summarize(data, gamePk, wantAllPlays) {
           pz: coords.pZ != null ? coords.pZ : null,
           call: (e.details && e.details.call && e.details.call.description) || null,
           type: (e.details && e.details.type && e.details.type.description) || null,
+          code: (e.details && e.details.type && e.details.type.code) || null,   // v5.87.0: FF, SL… for "vs his normal"
+          mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null,
           speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null
         };
       }).filter(function (p) { return p.px != null && p.pz != null; });
@@ -287,6 +289,8 @@ function summarize(data, gamePk, wantAllPlays) {
       pitchSequence = {
         batter: currentPlay.matchup.batter.fullName || null,
         batterId: currentPlay.matchup.batter.id || null,
+        pitcherId: (currentPlay.matchup.pitcher && currentPlay.matchup.pitcher.id) || null,
+        atBatIndex: (currentPlay.about && currentPlay.about.atBatIndex != null) ? currentPlay.about.atBatIndex : null,
         batSide: (currentPlay.matchup.batSide && currentPlay.matchup.batSide.code) || null,
         zoneTop: (lastEvent && lastEvent.pitchData.strikeZoneTop != null) ? lastEvent.pitchData.strikeZoneTop : 3.5,
         zoneBottom: (lastEvent && lastEvent.pitchData.strikeZoneBottom != null) ? lastEvent.pitchData.strikeZoneBottom : 1.5,
@@ -984,7 +988,7 @@ function _playAnimSummary(p, prev) {
   var pitches = pitchEvs.filter(function (e) { return e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX != null && e.pitchData.coordinates.pZ != null; }).map(function (e, i) {
     var d = e.details || {};
     return { num: e.pitchNumber || (i + 1), px: e.pitchData.coordinates.pX, pz: e.pitchData.coordinates.pZ,
-      call: (d.call && d.call.description) || d.description || null, type: (d.type && d.type.description) || null,
+      call: (d.call && d.call.description) || d.description || null, type: (d.type && d.type.description) || null, code: (d.type && d.type.code) || null,
       speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null };
   });
   var lastPd = null;
@@ -1019,12 +1023,15 @@ function _playAnimSummary(p, prev) {
     rbi: p.result.rbi || 0, awayScore: p.result.awayScore != null ? p.result.awayScore : null, homeScore: p.result.homeScore != null ? p.result.homeScore : null,
     outs: (p.count && p.count.outs != null) ? p.count.outs : null,
     batter: (p.matchup && p.matchup.batter && p.matchup.batter.fullName) || null,
+    batterId: (p.matchup && p.matchup.batter && p.matchup.batter.id) || null,
+    pitcherId: (p.matchup && p.matchup.pitcher && p.matchup.pitcher.id) || null,
     batSide: (p.matchup && p.matchup.batSide && p.matchup.batSide.code) || null,
     zoneTop: (lastPd && lastPd.strikeZoneTop != null) ? lastPd.strikeZoneTop : 3.5,
     zoneBottom: (lastPd && lastPd.strikeZoneBottom != null) ? lastPd.strikeZoneBottom : 1.5,
     pitches: pitches,
     hit: hit ? { x: hit.coordinates && hit.coordinates.coordX != null ? hit.coordinates.coordX : null, y: hit.coordinates && hit.coordinates.coordY != null ? hit.coordinates.coordY : null,
-      trajectory: hit.trajectory || null, distance: hit.totalDistance != null ? Math.round(hit.totalDistance) : null, speed: hit.launchSpeed != null ? Math.round(hit.launchSpeed) : null } : null,
+      trajectory: hit.trajectory || null, distance: hit.totalDistance != null ? Math.round(hit.totalDistance) : null, speed: hit.launchSpeed != null ? Math.round(hit.launchSpeed * 10) / 10 : null,
+      angle: hit.launchAngle != null ? Math.round(hit.launchAngle) : null } : null,
     runners: order.map(function (id) { return byRunner[id]; }),
     pre: pre,
     fielders: fielders,
