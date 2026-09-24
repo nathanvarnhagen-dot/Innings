@@ -807,6 +807,19 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ FOOTBALL FINAL — SCORING REPLAY (v5.99.0) ═══ */
+.fbr{display:flex;flex-direction:column;gap:8px}
+.fbr-ctl{display:flex;align-items:center;gap:8px}
+.fbr-btn{width:38px;height:38px;border-radius:50%;background:rgba(168,159,232,.14);border:0;color:#E9E5FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-family:inherit}
+.fbr-btn.pri{background:#A89FE8;color:#1A1640}
+.fbr-btn:disabled{opacity:.35;cursor:default}
+.fbr-btn:focus-visible,.fbr-dot:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.fbr-dots{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;min-width:0}
+.fbr-dot{width:22px;height:22px;border:0;padding:0;background:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fbr-dot i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);transition:width .3s,background .3s}
+.fbr-dot.on i{width:16px;border-radius:4px;background:#A89FE8}
+.fbr-dot.done i{background:rgba(168,159,232,.5)}
+
 /* ═══ WATCHING / ATTENDING (v5.66.0) ═══ */
 .gd-t-short{display:inline}.gd-t-full{display:none}
 .gatt-opts{display:flex;gap:2px;padding:3px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);flex-shrink:0}
@@ -10116,7 +10129,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.98.0-football-live-field';
+window.INNINGS_BUILD = 'v5.99.0-final-replay';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19986,6 +19999,106 @@ function _fbxResultHtml(m, fx) {
     (td ? '<span class="bd">TD</span>' : (firstDown ? '<span class="bd">1ST DOWN</span>' : '')) + '</div>';
 }
 
+// ═══ FOOTBALL FINAL — SCORING REPLAY (v5.99.0) ══════════════════════
+// After a game, the scoring plays replay one at a time on the live field:
+// the ball runs or flies the real distance into the right end zone (both
+// read from the play's own label, e.g. "Allgeier 57-yd TD run"), the
+// team's touchdown takeover plays for touchdowns, and the card underneath
+// says what happened and the score after it. Auto-plays once; prev/next,
+// pause and the dots step through by hand. Only the replay card repaints.
+window._fbr = null;
+function _fbrPlay(p) {
+  var t = String((p.head || '') + ' ' + (p.sub || ''));
+  var yd = t.match(/(\d{1,3})\s*-?\s*(?:yd|yard)/i);
+  var yards = yd ? Math.min(99, Number(yd[1])) : null;
+  var kind = 'rush', kindText = 'RUSH · TOUCHDOWN', badge = 'TD', td = true;
+  if (/\bFG\b|field goal/i.test(t)) { kind = 'kick'; kindText = 'FIELD GOAL'; badge = 'FG'; td = false; }
+  else if (/safety/i.test(t)) { kind = 'none'; kindText = 'SAFETY'; badge = 'SAFETY'; td = false; }
+  else if (/pick-six|interception return/i.test(t)) { kindText = 'INTERCEPTION RETURN · TOUCHDOWN'; }
+  else if (/fumble/i.test(t)) { kindText = 'FUMBLE RETURN · TOUCHDOWN'; }
+  else if (/catch|pass|reception/i.test(t)) { kind = 'pass'; kindText = 'PASS · TOUCHDOWN'; }
+  else if (!/\bTD\b|touchdown/i.test(t)) { kind = 'none'; kindText = 'SCORE'; badge = ''; td = false; }
+  var side = p.side === 'h' ? 'h' : 'a';
+  var goal = side === 'a' ? 100 : 0, dir = side === 'a' ? 1 : -1;
+  // A field goal is kicked from 17 yards behind its listed distance
+  var dist = yards != null ? (kind === 'kick' ? Math.max(1, yards - 17) : yards) : 20;
+  var start = kind === 'none' ? goal : Math.max(0, Math.min(100, goal - dir * dist));
+  return { kind: kind, kindText: kindText, badge: badge, td: td, side: side, yards: yards, start: start, end: goal };
+}
+function _fbrDur(pl) { return pl.td ? 5200 : 3600; }
+function _fbrState(m) {
+  var g = window._activeBrowseGame, pk = g ? String(g.gamePk) : '';
+  var r = window._fbr;
+  if (!r || r.pk !== pk || r.n !== m.highlights.length) {
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Autoplay starts once the final hero has finished animating in
+    r = window._fbr = { pk: pk, n: m.highlights.length, i: 0, playing: !reduce, at: Date.now() + 1400 };
+  }
+  return r;
+}
+function _fbrHtml(m, first) {
+  var r = _fbrState(m);
+  var plays = m.highlights;
+  var p = plays[r.i] || plays[0];
+  var pl = _fbrPlay(p);
+  var team = pl.side === 'h' ? m.home : m.away;
+  var mm = Object.assign({}, m, { situation: { downText: '', possSide: pl.side, lastPlay: null } });
+  var v = { pct: pl.end, firstPct: null, lastPlay: pl.kind === 'none' ? null : { kind: pl.kind === 'kick' ? 'kick' : pl.kind, startPct: pl.start, endPct: pl.end }, aria: p.head || 'Scoring play' };
+  var fx = { playAt: r.at, fromPct: pl.kind === 'none' ? null : pl.start, fromFirst: null, td: pl.td ? { side: pl.side, at: r.at + 950 } : null, burn: null, brkAt: 0 };
+  var field = _fbxFieldHtml(mm, v, fx, null);
+  var chip = _gxChip(p, m);
+  var big = pl.yards != null && pl.kind !== 'none' ? pl.yards + '<small>YDS</small>' : '&mdash;';
+  var res = '<div class="fbx-res' + (pl.td ? ' td' : '') + '" style="--acc:' + (pl.td ? '#F2C869' : team.colors.bg) + ';--t0:' + (-(Date.now() - r.at)) + 'ms">' +
+    '<span class="y">' + big + '</span><div class="w"><span class="k">' + _escapeHtml(team.abbr + ' · ' + pl.kindText) + '</span>' +
+    '<span class="x">' + _escapeHtml((p.head || '') + (p.sub ? ' · ' + p.sub : '')) + '</span>' +
+    '<span class="k" style="letter-spacing:.04em;color:#D9D4FA">' + _escapeHtml([p.tag, p.time].filter(Boolean).join(' ') + (chip ? '  ·  ' + chip : '')) + '</span></div>' +
+    (pl.badge ? '<span class="bd">' + pl.badge + '</span>' : '') + '</div>';
+  var dots = plays.map(function (q, k) {
+    return '<button class="fbr-dot' + (k === r.i ? ' on' : (k < r.i ? ' done' : '')) + '" onclick="fbrGo(' + k + ')" aria-label="Scoring play ' + (k + 1) + ' of ' + plays.length + '"' + (k === r.i ? ' aria-current="true"' : '') + '><i></i></button>';
+  }).join('');
+  var icon = function (d) { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + d + '</svg>'; };
+  var ctl = '<div class="fbr-ctl">' +
+    '<button class="fbr-btn" onclick="fbrStep(-1)" aria-label="Previous scoring play"' + (r.i === 0 ? ' disabled' : '') + '>' + icon('<path d="M15 5l-8 7 8 7z"/>') + '</button>' +
+    '<button class="fbr-btn pri" onclick="fbrToggle()" aria-label="' + (r.playing ? 'Pause replay' : 'Play replay') + '">' + (r.playing ? icon('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>') : icon('<path d="M8 5l11 7-11 7z"/>')) + '</button>' +
+    '<button class="fbr-btn" onclick="fbrStep(1)" aria-label="Next scoring play"' + (r.i >= plays.length - 1 ? ' disabled' : '') + '>' + icon('<path d="M9 5l8 7-8 7z"/>') + '</button>' +
+    '<div class="fbr-dots">' + dots + '</div></div>';
+  if (r.playing) _fbrRun();
+  return '<div class="gh-panel fbr' + (first ? ' gh-up' : '') + '" id="fbr-card" style="' + (first ? _ghDelay(.5) : '') + '">' +
+    '<div class="gh-row"><span class="gh-eyebrow">Replay the scoring</span><span class="gh-sub" style="white-space:nowrap">' + (r.i + 1) + ' of ' + plays.length + '</span></div>' +
+    field + res + ctl + '</div>';
+}
+function _fbrPaint() {
+  var el = document.getElementById('fbr-card');
+  var gp = window._gdPregame;
+  if (!el || !gp || !gp.gx) return false;
+  var tmp = document.createElement('div');
+  tmp.innerHTML = _fbrHtml(gp.gx, false);
+  el.parentNode.replaceChild(tmp.firstChild, el);
+  return true;
+}
+function _fbrRun() {
+  if (window._fbrTimer) return;
+  window._fbrTimer = setInterval(function () {
+    var r = window._fbr, gp = window._gdPregame;
+    if (!r || !document.getElementById('fbr-card') || !gp || !gp.gx) { clearInterval(window._fbrTimer); window._fbrTimer = null; return; }
+    if (!r.playing) return;
+    var p = gp.gx.highlights[r.i];
+    if (!p || Date.now() - r.at < _fbrDur(_fbrPlay(p))) return;
+    if (r.i < gp.gx.highlights.length - 1) { r.i++; r.at = Date.now(); }
+    else r.playing = false;
+    _fbrPaint();
+  }, 250);
+}
+function fbrGo(k) { var r = window._fbr; if (!r) return; r.i = Math.max(0, Math.min(r.n - 1, k)); r.at = Date.now(); _fbrPaint(); }
+function fbrStep(d) { var r = window._fbr; if (r) fbrGo(r.i + d); }
+function fbrToggle() {
+  var r = window._fbr; if (!r) return;
+  if (!r.playing && r.i >= r.n - 1) { r.i = 0; r.at = Date.now(); }   // replay from the top
+  r.playing = !r.playing;
+  if (r.playing) r.at = Date.now();
+  _fbrPaint();
+}
+
 // ═══ WATCHING / ATTENDING (v5.66.0) ══════════════════════════════════
 // Two options in the game header's top-right corner, worded by the game's
 // state (Going to watch / Attending → Watching / Attending → Watched /
@@ -22628,6 +22741,7 @@ function _gxFinalHtml(m, st) {
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">' + (soccer ? 'FT' : 'FINAL') + '</span>' +
     (extra ? '<span class="gh-sub" style="font-weight:700">' + extra + '</span>' : '') + '</div>';
   h += _ghScoreboard(m, center, { away: false, home: false }, true);
+  if (m.sport === 'football' && m.highlights.length) h += _fbrHtml(m, true);
   h += _gxHighlightsListHtml(m, st, { title: m.sport === 'basketball' ? 'Every big moment' : (m.sport === 'football' ? 'Every scoring play' : 'Every goal') });
 
   var recap = _gxRecap(m);
@@ -23146,6 +23260,17 @@ function renderGameCheatSheet() {
   var el = document.getElementById('game-sheet-panel');
   var state = window._gdPregame;
   if (!el || !state) return;
+  // v5.99.0: any re-render while the hero is still animating in (the field
+  // outline drawing itself, teams sliding in) replaced its DOM mid-animation
+  // and it jumped straight to finished. Every caller now waits for the intro
+  // to end; several calls in that window collapse into one render.
+  var ist = window._ghState;
+  var introLeft = (ist && ist.heroAt) ? 2600 - (Date.now() - ist.heroAt) : 0;
+  if (introLeft > 0 && el.querySelector('.gh.gh-anim')) {
+    clearTimeout(window._gxRenderTimer);
+    window._gxRenderTimer = setTimeout(renderGameCheatSheet, introLeft + 20);
+    return;
+  }
   var scrollPos = el.scrollTop; // preserved across the innerHTML replace below — otherwise every live-refresh tick would jump the reader back to the top mid-read
   if (!state.data) {
     // No pregame data was ever fetched — either it hasn't loaded yet, or
