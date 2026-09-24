@@ -1091,7 +1091,7 @@ function _playAnimSummary(p, prev) {
     });
   });
   var byRunner = {}, order = [];
-  var fielders = [];
+  var fielders = [], deflected = [];
   (p.runners || []).forEach(function (r) {
     if (isActRunner(r)) return; // v6.1.0: belongs to a between-pitch scene
     var id = r.details && r.details.runner && r.details.runner.id;
@@ -1102,6 +1102,9 @@ function _playAnimSummary(p, prev) {
     (r.credits || []).forEach(function (c) {
       var code = c.position && c.position.code;
       if (!code) return;
+      // v6.1.1: a deflection isn't part of the scoring ("6-4-3"), and it
+      // made the app think an infielder fielded a ball that went through
+      if (/deflect/.test(c.credit || '')) { if (deflected.indexOf(code) === -1) deflected.push(code); return; }
       if (fielders.indexOf(code) === -1) fielders.push(code); // first touch order: 6, 4, 3
     });
   });
@@ -1139,6 +1142,7 @@ function _playAnimSummary(p, prev) {
     pre: pre,
     fielders: fielders,
     errorPos: errorPos,
+    deflected: deflected,
     actions: actions
   };
 }
