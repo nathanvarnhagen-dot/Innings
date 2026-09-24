@@ -807,6 +807,18 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ ABS CHALLENGES (v6.3.0) ═══ */
+.abs-line{display:flex;align-items:center;gap:8px;margin:-2px 0 4px 30px;font-size:12px;color:#B9B3E6;min-width:0}
+.abs-line>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.abs-tag{font-size:9.5px;font-weight:900;letter-spacing:.12em;padding:2px 6px;border-radius:6px;background:rgba(168,159,232,.16);color:#E9E5FF;flex-shrink:0}
+.abs-line b{margin-left:auto;font-weight:800;white-space:nowrap;flex-shrink:0}
+.abs-line.ov b{color:#F2C869}.abs-line.ov .abs-tag{background:rgba(242,200,105,.18);color:#F2C869}
+.abs-line.st b{color:#9C95D0}
+.abs-line.rev b{color:#A89FE8}
+.abs-left{display:flex;justify-content:center;gap:6px;margin:-4px 0 12px;font-size:11.5px;color:#9C95D0}
+.abs-left b{color:#E9E5FF;font-weight:800}
+.fbx-nt.abs-nt{top:10px;z-index:5}
+
 /* ═══ INLINE PLAY REPLAYS (v6.2.0) ═══ */
 .pai{margin:6px 0 14px;padding:12px;border-radius:18px;background:linear-gradient(180deg,#171238 0%,#110C2C 100%);border:1px solid rgba(168,159,232,.16);display:flex;flex-direction:column;gap:10px;animation:paiIn .35s cubic-bezier(.22,1,.36,1)}
 @keyframes paiIn{from{opacity:0;transform:translateY(-6px)}}
@@ -10181,7 +10193,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v6.2.0-inline-replays';
+window.INNINGS_BUILD = 'v6.3.0-abs-challenges';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -22005,9 +22017,9 @@ function _ghLiveDetailHtml(box) {
       // Tap a play in the play-by-play to replay it here.
       // v6.0.0: count panel, purple zone glow, play label above the square
       // and the Statcast strip under it.
-      if (!brk) { out += _bbCountHtml(s); svg = _bbZoneGlow(svg, seq); }
+      if (!brk) { out += _bbCountHtml(s) + (typeof _absLeftHtml === 'function' ? _absLeftHtml(box) : ''); svg = _bbZoneGlow(svg, seq); if (typeof _absZoneMarks === 'function') svg = _absZoneMarks(svg, seq.pitches); }
       out += '<div id="gh-pa-label" class="pa-lab"></div>';
-      out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div></div>';
+      out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div>' + (!brk && typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') + '</div>';
       out += '<div id="gh-pa-stats" class="pa-sc"></div>';
       if (!brk && seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
@@ -22017,7 +22029,7 @@ function _ghLiveDetailHtml(box) {
             (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
             '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
             (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
-            (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
+            (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, box, s.half) : '');
         }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '');
       } else if (!brk) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
@@ -26746,7 +26758,7 @@ function _reelPitchListHtml(it, E) {
       '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0' + (last ? ';box-shadow:0 0 0 2px rgba(255,255,255,.35)' : '') + '">' + p.num + '</span>' +
       (p.speed ? '<span class="gh-num" style="font-size:13.5px;flex-shrink:0;width:58px">' + p.speed + ' mph</span>' : '') +
       '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
-      (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
+      (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, window._reel && window._reel.box || (window._pa && window._pa.box) || {}, it.lp.half, 'animation:paIn .25s linear ' + _paSec(.35 + i * .85 + _paActExtra(it.lp, i) + .45, E) + ' both') : '');
   }).join('');
 }
 function _reelBtnHtml(n) {
@@ -27487,6 +27499,71 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ── ABS CHALLENGES (v6.3.0) ────────────────────────────────────────────
+// From the Stats API: a challenged pitch carries `abs` {overturned,
+// inProgress, side} (reviewType "MJ"); the box carries each team's
+// remaining challenges. Shown on the pitch list line, as a ring on the
+// pitch in the zone, as a notice over the at-bat square when it happens,
+// and as "ABS challenges left" under the count.
+function _absAbbr(box, side) {
+  if (!box) return side === 'away' ? 'Away' : 'Home';
+  return side === 'away' ? (box.awayAbbr || _ghAbbrFallback(box.away || '')) : (box.homeAbbr || _ghAbbrFallback(box.home || ''));
+}
+function _absResult(p) {
+  var a = p.abs, call = String(p.call || '');
+  var strike = /strike/i.test(call), ball = !strike && /\bball\b/i.test(call);
+  if (a.inProgress) return { cls: 'rev', text: 'Under review' };
+  if (a.overturned) return { cls: 'ov', text: 'Overturned' + (strike ? ' \u00b7 was a ball' : ball ? ' \u00b7 was a strike' : '') };
+  return { cls: 'st', text: 'Call stands' };
+}
+function _absLineHtml(p, box, half, style) {
+  var a = p && p.abs;
+  if (!a) return '';
+  var who = a.side ? _absAbbr(box, a.side) : 'Team';
+  var bat = half === 'top' ? 'away' : half === 'bottom' ? 'home' : null;
+  var role = a.side && bat ? (a.side === bat ? ' batter' : ' defense') : '';
+  var r = _absResult(p);
+  return '<div class="abs-line ' + r.cls + '"' + (style ? ' style="' + style + '"' : '') + '><span class="abs-tag">ABS</span><span>' + _escapeHtml(who + role) + '</span><b>' + _escapeHtml(r.text) + '</b></div>';
+}
+function _absLeftHtml(box) {
+  var c = box && box.absChallenges;
+  if (!c || !c.away || !c.home || c.away.remaining == null || c.home.remaining == null) return '';
+  return '<div class="abs-left">ABS challenges left <b>' + _escapeHtml(_absAbbr(box, 'away')) + ' ' + c.away.remaining + '</b>\u00b7<b>' + _escapeHtml(_absAbbr(box, 'home')) + ' ' + c.home.remaining + '</b></div>';
+}
+function _absZoneMarks(svg, pitches) {
+  var marks = '';
+  (pitches || []).forEach(function (p) {
+    if (!p.abs || p.px == null || p.pz == null) return;
+    var x = _szX(p.px), y = _szY(p.pz), col = p.abs.overturned ? '#F2C869' : (p.abs.inProgress ? '#A89FE8' : '#9C95D0');
+    marks += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="17" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-dasharray="4 3"/>' +
+      '<text x="' + (x + 19).toFixed(1) + '" y="' + (y - 13).toFixed(1) + '" font-size="12" font-weight="900" fill="' + col + '" font-family="-apple-system,Helvetica,sans-serif">ABS</text>';
+  });
+  return marks ? svg.replace(/<\/svg>$/, marks + '</svg>') : svg;
+}
+// Notice over the square: while the challenge is being reviewed, and for
+// eight seconds after its result first shows up. Not for challenges that
+// were already there when you opened the game.
+window._absSeen = window._absSeen || { game: null, at: {} };
+function _absNoticeHtml(seq, box, sit) {
+  var g = window._activeBrowseGame, pk = g ? String(g.gamePk) : '', S = window._absSeen;
+  var ps = (seq && seq.pitches) || [];
+  var first = S.game !== pk;
+  if (first) { S.game = pk; S.at = {}; }
+  var show = null, showAt = 0, now = Date.now();
+  ps.forEach(function (p) {
+    if (!p.abs) return;
+    var key = (seq.atBatIndex != null ? seq.atBatIndex : seq.batter) + ':' + p.num + ':' + (p.abs.inProgress ? 'r' : (p.abs.overturned ? 'o' : 's'));
+    if (S.at[key] == null) S.at[key] = first ? 0 : now;
+    var t = S.at[key];
+    if (p.abs.inProgress || (t && now - t < 8000)) { show = p; showAt = t || now; }
+  });
+  if (!show) return '';
+  var a = show.abs, who = a.side ? _absAbbr(box, a.side) : '';
+  var r = _absResult(show);
+  var col = a.side && typeof _ghTeamColors === 'function' ? _ghTeamColors(who).bg : '#A89FE8';
+  return '<div class="fbx-nt abs-nt' + (a.inProgress ? ' rev' : '') + '" style="--t0:' + (showAt - now) + 'ms;--acc:' + col + '"><span class="t">ABS CHALLENGE' + (who ? ' \u00b7 ' + _escapeHtml(who) : '') + '</span><span class="s">' + _escapeHtml('Pitch ' + show.num + ' \u00b7 ' + r.text.split(' \u00b7 ')[0]) + '</span></div>';
+}
+
 // ── INLINE PLAY REPLAYS (v6.2.0) ────────────────────────────────────────
 // Separate from the live square's state (window._pa), so the live game keeps
 // going untouched while a past play replays under its row.
@@ -27561,7 +27638,7 @@ function _paiListHtml(lp, E) {
       '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + p.num + '</span>' +
       (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
       '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
-      (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>';
+      (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, (window._pai && window._pai.box) || {}, lp.half, 'opacity:0;animation:paIn .25s linear ' + (T.land[i] - .15 - E).toFixed(2) + 's both') : '');
   }).join('');
 }
 function _paiMount(rowEl, scroll) {
