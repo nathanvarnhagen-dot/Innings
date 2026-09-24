@@ -807,6 +807,45 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ BASEBALL LIVE REDESIGN (v6.0.0) — count panel, zone glow, park,
+   play label above the square, Statcast strip under it, home run takeover.
+   Everything that already animated keeps its timing; this restyles and adds. ═══ */
+.bbc{display:grid;grid-template-columns:1fr 1fr 1fr;border-radius:16px;overflow:hidden;margin:0 0 12px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.bbc-t{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 11px}
+.bbc-t+.bbc-t{border-left:1px solid rgba(255,255,255,.07)}
+.bbc-n{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.bbc-l{font-size:9px;font-weight:800;letter-spacing:.2em;color:#9C95D0}
+.bbc-caps{display:flex;gap:4px}
+.bbc-caps i{width:16px;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}
+.bbc-b .bbc-caps i.on{background:#7CF29C;box-shadow:0 0 10px rgba(124,242,156,.65)}
+.bbc-s .bbc-caps i.on{background:#FF6A58;box-shadow:0 0 10px rgba(255,106,88,.65)}
+.bbc-o .bbc-caps i.on{background:#F2C869;box-shadow:0 0 10px rgba(242,200,105,.65)}
+.bbc-n.hit{animation:bbcHit .6s cubic-bezier(.22,1,.36,1)}
+@keyframes bbcHit{0%{transform:scale(1.18)}100%{transform:none}}
+.bbc-b .bbc-n.hit{color:#7CF29C}.bbc-s .bbc-n.hit{color:#FF8A7A}.bbc-o .bbc-n.hit{color:#F2C869}
+/* play label above the square (1B SINGLE, 6-4-3 · Inning over) */
+.pa-lab:empty{display:none}
+.pa-lab .pl-in{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;overflow:hidden;max-height:0;opacity:0;animation:paLabIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes paLabIn{to{max-height:90px;opacity:1;margin-bottom:10px}}
+.pa-lab .pl-t{font-size:20px;font-weight:900;letter-spacing:.05em;color:#F5F3FF}
+.pa-lab .pl-n{font-size:11px;font-weight:900;letter-spacing:.14em;color:#F2C869;padding:5px 10px;border-radius:9px;background:rgba(242,200,105,.1);border:1px solid rgba(242,200,105,.3);text-transform:uppercase}
+/* Statcast strip under the square */
+.pa-sc:empty{display:none}
+.pa-sc .ps-in{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:6px;border-radius:14px;background:linear-gradient(180deg,rgba(168,159,232,.1),rgba(168,159,232,.03));border:1px solid rgba(168,159,232,.22);overflow:visible;max-height:0;opacity:0;padding:0 12px;margin-top:0;animation:paScIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes paScIn{to{max-height:90px;opacity:1;padding:20px 12px 10px;margin-top:12px}}
+.pa-sc .ps-m{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
+.pa-sc .ps-m+.ps-m{border-left:1px solid rgba(255,255,255,.08)}
+.pa-sc .ps-m b{font-size:17px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+.pa-sc .ps-m b small{font-size:10px;font-weight:700;color:#9C95D0;margin-left:1px}
+.pa-sc .ps-m span{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;white-space:nowrap}
+.pa-sc .ps-tr{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:.14em;padding:4px 9px;border-radius:8px;background:#2A2460;border:1px solid rgba(168,159,232,.35);color:#E9E5FF;white-space:nowrap}
+/* home run takeover inside the square (reuses the football takeover's motion) */
+.fbx-to.pa-to{top:0;bottom:0;border-radius:16px;z-index:6}
+.pa-to .stx{display:flex;gap:12px;margin-top:4px;font-size:11.5px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;animation:fbxIn .42s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--t0) + 700ms)}
+.pa-to .stx small{font-weight:700;color:rgba(255,255,255,.7);margin-left:1px}
+.pa-to .who{font-size:12px;font-weight:700;color:rgba(255,255,255,.9);animation:fbxIn .42s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--t0) + 660ms)}
+@media (prefers-reduced-motion: reduce){.bbc-n.hit{animation:none}.pa-lab .pl-in{animation:none;max-height:none;opacity:1;margin-bottom:10px}.pa-sc .ps-in{animation:none;max-height:none;opacity:1;padding:20px 12px 10px;margin-top:12px}.pa-to .stx,.pa-to .who{animation:none}}
+
 /* ═══ FOOTBALL FINAL — SCORING REPLAY (v5.99.0) ═══ */
 .fbr{display:flex;flex-direction:column;gap:8px}
 .fbr-ctl{display:flex;align-items:center;gap:8px}
@@ -10129,7 +10168,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v5.99.0-final-replay';
+window.INNINGS_BUILD = 'v6.0.0-baseball-live-redesign';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19999,6 +20038,149 @@ function _fbxResultHtml(m, fx) {
     (td ? '<span class="bd">TD</span>' : (firstDown ? '<span class="bd">1ST DOWN</span>' : '')) + '</div>';
 }
 
+// ═══ BASEBALL LIVE REDESIGN (v6.0.0) ════════════════════════════════
+// Count panel (balls / strikes / outs), a purple glow on the strike zone,
+// a park drawn under the play animation (infield to scale on the square's
+// own geometry: 90 ft = 113 units, mound at 60.5 ft), the Statcast strip
+// under the square, and a home run takeover in the batting team's colors.
+window._bbLastCount = window._bbLastCount || {};
+function _bbCountHtml(s) {
+  var b = s.balls != null ? s.balls : 0, k = s.strikes != null ? s.strikes : 0, o = s.outs != null ? Math.min(3, s.outs) : 0;
+  var g = window._activeBrowseGame, pk = g ? String(g.gamePk) : '';
+  var last = window._bbLastCount[pk] || null;
+  window._bbLastCount[pk] = { b: b, k: k, o: o };
+  var tile = function (cls, n, slots, label, changed) {
+    var caps = '';
+    for (var i = 0; i < slots; i++) caps += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+    return '<div class="bbc-t ' + cls + '"><span class="bbc-n' + (changed ? ' hit' : '') + '">' + n + '</span><span class="bbc-caps">' + caps + '</span><span class="bbc-l">' + label + '</span></div>';
+  };
+  return '<div class="bbc" role="group" aria-label="Count: ' + b + ' balls, ' + k + ' strikes, ' + o + (o === 1 ? ' out' : ' outs') + '">' +
+    tile('bbc-b', b, 3, 'BALLS', last && last.b !== b) + tile('bbc-s', k, 2, 'STRIKES', last && last.k !== k) + tile('bbc-o', o, 2, 'OUTS', last && last.o !== o) + '</div>';
+}
+function _bbZoneGlow(svg, seq) {
+  if (!svg || !seq || svg.indexOf('<svg') !== 0) return svg;
+  var x1 = _szX(-0.83), x2 = _szX(0.83), y1 = _szY(seq.zoneTop), y2 = _szY(seq.zoneBottom);
+  var id = 'bbzg' + (window._bbZgN = (window._bbZgN || 0) + 1);
+  var halo = '<defs><filter id="' + id + 'f" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+    '<radialGradient id="' + id + 'h" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#A89FE8" stop-opacity=".22"/><stop offset="1" stop-color="#A89FE8" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect x="' + (x1 - 40).toFixed(1) + '" y="' + (y1 - 40).toFixed(1) + '" width="' + (x2 - x1 + 80).toFixed(1) + '" height="' + (y2 - y1 + 80).toFixed(1) + '" rx="18" fill="url(#' + id + 'h)"/>';
+  var stroke = '<rect x="' + x1.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + (x2 - x1).toFixed(1) + '" height="' + (y2 - y1).toFixed(1) + '" rx="3" fill="none" stroke="#A89FE8" stroke-width="2.4" filter="url(#' + id + 'f)"/>';
+  // halo under the zone; the purple edge over the colored cells, under the pitch dots
+  var zi = svg.indexOf('<rect x="' + x1.toFixed(1) + '" y="' + y1.toFixed(1));
+  svg = zi > -1 ? svg.slice(0, zi) + halo + svg.slice(zi) : svg.replace(/<\/svg>$/, halo + '</svg>');
+  var di = svg.indexOf('r="10.5"');
+  di = di > -1 ? svg.lastIndexOf('<circle', di) : svg.lastIndexOf('</svg>');
+  return svg.slice(0, di) + stroke + svg.slice(di);
+}
+// The park, on the at-bat square's 500×386 drawing: home (250,366), bases
+// 80 units apart on the diagonals, wall M 58 174 Q 250 20 442 174.
+function _bbParkSvg(box) {
+  var H = [250, 366], M = [250, 290], U = 1.257, R = 95 * U;
+  var P = function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); };
+  var hA = box && (box.homeAbbr || _ghAbbrFallback(box.home || ''));
+  var cap = (hA && typeof _ghTeamColors === 'function') ? _ghTeamColors(hA).bg : '#FD5A1E';
+  var id = 'bbpk' + (window._bbPkN = (window._bbPkN || 0) + 1);
+  var fair = 'M 58 174 Q 250 20 442 174 L 250 366 Z', wall = 'M 58 174 Q 250 20 442 174';
+  var s = '<defs><clipPath id="' + id + 'c"><path d="' + fair + '"/></clipPath>' +
+    '<linearGradient id="' + id + 'st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2260"/><stop offset="1" stop-color="#15103A"/></linearGradient>' +
+    '<radialGradient id="' + id + 'd" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#D19560"/><stop offset="1" stop-color="#A96C3D"/></radialGradient>' +
+    '<radialGradient id="' + id + 'l" cx=".5" cy=".6" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".65" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient></defs>';
+  // stands behind the wall, seat rows in the app's purple
+  s += '<path d="M -10 200 Q 250 -60 510 200 L 510 0 L -10 0 Z" fill="url(#' + id + 'st)"/>';
+  for (var r = 0; r < 5; r++) { var o = r * 9; s += '<path d="M ' + (20 + o) + ' ' + (160 - o * .4) + ' Q 250 ' + (-10 - o * 1.6) + ' ' + (480 - o) + ' ' + (160 - o * .4) + '" fill="none" stroke="rgba(168,159,232,' + (.16 - r * .02).toFixed(2) + ')" stroke-width="1.2"/>'; }
+  // foul ground, then striped fair grass (straight bands, pole to pole)
+  s += '<path d="M -10 386 L -10 200 Q 250 60 510 200 L 510 386 Z" fill="#183A28"/>';
+  s += '<g clip-path="url(#' + id + 'c)">';
+  for (var y = 10, k = 0; y < 386; y += 18, k++) s += '<rect x="0" y="' + y + '" width="500" height="18" fill="' + (k % 2 ? '#2F7A4B' : '#378A57') + '"/>';
+  s += '<path d="' + wall + '" fill="none" stroke="#A5703F" stroke-width="16"/></g>';            // warning track
+  s += '<path d="' + wall + '" fill="none" stroke="#1B1A1A" stroke-width="8"/>' +
+    '<path d="M 58 169 Q 250 15 442 169" fill="none" stroke="' + cap + '" stroke-width="2.4"/>';  // wall + home-team cap
+  [[82, 178, '330'], [150, 110, '375'], [250, 88, '400'], [350, 110, '375'], [418, 178, '330']].forEach(function (d) {
+    s += '<text x="' + d[0] + '" y="' + d[1] + '" text-anchor="middle" font-size="11" font-weight="800" fill="rgba(255,255,255,.75)" font-family="-apple-system,Helvetica,sans-serif">' + d[2] + '</text>';
+  });
+  s += '<line x1="58" y1="174" x2="55" y2="138" stroke="#F2C869" stroke-width="2.4"/><line x1="442" y1="174" x2="445" y2="138" stroke="#F2C869" stroke-width="2.4"/>';
+  // infield dirt: a 95 ft arc around the mound, closed along both foul lines
+  var dx = M[0] - H[0], dy = M[1] - H[1];
+  var meet = function (sign) {
+    var ux = sign / Math.SQRT2, uy = -1 / Math.SQRT2, b = -2 * (dx * ux + dy * uy), c = dx * dx + dy * dy - R * R;
+    var t = (-b + Math.sqrt(b * b - 4 * c)) / 2; return [H[0] + ux * t, H[1] + uy * t];
+  };
+  s += '<path d="M ' + P(H) + ' L ' + P(meet(1)) + ' A ' + R.toFixed(1) + ' ' + R.toFixed(1) + ' 0 0 0 ' + P(meet(-1)) + ' Z" fill="url(#' + id + 'd)"/>';
+  // infield grass inside the base paths
+  var ins = function (p) { return [p[0] + (M[0] - p[0]) * .13, p[1] + (M[1] - p[1]) * .13]; };
+  var g1 = ins([330, 286]), g2 = ins([250, 206]), g3 = ins([170, 286]), g0 = ins(H);
+  s += '<path d="M ' + P(g0) + ' L ' + P(g1) + ' L ' + P(g2) + ' L ' + P(g3) + ' Z" fill="#378A57"/>';
+  s += '<circle cx="250" cy="290" r="' + (9 * U).toFixed(1) + '" fill="url(#' + id + 'd)"/><rect x="244" y="289" width="12" height="2.4" fill="#fff" opacity=".9"/>' +
+    '<circle cx="250" cy="366" r="' + (13 * U).toFixed(1) + '" fill="url(#' + id + 'd)"/>' +
+    '<rect x="233" y="357" width="8" height="14" fill="none" stroke="#fff" stroke-width="1" opacity=".75"/><rect x="259" y="357" width="8" height="14" fill="none" stroke="#fff" stroke-width="1" opacity=".75"/>';
+  s += '<rect x="0" y="0" width="500" height="386" fill="url(#' + id + 'l)"/>';
+  // stadium lights
+  s += '<rect x="40" y="6" width="44" height="5" rx="2.5" fill="#F4F1FF" opacity=".9"/><rect x="416" y="6" width="44" height="5" rx="2.5" fill="#F4F1FF" opacity=".9"/>' +
+    '<polygon points="40,11 84,11 170,120 110,120" fill="#E9E5FF" opacity=".06"/><polygon points="416,11 460,11 390,120 330,120" fill="#E9E5FF" opacity=".06"/>';
+  return s;
+}
+// Exit velo, launch angle and distance under the square: the strip slides
+// in at contact and the numbers count up until the ball comes down.
+function _bbStatsHtml(lp, s, OFF) {
+  var h = lp.hit || {};
+  var g = window._activeBrowseGame, sp = (typeof _savPlay === 'function' && g) ? (_savPlay(g.gamePk, lp.atBatIndex) || {}) : {};
+  var ev = h.speed != null ? h.speed : sp.ev, la = h.angle != null ? h.angle : sp.la, dist = h.distance != null ? h.distance : sp.dist;
+  var tr = h.trajectory || '';
+  if (ev == null && la == null && dist == null) return '';
+  var trWord = { ground_ball: 'GROUND BALL', line_drive: 'LINE DRIVE', fly_ball: 'FLY BALL', popup: 'POP UP', bunt_grounder: 'BUNT', bunt_popup: 'BUNT' }[tr] || '';
+  if ((lp.eventType || '') === 'home_run') trWord = trWord ? trWord + ' \u00b7 HOME RUN' : 'HOME RUN';
+  var t0 = OFF + PA.T0, t1 = OFF + (s._t1 != null ? s._t1 : PA.T0 + 1.2);
+  var E = (Date.now() - s.startAt) / 1000;
+  var m = function (key, v, dec, unit, label) {
+    return '<div class="ps-m"><b><span data-bbv="' + (v == null ? '' : v) + '" data-dec="' + dec + '">' + (v == null ? '\u2014' : (0).toFixed(dec)) + '</span><small>' + (v == null ? '' : unit) + '</small></b><span>' + label + '</span></div>';
+  };
+  return '<div class="ps-in" data-t0="' + t0.toFixed(2) + '" data-t1="' + t1.toFixed(2) + '" data-start="' + s.startAt + '" style="--t0:' + (t0 - E).toFixed(2) + 's">' +
+    (trWord ? '<span class="ps-tr">' + trWord + '</span>' : '') +
+    m('ev', ev, 1, 'MPH', 'EXIT VELO') + m('la', la, 0, '\u00b0', 'LAUNCH') + m('d', (tr === 'ground_ball' ? null : dist), 0, 'FT', 'DISTANCE') + '</div>';
+}
+function _bbStatsTick() {
+  if (window._bbStatsRaf) return;
+  var step = function () {
+    window._bbStatsRaf = null;
+    var box = document.querySelector('#gh-pa-stats .ps-in');
+    if (!box) return;
+    var t0 = +box.getAttribute('data-t0'), t1 = +box.getAttribute('data-t1'), st = +box.getAttribute('data-start');
+    var E = (Date.now() - st) / 1000;
+    var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
+    var p = reduce ? 1 : Math.max(0, Math.min(1, (E - t0) / Math.max(.3, t1 - t0)));
+    var ease = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+    box.querySelectorAll('[data-bbv]').forEach(function (n) {
+      var v = n.getAttribute('data-bbv');
+      if (v === '') return;
+      n.textContent = (Number(v) * ease).toFixed(+n.getAttribute('data-dec'));
+    });
+    if (p < 1) window._bbStatsRaf = requestAnimationFrame(step);
+  };
+  window._bbStatsRaf = requestAnimationFrame(step);
+}
+// Home run: the batting team's takeover inside the square, with the
+// Statcast numbers. Starts as the ball clears the wall.
+function _bbHrTakeoverHtml(lp, box, s, Es) {
+  var top = lp.half === 'top';
+  var name = top ? box.away : box.home, abbr = top ? (box.awayAbbr || _ghAbbrFallback(box.away || '')) : (box.homeAbbr || _ghAbbrFallback(box.home || ''));
+  var c = _ghTeamColors(abbr);
+  // second color: the team's accent when it stands out from the base color, else white
+  var t2 = (c.accent && Math.abs(_gxLum(c.accent) - _gxLum(c.bg)) > .25) ? c.accent : '#FFFFFF';
+  var nm = String(_teamShortName(name || '') || abbr || '').toUpperCase();
+  var rbi = lp.rbi || 1;
+  var shot = rbi >= 4 ? 'Grand slam' : rbi === 1 ? 'Solo shot' : rbi + '-run shot';
+  var h = lp.hit || {};
+  var stats = [h.speed != null ? h.speed + '<small>MPH</small>' : null, h.angle != null ? h.angle + '<small>\u00b0</small>' : null, h.distance != null ? h.distance + '<small>FT</small>' : null].filter(Boolean);
+  var at = (s._t1 != null ? s._t1 : PA.T0 + 1.8) + .2;
+  return '<div class="fbx-to pa-to" style="--t0:' + _paSec(at, Es) + ';--t1:' + c.bg + ';--t2:' + t2 + ';--tdark:' + _fbxDark(c.bg, .5) + '">' +
+    '<div class="bg"></div><div class="st b"></div><div class="st"></div><div class="sk"></div>' +
+    '<div class="ct"><span class="lg">' + _escapeHtml(abbr || '') + '</span><div class="wd"><span class="sm">HOME RUN</span>' +
+    '<span class="bg2' + (nm.length > 10 ? ' long' : '') + '">' + _escapeHtml(nm) + '</span>' +
+    '<span class="who">' + _escapeHtml((_ghLastName(lp.batter || '') || '') + ' \u00b7 ' + shot) + '</span>' +
+    (stats.length ? '<span class="stx">' + stats.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span>' : '') +
+    '<span class="ln"></span></div></div></div>';
+}
+
 // ═══ FOOTBALL FINAL — SCORING REPLAY (v5.99.0) ══════════════════════
 // After a game, the scoring plays replay one at a time on the live field:
 // the ball runs or flies the real distance into the right end zone (both
@@ -21808,7 +21990,12 @@ function _ghLiveDetailHtml(box) {
       // v5.70.0: the square is also where the last play animates (#gh-pa-slot,
       // filled after each render so a refresh picks the animation up mid-way).
       // Tap a play in the play-by-play to replay it here.
+      // v6.0.0: count panel, purple zone glow, play label above the square
+      // and the Statcast strip under it.
+      if (!brk) { out += _bbCountHtml(s); svg = _bbZoneGlow(svg, seq); }
+      out += '<div id="gh-pa-label" class="pa-lab"></div>';
       out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div></div>';
+      out += '<div id="gh-pa-stats" class="pa-sc"></div>';
       if (!brk && seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
           var c = _pitchCallColor(p.call);
@@ -26694,7 +26881,11 @@ function ghPaReplayPlay(playId, rowEl) {
 function _paFill() {
   var slot = document.getElementById('gh-pa-slot');
   if (!slot) return;
+  var labSlot = document.getElementById('gh-pa-label'), stSlot = document.getElementById('gh-pa-stats');
+  window._pa.labelOut = !!(labSlot && !slot.getAttribute('data-inline'));
   slot.innerHTML = _paOverlayHtml();
+  if (labSlot) labSlot.innerHTML = slot.innerHTML ? (window._pa._labelHtml || '') : '';
+  if (stSlot) { stSlot.innerHTML = slot.innerHTML ? (window._pa._statsHtml || '') : ''; if (stSlot.innerHTML) _bbStatsTick(); }
   var s0 = window._pa;
   slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
   clearTimeout(window._paEndT);
@@ -26702,7 +26893,7 @@ function _paFill() {
     // One full run, then hand the square back and catch up on any
     // refresh that waited (see the render hook below).
     window._paEndT = setTimeout(function () {
-      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) sl.innerHTML = '';
+      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) lb.innerHTML = ''; var st2 = document.getElementById('gh-pa-stats'); if (st2) st2.innerHTML = ''; }
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
     }, Math.max(0, ((window._pa.total || PA.END) + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
@@ -26910,9 +27101,8 @@ function _paActionHtml(a, s, box) {
   var P = [250, 290], C = [250, 378];
   var g = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
     '<rect x="0" y="0" width="500" height="386" fill="#120E2B"/>' +
-    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
-    '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
-    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".7" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174" stroke-opacity=".5"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
+    (typeof _bbParkSvg === 'function' ? _bbParkSvg(box) : '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>') +
+    '<g fill="none" stroke="#FFFFFF" stroke-opacity=".8" stroke-width="2" stroke-linejoin="round"><path d="M 250 366 L 58 174"/><path d="M 250 366 L 442 174"/><path d="M 58 174 Q 250 20 442 174" stroke-opacity=".5"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z"/></g>' +
     '<ellipse cx="250" cy="290" rx="10" ry="5" fill="none" stroke="#D9D4FA" stroke-opacity=".5"/>' +
     ['1B', '2B', '3B'].map(function (b) { var p = PA_B[b]; return '<rect x="' + (p[0] - 8) + '" y="' + (p[1] - 8) + '" width="16" height="16" transform="rotate(45 ' + p[0] + ' ' + p[1] + ')" fill="' + (occ[b] ? '#FD7A48' : '#F5F3FF') + '"/>'; }).join('') +
     '<path d="M 240 361 L 260 361 L 260 368 L 250 374 L 240 368 Z" fill="#F5F3FF"/>';
@@ -27044,6 +27234,7 @@ function _paOverlayHtml() {
   }
   var seq = { batter: lp.batter, batterId: lp.batterId, batSide: lp.batSide, zoneTop: lp.zoneTop, zoneBottom: lp.zoneBottom, pitches: ps };
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
+  if (typeof _bbZoneGlow === 'function') pv = _bbZoneGlow(pv, seq);
   pv = pv.replace(/<\/svg>$/, groups + '</svg>');
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
   out += '<div style="position:absolute;inset:0;' + (showField ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
@@ -27051,10 +27242,23 @@ function _paOverlayHtml() {
   if (showField) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW, null, Es) + '">' + _paFieldSvg(lp, land, Es) + '</div>';
   // title at the top
   var tT = showField ? (s._titleAt || PA.T0 + 2) : 1.4;
-  out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT, null, Es) + '">' +
-    '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
-    (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note).replace('\u24C0K', '<span class="kback" aria-label="strikeout looking">K</span>') + '</div>' : '') + '</div>';
+  // v6.0.0: on the live at-bat square the title sits in its own row above
+  // the square (s.labelOut); replays in the reel and under a tapped play
+  // keep it on top of the drawing as before.
+  s._labelHtml = '';
+  if (s.labelOut) {
+    s._labelHtml = '<div class="pl-in" style="--t0:' + _paSec(tT, Es) + '"><span class="pl-t">' + _escapeHtml(title) + '</span>' +
+      (note ? '<span class="pl-n">' + _escapeHtml(note).replace('\u24C0K', '<span class="kback" aria-label="strikeout looking">K</span>') + '</span>' : '') + '</div>';
+  } else {
+    out += '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;' + anim('paIn', .5, tT, null, Es) + '">' +
+      '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
+      (note ? '<div style="margin-top:2px;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note).replace('\u24C0K', '<span class="kback" aria-label="strikeout looking">K</span>') + '</div>' : '') + '</div>';
+  }
   if (inPlay && typeof _savPlayPillsHtml === 'function') out += _savPlayPillsHtml(lp, tT + .3, Es);
+  // v6.0.0: Statcast strip (counts up while the ball is in the air) and the
+  // home run takeover in the batting team's colors, inside the square.
+  s._statsHtml = (s.labelOut && showField && typeof _bbStatsHtml === 'function') ? _bbStatsHtml(lp, s, OFF) : '';
+  if (showField && (lp.eventType || '') === 'home_run' && typeof _bbHrTakeoverHtml === 'function') out += _bbHrTakeoverHtml(lp, box, s, Es);
   out += '</div>';
   return out;
 }
@@ -27136,9 +27340,8 @@ function _paFieldSvg(lp, land, E) {
   var ballEnd = tt;
   var g = '<svg viewBox="0 0 500 386" width="100%" height="220" style="display:block">' +
     '<rect x="0" y="0" width="500" height="386" fill="#120E2B"/>' +
-    '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/>' +
-    '<path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>' +
-    '<g fill="none" stroke="#D9D4FA" stroke-opacity=".7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    (typeof _bbParkSvg === 'function' ? _bbParkSvg(s.box) : '<path d="M 58 174 Q 250 20 442 174 L 250 366 Z" fill="#12402A" fill-opacity=".45"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="#6B4A2A" fill-opacity=".35"/>') +
+    '<g fill="none" stroke="#FFFFFF" stroke-opacity=".8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     ['M 250 366 L 58 174', 'M 250 366 L 442 174', 'M 58 174 Q 250 20 442 174', 'M 250 366 L 330 286 L 250 206 L 170 286 Z'].map(function (d) {
       return '<path d="' + d + '" pathLength="100" stroke-dasharray="100" style="' + 'animation:paDraw .8s cubic-bezier(.5,0,.2,1) ' + _paSec(PA.SW, E) + ' both"/>';
     }).join('') + '</g>' +
@@ -27242,6 +27445,7 @@ function _paFieldSvg(lp, land, E) {
     }
   });
   s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
+  s._t1 = t1; // v6.0.0: when the ball finishes its flight
   return g + '</svg>';
 }
 
@@ -27388,6 +27592,8 @@ function _savPlayPillsHtml(lp, t, E) {
   var isHit = /^(single|double|triple|home_run)$/.test(et);
   var pill = function (txt, bg, col) { return '<span style="padding:3px 8px;border-radius:999px;background:' + (bg || 'rgba(11,8,32,.78)') + ';border:1px solid rgba(168,159,232,.3);color:' + (col || '#F5F3FF') + ';font-size:10.5px;font-weight:800;white-space:nowrap">' + txt + '</span>'; };
   var left = [], right = [];
+  var inStrip = !!(window._pa && window._pa.labelOut); // v6.0.0: shown in the Statcast strip instead
+  if (inStrip) { ev = null; la = null; dist = null; }
   if (ev != null) left.push(pill(_escapeHtml(String(ev)) + ' mph'));
   if (la != null) left.push(pill(_escapeHtml(String(la)) + '&deg;'));
   if (dist != null && tr !== 'ground_ball') left.push(pill(_escapeHtml(String(dist)) + ' ft'));
