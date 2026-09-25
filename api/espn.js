@@ -71,6 +71,22 @@ module.exports = async function handler(req, res) {
       const r = await fetch(url);
       const data = await r.json();
       const model = summarizeGamecast(data, league, eventId, req.query.plays === 'all');
+      // v7.2.1: ESPN's summary doesn't carry timeouts; the single-game
+      // situation resource does. NFL only — ESPN reports a flat 3 for every
+      // college game, which would be wrong. Fails soft (keeps nulls).
+      if (model.phase === 'live' && league === 'nfl' && model.situation) {
+        try {
+          const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const tm = ctrl ? setTimeout(function () { ctrl.abort(); }, 2500) : null;
+          const sr = await fetch('https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/' + encodeURIComponent(eventId) + '/competitions/' + encodeURIComponent(eventId) + '/situation', ctrl ? { signal: ctrl.signal } : undefined);
+          if (tm) clearTimeout(tm);
+          if (sr.ok) {
+            const sj = await sr.json();
+            if (sj && sj.awayTimeouts != null) model.situation.timeoutsA = sj.awayTimeouts;
+            if (sj && sj.homeTimeouts != null) model.situation.timeoutsH = sj.homeTimeouts;
+          }
+        } catch (e) {}
+      }
       if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
         model.teamColors = await _gcTeamColors(path, league);
       }
@@ -1238,6 +1254,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
         { label: '3rd down', names: ['thirdDownEff', '3rd down efficiency'] }
       ]);
       if (phase === 'live') { model.situation = _fbSituation(data, comp, away, home); model.drive = _fbDrive(data, sport); }
+      model.possession = _fbPossession(data, away, home); // v7.2.1
       if (wantAllPlays) model.allDrives = _fbAllDrives(data, home.id);
       boxById = _fbBox(data);
     } else if (sport === 'basketball') {
@@ -1500,4 +1517,24 @@ async function _playerSearch(req, res) {
   }
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
   res.status(200).json({ players: players.slice(0, 20) });
+}
+
+
+// ── TIME OF POSSESSION FROM THE DRIVES (v7.2.1) ─────────────────────────
+// Each finished drive (and the one in progress) says how long it took and
+// whose it was; adding those up gives time of possession even when the box
+// score's team stats don't include it yet.
+function _fbPossession(data, away, home) {
+  var d = data && data.drives;
+  if (!d) return null;
+  var list = (d.previous || []).slice();
+  if (d.current && list.indexOf(d.current) === -1 && !list.some(function (x) { return x.id != null && x.id === d.current.id; })) list.push(d.current);
+  var secs = function (v) { var m = String(v || '').match(/^(\d+):(\d{2})$/); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
+  var a = 0, h = 0;
+  list.forEach(function (dr) {
+    var t = secs(dr.timeElapsed && (dr.timeElapsed.displayValue || dr.timeElapsed.value));
+    var id = dr.team && String(dr.team.id);
+    if (id === String(home.id)) h += t; else if (id === String(away.id)) a += t;
+  });
+  return a + h > 0 ? { a: a, h: h } : null;
 }
