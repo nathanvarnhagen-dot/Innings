@@ -1002,7 +1002,9 @@ function _fbSituation(data, comp, away, home) {
     driveStart = possSide === 'h' ? own : 100 - own;
   }
   var dir = possSide === 'h' ? 1 : -1;
+  var drivePlays = _fbDriveChart(drive, away, home, possSide);
   return {
+    drivePlays: drivePlays,
     downText: ddText || _fbDownText(down, dist) || '',
     posText: posText,
     possSide: possSide,
@@ -1015,6 +1017,47 @@ function _fbSituation(data, comp, away, home) {
     timeoutsH: sit && sit.homeTimeouts != null ? sit.homeTimeouts : null,
     redZone: !!(sit && sit.isRedZone)
   };
+}
+// Every play of the current drive as a bar on the field (v7.3.1): where it
+// started and ended, in the same frame as `spot` (0 = home goal line), and
+// whether it was a run, a pass, a kick or a penalty. Timeouts, kickoffs and
+// period breaks don't move the ball and are left out.
+function _fbSpotOf(pt, drive, away, home, possSide) {
+  if (!pt) return null;
+  var side = possSide;
+  if (pt.team && pt.team.id != null && drive && drive.team && String(pt.team.id) !== String(drive.team.id)) {
+    side = String(pt.team.id) === String(home.id) ? 'h' : (String(pt.team.id) === String(away.id) ? 'a' : side);
+  }
+  if (!side) return null;
+  var fromOwn = null;
+  if (pt.yardsToEndzone != null && isFinite(Number(pt.yardsToEndzone))) fromOwn = 100 - Number(pt.yardsToEndzone);
+  else {
+    var m = pt.possessionText && String(pt.possessionText).match(/^([A-Z]{1,4})\s+(\d{1,2})$/);
+    if (m) { var ab = side === 'h' ? home.abbr : away.abbr; fromOwn = m[1] === ab ? Number(m[2]) : 100 - Number(m[2]); }
+    else if (/^50$|midfield/i.test(String(pt.possessionText || ''))) fromOwn = 50;
+  }
+  if (fromOwn == null || fromOwn < 0 || fromOwn > 100) return null;
+  return side === 'h' ? fromOwn : 100 - fromOwn;
+}
+function _fbDriveChart(drive, away, home, possSide) {
+  if (!drive || !drive.plays || !possSide) return [];
+  var out = [];
+  drive.plays.forEach(function (p) {
+    var t = String((p.type && p.type.text) || '') + ' ' + String(p.text || '');
+    if (/timeout|end (of )?(period|quarter|half|game)|two-minute|kickoff/i.test(t)) return;
+    var k = /penalty/i.test(String((p.type && p.type.text) || '')) ? 'pen'
+      : /pass|sack|intercept/i.test(t) ? 'pass'
+      : /punt|field goal|extra point/i.test(t) ? 'kick'
+      : /rush|run|scramble|kneel/i.test(t) ? 'run' : null;
+    if (!k) return;
+    var s0 = _fbSpotOf(p.start, drive, away, home, possSide);
+    var s1 = _fbSpotOf(p.end, drive, away, home, possSide);
+    if (s0 == null) return;
+    if (s1 == null) s1 = s0;
+    var y = p.statYardage != null && isFinite(Number(p.statYardage)) ? Number(p.statYardage) : null;
+    out.push({ s: s0, e: s1, k: k, y: y, inc: /incomplet/i.test(t) });
+  });
+  return out.slice(-12);
 }
 function _fbDrive(data, sport) {
   var drive = data.drives && data.drives.current;
