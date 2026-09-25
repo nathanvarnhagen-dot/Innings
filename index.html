@@ -807,6 +807,54 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 @media (orientation:landscape){html.is-tablet .fbx-to .bg2{font-size:40px}html.is-tablet .fbx-to .bg2.long{font-size:30px}html.is-tablet .fbx-brk .lb{font-size:28px}}
 @media (prefers-reduced-motion: reduce){.fbx-mv,.fbx-run,.fbx-air,.fbx-trail,.fbx-trail-glow,.fbx-to .sk,.fbx-to .lg,.fbx-to .sm,.fbx-to .bg2,.fbx-to .ln,.fbx-brk,.fbx-brk *,.fbx-nt,.fbx-res,.fbx-dot-burn,.fbx-lights *{animation:none!important}.fbx-to{animation:none}.fbx-inc{opacity:0}}
 
+/* ═══ FOOTBALL BROADCAST LAYOUT (v7.2.0) — live games: timeouts under each
+   team, a possession split bar, the down row (football on the side with the
+   ball, spot on the other), then latest play → field → current drive. ═══ */
+.fbb-to{display:flex;gap:4px;margin-top:6px}
+.fbb-to i{width:16px;height:5px;border-radius:3px;background:#F2C869;box-shadow:0 0 6px rgba(242,200,105,.45)}
+.fbb-to i.u{background:rgba(255,255,255,.14);box-shadow:none}
+.fbb-to i.burn{animation:fbxBurn .9s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+.fbb-poss{display:flex;align-items:center;gap:10px;margin-top:2px}
+.fbb-poss b{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;min-width:30px}
+.fbb-poss b:last-child{text-align:right}
+.fbb-poss .bar{flex:1;display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px}
+.fbb-poss .bar i{display:block;height:100%}
+.fbb-down{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:2px -4px 0;padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06)}
+.fbb-down .side{display:flex;align-items:center;gap:6px;min-width:0}
+.fbb-down .side.r{justify-content:flex-end}
+.fbb-down .dd{font-size:22px;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+.fbb-down .yl{font-size:13px;font-weight:800;color:#B9B3E6;white-space:nowrap}
+.fbb-ball{width:26px;height:15px;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.fbb-rz{font-size:9.5px;font-weight:900;letter-spacing:.1em;padding:3px 6px;border-radius:6px;background:rgba(255,122,107,.18);color:#FFC2BA}
+.fbb-lp{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:#1C1648;border:1px solid rgba(168,159,232,.18);overflow:hidden;animation:fbxUp .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+.fbb-lp::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--acc,#7CF29C)}
+.fbb-lp .yd{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ydc,#7CF29C);white-space:nowrap}
+.fbb-lp .yd small{font-size:11px;font-weight:800;color:#8C86B8;margin-left:2px;letter-spacing:.06em}
+.fbb-lp .l1{display:flex;align-items:center;gap:7px;min-width:0}
+.fbb-lp .l1 b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbb-lp .l1 .tag{margin-left:auto;font-size:9.5px;font-weight:900;letter-spacing:.1em;padding:3px 7px;border-radius:6px;background:#F2C869;color:#2A1A00;white-space:nowrap}
+.fbb-lp .l2{font-size:12.5px;color:#B9B3E6;margin-top:3px;line-height:1.35}
+.fbb-lp .l2 em{font-style:normal;color:#8C86B8}
+.fbb-chip{display:inline-flex;align-items:center;padding:2px 6px;border-radius:6px;font-size:9.5px;font-weight:800;letter-spacing:.06em;flex-shrink:0}
+.fbb-chip.run{background:rgba(124,242,156,.14);color:#7CF29C}.fbb-chip.pass{background:rgba(90,176,255,.16);color:#8CC8FF}.fbb-chip.pen{background:rgba(242,200,105,.16);color:#F2C869}.fbb-chip.kick{background:rgba(168,159,232,.16);color:#D9D4FA}.fbb-chip.td{background:#F2C869;color:#2A1A00}.fbb-chip.to{background:rgba(255,122,107,.18);color:#FFB0A6}
+.fbb-dh{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:6px}
+.fbb-dh .tt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fbb-dh .tt b{font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px}
+.fbb-dh .nums{display:flex;gap:14px}
+.fbb-dh .nums div{display:flex;flex-direction:column;align-items:flex-end}
+.fbb-dh .nums b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.fbb-dh .nums span{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:#8C86B8}
+.fbb-pr{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 0}
+.fbb-pr .dn{font-size:11px;font-weight:800;color:#8C86B8;font-variant-numeric:tabular-nums;line-height:1.25}
+.fbb-pr .w{min-width:0}
+.fbb-pr .w .a{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#F5F3FF;min-width:0}
+.fbb-pr .w .a span.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbb-pr .w .b{font-size:12px;color:#8C86B8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbb-pr .g{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.fbb-pr .g.pos{color:#7CF29C}.fbb-pr .g.neg{color:#FF7A6B}.fbb-pr .g.zero{color:#8C86B8}
+.gh-plays-row.fbb-now{background:linear-gradient(90deg,rgba(124,242,156,.08),transparent 60%);border-radius:10px;margin:0 -8px;padding-left:8px!important;padding-right:8px!important}
+@media (prefers-reduced-motion: reduce){.fbb-lp{animation:none}.fbb-to i.burn{animation:none}}
+
 /* ═══ NEW MOMENT (v7.1.0) — the refined first screen, "happening now" radar
    with typing, and ticket stubs for games, concerts and festivals. Stubs
    fill the same fields the guided story uses and save through the same
@@ -10389,7 +10437,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.1.0-new-moment';
+window.INNINGS_BUILD = 'v7.2.0-football-broadcast';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -19942,9 +19990,15 @@ function _fbxResultHtml(m, fx) {
   var firstDown = !td && yds != null && yds > 0 && fx.prevPoss && fx.prevPoss === s.possSide && /^1st/i.test(String(s.downText || '')) && !/^1st/i.test(String(fx.prevDown || '1st'));
   var poss = s.possSide === 'h' ? m.home : (s.possSide === 'a' ? m.away : null);
   var acc = td ? '#F2C869' : (firstDown ? '#F2C869' : (inc ? 'rgba(255,255,255,.25)' : (poss ? poss.colors.bg : '#A89FE8')));
-  return '<div class="fbx-res' + (inc ? ' inc' : '') + (td ? ' td' : '') + '" style="--acc:' + acc + ';--t0:' + (fx.playAt ? -(Date.now() - fx.playAt) : -60000) + 'ms">' +
-    '<span class="y">' + big + '</span><div class="w"><span class="k">' + kind + '</span><span class="x">' + _escapeHtml(lp.text) + '</span></div>' +
-    (td ? '<span class="bd">TD</span>' : (firstDown ? '<span class="bd">1ST DOWN</span>' : '')) + '</div>';
+  // v7.2.0: broadcast card — big yards, chip + who, one short line
+  var P = typeof _fbbParts === 'function' ? _fbbParts(lp.text) : { who: '', what: lp.text, tk: '' };
+  var ck = td ? 'td' : inc ? 'pass' : lp.kind === 'rush' ? 'run' : lp.kind === 'pass' ? 'pass' : 'kick';
+  var chipTxt = td ? 'TD' : inc ? 'INCOMPLETE' : /intercept/i.test(label) ? 'INTERCEPTED' : ({ run: 'RUN', pass: 'PASS', kick: 'KICK' }[ck]);
+  var ydc = inc || yds == null ? '#8C86B8' : yds < 0 ? '#FF7A6B' : td ? '#F2C869' : '#7CF29C';
+  return '<div class="fbb-lp" style="--acc:' + (td || firstDown ? '#F2C869' : ydc) + ';--ydc:' + ydc + ';--t0:' + (fx.playAt ? -(Date.now() - fx.playAt) : -60000) + 'ms">' +
+    '<span class="yd">' + big + '</span><div style="min-width:0"><div class="l1"><span class="fbb-chip ' + ck + '">' + chipTxt + '</span><b>' + _escapeHtml(P.who || P.what) + '</b>' +
+    (td ? '<span class="tag">TOUCHDOWN</span>' : firstDown ? '<span class="tag">1ST DOWN</span>' : '') + '</div>' +
+    '<div class="l2">' + _escapeHtml(P.who ? P.what : '') + (P.tk ? ' <em>\u00b7 ' + _escapeHtml(P.tk) + '</em>' : '') + '</div></div></div>';
 }
 
 // ═══ BASEBALL LIVE REDESIGN (v6.0.0) ════════════════════════════════
@@ -21761,6 +21815,7 @@ function _ghLiveHtml(m, st) {
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
         '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short) + '</span>' +
         '<span class="gh-num gh-sb-score' + ((m.away.score >= 100 || m.home.score >= 100) ? ' gh-sb3' : '') + '" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
+      (m.sport === 'football' ? _fbbTimeoutsHtml(m, t === m.away ? 'a' : 'h') : '') +
       '</div></div>';
   };
   h += '<div class="gh-row gh-up" style="' + _ghDelay(.15) + '">' +
@@ -22649,12 +22704,9 @@ function _gxStripHtml(m) {
       return o;
     };
     var field = _fbxFieldHtml(m, _fbViewFromGx(m), fx, null);
-    return '<div class="gh-panel gh-strip fbx" style="display:flex;flex-direction:column;gap:8px">' +
-      '<div class="gh-row"><span style="font-size:13.5px;font-weight:700">' + _escapeHtml(s.downText || '') + (s.redZone ? ' <span class="gh-tag" style="background:rgba(255,122,107,.18);color:#FFC2BA;margin-left:4px">RED ZONE</span>' : '') + '</span>' +
-      '<span class="gh-sub" style="white-space:nowrap">' + (possT ? _escapeHtml(possT.abbr) + ' ball' : '') + '</span></div>' + field +
-      '<div class="gh-row" style="font-size:11px;color:#B9B3E6"><span>' + _escapeHtml(s.driveText || '') + '</span>' +
-      (s.timeoutsA != null ? '<span style="white-space:nowrap">TO ' + _escapeHtml(m.away.abbr) + dots(s.timeoutsA, 'a') + ' · ' + _escapeHtml(m.home.abbr) + dots(s.timeoutsH, 'h') + '</span>' : '') + '</div>' +
-      _fbxResultHtml(m, fx) + '</div>';
+    // v7.2.0: latest play, then the field; the down row and timeouts live in
+    // the scoreboard now, the drive's numbers head the Current drive card
+    return '<div class="gh-panel gh-strip fbx" style="display:flex;flex-direction:column;gap:10px">' + _fbxResultHtml(m, fx) + field + '</div>';
   }
   if (m.sport === 'basketball') {
     if (!s || (!s.momA && !s.momH)) return '';
@@ -22730,9 +22782,12 @@ function _gxLiveHtml(m, st) {
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
         '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short || '') + '</span>' +
         '<span class="gh-num gh-sb-score' + ((m.away.score >= 100 || m.home.score >= 100) ? ' gh-sb3' : '') + '" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
+      (m.sport === 'football' ? _fbbTimeoutsHtml(m, t === m.away ? 'a' : 'h') : '') +
       '</div></div>';
   };
+  if (m.sport === 'football' && typeof _fbxTrack === 'function') _fbxTrack(m); // timeouts read the burn state
   h += '<div class="gh-row gh-up" style="' + _ghDelay(.15) + '">' + side(m.away, false, !!(prev && prev.away !== m.away.score)) + center + side(m.home, true, !!(prev && prev.home !== m.home.score)) + '</div>';
+  if (m.sport === 'football') h += _fbbPossHtml(m) + _fbbDownHtml(m); // v7.2.0
   h += _gxStripHtml(m);
   h += _gxHighlightsListHtml(m, st, { cap: 8, withNew: true, title: m.sport === 'basketball' ? 'Big moments' : (m.sport === 'football' ? 'Scoring plays' : 'Goals') });
   return h;
@@ -23054,7 +23109,9 @@ function _gxDetailHtml(m) {
   var out = '';
   if (m.phase === 'live') {
     if (m.sport === 'football') {
-      if (m.drive && m.drive.plays && m.drive.plays.length) {
+      if (typeof _fbbDriveCardHtml === 'function' && m.drive && m.drive.plays && m.drive.plays.length) {
+        out += _fbbDriveCardHtml(m); // v7.2.0
+      } else if (m.drive && m.drive.plays && m.drive.plays.length) {
         var drivePlayIds = [];
         var driveRows = m.drive.plays.map(function (p, i) {
           if (p.id != null && m.gameId != null) drivePlayIds.push(m.gameId + '_' + p.id);
@@ -27350,6 +27407,102 @@ function _paFieldSvg(lp, land, E) {
   s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
   s._t1 = t1; // v6.0.0: when the ball finishes its flight
   return g + '</svg>';
+}
+
+// ═══ FOOTBALL BROADCAST LAYOUT (v7.2.0) ══════════════════════════════
+var FBB_BALL = '<svg class="fbb-ball" viewBox="0 0 24 14" role="img" aria-label="Has the ball"><ellipse cx="12" cy="7" rx="11" ry="6.2" fill="#8B4A22" stroke="#5A2C10" stroke-width="1"/><path d="M8 7h8M10 5.3v3.4M12 5.3v3.4M14 5.3v3.4" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M2.6 5.2a11 6 0 0 0 0 3.6M21.4 5.2a11 6 0 0 1 0 3.6" fill="none" stroke="#fff" stroke-width=".9" opacity=".8"/></svg>';
+// Timeouts left, as three bars under a team (the one just used burns out)
+function _fbbTimeoutsHtml(m, side) {
+  var s = m.situation; if (!s) return '';
+  var n = side === 'a' ? s.timeoutsA : s.timeoutsH; if (n == null) return '';
+  var fx = window._fbx, burn = fx && fx.burn && fx.burn.side === side && Date.now() - fx.burn.at < 3000 ? fx.burn : null;
+  var h = '';
+  for (var i = 0; i < 3; i++) h += '<i class="' + (i < n ? '' : 'u') + (burn && i === n ? ' burn' : '') + '"' + (burn && i === n ? ' style="--t0:' + (-(Date.now() - burn.at)) + 'ms"' : '') + '></i>';
+  return '<div class="fbb-to" role="img" aria-label="' + n + (n === 1 ? ' timeout' : ' timeouts') + ' left">' + h + '</div>';
+}
+function _fbbSecs(v) { var mm = String(v || '').match(/^(\d+):(\d{2})$/); return mm ? Number(mm[1]) * 60 + Number(mm[2]) : null; }
+// Time of possession as one bar in team colors, a percentage at each end
+function _fbbPossHtml(m) {
+  var row = (m.teamStats || []).filter(function (r) { return r[0] === 'Possession'; })[0];
+  if (!row) return '';
+  var a = _fbbSecs(row[1]), h = _fbbSecs(row[2]);
+  if (a == null || h == null || a + h <= 0) return '';
+  var ap = Math.round(a / (a + h) * 100), hp = 100 - ap;
+  var ac = m.away.colors.accent || m.away.colors.bg, hc = m.home.colors.accent || m.home.colors.bg;
+  return '<div class="fbb-poss" role="img" aria-label="Time of possession: ' + _escapeHtml(m.away.abbr) + ' ' + _escapeHtml(row[1]) + ', ' + _escapeHtml(m.home.abbr) + ' ' + _escapeHtml(row[2]) + '">' +
+    '<b style="color:' + ac + '">' + ap + '%</b><div class="bar"><i style="width:' + ap + '%;background:' + m.away.colors.bg + '"></i><i style="width:' + hp + '%;background:' + m.home.colors.bg + '"></i></div><b style="color:' + hc + '">' + hp + '%</b></div>';
+}
+// Down & distance in the middle, the football on the side with the ball,
+// where the ball is on the other side
+function _fbbDownHtml(m) {
+  var s = m.situation; if (!s || !s.downText) return '';
+  var parts = String(s.downText).split(/\s+at\s+/i);
+  var dd = parts[0], spot = parts[1] || '';
+  var left = s.possSide === 'a', right = s.possSide === 'h';
+  var spotHtml = spot ? '<span class="yl">' + _escapeHtml(spot) + '</span>' : '';
+  var mid = '<span class="dd">' + _escapeHtml(dd) + '</span>';
+  return '<div class="fbb-down">' +
+    '<span class="side">' + (left ? FBB_BALL : spotHtml) + (s.redZone && left ? '<span class="fbb-rz">RED ZONE</span>' : '') + '</span>' + mid +
+    '<span class="side r">' + (s.redZone && right ? '<span class="fbb-rz">RED ZONE</span>' : '') + (right ? FBB_BALL : (left ? spotHtml : '')) + '</span></div>';
+}
+// Split a play-by-play sentence into who / what / yards / tacklers
+function _fbbParts(text) {
+  var t = String(text || '').replace(/^\((?:Shotgun|No Huddle|No Huddle, Shotgun|Shotgun, No Huddle)\)\s*/i, '').trim();
+  var tk = '', mt = t.match(/\(([^()]+)\)\.?\s*$/);
+  if (mt) { tk = mt[1]; t = t.slice(0, mt.index).trim(); }
+  t = t.replace(/\.$/, '');
+  var yds = null, my = t.match(/for (-?\d+) yards?/i) || t.match(/for a loss of (\d+) yards?/i);
+  if (my) yds = /loss/i.test(my[0]) ? -Number(my[1]) : Number(my[1]);
+  else if (/for no gain/i.test(t)) yds = 0;
+  var kind = /touchdown/i.test(t) ? 'td' : /penalty/i.test(t) ? 'pen' : /\bpass\b|sacked/i.test(t) ? 'pass' : /punt|kicks|field goal|extra point/i.test(t) ? 'kick' : /timeout/i.test(t) ? 'to' : /\b(left|right|up the middle|middle|end|tackle|guard|scrambles|kneels|rush)/i.test(t) ? 'run' : null;
+  var who = '', what = t;
+  var pm = t.match(/^([A-Z][A-Za-z.'\-]+(?:\s[A-Z][A-Za-z'\-]+)?)\s+pass\s+(?:\w+\s+){0,2}?(?:(?:short|deep)\s+(?:left|right|middle)\s+)?(?:to|intended for)\s+([A-Z][A-Za-z.'\-]+)/);
+  if (pm) {
+    who = pm[1] + ' \u2192 ' + pm[2];
+    what = t.slice(pm[1].length).replace(/^\s*pass\s*/i, '').replace(/\s*for (-?\d+) yards?.*$/i, '').replace(/\s*for no gain.*$/i, '');
+    what = what.replace(new RegExp('\\s*(?:to|intended for)\\s+' + pm[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), ''); // the receiver is already in "who"
+  }
+  else {
+    var nm = t.match(/^([A-Z][A-Za-z]{0,2}\.[A-Za-z'\-]+|[A-Z][A-Za-z'\-]+ [A-Z][A-Za-z'\-]+)\s/);
+    if (nm && kind !== 'pen' && kind !== 'to') { who = nm[1]; what = t.slice(nm[0].length).replace(/\s*for (-?\d+) yards?.*$/i, '').replace(/\s*for a loss.*$/i, '').replace(/\s*for no gain.*$/i, ''); }
+  }
+  what = what.replace(/^pass\s+/i, '').trim();
+  what = what.charAt(0).toUpperCase() + what.slice(1);
+  return { who: who, what: what, yds: yds, kind: kind, tk: tk };
+}
+function _fbbChip(k) { var L = { run: 'RUN', pass: 'PASS', pen: 'PEN', kick: 'KICK', td: 'TD', to: 'TIMEOUT' }[k]; return L ? '<span class="fbb-chip ' + k + '">' + L + '</span>' : ''; }
+function _fbbGain(y) { if (y == null) return ''; return '<span class="g ' + (y > 0 ? 'pos' : y < 0 ? 'neg' : 'zero') + '">' + (y > 0 ? '+' : '') + y + '</span>'; }
+// "3 plays, 20 yards, 1:16" → the three numbers
+function _fbbDriveNums(summary) {
+  var t = String(summary || ''), p = t.match(/(\d+)\s*plays?/i), y = t.match(/(-?\d+)\s*yards?/i), c = t.match(/(\d+:\d{2})/);
+  return { plays: p ? p[1] : null, yds: y ? y[1] : null, time: c ? c[1] : null };
+}
+function _fbbDriveCardHtml(m) {
+  var d = m.drive; if (!d || !d.plays || !d.plays.length) return '';
+  var ids = [];
+  var rows = d.plays.map(function (p, i) { if (p.id != null && m.gameId != null) ids.push(m.gameId + '_' + p.id); return _fbbPlayRowHtml(m, p, i === 0); }).join('');
+  if (ids.length) setTimeout(function () { _loadPlayReactions(ids); }, 0);
+  var n = _fbbDriveNums(d.summary);
+  var tm = d.team && (String(d.team) === String(m.away.abbr) ? m.away : String(d.team) === String(m.home.abbr) ? m.home : null);
+  var nums = [[n.plays, 'PLAYS'], [n.yds, 'YDS'], [n.time, 'TIME']].filter(function (x) { return x[0] != null; });
+  return '<div class="gh-card gh-up" style="' + _ghDelay(.4) + '"><div class="fbb-dh"><div class="tt"><span class="gh-eyebrow">Current drive</span><b>' + (tm ? '<span class="gh-badge" style="width:22px;height:22px;font-size:7.5px;background:' + tm.colors.bg + ';color:' + tm.colors.fg + '">' + _escapeHtml(tm.abbr) + '</span>' : '') + _escapeHtml(tm ? tm.short || tm.abbr : (d.team || '')) + '</b></div>' +
+    (nums.length ? '<div class="nums">' + nums.map(function (x) { return '<div><b>' + _escapeHtml(x[0]) + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' : (d.summary ? '<span class="gh-sub">' + _escapeHtml(d.summary) + '</span>' : '')) + '</div>' + rows + '</div>';
+}
+// One drive play: down on the left, chip + who, a short line, the yards —
+// same double-tap reactions, reply, rule chip and reactions row as before
+function _fbbPlayRowHtml(m, p, first) {
+  var playId = (p.id != null && m.gameId != null) ? (m.gameId + '_' + p.id) : null;
+  var tag = p.tag || '';
+  var P = _fbbParts(p.text);
+  if (p.scoring && !P.kind) P.kind = 'td';
+  var attrs = playId ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"' : '';
+  return '<div class="gh-plays-row' + (first ? ' fbb-now' : '') + '"' + attrs + ' style="' + (first ? 'border-top:0;' : '') + 'padding:0">' +
+    '<div class="fbb-pr"><span class="dn">' + _escapeHtml(tag) + '</span><div class="w"><div class="a">' + _fbbChip(P.kind) + '<span class="n">' + _escapeHtml(P.who || P.what) + '</span></div>' +
+    (P.who ? '<div class="b">' + _escapeHtml(P.what) + '</div>' : '') + '</div>' + _fbbGain(P.yds) +
+    '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 4 4v6"/></svg></button></div>' +
+    (typeof _ruleChipHtml === 'function' ? _ruleChipHtml(m.league, p.text) : '') +
+    (playId ? '<div id="play-react-' + _escapeHtml(playId) + '"></div>' : '') + '</div>';
 }
 
 // ═══ NEW MOMENT (v7.1.0) ════════════════════════════════════════════════
