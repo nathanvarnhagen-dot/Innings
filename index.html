@@ -739,6 +739,19 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .fbx-tilt{perspective:620px;padding-top:16px}
 .fbx-tilt svg{display:block;width:100%;height:auto;transform:rotateX(26deg);transform-origin:50% 100%;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45))}
 .fbx-mv{animation:fbxMove .95s cubic-bezier(.22,1,.36,1) both}
+/* v7.3.1 drive chart: flat field, one bar per play, legend underneath */
+.fbd .fbx-tilt{perspective:none;padding-top:0}
+.fbd .fbx-tilt svg{transform:none;filter:none;border-radius:12px;box-shadow:0 0 0 1px rgba(142,230,160,.28)}
+.fbd .fbx-to{top:0;bottom:0}
+.fbd .fbx-nt{top:8px}
+.fbd-new{transform-box:fill-box;animation:fbdGrow .9s cubic-bezier(.22,1,.36,1) both}
+@keyframes fbdGrow{from{transform:scaleX(0)}}
+.fbd-leg{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;font-weight:600;color:#B9B3E6;padding:0 2px}
+.fbd-leg .k{display:flex;align-items:center;gap:14px}
+.fbd-leg span{display:flex;align-items:center;gap:6px}
+.fbd-leg i{width:11px;height:11px;border-radius:3px}
+.fbd-leg b{width:3px;height:12px;border-radius:2px}
+@media (prefers-reduced-motion: reduce){.fbd-new{animation:none}}
 @keyframes fbxMove{from{transform:translateX(calc(var(--dx) * 1px))}}
 .fbx-run{transform-box:fill-box;transform-origin:center;animation:fbxRun .95s cubic-bezier(.45,0,.2,1) both}
 @keyframes fbxRun{0%{transform:translateX(calc(var(--dx) * 1px))}35%{transform:translate(calc(var(--dx) * .66px),-5px) rotate(-8deg)}70%{transform:translate(calc(var(--dx) * .28px),5px) rotate(6deg)}100%{transform:none}}
@@ -2100,6 +2113,7 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 /* ══ NFL PLAYER PROFILE (v7.3.0) — "get to know the player" overlay ══ */
 #nflp-overlay{display:none;position:fixed;inset:0;z-index:196;flex-direction:column;background:#0B0820;color:#fff}
 #nflp-overlay .ov-body{padding:0 0 calc(env(safe-area-inset-bottom, 16px) + 28px);gap:0}
+#nflp-overlay .ov-body > *{flex-shrink:0}
 .nflp-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:20px 18px 18px;border-bottom:3px solid #3D3580}
 .nflp-num{position:absolute;right:-6px;top:-10px;font-size:200px;font-weight:800;line-height:1;color:rgba(255,255,255,.06);pointer-events:none;font-variant-numeric:tabular-nums}
 .nflp-id{position:relative;display:flex;align-items:flex-end;gap:16px}
@@ -10512,7 +10526,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.3.0-nfl-player-profile';
+window.INNINGS_BUILD = 'v7.3.1-drive-chart-field';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -18617,6 +18631,8 @@ function _fbViewFromGx(m) {
     logo: poss ? poss.logo : null,
     possColor: poss ? poss.colors.bg : '#A89FE8',
     possAbbr: poss ? poss.abbr : '',
+    // v7.3.1: every play of the drive, for the drive chart on the field
+    drive: (s.drivePlays || []).map(function (p) { return { s: 100 - p.s, e: 100 - p.e, k: p.k, y: p.y, inc: !!p.inc }; }),
     aria: (s.downText || 'Field position') + (s.posText ? ' at ' + s.posText : '')
   };
 }
@@ -20137,7 +20153,8 @@ function _fbxClockClass(m) {
 function _fbxFieldHtml(m, v, fx, brk) {
   window._fbPinSeq = (window._fbPinSeq || 0) + 1;
   var id = 'fbx' + window._fbPinSeq;
-  var W = 360, H = 150, LANE = 78;
+  // v7.3.1: the drive chart is a flatter, broadcast-style strip
+  var W = 360, H = (v && v.pct != null && v.drive && v.drive.length) ? 108 : 150, LANE = 78;
   var X = function (p) { return 30 + Math.max(0, Math.min(100, p)) * 3; };
   var n1 = function (x) { return (Math.round(x * 10) / 10).toString(); };
   var F = 'font-family="-apple-system,Helvetica,sans-serif"';
@@ -20180,6 +20197,22 @@ function _fbxFieldHtml(m, v, fx, brk) {
   h += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#' + id + 'lt)"/>';
 
   var ghost = '';
+  // v7.3.1: the drive chart — one bar per play, stepping down the field
+  var driveMode = !!(v && v.pct != null && v.drive && v.drive.length);
+  if (driveMode) {
+    var dp = v.drive, top = 8, avail = H - 30 - top, gap = 3;
+    var rh = Math.min(20, (avail - (dp.length - 1) * gap) / dp.length);
+    var DC = { run: '#8EE6A0', pass: '#9CC8FF', kick: '#D9D4FA', pen: '#FFB38A' };
+    dp.forEach(function (p, i) {
+      var x0 = X(p.s), x1 = X(p.e), lft = Math.min(x0, x1), wd = Math.abs(x1 - x0);
+      if (wd < 5) { lft = (x0 + x1) / 2 - 2.5; wd = 5; }
+      var yy = top + i * (rh + gap), last = i === dp.length - 1;
+      var grow = last && eP < 60000 && wd > 5;
+      h += '<rect x="' + n1(lft) + '" y="' + n1(yy) + '" width="' + n1(wd) + '" height="' + n1(rh) + '" rx="' + n1(Math.min(5, rh / 3)) + '" fill="' + (DC[p.k] || '#D9D4FA') + '"' +
+        (p.inc ? ' opacity=".5"' : '') + (p.y != null && p.y < 0 ? ' stroke="#FF7A6B" stroke-width="1.4"' : '') +
+        (grow ? ' class="fbd-new" style="transform-origin:' + (x1 >= x0 ? 'left' : 'right') + ' center;animation-delay:' + (-eP) + 'ms"' : '') + '/>';
+    });
+  }
   if (v && v.pct != null) {
     var bx = X(v.pct);
     var moving = fx.fromPct != null && Math.abs(fx.fromPct - v.pct) > 0.5 && eP < 60000;
@@ -20194,7 +20227,8 @@ function _fbxFieldHtml(m, v, fx, brk) {
       h += '<g transform="translate(' + n1(fdx) + ',0)"><g class="' + (fdDx ? 'fbx-mv' : '') + '" style="--dx:' + n1(fdDx) + ';animation-delay:' + (150 - eP) + 'ms"><rect x="-1.4" y="2" width="2.8" height="' + (H - 4) + '" rx="1.4" fill="#F2C869" filter="url(#' + id + 'gl)"/></g></g>';
     }
     // path of the last play: a run hugs the ground, a throw or kick arcs
-    var lp = v.lastPlay;
+    // (the drive chart shows the plays instead, so none of this in drive mode)
+    var lp = driveMode ? null : v.lastPlay;
     var s = m.situation || {};
     var incomplete = s.lastPlay && /incomplete/i.test(String(s.lastPlay.label || ''));
     var air = lp && (lp.kind === 'pass' || lp.kind === 'kick');
@@ -20204,7 +20238,7 @@ function _fbxFieldHtml(m, v, fx, brk) {
       else d = 'M' + n1(sx) + ' ' + LANE + ' Q' + n1((sx + ex) / 2) + ' ' + (LANE - 32) + ' ' + n1(ex) + ' ' + LANE;
       h += '<path d="' + d + '" pathLength="1" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" filter="url(#' + id + 'sf)" class="fbx-trail-glow" style="' + delay + '"/>' +
         '<path d="' + d + '" pathLength="1" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"' + (air ? ' stroke-dasharray="1"' : '') + ' class="fbx-trail" style="' + delay + '"/>';
-    } else if (incomplete) {
+    } else if (incomplete && !driveMode) {
       // no gain: the throw arcs downfield and fades, the ball stays put
       var dir = s.possSide === 'h' ? -1 : 1;
       var ix = X(Math.max(0, Math.min(100, v.pct + dir * 12)));
@@ -20212,14 +20246,14 @@ function _fbxFieldHtml(m, v, fx, brk) {
     }
     // the ball, with its shadow staying on the turf
     var ballCls = moving ? (air ? 'fbx-air' : 'fbx-run') : '';
-    h += '<g transform="translate(' + n1(bx) + ',' + (LANE + 5) + ')"><g class="' + (moving ? 'fbx-mv' : '') + '" style="--dx:' + n1(dxBall) + ';' + delay + '"><ellipse rx="7" ry="2.4" fill="#000" opacity=".4"/></g></g>' +
+    if (!driveMode) h += '<g transform="translate(' + n1(bx) + ',' + (LANE + 5) + ')"><g class="' + (moving ? 'fbx-mv' : '') + '" style="--dx:' + n1(dxBall) + ';' + delay + '"><ellipse rx="7" ry="2.4" fill="#000" opacity=".4"/></g></g>' +
       '<g transform="translate(' + n1(bx) + ',' + LANE + ')"><g class="' + ballCls + '" style="--dx:' + n1(dxBall) + ';' + delay + '">' +
         '<ellipse rx="7.2" ry="4.3" fill="url(#' + id + 'lb)" stroke="#3d1f0b" stroke-width=".6"/>' +
         '<path d="M-3 0H3M-2 -1.2V1.2M0 -1.2V1.2M2 -1.2V1.2" stroke="#fff" stroke-width=".7" stroke-linecap="round"/>' +
         '<path d="M-6.4 -1.5A7 4 0 0 1 -6.4 1.5M6.4 -1.5A7 4 0 0 0 6.4 1.5" fill="none" stroke="#fff" stroke-width=".6" opacity=".8"/></g></g>';
     // down & distance tag riding the line of scrimmage
     var dd = String(s.downText || '').split(' at ')[0];
-    if (dd && !tdLive) {
+    if (dd && !tdLive && !driveMode) {
       var tw = Math.max(38, dd.length * 5.2 + 12);
       h += '<g transform="translate(' + n1(bx) + ',' + (LANE - 8) + ')"><g class="' + (losDx ? 'fbx-mv' : '') + '" style="--dx:' + n1(losDx) + ';' + delay + '">' +
         '<rect x="' + n1(-tw / 2) + '" y="-24" width="' + n1(tw) + '" height="14" rx="7" fill="rgba(13,8,32,.9)" stroke="rgba(90,176,255,.6)" stroke-width="1"/>' +
@@ -20261,6 +20295,20 @@ function _fbxFieldHtml(m, v, fx, brk) {
     over += '<div class="fbx-to" style="--t0:' + (-(now - fx.td.at)) + 'ms;--t1:' + tm.colors.bg + ';--t2:' + _fbxSecond(tm) + ';--tdark:' + _fbxDark(tm.colors.bg, .5) + '">' +
       '<div class="bg"></div><div class="st b"></div><div class="st"></div><div class="sk"></div>' +
       '<div class="ct"><span class="lg">' + _escapeHtml(tm.abbr || '') + '</span><div class="wd"><span class="sm">TOUCHDOWN</span><span class="bg2' + (nm.length > 10 ? ' long' : '') + '">' + _escapeHtml(nm) + '</span><span class="ln"></span></div></div></div>';
+  }
+  if (driveMode) {
+    var sit = m.situation || {};
+    var kinds = [];
+    v.drive.forEach(function (p) { if (kinds.indexOf(p.k) === -1) kinds.push(p.k); });
+    var KL = { run: ['Run', '#8EE6A0'], pass: ['Pass', '#9CC8FF'], kick: ['Kick', '#D9D4FA'], pen: ['Penalty', '#FFB38A'] };
+    var fdText = '';
+    if (sit.firstDown != null) { var fdS = Math.round(sit.firstDown); fdText = fdS === 50 ? '50' : String(fdS < 50 ? fdS : 100 - fdS); }
+    var leg = '<div class="fbd-leg"><div class="k">' + ['run', 'pass', 'kick', 'pen'].filter(function (k) { return kinds.indexOf(k) !== -1; }).map(function (k) {
+      return '<span><i style="background:' + KL[k][1] + '"></i>' + KL[k][0] + '</span>';
+    }).join('') + '</div><div class="k">' +
+      (sit.posText ? '<span><b style="background:#5AB0FF"></b>' + _escapeHtml(sit.posText) + '</span>' : '') +
+      (fdText ? '<span><b style="background:#F2C869"></b>1st down at ' + fdText + '</span>' : '') + '</div></div>';
+    return '<div class="fbx-field fbd"><div class="fbx-tilt">' + h + '</div>' + over + '</div>' + leg;
   }
   return '<div class="fbx-field">' + lights + '<div class="fbx-tilt">' + h + '</div>' + over + '</div>';
 }
@@ -27775,8 +27823,11 @@ function _fbbDriveCardHtml(m) {
   if (ids.length) setTimeout(function () { _loadPlayReactions(ids); }, 0);
   var n = _fbbDriveNums(d.summary);
   var tm = d.team && (String(d.team) === String(m.away.abbr) ? m.away : String(d.team) === String(m.home.abbr) ? m.home : null);
+  // v7.3.1: "ATL · from own 15" — where the drive began, from the offense's side
+  var ds = m.situation && m.situation.driveStart, possH = m.situation && m.situation.possSide === 'h', from = '';
+  if (ds != null) { var own = possH ? ds : 100 - ds; from = own === 50 ? 'from midfield' : own < 50 ? 'from own ' + own : 'from opp ' + (100 - own); }
   var nums = [[n.plays, 'PLAYS'], [n.yds, 'YDS'], [n.time && n.time !== '0:00' ? n.time : null, 'TIME']].filter(function (x) { return x[0] != null; });
-  return '<div class="gh-card gh-up" style="' + _ghDelay(.4) + '"><div class="fbb-dh"><div class="tt"><span class="gh-eyebrow">Current drive</span><b>' + (tm ? '<span class="gh-badge" style="width:22px;height:22px;font-size:7.5px;background:' + tm.colors.bg + ';color:' + tm.colors.fg + '">' + _escapeHtml(tm.abbr) + '</span>' : '') + _escapeHtml(tm ? tm.short || tm.abbr : (d.team || '')) + '</b></div>' +
+  return '<div class="gh-card gh-up" style="' + _ghDelay(.4) + '"><div class="fbb-dh"><div class="tt"><span class="gh-eyebrow">Current drive</span><b><svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5z" fill="#F2C869"/></svg>' + _escapeHtml(tm ? tm.abbr : (d.team || '')) + (from ? ' &middot; ' + from : '') + '</b></div>' +
     (nums.length ? '<div class="nums">' + nums.map(function (x) { return '<div><b>' + _escapeHtml(x[0]) + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' : (d.summary ? '<span class="gh-sub">' + _escapeHtml(d.summary) + '</span>' : '')) + '</div>' + rows + '</div>';
 }
 // One drive play: down on the left, chip + who, a short line, the yards —
