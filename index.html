@@ -2097,6 +2097,71 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 @keyframes otdIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.otd-card{animation:none}}
 #otd-overlay{display:none;position:fixed;inset:0;z-index:192;flex-direction:column;background:#0B0820;color:#fff}
+/* ══ NFL PLAYER PROFILE (v7.3.0) — "get to know the player" overlay ══ */
+#nflp-overlay{display:none;position:fixed;inset:0;z-index:196;flex-direction:column;background:#0B0820;color:#fff}
+#nflp-overlay .ov-body{padding:0 0 calc(env(safe-area-inset-bottom, 16px) + 28px);gap:0}
+.nflp-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:20px 18px 18px;border-bottom:3px solid #3D3580}
+.nflp-num{position:absolute;right:-6px;top:-10px;font-size:200px;font-weight:800;line-height:1;color:rgba(255,255,255,.06);pointer-events:none;font-variant-numeric:tabular-nums}
+.nflp-id{position:relative;display:flex;align-items:flex-end;gap:16px}
+.nflp-av{position:relative;width:92px;height:92px;flex-shrink:0;border-radius:50%;background:rgba(255,255,255,.10);border:2px solid #A89FE8;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:30px;font-weight:800;color:#fff}
+.nflp-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.nflp-name{margin:0;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.01em}
+.nflp-sub{font-size:13.5px;color:#D9D4FA;margin-top:6px}
+.nflp-line{position:relative;margin:0;font-size:15px;line-height:1.45;color:#F2F0FF}
+.nflp-chips{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.nflp-chip{display:flex;flex-direction:column;gap:2px;padding:10px 8px;background:rgba(0,0,0,.24);border-radius:12px;min-width:0}
+.nflp-chip span{font-size:11px;color:#B9B3E6}
+.nflp-chip b{font-size:13.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nflp-role{position:relative;display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14)}
+.nflp-role-k{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:#B9B3E6}
+.nflp-role-v{font-size:14px;font-weight:700}
+.nflp-status{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:13px;color:#F2F0FF}
+.nflp-status i{width:7px;height:7px;border-radius:50%;background:#F2B35A}
+.nflp-secs{display:flex;flex-direction:column;gap:26px;padding:22px 16px 0}
+.nflp-sec{display:flex;flex-direction:column;gap:12px}
+.nflp-h{margin:0;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#B9B3E6}
+.nflp-card{display:flex;flex-direction:column;gap:14px;padding:16px;background:rgba(255,255,255,.05);border:1px solid rgba(168,159,232,.2);border-radius:18px}
+.nflp-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.nflp-tile{display:flex;flex-direction:column;gap:6px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(168,159,232,.2);border-radius:16px;min-width:0}
+.nflp-tile span{font-size:12px;color:#B9B3E6}
+.nflp-tile b{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.nflp-rank{align-self:flex-start;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.08);color:#D9D4FA}
+.nflp-rank.top{background:rgba(168,159,232,.28);color:#fff}
+.nflp-bars{display:flex;align-items:flex-end;gap:8px;height:168px}
+.nflp-bar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px}
+.nflp-bar em{font-style:normal;font-size:12px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nflp-bar i{display:block;width:100%;max-width:36px;border-radius:6px 6px 2px 2px;background:#A89FE8}
+.nflp-bar i.part{background:rgba(168,159,232,.4)}
+.nflp-bar small{font-size:11.5px;color:#B9B3E6}
+.nflp-cap{font-size:12.5px;color:#B9B3E6}
+.nflp-tl{display:flex;align-items:flex-start;gap:8px}
+.nflp-tl-stop{display:flex;flex-direction:column;gap:5px;min-width:0}
+.nflp-tl-stop i{width:10px;height:10px;border-radius:50%;border:2px solid #B9B3E6}
+.nflp-tl-stop.cur i{background:#A89FE8;border-color:#A89FE8}
+.nflp-tl-stop b{font-size:13px;font-weight:700}
+.nflp-tl-stop span{font-size:12px;color:#B9B3E6}
+.nflp-tl-join{flex:1;height:2px;margin-top:5px;background:rgba(168,159,232,.2);min-width:12px}
+.nflp-tot{display:grid;gap:8px;padding-top:14px;border-top:1px solid rgba(168,159,232,.2)}
+.nflp-tot div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nflp-tot b{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
+.nflp-tot span{font-size:12px;color:#B9B3E6}
+.nflp-note{display:flex;gap:12px;align-items:flex-start}
+.nflp-note svg{flex-shrink:0;margin-top:2px}
+.nflp-note b{display:block;font-size:15px;font-weight:700}
+.nflp-note span{display:block;font-size:13px;line-height:1.45;color:#D9D4FA;margin-top:2px}
+.nflp-you-top{display:flex;align-items:center;gap:14px}
+.nflp-you-top b{font-size:44px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.nflp-you-top span{font-size:15px;line-height:1.4}
+.nflp-you-top em{display:block;font-style:normal;color:#B9B3E6}
+.nflp-mem{width:100%;display:flex;flex-direction:column;gap:3px;padding:12px 14px;min-height:44px;background:rgba(0,0,0,.24);border:0;border-radius:14px;color:#fff;text-align:left;font-family:inherit;cursor:pointer}
+.nflp-mem b{font-size:14.5px;font-weight:700}
+.nflp-mem span{font-size:12.5px;color:#B9B3E6}
+.nflp-links a{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 4px;border-top:.5px solid rgba(255,255,255,.08);text-decoration:none;color:#fff;font-size:14px;font-weight:600}
+.nflp-attr{font-size:11px;line-height:1.5;color:#8F88C4;padding:4px 4px 0}
+.nflp-skel{border-radius:14px;background:rgba(255,255,255,.06);animation:nflpPulse 1.2s ease-in-out infinite}
+@keyframes nflpPulse{50%{opacity:.5}}
+@media (prefers-reduced-motion: reduce){.nflp-skel{animation:none}}
+html.desk #nflp-overlay{left:232px}
 .otd-row{width:100%;display:flex;gap:14px;align-items:center;padding:12px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(168,159,232,.14);color:#fff;text-align:left;font-family:inherit;cursor:pointer}
 .otd-row-img{width:64px;height:64px;border-radius:14px;flex-shrink:0}
 .otd-row.big{flex-direction:column;align-items:stretch;padding:0;overflow:hidden}
@@ -3954,6 +4019,15 @@ html.desk .gatt-sheet{max-width:560px}
     <div id="player-link-rows"></div>
     <div id="player-sav" style="margin-top:14px"></div>
   </div>
+</div>
+
+<!-- ═══ NFL PLAYER PROFILE (v7.3.0) — tapping an NFL player's name opens
+     this instead of the link sheet: who he is, where he stands, his career
+     arc, and his games in your archive. The reference links the sheet used
+     to show live at the bottom. ═══ -->
+<div id="nflp-overlay" role="dialog" aria-modal="true" aria-labelledby="nflp-title">
+  <div class="ov-top"><button class="ov-back" aria-label="Back" onclick="closeNflPlayer()"><svg width="9" height="14" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 1 1 6.5 7 12"/></svg></button><span id="nflp-title" style="font-size:16px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div>
+  <div class="ov-body" id="nflp-body"></div>
 </div>
 
 <!-- ═══ PLAYOFF PICTURE — MLB only for now. AL/NL/Finals tabs; each
@@ -10438,7 +10512,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.2.1-football-top-card';
+window.INNINGS_BUILD = 'v7.3.0-nfl-player-profile';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -18000,6 +18074,8 @@ function _cheatSheetLinkChips(name, id, league) { return _refChipsHtml(_refLinks
 // tapped a name specifically to find out where it goes.
 var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', BBRef: 'Basketball Reference', FBref: 'FBref', ESPN: 'ESPN Player Page', HockeyRef: 'Hockey Reference', NHL: 'NHL.com Player Page' };
 function openPlayerLinkSheet(name, id, league) {
+  // NFL players get the full profile page (v7.3.0); its links sit at the bottom.
+  if (league === 'nfl' && id && typeof openNflPlayer === 'function') { openNflPlayer(name, id); return; }
   var links = _refLinksForLeague(name, id, league);
   var nameEl = document.getElementById('player-link-name');
   var rowsEl = document.getElementById('player-link-rows');
@@ -18029,6 +18105,218 @@ function closePlayerLinkSheet() {
   if (_ghReducedMotion && _ghReducedMotion()) { backdrop.style.display = 'none'; return; }
   backdrop.classList.remove('pls-in'); backdrop.classList.add('pls-out');
   window._plsCloseT = setTimeout(function () { backdrop.style.display = 'none'; backdrop.classList.remove('pls-out'); }, 200);
+}
+
+// ══ NFL PLAYER PROFILE (v7.3.0) ════════════════════════════════════════
+// A "get to know the player" page, not a stats source of truth. Data comes
+// from /api/espn?mode=player (bio, depth chart, season + career stats);
+// "You and him" is read off the person's own archive. Cached 30 minutes
+// per player so reopening is instant.
+window._nflp = { cache: {}, id: null, name: null };
+function openNflPlayer(name, id) {
+  var ov = document.getElementById('nflp-overlay'), body = document.getElementById('nflp-body');
+  if (!ov || !body || !id) return;
+  var key = String(id);
+  window._nflp.id = key; window._nflp.name = name;
+  var t = document.getElementById('nflp-title'); if (t) t.textContent = name || '';
+  ov.style.display = 'flex';
+  body.scrollTop = 0;
+  var c = window._nflp.cache[key];
+  if (c && Date.now() - c.at < 30 * 60e3) { _nflpRender(c.d); return; }
+  body.innerHTML = _nflpLoadingHtml();
+  var url = '/api/espn?league=nfl&mode=player&id=' + encodeURIComponent(key);
+  fetch(url).then(function (r) { return r.json().then(function (d) { if (!r.ok || !d || d.error) throw new Error((d && d.error) || ('HTTP ' + r.status)); return d; }); })
+    .then(function (d) {
+      window._nflp.cache[key] = { at: Date.now(), d: d };
+      if (window._nflp.id === key) _nflpRender(d);
+    })
+    .catch(function (err) {
+      console.error('[nflp] ' + url, err);
+      if (window._nflp.id === key) body.innerHTML = _nflpErrorHtml(name, key, err && err.message);
+    });
+}
+function closeNflPlayer() {
+  var ov = document.getElementById('nflp-overlay');
+  if (ov) ov.style.display = 'none';
+  window._nflp.id = null;
+}
+function _nflpRetry() { var n = window._nflp.name, i = window._nflp.id; if (!i) return; delete window._nflp.cache[i]; openNflPlayer(n, i); }
+function _nflpLoadingHtml() {
+  return '<div style="padding:20px 18px;display:flex;flex-direction:column;gap:16px" aria-busy="true" aria-label="Loading player">' +
+    '<div style="display:flex;gap:16px;align-items:flex-end"><div class="nflp-skel" style="width:92px;height:92px;border-radius:50%"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="nflp-skel" style="height:26px;width:70%"></div><div class="nflp-skel" style="height:14px;width:55%"></div></div></div>' +
+    '<div class="nflp-skel" style="height:48px"></div><div class="nflp-skel" style="height:190px"></div><div class="nflp-skel" style="height:220px"></div></div>';
+}
+function _nflpLinksHtml(name, id) {
+  var links = (typeof _refLinksForLeague === 'function') ? _refLinksForLeague(name, id, 'nfl') : [];
+  if (!links.length) return '';
+  return '<div class="nflp-links">' + links.map(function (l) {
+    return '<a href="' + _escapeHtml(l.url) + '" target="_blank" rel="noopener"><span>' + _escapeHtml((typeof PLAYER_LINK_LABELS !== 'undefined' && PLAYER_LINK_LABELS[l.label]) || l.label) + '</span><span style="color:rgba(255,255,255,.35);font-size:16px" aria-hidden="true">›</span></a>';
+  }).join('') + '</div>';
+}
+function _nflpErrorHtml(name, id, msg) {
+  return '<div style="padding:24px 18px;display:flex;flex-direction:column;gap:14px">' +
+    '<div class="rb-h1">' + _escapeHtml(name || 'Player') + '</div>' +
+    '<div style="font-size:14px;color:#D9D4FA;line-height:1.5">Couldn&#39;t load his profile right now.' + (msg ? '<br><span style="font-size:12px;color:#8F88C4">' + _escapeHtml(msg) + '</span>' : '') + '</div>' +
+    '<button onclick="_nflpRetry()" style="align-self:flex-start;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(168,159,232,.35);background:rgba(168,159,232,.14);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">Try again</button>' +
+    _nflpLinksHtml(name, id) + '</div>';
+}
+// Team color folded into the indigo ground, so every team's hero reads as
+// part of the app rather than a loud team banner.
+function _nflpMix(hex, t) {
+  var m = String(hex || '').match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return '#1A1640';
+  var a = parseInt(m[1], 16), b = 0x1A1640;
+  var ch = function (s) { return Math.round(((b >> s) & 255) * (1 - t) + ((a >> s) & 255) * t); };
+  return 'rgb(' + ch(16) + ',' + ch(8) + ',' + ch(0) + ')';
+}
+function _nflpSeasonOf(ds) {
+  var p = String(ds || '').split('-');
+  if (p.length !== 3) return null;
+  var y = parseInt(p[0], 10), mo = parseInt(p[1], 10);
+  return mo <= 2 ? y - 1 : y;
+}
+function _nflpSide(bs, s) {
+  var norm = function (x) { return String(x || '').toLowerCase(); };
+  var match = function (nm, ab) {
+    if (s.abbr && ab && String(ab).toUpperCase() === String(s.abbr).toUpperCase()) return true;
+    var n = norm(nm);
+    if (!n) return false;
+    return (s.name && n === norm(s.name)) || (s.short && n.indexOf(norm(s.short)) !== -1);
+  };
+  if (match(bs.home, bs.homeAbbr)) return 'home';
+  if (match(bs.away, bs.awayAbbr)) return 'away';
+  return null;
+}
+// Your games with him: memories that tag him, plus NFL games in your
+// archive from seasons he was on one of the two teams.
+function _nflpYou(d) {
+  var key = 'nfl:' + d.id, stints = (d.arc && d.arc.stints) || [], today = (typeof _todayLocal === 'function') ? _todayLocal() : '';
+  var items = [];
+  (window._moments || []).forEach(function (m) {
+    if (!m) return;
+    var bs = m.boxScore || {}, ds = m.date || bs.date || '';
+    if (today && ds && ds > today) return;
+    var tagged = (m.players || []).some(function (p) { return p && (p.league + ':' + p.id) === key; });
+    var side = null;
+    if (String(bs.sport || '').toLowerCase() === 'nfl') {
+      var yr = _nflpSeasonOf(ds);
+      stints.forEach(function (s) { if (!side && yr && yr >= s.from && yr <= s.to) side = _nflpSide(bs, s); });
+    }
+    if (tagged || side) items.push({ m: m, side: side, ds: ds });
+  });
+  items.sort(function (a, b) { return a.ds < b.ds ? 1 : a.ds > b.ds ? -1 : 0; });
+  var w = 0, l = 0;
+  items.forEach(function (it) {
+    var bs = it.m.boxScore || {};
+    if (!it.side || bs.homeScore == null || bs.awayScore == null) return;
+    var mine = it.side === 'home' ? bs.homeScore : bs.awayScore, theirs = it.side === 'home' ? bs.awayScore : bs.homeScore;
+    if (mine > theirs) w++; else if (mine < theirs) l++;
+  });
+  return { items: items, w: w, l: l };
+}
+function _nflpYouHtml(d) {
+  var y = _nflpYou(d);
+  if (!y.items.length) return '';
+  var n = y.items.length;
+  var rows = y.items.slice(0, 3).map(function (it) {
+    var sub = [it.ds ? _formatMomentDate(it.ds) : '', (typeof _otdWho === 'function') ? _otdWho(it.m) : ''].filter(Boolean).join(' · ');
+    return '<button class="nflp-mem" data-id="' + _escapeHtml(it.m._id) + '" onclick="closeNflPlayer();openMemory(this.dataset.id)"><b>' + _escapeHtml(it.m.name || 'A memory') + '</b>' + (sub ? '<span>' + _escapeHtml(sub) + '</span>' : '') + '</button>';
+  }).join('');
+  return '<section class="nflp-sec"><h2 class="nflp-h">You and him</h2><div class="nflp-card">' +
+    '<div class="nflp-you-top"><b>' + n + '</b><span>' + (n === 1 ? 'game in your archive' : 'games in your archive') + ((y.w + y.l) ? '<em>' + y.w + '–' + y.l + ' in those games</em>' : '') + '</span></div>' +
+    rows + (n > 3 ? '<div class="nflp-cap">+ ' + (n - 3) + ' more in your archive</div>' : '') + '</div></section>';
+}
+function _nflpRoleHtml(d) {
+  var r = d.role, txt = '';
+  if (r) {
+    var numbered = /^(QB|PK|K|P|LS)$/i.test(r.pos || '');
+    txt = (r.pos || d.pos || '') + (numbered ? r.depth : '') + ' · ' + (r.depth === 1 ? 'Starter' : 'Backup' + (r.ahead ? ' to ' + r.ahead : ''));
+  }
+  if (!txt && !d.status) return '';
+  return '<div class="nflp-role">' + (txt ? '<span class="nflp-role-k">ROLE</span><span class="nflp-role-v">' + _escapeHtml(txt) + '</span>' : '') +
+    (d.status ? '<span class="nflp-status"><i aria-hidden="true"></i>' + _escapeHtml(d.status) + '</span>' : '') + '</div>';
+}
+function _nflpStandHtml(d) {
+  var s = d.stand;
+  if (!s || !s.tiles || !s.tiles.length) return '';
+  return '<section class="nflp-sec"><h2 class="nflp-h">Where he stands · ' + s.year + '</h2><div class="nflp-tiles">' +
+    s.tiles.map(function (t) {
+      var rank = t.rankDisplay || (t.rank ? (typeof _ordinal === 'function' ? _ordinal(t.rank) : t.rank) : '');
+      return '<div class="nflp-tile"><span>' + _escapeHtml(t.label) + '</span><b>' + _escapeHtml(t.value) + '</b>' +
+        (rank ? '<em class="nflp-rank' + (t.rank && t.rank <= 10 ? ' top' : '') + '" style="font-style:normal">' + _escapeHtml(rank) + ' in NFL</em>' : '') + '</div>';
+    }).join('') + '</div></section>';
+}
+function _nflpShortNum(v, compact) {
+  if (v == null) return '—';
+  if (compact && v >= 1000) return (Math.round(v / 100) / 10) + 'k';
+  return Math.round(v).toLocaleString('en-US');
+}
+function _nflpArcHtml(d) {
+  var a = d.arc;
+  if (!a) return '';
+  var seasons = a.seasons || [];
+  var html = '';
+  if (seasons.length) {
+    var max = Math.max.apply(null, seasons.map(function (s) { return s.value || 0; })) || 1;
+    var compact = seasons.length > 6;
+    html += '<div class="nflp-cap">' + _escapeHtml(a.label) + '</div><div class="nflp-bars">' + seasons.map(function (s) {
+      var h = Math.max(4, Math.round(116 * (s.value || 0) / max));
+      return '<div class="nflp-bar"><em>' + _nflpShortNum(s.value, compact) + '</em><i class="' + (s.partial ? 'part' : '') + '" style="height:' + h + 'px"></i><small>&#8217;' + String(s.year).slice(2) + '</small></div>';
+    }).join('') + '</div>';
+  }
+  var st = a.stints || [];
+  if (st.length) {
+    html += '<div class="nflp-tl">' + st.map(function (s, i) {
+      var cur = i === st.length - 1 && d.team && String(d.team.id) === String(s.teamId);
+      var yrs = s.from === s.to ? String(s.from) : s.from + '–' + (cur ? 'now' : String(s.to).slice(2));
+      return '<div class="nflp-tl-stop' + (cur ? ' cur' : '') + '"><i aria-hidden="true"></i><b>' + _escapeHtml(s.short || s.abbr || 'Team') + '</b><span>' + yrs + '</span></div>';
+    }).join('<div class="nflp-tl-join" aria-hidden="true"></div>') + '</div>';
+  }
+  var tot = (a.totals || []).filter(function (t) { return t.value && t.value !== '—' && t.value !== '—–—'; });
+  if (tot.length) {
+    html += '<div class="nflp-tot" style="grid-template-columns:repeat(' + tot.length + ',minmax(0,1fr))">' + tot.map(function (t) {
+      return '<div><b>' + _escapeHtml(t.value) + '</b><span>Career ' + _escapeHtml(t.label.toLowerCase()) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  if (!html) return '';
+  return '<section class="nflp-sec"><h2 class="nflp-h">Career arc</h2><div class="nflp-card">' + html + '</div></section>';
+}
+function _nflpNotableHtml(d) {
+  var n = d.notable || [];
+  if (!n.length) return '';
+  var star = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A89FE8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></svg>';
+  return '<section class="nflp-sec"><h2 class="nflp-h">What makes him notable</h2><div class="nflp-card" style="gap:16px">' + n.map(function (x) {
+    return '<div class="nflp-note">' + star + '<div><b>' + _escapeHtml(x.title) + '</b>' + (x.detail ? '<span>' + _escapeHtml(x.detail) + '</span>' : '') + '</div></div>';
+  }).join('') + '</div></section>';
+}
+function _nflpRender(d) {
+  var body = document.getElementById('nflp-body');
+  if (!body || !d) return;
+  var t = document.getElementById('nflp-title'); if (t) t.textContent = d.name || '';
+  var team = d.team || {}, color = team.color || '#3D3580';
+  var initials = String(d.name || '').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0); }).join('').toUpperCase();
+  var last = (d.arc && d.arc.stints && d.arc.stints.length) ? d.arc.stints[d.arc.stints.length - 1] : null;
+  var since = last && team.id && String(last.teamId) === String(team.id) ? last.from : null;
+  var line = [(d.posName || d.pos || '') + (team.name ? ' for the ' + team.name : '') + (since ? ' since ' + since : ''), [d.height, d.weight].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+  var dr = d.draft;
+  var chips = [
+    ['Age', d.age != null ? String(d.age) : '—'],
+    ['Season', d.season || '—'],
+    ['College', d.college || '—'],
+    ['Drafted', dr && dr.pick ? 'R' + dr.round + ' · #' + dr.pick : (dr ? '—' : 'Undrafted')]
+  ];
+  var sub = [d.jersey ? '#' + d.jersey : '', d.pos || '', team.name || 'Free agent'].filter(Boolean).join(' · ');
+  var html = '<div class="nflp-hero" style="background:' + _nflpMix(color, 0.2) + ';border-bottom-color:' + _escapeHtml(color) + '">' +
+    (d.jersey ? '<div class="nflp-num" aria-hidden="true">' + _escapeHtml(d.jersey) + '</div>' : '') +
+    '<div class="nflp-id"><div class="nflp-av" style="border-color:' + _escapeHtml(color) + '"><span aria-hidden="true">' + _escapeHtml(initials) + '</span>' +
+    (d.headshot ? '<img src="' + _escapeHtml(d.headshot) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
+    '<div style="min-width:0;padding-bottom:4px"><h1 class="nflp-name">' + _escapeHtml(d.first || d.name || '') + (d.last ? '<br>' + _escapeHtml(d.last) : '') + '</h1><div class="nflp-sub">' + _escapeHtml(sub) + '</div></div></div>' +
+    (line ? '<p class="nflp-line">' + _escapeHtml(line) + '</p>' : '') +
+    '<div class="nflp-chips">' + chips.map(function (c) { return '<div class="nflp-chip"><span>' + c[0] + '</span><b>' + _escapeHtml(c[1]) + '</b></div>'; }).join('') + '</div>' +
+    _nflpRoleHtml(d) + '</div>';
+  html += '<div class="nflp-secs">' + _nflpYouHtml(d) + _nflpStandHtml(d) + _nflpArcHtml(d) + _nflpNotableHtml(d) +
+    '<div>' + _nflpLinksHtml(d.name, d.id) + '<div class="nflp-attr">Player data via ESPN.</div></div></div>';
+  body.innerHTML = html;
 }
 
 // data-* attributes rather than embedding the name in the onclick string
