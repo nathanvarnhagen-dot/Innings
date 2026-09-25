@@ -10526,7 +10526,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.3.1-drive-chart-field';
+window.INNINGS_BUILD = 'v7.3.2-football-play-animations';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -20160,6 +20160,12 @@ function _fbxFieldHtml(m, v, fx, brk) {
   var F = 'font-family="-apple-system,Helvetica,sans-serif"';
   var now = Date.now();
   var eP = fx.playAt ? now - fx.playAt : 1e7;          // ms since the latest play arrived
+  // v7.3.2: a play that just came in (or a tapped replay) runs as a scene first
+  if (fx === window._fbx && v && v.pct != null && typeof _fbpSceneHtml === 'function') {
+    var scene = null;
+    try { scene = _fbpSceneHtml(m, v, fx); } catch (err) { console.error('[fbp] scene', err); }
+    if (scene) return '<div class="fbx-field fbd fbp"><div class="fbx-tilt">' + scene.svg + '</div></div>' + _fbdLegendHtml(m, v);
+  }
   var aC = m.away.colors.bg, hC = m.home.colors.bg;
   var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + _escapeHtml(v ? (v.aria || 'Field position') : (brk || 'Field').toLowerCase()) + '">' +
     '<defs>' +
@@ -20174,7 +20180,7 @@ function _fbxFieldHtml(m, v, fx, brk) {
   for (var i = 0; i < 20; i++) h += '<rect x="' + (30 + i * 15) + '" y="0" width="15" height="' + H + '" fill="' + (i % 2 ? '#2B6A43' : '#2F7349') + '"/>';
   h += '<rect x="0" y="0" width="30" height="' + H + '" fill="url(#' + id + 'ea)"/><rect x="330" y="0" width="30" height="' + H + '" fill="url(#' + id + 'eh)"/>';
   // The scoring team's end zone lights up (away scores into the home end zone)
-  var tdLive = fx.td && now - fx.td.at < 3400;
+  var tdLive = fx.td && now >= fx.td.at && now - fx.td.at < 3400;
   if (tdLive) {
     var ezx = fx.td.side === 'a' ? 330 : 0;
     h += '<rect class="fbx-ezg" x="' + ezx + '" y="0" width="30" height="' + H + '" fill="#F2C869" style="animation-delay:' + (-(now - fx.td.at)) + 'ms"/>';
@@ -20207,10 +20213,11 @@ function _fbxFieldHtml(m, v, fx, brk) {
       var x0 = X(p.s), x1 = X(p.e), lft = Math.min(x0, x1), wd = Math.abs(x1 - x0);
       if (wd < 5) { lft = (x0 + x1) / 2 - 2.5; wd = 5; }
       var yy = top + i * (rh + gap), last = i === dp.length - 1;
-      var grow = last && eP < 60000 && wd > 5;
+      var gd = eP - ((window._fbpEndKey && String(window._fbpEndKey).indexOf(fx.playAt + ':') === 0) ? (window._fbpLastTotal || 0) * 1000 : 0);
+      var grow = last && gd >= 0 && gd < 60000 && wd > 5;
       h += '<rect x="' + n1(lft) + '" y="' + n1(yy) + '" width="' + n1(wd) + '" height="' + n1(rh) + '" rx="' + n1(Math.min(5, rh / 3)) + '" fill="' + (DC[p.k] || '#D9D4FA') + '"' +
         (p.inc ? ' opacity=".5"' : '') + (p.y != null && p.y < 0 ? ' stroke="#FF7A6B" stroke-width="1.4"' : '') +
-        (grow ? ' class="fbd-new" style="transform-origin:' + (x1 >= x0 ? 'left' : 'right') + ' center;animation-delay:' + (-eP) + 'ms"' : '') + '/>';
+        (grow ? ' class="fbd-new" style="transform-origin:' + (x1 >= x0 ? 'left' : 'right') + ' center;animation-delay:' + (-gd) + 'ms"' : '') + '/>';
     });
   }
   if (v && v.pct != null) {
@@ -20296,21 +20303,23 @@ function _fbxFieldHtml(m, v, fx, brk) {
       '<div class="bg"></div><div class="st b"></div><div class="st"></div><div class="sk"></div>' +
       '<div class="ct"><span class="lg">' + _escapeHtml(tm.abbr || '') + '</span><div class="wd"><span class="sm">TOUCHDOWN</span><span class="bg2' + (nm.length > 10 ? ' long' : '') + '">' + _escapeHtml(nm) + '</span><span class="ln"></span></div></div></div>';
   }
-  if (driveMode) {
-    var sit = m.situation || {};
-    var kinds = [];
-    v.drive.forEach(function (p) { if (kinds.indexOf(p.k) === -1) kinds.push(p.k); });
-    var KL = { run: ['Run', '#8EE6A0'], pass: ['Pass', '#9CC8FF'], kick: ['Kick', '#D9D4FA'], pen: ['Penalty', '#FFB38A'] };
-    var fdText = '';
-    if (sit.firstDown != null) { var fdS = Math.round(sit.firstDown); fdText = fdS === 50 ? '50' : String(fdS < 50 ? fdS : 100 - fdS); }
-    var leg = '<div class="fbd-leg"><div class="k">' + ['run', 'pass', 'kick', 'pen'].filter(function (k) { return kinds.indexOf(k) !== -1; }).map(function (k) {
-      return '<span><i style="background:' + KL[k][1] + '"></i>' + KL[k][0] + '</span>';
-    }).join('') + '</div><div class="k">' +
-      (sit.posText ? '<span><b style="background:#5AB0FF"></b>' + _escapeHtml(sit.posText) + '</span>' : '') +
-      (fdText ? '<span><b style="background:#F2C869"></b>1st down at ' + fdText + '</span>' : '') + '</div></div>';
-    return '<div class="fbx-field fbd"><div class="fbx-tilt">' + h + '</div>' + over + '</div>' + leg;
-  }
+  if (driveMode) return '<div class="fbx-field fbd"><div class="fbx-tilt">' + h + '</div>' + over + '</div>' + _fbdLegendHtml(m, v);
   return '<div class="fbx-field">' + lights + '<div class="fbx-tilt">' + h + '</div>' + over + '</div>';
+}
+
+// v7.3.2: the drive chart's legend — play kinds on the left, the lines on the right
+function _fbdLegendHtml(m, v) {
+  var sit = m.situation || {};
+  var kinds = [];
+  (v.drive || []).forEach(function (p) { if (kinds.indexOf(p.k) === -1) kinds.push(p.k); });
+  var KL = { run: ['Run', '#8EE6A0'], pass: ['Pass', '#9CC8FF'], kick: ['Kick', '#D9D4FA'], pen: ['Penalty', '#FFB38A'] };
+  var fdText = '';
+  if (sit.firstDown != null) { var fdS = Math.round(sit.firstDown); fdText = fdS === 50 ? '50' : String(fdS < 50 ? fdS : 100 - fdS); }
+  return '<div class="fbd-leg"><div class="k">' + ['run', 'pass', 'kick', 'pen'].filter(function (k) { return kinds.indexOf(k) !== -1; }).map(function (k) {
+    return '<span><i style="background:' + KL[k][1] + '"></i>' + KL[k][0] + '</span>';
+  }).join('') + '</div><div class="k">' +
+    (sit.posText ? '<span><b style="background:#5AB0FF"></b>' + _escapeHtml(sit.posText) + '</span>' : '') +
+    (fdText ? '<span><b style="background:#F2C869"></b>1st down at ' + fdText + '</span>' : '') + '</div></div>';
 }
 
 // The last real play as a card under the field: yards, what it was, who.
@@ -27746,6 +27755,258 @@ function _paFieldSvg(lp, land, E) {
   return g + '</svg>';
 }
 
+// ═══ FOOTBALL PLAY ANIMATIONS (v7.3.2) ═══════════════════════════════
+// Like baseball's: each new play runs as a short top-down scene on a
+// zoomed-in stretch of the field — the formations line up, the ball is
+// snapped, and the run, throw, kick or flag plays out to where the ball
+// really ended, with a tag for how it finished. Then the drive chart comes
+// back. Timed from when the play arrived, so a refresh mid-scene picks it
+// up where it was. Tap a play in the drive list to replay it.
+// Every mover keeps a long stationary hold running underneath its legs:
+// Chrome drops the frozen end of a scene whose animations all finished
+// before the SVG was inserted (a refresh late in the scene), and an
+// animation still running keeps them in place.
+var FBP = { SNAP: .9, W: 360, H: 108 };
+function _fbpKind(p) {
+  var t = String(p.text || '');
+  if (p.k === 'pen' || /penalty/i.test(t) && !/(pass|rush|run|sack)/i.test(t.split(/penalty/i)[0])) return 'flag';
+  if (/field goal/i.test(t)) return 'fg';
+  if (/extra point/i.test(t)) return 'xp';
+  if (/punt/i.test(t) || p.k === 'kick') return 'punt';
+  if (/sacked/i.test(t)) return 'sack';
+  if (/intercept/i.test(t)) return 'int';
+  if (p.k === 'pass' || /\bpass\b/i.test(t)) return p.inc || /incomplete/i.test(t) ? 'inc' : 'pass';
+  return 'run';
+}
+// Which play to show, and since when: a replay first, else the play that
+// just came in (the newest bar of the drive, or the situation's last play).
+function _fbpPick(m, v, fx) {
+  var rp = window._fbpReplay;
+  if (rp && rp.pk === fx.pk && Date.now() - rp.at < 15000) return { p: rp.p, at: rp.at, replay: true };
+  if (!fx.playAt || !v || v.pct == null) return null;
+  var p = null;
+  if (v.drive && v.drive.length) {
+    var d = v.drive[v.drive.length - 1];
+    if (Math.abs(d.e - v.pct) < 1.5) p = d;
+  }
+  if (!p && v.lastPlay && v.lastPlay.startPct != null) {
+    var lp = (m.situation && m.situation.lastPlay) || {};
+    p = { s: v.lastPlay.startPct, e: v.lastPlay.endPct, k: v.lastPlay.kind === 'rush' ? 'run' : v.lastPlay.kind === 'pass' ? 'pass' : 'kick', y: lp.yards != null ? Number(lp.yards) : null, inc: /incomplete/i.test(String(lp.label || '')), text: lp.text || lp.label || '' };
+  }
+  return p ? { p: p, at: fx.playAt, replay: false } : null;
+}
+function _fbpSceneHtml(m, v, fx) {
+  if (typeof _ghReducedMotion === 'function' && _ghReducedMotion()) return null; // the drive chart alone
+  var pick = _fbpPick(m, v, fx);
+  if (!pick) return null;
+  var p = pick.p, E = (Date.now() - pick.at) / 1000;
+  var kind = _fbpKind(p), txt = String(p.text || '');
+  var W = FBP.W, H = FBP.H, mid = 46, SN = FBP.SNAP;
+  var s = p.s, e = p.e;
+  // which way the offense faces: the away team drives toward 100 in this frame
+  var ps = m.situation && m.situation.possSide;
+  var dir = ps === 'h' ? -1 : ps === 'a' ? 1 : (e < s ? -1 : 1);
+  var off = dir === 1 ? m.away : m.home, def = dir === 1 ? m.home : m.away;
+  var goalX = dir === 1 ? 110 : -10;
+  // the stretch of field in view
+  var lo = Math.min(s, e) - (dir === 1 ? 8 : 3), hi = Math.max(s, e) + (dir === 1 ? 3 : 8);
+  if (kind === 'fg' || kind === 'xp') { if (dir === 1) hi = 111; else lo = -11; }
+  var span = Math.max(34, hi - lo + 8), w0 = (lo + hi) / 2 - span / 2;
+  w0 = Math.max(-12, Math.min(112 - span, w0));
+  var X = function (yd) { return (yd - w0) * W / span; };
+  var n = function (x) { return (Math.round(x * 10) / 10).toString(); };
+  var sec = function (t) { return _paSec(t, E); };
+  var F = 'font-family="-apple-system,Helvetica,sans-serif"';
+  window._fbPinSeq = (window._fbPinSeq || 0) + 1;
+  var id = 'fbp' + window._fbPinSeq;
+  var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + _escapeHtml((txt || 'Play').slice(0, 140)) + '"><defs><clipPath id="' + id + 'c"><rect width="' + W + '" height="' + H + '" rx="12"/></clipPath>' +
+    '<radialGradient id="' + id + 'b" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#b3713d"/><stop offset="1" stop-color="#6b3a17"/></radialGradient></defs><g clip-path="url(#' + id + 'c)">';
+  // turf, 5-yard bands, end zones, lines, numbers
+  g += '<rect width="' + W + '" height="' + H + '" fill="#2B6A43"/>';
+  for (var b = Math.floor(w0 / 5) * 5; b < w0 + span; b += 5) {
+    if (b >= 0 && b < 100 && (b / 5) % 2 === 0) g += '<rect x="' + n(X(b)) + '" y="0" width="' + n(X(b + 5) - X(b)) + '" height="' + H + '" fill="#2F7349"/>';
+  }
+  if (w0 < 0) g += '<rect x="0" y="0" width="' + n(X(0)) + '" height="' + H + '" fill="' + m.away.colors.bg + '"/>';
+  if (w0 + span > 100) g += '<rect x="' + n(X(100)) + '" y="0" width="' + n(W - X(100)) + '" height="' + H + '" fill="' + m.home.colors.bg + '"/>';
+  for (var y5 = Math.ceil(w0 / 5) * 5; y5 <= w0 + span; y5 += 5) {
+    if (y5 < 0 || y5 > 100) continue;
+    var gl = y5 === 0 || y5 === 100;
+    g += '<line x1="' + n(X(y5)) + '" y1="0" x2="' + n(X(y5)) + '" y2="' + H + '" stroke="#fff" stroke-opacity="' + (gl ? .9 : y5 % 10 ? .2 : .4) + '" stroke-width="' + (gl ? 2 : 1) + '"/>';
+    if (y5 % 10 === 0 && !gl) g += '<text x="' + n(X(y5)) + '" y="' + (H - 7) + '" text-anchor="middle" font-size="12" font-weight="800" fill="rgba(255,255,255,.5)" ' + F + '>' + (y5 <= 50 ? y5 : 100 - y5) + '</text>';
+  }
+  if (kind === 'fg' || kind === 'xp') { // uprights at the end line
+    var ux = X(goalX);
+    g += '<line x1="' + n(ux) + '" y1="' + (mid - 12) + '" x2="' + n(ux) + '" y2="' + (mid + 12) + '" stroke="#F2C869" stroke-width="3" stroke-linecap="round"/>';
+  }
+  // line of scrimmage (and the line to gain, live only)
+  g += '<line x1="' + n(X(s)) + '" y1="2" x2="' + n(X(s)) + '" y2="' + (H - 2) + '" stroke="#5AB0FF" stroke-width="2.4" stroke-opacity=".9"/>';
+  if (!pick.replay && v && v.firstPct != null && Math.abs(v.firstPct - s) < span) {
+    // the first-down line as it was before this play is unknown; skip it if the play moved it
+    if (fx.fromFirst != null) g += '<line x1="' + n(X(fx.fromFirst)) + '" y1="2" x2="' + n(X(fx.fromFirst)) + '" y2="' + (H - 2) + '" stroke="#F2C869" stroke-width="2.4" stroke-opacity=".85"/>';
+  }
+  // ── movers: each a dot at the origin moved by timed animateMotion legs
+  var mover = function (r, fill, stroke, start, legs, extraStyle, extra) {
+    var o = '<circle cx="0" cy="0" r="' + r + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.2"' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>' +
+      '<animateMotion dur="600s" begin="' + sec(-1) + '" fill="freeze" path="M ' + n(start[0]) + ' ' + n(start[1]) + ' L ' + n(start[0]) + ' ' + n(start[1]) + '"/>';
+    var from = start;
+    (legs || []).forEach(function (L) {
+      var d = 'M ' + n(from[0]) + ' ' + n(from[1]) + (L.via ? ' Q ' + n(L.via[0]) + ' ' + n(L.via[1]) + ' ' : ' L ') + n(L.to[0]) + ' ' + n(L.to[1]);
+      o += '<animateMotion dur="' + Math.max(.05, L.d).toFixed(2) + 's" begin="' + sec(L.t) + '" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="' + (L.ease || '.4 0 .3 1') + '" path="' + d + '"/>' +
+        '<animateMotion dur="600s" begin="' + sec(L.t + Math.max(.05, L.d)) + '" fill="freeze" path="M ' + n(L.to[0]) + ' ' + n(L.to[1]) + ' L ' + n(L.to[0]) + ' ' + n(L.to[1]) + '"/>';
+      from = L.to;
+    });
+    return o + (extra || '') + '</circle>';
+  };
+  var P = function (yd, y) { return [X(yd), y]; };
+  var oc = off.colors.bg, dc = def.colors.bg, R = 3.6;
+  var tag = null, tEnd = SN + 1.6, burstAt = null, ballLegs = [], ballStart = P(s, mid), ballOut = null;
+  // formations (in yards off the ball, and px across)
+  var ol = [-14, -7, 0, 7, 14].map(function (dy) { return P(s - dir * .8, mid + dy); });
+  var qb0 = P(s - dir * 1.8, mid), rb0 = P(s - dir * 6, mid);
+  var wr = [P(s - dir * 1, 10), P(s - dir * 1, H - 22)], te0 = P(s - dir * 1, mid + 22);
+  var dl = [-17, -6, 6, 17].map(function (dy) { return P(s + dir * 1.2, mid + dy); });
+  var lb = [-18, 0, 18].map(function (dy) { return P(s + dir * 5, mid + dy); });
+  var cb = [P(s + dir * 6, 10), P(s + dir * 6, H - 22)], sf = [P(s + dir * 12, mid - 20), P(s + dir * 12, mid + 20)];
+  var defAll = dl.concat(lb, cb, sf);
+  var endP = P(e, mid + ((Math.round(Math.abs(p.y || 3)) % 2) ? -8 : 8));
+  var ofL = {}, dfL = {}; // legs per index
+  var push = function (x, dy, t, d) { return { to: [x[0] + dir * dy * W / span, x[1]], t: t, d: d }; };
+  var td = /touchdown/i.test(txt);
+  if (kind === 'run') {
+    var hand = P(s - dir * 3, mid), gapP = P(s + dir * .8, mid + (endP[1] < mid ? -7 : 7));
+    var runT = Math.max(.5, Math.min(2.6, .45 + Math.abs(e - s) * .085));
+    tEnd = SN + .75 + runT;
+    ofL.rb = [{ to: hand, t: SN, d: .4 }, { to: gapP, t: SN + .4, d: .35 }, { to: endP, t: SN + .75, d: runT, via: [(gapP[0] + endP[0]) / 2, gapP[1] + (endP[1] - gapP[1]) * 1.6] }];
+    ofL.qb = [{ to: hand, t: SN, d: .4 }, { to: P(s - dir * 4, mid - 6), t: SN + .4, d: .5 }];
+    ballLegs = [{ to: qb0, t: SN, d: .12 }, { to: hand, t: SN + .12, d: .28 }].concat(ofL.rb.slice(1));
+    tag = Math.abs(e - s) < .5 ? 'NO GAIN' : 'TACKLED';
+  } else if (kind === 'pass' || kind === 'inc' || kind === 'int') {
+    var drop = P(s - dir * 6, mid), yac = kind === 'pass' ? Math.min(Math.max(0, (p.y || 0) * .35), 10) : 0;
+    var catchYd = kind === 'pass' ? e - dir * yac : s + dir * Math.min(14, Math.max(8, Math.abs(e - s) || 10));
+    var tgt = (Math.round(Math.abs(p.y || 5)) % 2) ? 0 : 1, cy = tgt ? H - 30 : 18;
+    var catchP = P(catchYd, cy);
+    var tThrow = SN + 1.0, air = Math.max(.45, Math.min(1.3, .3 + Math.abs(catchP[0] - drop[0]) / W * 1.6)), tCatch = tThrow + air;
+    ofL.qb = [{ to: drop, t: SN, d: .65 }];
+    ofL['wr' + tgt] = [{ to: P(catchYd - dir * 1.5, wr[tgt][1]), t: SN, d: tCatch - SN - .3, ease: '.3 0 .6 1' }, { to: catchP, t: tCatch - .3, d: .3 }];
+    ofL['wr' + (1 - tgt)] = [{ to: P(s + dir * 9, wr[1 - tgt][1] + (tgt ? 14 : -14)), t: SN, d: 1.4 }];
+    ofL.te = [{ to: P(s + dir * 4, te0[1] - 6), t: SN, d: 1.2 }];
+    ballLegs = [{ to: qb0, t: SN, d: .12 }, { to: drop, t: SN + .12, d: .53 }, { to: catchP, t: tThrow, d: air, via: [(drop[0] + catchP[0]) / 2, Math.min(drop[1], catchP[1]) - 26], ease: '.3 .2 .6 .9' }];
+    if (kind === 'pass') {
+      var yT = Math.max(.3, Math.min(2.2, .3 + yac * .12));
+      ofL['wr' + tgt].push({ to: endP, t: tCatch, d: yT });
+      ballLegs.push({ to: endP, t: tCatch, d: yT });
+      tEnd = tCatch + yT; tag = 'TACKLED';
+    } else if (kind === 'inc') {
+      var past = P(catchYd + dir * 3, cy + (tgt ? 10 : -10));
+      ballLegs[ballLegs.length - 1].to = past;
+      tEnd = tCatch + .1; ballOut = tCatch + .5; tag = 'INCOMPLETE';
+    } else {
+      dfL['cb' + tgt] = [{ to: catchP, t: SN, d: tCatch - SN }, { to: P(e, catchP[1]), t: tCatch, d: Math.max(.4, Math.min(2.4, Math.abs(e - catchYd) * .09)) }];
+      ballLegs.push({ to: P(e, catchP[1]), t: tCatch, d: dfL['cb' + tgt][1].d });
+      tEnd = tCatch + dfL['cb' + tgt][1].d; tag = 'INTERCEPTED';
+    }
+  } else if (kind === 'sack') {
+    var dropS = P(s - dir * 5.5, mid), tHit = SN + 1.6;
+    ofL.qb = [{ to: dropS, t: SN, d: .6 }, { to: P(e, mid + 4), t: tHit, d: .35 }];
+    dfL.dl1 = [{ to: P(s - dir * 5, mid - 5), t: SN, d: tHit - SN, ease: '.5 0 .8 1' }, { to: P(e, mid), t: tHit, d: .35 }];
+    ballLegs = [{ to: qb0, t: SN, d: .12 }, { to: dropS, t: SN + .12, d: .48 }, { to: P(e, mid + 4), t: tHit, d: .35 }];
+    endP = P(e, mid + 4); tEnd = tHit + .35; tag = 'SACK';
+  } else if (kind === 'punt' || kind === 'fg' || kind === 'xp') {
+    var kp = kind === 'punt' ? P(s - dir * 13, mid) : P(s - dir * 7, mid);
+    var tgtP = kind === 'punt' ? P(e, mid - 6) : P(goalX, mid);
+    var airK = kind === 'punt' ? 1.9 : 1.3;
+    ofL.rb = [{ to: kp, t: .1, d: .4 }];
+    ballLegs = [{ to: kp, t: SN, d: .35 }, { to: tgtP, t: SN + .55, d: airK, via: [(kp[0] + tgtP[0]) / 2, 2], ease: '.25 .1 .55 1' }];
+    endP = tgtP; tEnd = SN + .55 + airK;
+    tag = kind === 'punt' ? 'PUNT' : (/no good|missed|blocked/i.test(txt) ? 'NO GOOD' : 'GOOD');
+  } else { // flag: nobody moves, the flag flies in
+    tEnd = SN + .9; tag = 'FLAG';
+  }
+  if (td) tag = 'TOUCHDOWN';
+  else if (!pick.replay && tag === 'TACKLED' && fx.prevPoss && m.situation && fx.prevPoss === m.situation.possSide && /^1st/i.test(String(m.situation.downText || '')) && !/^1st/i.test(String(fx.prevDown || '1st'))) tag = '1ST DOWN';
+  // defense converges on where the ball ends up
+  var hunt = function (pt, i, reach) { return [{ to: [pt[0] + (endP[0] - pt[0]) * reach, pt[1] + (endP[1] + ((i % 3) - 1) * 7 - pt[1]) * reach], t: SN + .1, d: Math.max(.5, tEnd - SN - .1), ease: '.3 0 .5 1' }]; };
+  var names = ['dl0', 'dl1', 'dl2', 'dl3', 'lb0', 'lb1', 'lb2', 'cb0', 'cb1', 's0', 's1'];
+  var still = kind === 'flag';
+  // players, defense under offense
+  defAll.forEach(function (pt, i) {
+    var k = names[i];
+    var legs = still ? [] : (dfL[k] || hunt(pt, i, i < 7 ? .82 : .6));
+    g += mover(R, dc, 'rgba(255,255,255,.75)', pt, legs, 'animation:paIn .25s linear ' + sec(0) + ' both');
+  });
+  var offPl = [['qb', qb0], ['rb', rb0], ['wr0', wr[0]], ['wr1', wr[1]], ['te', te0]];
+  ol.forEach(function (pt, i) { g += mover(R, oc, '#fff', pt, still ? [] : [push(pt, 1.2, SN, .8)], 'animation:paIn .25s linear ' + sec(0) + ' both'); });
+  offPl.forEach(function (x) { g += mover(x[0] === 'qb' ? R + .4 : R, oc, '#fff', x[1], still ? [] : (ofL[x[0]] || [{ to: P(s + dir * 3, x[1][1]), t: SN, d: 1.2 }]), 'animation:paIn .25s linear ' + sec(0) + ' both'); });
+  // the ball (a flag instead on a penalty)
+  if (kind === 'flag') {
+    var ref = P(s + dir * 8, 6);
+    g += '<rect x="-3" y="-3" width="6" height="6" rx="1" fill="#F2C869" stroke="#fff" stroke-width=".8" style="animation:paIn .1s linear ' + sec(SN) + ' both">' +
+      '<animateMotion dur="600s" begin="' + sec(-1) + '" fill="freeze" path="M ' + n(ref[0]) + ' ' + n(ref[1]) + ' L ' + n(ref[0]) + ' ' + n(ref[1]) + '"/>' +
+      '<animateMotion dur=".7s" begin="' + sec(SN) + '" fill="freeze" path="M ' + n(ref[0]) + ' ' + n(ref[1]) + ' Q ' + n((ref[0] + X(s)) / 2) + ' -6 ' + n(X(s)) + ' ' + (mid - 4) + '"/>' +
+      '<animateMotion dur="600s" begin="' + sec(SN + .7) + '" fill="freeze" path="M ' + n(X(s)) + ' ' + (mid - 4) + ' L ' + n(X(s)) + ' ' + (mid - 4) + '"/>' +
+      '<animateTransform attributeName="transform" type="rotate" from="0" to="540" dur=".7s" begin="' + sec(SN) + '" fill="freeze" additive="sum"/></rect>';
+    endP = P(s, mid - 4);
+  } else {
+    var ballG = '<g style="' + (ballOut ? 'animation:paOut .35s linear ' + sec(ballOut) + ' forwards' : '') + '"><g>' +
+      '<animateMotion dur="600s" begin="' + sec(-1) + '" fill="freeze" path="M ' + n(ballStart[0]) + ' ' + n(ballStart[1]) + ' L ' + n(ballStart[0]) + ' ' + n(ballStart[1]) + '"/>';
+    var bf = ballStart;
+    ballLegs.forEach(function (L) {
+      ballG += '<animateMotion dur="' + Math.max(.05, L.d).toFixed(2) + 's" begin="' + sec(L.t) + '" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="' + (L.ease || '.4 0 .3 1') + '" path="M ' + n(bf[0]) + ' ' + n(bf[1]) + (L.via ? ' Q ' + n(L.via[0]) + ' ' + n(L.via[1]) + ' ' : ' L ') + n(L.to[0]) + ' ' + n(L.to[1]) + '"/>';
+      ballG += '<animateMotion dur="600s" begin="' + sec(L.t + Math.max(.05, L.d)) + '" fill="freeze" path="M ' + n(L.to[0]) + ' ' + n(L.to[1]) + ' L ' + n(L.to[0]) + ' ' + n(L.to[1]) + '"/>';
+      if (L.via) ballG += '<animateTransform attributeName="transform" type="scale" values="1;1.7;1" dur="' + L.d.toFixed(2) + 's" begin="' + sec(L.t) + '" fill="freeze" additive="sum"/>';
+      bf = L.to;
+    });
+    ballG += '<ellipse rx="4.2" ry="2.6" fill="url(#' + id + 'b)" stroke="#3d1f0b" stroke-width=".5"/><path d="M-1.6 0H1.6" stroke="#fff" stroke-width=".6"/></g></g>';
+    g += ballG;
+  }
+  // how it finished: a burst where the ball stopped and a tag above it
+  burstAt = tEnd;
+  var good = tag === 'TOUCHDOWN' || tag === '1ST DOWN' || tag === 'GOOD';
+  var bad = tag === 'INTERCEPTED' || tag === 'SACK' || tag === 'NO GOOD';
+  var tc = good ? '#F2C869' : bad ? '#FF9A8C' : tag === 'FLAG' ? '#F2C869' : '#fff';
+  if (kind !== 'inc' && kind !== 'flag') g += '<circle cx="' + n(endP[0]) + '" cy="' + n(endP[1]) + '" r="4" fill="none" stroke="' + tc + '" stroke-width="2" opacity="0"><animate attributeName="r" values="4;18" dur=".6s" begin="' + sec(burstAt) + '" fill="freeze"/><animate attributeName="opacity" values=".9;0" dur=".6s" begin="' + sec(burstAt) + '" fill="freeze"/></circle>';
+  var label = tag;
+  if (kind === 'flag') { var pm = txt.match(/penalty[^,]*,\s*([^,(]+?)(?:,|\s*\(|$)/i); if (pm) label = 'FLAG · ' + pm[1].trim().toUpperCase().slice(0, 22); }
+  if (kind === 'punt' && p.y != null) label = 'PUNT · ' + Math.abs(p.y) + ' YDS';
+  var tw = Math.max(52, label.length * 6.6 + 18), tx = Math.max(tw / 2 + 4, Math.min(W - tw / 2 - 4, endP[0])), ty = endP[1] < 40 ? endP[1] + 12 : endP[1] - 34;
+  g += '<g style="animation:paIn .2s linear ' + sec(burstAt + .1) + ' both"><rect x="' + n(tx - tw / 2) + '" y="' + n(ty) + '" width="' + n(tw) + '" height="20" rx="7" fill="rgba(13,8,32,.9)" stroke="' + tc + '" stroke-opacity=".75"/>' +
+    '<text x="' + n(tx) + '" y="' + n(ty + 14) + '" text-anchor="middle" font-size="11.5" font-weight="800" letter-spacing="1" fill="' + tc + '" ' + F + '>' + _escapeHtml(label) + '</text></g>';
+  if (pick.replay) g += '<g><rect x="8" y="7" width="58" height="17" rx="8.5" fill="rgba(13,8,32,.85)"/><text x="37" y="19" text-anchor="middle" font-size="9.5" font-weight="800" letter-spacing="1.2" fill="#D9D4FA" ' + F + '>REPLAY</text></g>';
+  g += '</g></svg>';
+  var total = tEnd + 2.2;
+  if (E > total) return null;
+  // hand the field back to the drive chart when the scene is over
+  var key = pick.at + ':' + (p.id || p.s + '-' + p.e);
+  if (window._fbpEndKey !== key) {
+    window._fbpEndKey = key;
+    clearTimeout(window._fbpEndT);
+    window._fbpEndT = setTimeout(function () { if (window._fbpReplay && window._fbpReplay.at === pick.at) window._fbpReplay = null; if (typeof _gxRerenderDetail === 'function') _gxRerenderDetail(); }, Math.max(0, (total - E) * 1000 + 60));
+  }
+  window._fbpLastTotal = total;
+  if (!pick.replay && fx.td && fx.td.at < pick.at + total * 1000) fx.td.at = pick.at + total * 1000;
+  return { svg: g, total: total, at: pick.at };
+}
+// Tap a play in the drive list to replay it (a double-tap still reacts).
+function _fbpRowTap(el, playId, tag, text, rawId) {
+  var dbl = el._lastTapTs && (Date.now() - el._lastTapTs) < 400;
+  _playDoubleTap(el, playId, tag, text);
+  clearTimeout(el._fbpT);
+  if (dbl || !rawId) return;
+  el._fbpT = setTimeout(function () { _fbpReplayPlay(rawId); }, 420);
+}
+function _fbpReplayPlay(rawId) {
+  var m = window._gdPregame && window._gdPregame.gx;
+  var s = m && m.situation, list = (s && s.drivePlays) || [];
+  var hit = null;
+  list.forEach(function (p) { if (String(p.id) === String(rawId)) hit = p; });
+  if (!hit) { if (typeof ib_toast === 'function') ib_toast('No replay for that play'); return; }
+  var g = window._activeBrowseGame;
+  window._fbpReplay = { pk: g ? String(g.gamePk) : '', at: Date.now(), p: { id: hit.id, s: 100 - hit.s, e: 100 - hit.e, k: hit.k, y: hit.y, inc: !!hit.inc, text: hit.text || '' } };
+  if (typeof _gxRerenderDetail === 'function') _gxRerenderDetail();
+  var f = document.querySelector('.fbx-field.fbd, .fbx-field.fbp');
+  if (f && f.scrollIntoView) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 // ═══ FOOTBALL BROADCAST LAYOUT (v7.2.0) ══════════════════════════════
 var FBB_BALL = '<svg class="fbb-ball" viewBox="0 0 24 14" role="img" aria-label="Has the ball"><ellipse cx="12" cy="7" rx="11" ry="6.2" fill="#8B4A22" stroke="#5A2C10" stroke-width="1"/><path d="M8 7h8M10 5.3v3.4M12 5.3v3.4M14 5.3v3.4" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M2.6 5.2a11 6 0 0 0 0 3.6M21.4 5.2a11 6 0 0 1 0 3.6" fill="none" stroke="#fff" stroke-width=".9" opacity=".8"/></svg>';
 // Timeouts left, as three bars under a team (the one just used burns out)
@@ -27837,7 +28098,7 @@ function _fbbPlayRowHtml(m, p, first) {
   var tag = p.tag || '';
   var P = _fbbParts(p.text);
   if (p.scoring && !P.kind) P.kind = 'td';
-  var attrs = playId ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"' : '';
+  var attrs = playId ? ' onclick="_fbpRowTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext,\'' + _escapeHtml(String(p.id)) + '\')" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"' : '';
   return '<div class="gh-plays-row' + (first ? ' fbb-now' : '') + '"' + attrs + ' style="' + (first ? 'border-top:0;' : '') + 'padding:0">' +
     '<div class="fbb-pr"><span class="dn">' + _escapeHtml(tag) + '</span><div class="w"><div class="a">' + _fbbChip(P.kind) + '<span class="n">' + _escapeHtml(P.who || P.what) + '</span></div>' +
     (P.who ? '<div class="b">' + _escapeHtml(P.what) + '</div>' : '') + '</div>' + _fbbGain(P.yds) +
