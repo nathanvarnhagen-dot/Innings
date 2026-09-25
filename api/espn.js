@@ -1055,7 +1055,8 @@ function _fbDriveChart(drive, away, home, possSide) {
     if (s0 == null) return;
     if (s1 == null) s1 = s0;
     var y = p.statYardage != null && isFinite(Number(p.statYardage)) ? Number(p.statYardage) : null;
-    out.push({ s: s0, e: s1, k: k, y: y, inc: /incomplet/i.test(t) });
+    // v7.3.2: id + text so each play can be animated and replayed
+    out.push({ id: p.id != null ? String(p.id) : null, s: s0, e: s1, k: k, y: y, inc: /incomplet/i.test(t), text: String(p.text || '').slice(0, 240) });
   });
   return out.slice(-12);
 }
