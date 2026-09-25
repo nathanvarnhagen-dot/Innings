@@ -811,6 +811,7 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
    team, a possession split bar, the down row (football on the side with the
    ball, spot on the other), then latest play → field → current drive. ═══ */
 .fbb-to{display:flex;gap:4px;margin-top:6px}
+.gh-m-compact .fbb-sb .gh-sb-name,.gh-m-intro .fbb-sb .gh-sb-name,.gh-m-closing .fbb-sb .gh-sb-name{max-height:18px!important;opacity:1!important;animation:none!important}
 .fbb-to i{width:16px;height:5px;border-radius:3px;background:#F2C869;box-shadow:0 0 6px rgba(242,200,105,.45)}
 .fbb-to i.u{background:rgba(255,255,255,.14);box-shadow:none}
 .fbb-to i.burn{animation:fbxBurn .9s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
@@ -10437,7 +10438,7 @@ function _runOslPreviewSequence() {
   </div>
 </div>
 <script>
-window.INNINGS_BUILD = 'v7.2.0-football-broadcast';
+window.INNINGS_BUILD = 'v7.2.1-football-top-card';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
@@ -22786,7 +22787,7 @@ function _gxLiveHtml(m, st) {
       '</div></div>';
   };
   if (m.sport === 'football' && typeof _fbxTrack === 'function') _fbxTrack(m); // timeouts read the burn state
-  h += '<div class="gh-row gh-up" style="' + _ghDelay(.15) + '">' + side(m.away, false, !!(prev && prev.away !== m.away.score)) + center + side(m.home, true, !!(prev && prev.home !== m.home.score)) + '</div>';
+  h += '<div class="gh-row gh-up' + (m.sport === 'football' ? ' fbb-sb' : '') + '" style="' + _ghDelay(.15) + '">' + side(m.away, false, !!(prev && prev.away !== m.away.score)) + center + side(m.home, true, !!(prev && prev.home !== m.home.score)) + '</div>';
   if (m.sport === 'football') h += _fbbPossHtml(m) + _fbbDownHtml(m); // v7.2.0
   h += _gxStripHtml(m);
   h += _gxHighlightsListHtml(m, st, { cap: 8, withNew: true, title: m.sport === 'basketball' ? 'Big moments' : (m.sport === 'football' ? 'Scoring plays' : 'Goals') });
@@ -27424,13 +27425,15 @@ function _fbbSecs(v) { var mm = String(v || '').match(/^(\d+):(\d{2})$/); return
 // Time of possession as one bar in team colors, a percentage at each end
 function _fbbPossHtml(m) {
   var row = (m.teamStats || []).filter(function (r) { return r[0] === 'Possession'; })[0];
-  if (!row) return '';
-  var a = _fbbSecs(row[1]), h = _fbbSecs(row[2]);
+  var a = row ? _fbbSecs(row[1]) : null, h = row ? _fbbSecs(row[2]) : null;
+  if ((a == null || h == null || a + h <= 0) && m.possession) { a = m.possession.a; h = m.possession.h; }
   if (a == null || h == null || a + h <= 0) return '';
+  var fmt = function (x) { return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
+  if (!row) row = ['Possession', fmt(a), fmt(h)];
   var ap = Math.round(a / (a + h) * 100), hp = 100 - ap;
   var ac = m.away.colors.accent || m.away.colors.bg, hc = m.home.colors.accent || m.home.colors.bg;
   return '<div class="fbb-poss" role="img" aria-label="Time of possession: ' + _escapeHtml(m.away.abbr) + ' ' + _escapeHtml(row[1]) + ', ' + _escapeHtml(m.home.abbr) + ' ' + _escapeHtml(row[2]) + '">' +
-    '<b style="color:' + ac + '">' + ap + '%</b><div class="bar"><i style="width:' + ap + '%;background:' + m.away.colors.bg + '"></i><i style="width:' + hp + '%;background:' + m.home.colors.bg + '"></i></div><b style="color:' + hc + '">' + hp + '%</b></div>';
+    '<b style="color:' + ac + '">' + ap + '%</b><div class="bar"><i style="width:' + ap + '%;background:' + ac + '"></i><i style="width:' + hp + '%;background:' + hc + '"></i></div><b style="color:' + hc + '">' + hp + '%</b></div>';
 }
 // Down & distance in the middle, the football on the side with the ball,
 // where the ball is on the other side
@@ -27484,7 +27487,7 @@ function _fbbDriveCardHtml(m) {
   if (ids.length) setTimeout(function () { _loadPlayReactions(ids); }, 0);
   var n = _fbbDriveNums(d.summary);
   var tm = d.team && (String(d.team) === String(m.away.abbr) ? m.away : String(d.team) === String(m.home.abbr) ? m.home : null);
-  var nums = [[n.plays, 'PLAYS'], [n.yds, 'YDS'], [n.time, 'TIME']].filter(function (x) { return x[0] != null; });
+  var nums = [[n.plays, 'PLAYS'], [n.yds, 'YDS'], [n.time && n.time !== '0:00' ? n.time : null, 'TIME']].filter(function (x) { return x[0] != null; });
   return '<div class="gh-card gh-up" style="' + _ghDelay(.4) + '"><div class="fbb-dh"><div class="tt"><span class="gh-eyebrow">Current drive</span><b>' + (tm ? '<span class="gh-badge" style="width:22px;height:22px;font-size:7.5px;background:' + tm.colors.bg + ';color:' + tm.colors.fg + '">' + _escapeHtml(tm.abbr) + '</span>' : '') + _escapeHtml(tm ? tm.short || tm.abbr : (d.team || '')) + '</b></div>' +
     (nums.length ? '<div class="nums">' + nums.map(function (x) { return '<div><b>' + _escapeHtml(x[0]) + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' : (d.summary ? '<span class="gh-sub">' + _escapeHtml(d.summary) + '</span>' : '')) + '</div>' + rows + '</div>';
 }
