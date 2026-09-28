@@ -91,10 +91,13 @@ function heroOf(games, moments) {
   const g = games.slice().sort(function (a, b) { return (b.ex || 0) - (a.ex || 0); })[0];
   if (!g) return null;
   const top = moments.filter(function (m) { return m.gameId === g.id; })[0];
-  const w = g.home.score > g.away.score ? g.home : g.away;
-  let line = top ? top.title + '.' : w.short + ' beat the ' + (w === g.home ? g.away.short : g.home.short) + ' ' + Math.max(g.home.score, g.away.score) + '–' + Math.min(g.home.score, g.away.score) + '.';
-  if (g.comeback >= 3) line += ' The ' + w.short + ' came back from ' + g.comeback + ' down.';
-  else if (g.extra && !/overtime|shootout|extra|\b1\dth\b|walk/i.test(line)) line += ' It took ' + g.extra + '.';
+  const w = g.home.score > g.away.score ? g.home : g.away, l = w === g.home ? g.away : g.home;
+  // The score sits right above this line in the app, so tell the story instead
+  const parts = [];
+  if (g.comeback >= 3) parts.push('The ' + w.short + ' came back from ' + g.comeback + ' down.');
+  if (top) parts.push(top.title + (top.when && !/\d(st|nd|rd|th)\b|overtime|buzzer|shootout|\u2032/i.test(top.title) ? ' (' + top.when + ')' : '') + '.');
+  else parts.push('The ' + w.short + ' beat the ' + l.short + (g.extra ? ' in ' + g.extra : '') + '.');
+  const line = parts.join(' ');
   return { gameId: g.id, line: line, wp: g.wp || null };
 }
 function kickDay(d) { return (wday(d) + ', ' + mday(d)).toUpperCase(); }
@@ -240,7 +243,11 @@ async function mlbWeek(req, start, end) {
   });
   games.forEach(function (g) {
     const aw = g.away.score > g.home.score;
-    [[g.away, aw], [g.home, !aw]].forEach(function (x) { const t = teamWeek[x[0].name] || (teamWeek[x[0].name] = [0, 0]); t[x[1] ? 0 : 1]++; });
+    [[g.away, g.home, aw, 0], [g.home, g.away, !aw, 1]].forEach(function (x) {
+      const t = teamWeek[x[0].name] || (teamWeek[x[0].name] = { w: 0, l: 0, abbr: x[0].abbr, g: [] });
+      if (x[2]) t.w++; else t.l++;
+      t.g.push([g.date, x[1].abbr, x[0].score, x[1].score, x[3], g.id]); // date, opponent, us, them, home?, game
+    });
   });
   const top = pickMoments(moments, 5, 1);
   const topGames = games.slice().sort(function (a, b) { return (b.ex || 0) - (a.ex || 0); }).slice(0, 8);
@@ -254,7 +261,7 @@ async function mlbWeek(req, start, end) {
       const wcgb = tr.wildCardGamesBack;
       const close = div1 || wc <= 3 || (wcgb != null && wcgb !== '-' && parseFloat(wcgb) <= 4);
       if (!close) return;
-      const name = tr.team && tr.team.name, wk = teamWeek[name] || [0, 0];
+      const name = tr.team && tr.team.name, tw = teamWeek[name] || { w: 0, l: 0 }, wk = [tw.w, tw.l];
       race.push({ name: name, abbr: (tr.team && tr.team.abbreviation) || '', rec: tr.wins + '–' + tr.losses, week: wk[0] + '–' + wk[1], net: wk[0] - wk[1],
         status: tr.clinched ? (div1 ? 'Clinched division' : 'Clinched') : div1 ? 'Leads division' : wc <= 3 ? 'Wild Card ' + wc : (wcgb && wcgb !== '-' ? wcgb + ' back' : '') });
     });
@@ -359,9 +366,16 @@ function nhlMoment(G, p, team, title, sub, when, d) {
 // ═══ ESPN leagues — football, basketball, soccer ════════════════════════
 async function espnRecap(sport, start, end) {
   const path = ESPN_PATH[sport];
-  const dates = start === end ? start.replace(/-/g, '') : start.replace(/-/g, '') + '-' + end.replace(/-/g, '');
-  const sb = await getJson(ESPN + path + '/scoreboard?limit=300&dates=' + dates);
-  const allEv = ((sb && sb.events) || []).filter(function (e) { return !/postpon|cancel|suspend/i.test((e.status && e.status.type && e.status.type.name) || ''); });
+  // ESPN rejects date ranges for some leagues (football returns 400), so ask one day at a time
+  const boards = await Promise.all(daysBetween(start, end).map(function (d) { return getJson(ESPN + path + '/scoreboard?dates=' + d.replace(/-/g, '')); }));
+  const seen = {}, merged = [];
+  let sb = null;
+  boards.forEach(function (b) {
+    if (!b) return;
+    if (!sb || (!sb.week && b.week)) sb = b;
+    (b.events || []).forEach(function (e) { if (!seen[e.id]) { seen[e.id] = 1; merged.push(e); } });
+  });
+  const allEv = merged.filter(function (e) { return !/postpon|cancel|suspend/i.test((e.status && e.status.type && e.status.type.name) || ''); });
   const events = allEv.filter(function (e) { return e.status && e.status.type && e.status.type.completed; });
   const pending = events.length < allEv.length;
   if (!events.length) return pending ? { empty: true, pending: true } : null;

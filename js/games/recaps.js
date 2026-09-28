@@ -111,26 +111,32 @@ function recapsRefresh() {
     _rcRenderRings();
   });
 }
-function _rcOrdered() {
+// On a league's page only that league's recaps show (MLB also gets its week);
+// the league picker shows every sport. Unwatched rings come first.
+function _rcOrdered(host) {
   var seen = _rcSeen(), cur = window._gamesSport;
-  var onGames = !!(document.querySelector('#screen-games.active'));
-  var rank = function (r, i) {
-    var mine = onGames && (r.sport === cur || (cur === 'mlb' && r.sport === 'mlbw'));
-    return (mine ? 0 : 100) + (seen[r.id] ? 50 : 0) + i;
-  };
-  return window._rcList.map(function (r, i) { return { r: r, k: rank(r, i) }; }).sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; });
+  var list = window._rcList.filter(function (r) {
+    if (host === 'p') return true;
+    return r.sport === cur || (cur === 'mlb' && r.sport === 'mlbw');
+  });
+  return list.map(function (r, i) { return { r: r, k: (seen[r.id] ? 50 : 0) + i }; }).sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; });
 }
 function _rcRenderRings() {
-  var seen = _rcSeen(), list = _rcOrdered();
-  window._rcOrder = list;
-  var html = list.length ? '<div class="rc-rings" role="list" aria-label="Recaps">' + list.map(function (r, i) {
-    var hg = r.hero && r._games[String(r.hero.gameId)], w = hg ? _rcWinner(hg) : null;
-    var col = w && w.colors ? w.colors.bg : '#3D3580';
-    return '<button class="rc-ring' + (seen[r.id] ? ' rc-seen' : '') + '" role="listitem" onclick="recapsOpen(' + i + ')" aria-label="' + _rcEsc(r.title) + ' recap">' +
-      '<span class="rc-r"><span class="rc-in" style="background:radial-gradient(circle at 30% 30%,' + col + ',#140E34)">' + r._emoji + '<b>' + _rcEsc(r.ring && r.ring.sub || '') + '</b></span></span>' +
-      '<span class="rc-l">' + _rcEsc(r.ring && r.ring.label || r.sport.toUpperCase()) + '</span></button>';
-  }).join('') + '</div>' : '';
-  ['games-recaps', 'games-picker-recaps'].forEach(function (id) { var el = document.getElementById(id); if (el) { el.innerHTML = html; el.style.display = list.length ? '' : 'none'; } });
+  var seen = _rcSeen();
+  window._rcOrders = {};
+  [['games-recaps', 'g'], ['games-picker-recaps', 'p']].forEach(function (h) {
+    var el = document.getElementById(h[0]); if (!el) return;
+    var list = _rcOrdered(h[1]);
+    window._rcOrders[h[1]] = list;
+    el.innerHTML = list.length ? '<div class="rc-rings" role="list" aria-label="Recaps">' + list.map(function (r, i) {
+      var hg = r.hero && r._games[String(r.hero.gameId)], w = hg ? _rcWinner(hg) : null;
+      var col = w && w.colors ? w.colors.bg : '#3D3580';
+      return '<button class="rc-ring' + (seen[r.id] ? ' rc-seen' : '') + '" role="listitem" onclick="recapsOpen(' + i + ',\'' + h[1] + '\')" aria-label="' + _rcEsc(r.title) + ' recap">' +
+        '<span class="rc-r"><span class="rc-in" style="background:radial-gradient(circle at 30% 30%,' + col + ',#140E34)">' + r._emoji + '<b>' + _rcEsc(r.ring && r.ring.sub || '') + '</b></span></span>' +
+        '<span class="rc-l">' + _rcEsc(r.ring && r.ring.label || r.sport.toUpperCase()) + '</span></button>';
+    }).join('') + '</div>' : '';
+    el.style.display = list.length ? '' : 'none';
+  });
 }
 
 // Refresh the rings whenever a Games screen opens
@@ -484,16 +490,21 @@ function _rcSpec(r, m) {
 
 // ═══ STORY PLAYER ═══════════════════════════════════════════════════════
 window._rc = { cur: 0, si: 0, raf: null, t0: 0, a0: 0, pausedAt: 0, slides: null };
-function _rcBg(t) { var c = (t && t.colors && t.colors.bg) || '#3D3580'; return 'background:radial-gradient(120% 70% at 50% 100%,' + c + 'bb,transparent 65%),linear-gradient(180deg,#140E34,#05030F)'; }
+// Each slide is lit from the top, where its content sits, and anything left over falls away below
+function _rcBg(t) { var c = (t && t.colors && t.colors.bg) || '#3D3580'; return 'background:radial-gradient(130% 55% at 50% -8%,' + c + 'cc,transparent 72%),radial-gradient(90% 40% at 100% 0%,rgba(242,200,105,.10),transparent 70%),linear-gradient(180deg,#0E0A26 0%,#06041A 60%,#040312 100%)'; }
+function _rcBgPlain() { return 'background:radial-gradient(120% 50% at 50% -10%,rgba(168,159,232,.28),transparent 70%),radial-gradient(80% 36% at 100% 0%,rgba(242,200,105,.12),transparent 70%),linear-gradient(180deg,#0E0A26 0%,#06041A 60%,#040312 100%)'; }
+function _rcShort(t) { return t ? (typeof _teamShortName === 'function' && t.name ? _teamShortName(t.name) : t.short || t.abbr || '') : ''; }
 function _rcWpSvg(d, fill) {
-  var pts = d.map(function (v, i) { return (i / (d.length - 1) * 300).toFixed(0) + ' ' + (70 - v * .6).toFixed(1); }).join(' L');
-  return '<svg viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="300" y1="40" y2="40" stroke="rgba(255,255,255,.2)" stroke-dasharray="3 4"/><path d="M' + pts + ' L300 70 L0 70Z" fill="' + fill + '" opacity=".3"/><path class="rc-draw" d="M' + pts + '" fill="none" stroke="#fff" stroke-width="2.2"/></svg>';
+  var pts = d.map(function (v, i) { return (i / (d.length - 1) * 300).toFixed(0) + ' ' + (66 - v * .56).toFixed(1); }).join(' L');
+  return '<svg viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="300" y1="38" y2="38" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/><path d="M' + pts + ' L300 70 L0 70Z" fill="' + fill + '" opacity=".28"/><path class="rc-draw" d="M' + pts + '" fill="none" stroke="#fff" stroke-width="2.2" vector-effect="non-scaling-stroke"/></svg>';
 }
 function _rcFinal(r, g) {
   if (!g) return '';
   var aw = g.away.score > g.home.score;
   return '<button class="rc-fin" onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(g.id)) + '\')"><span class="rc-kk rc-kk-dim">' + _rcEsc(g.note || 'FINAL').toUpperCase() + '</span>' + _rcLo(g.away, 's') + '<span class="' + (aw ? '' : 'rc-lz') + '">' + g.away.score + '</span><span class="rc-lz">–</span><span class="' + (aw ? 'rc-lz' : '') + '">' + g.home.score + '</span>' + _rcLo(g.home, 's') + '<span class="rc-go">Open game ›</span></button>';
 }
+function _rcDayName(ymd) { try { return new Date(ymd + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' }); } catch (e) { return ''; } }
+// Your team: your favorite first, then teams you follow (set with the gear on the Games page)
 function _rcYours(r) {
   var favs = (window._favTeamsCache || {})[r.league];
   if (!favs) return null;
@@ -501,54 +512,79 @@ function _rcYours(r) {
   for (var i = 0; i < names.length; i++) {
     var n = names[i];
     var g = (r.games || []).filter(function (x) { return x.away.name === n || x.home.name === n; })[0];
-    if (r.sport === 'mlbw' && r.teamWeek && r.teamWeek[n]) {
-      var wk = r.teamWeek[n], team = g ? (g.home.name === n ? g.home : g.away) : _rcTeam(r, { name: n, abbr: '' });
+    var tw = r.sport === 'mlbw' && r.teamWeek && r.teamWeek[n];
+    if (tw && tw.g) {
+      var team = _rcTeam(r, { name: n, abbr: tw.abbr });
       var race = (r.race || []).filter(function (x) { return x.name === n; })[0];
-      if (!team.abbr && race) team = Object.assign({}, team, { abbr: race.abbr, colors: _rcColors('mlb', { abbr: race.abbr }) });
-      var short = typeof _teamShortName === 'function' ? _teamShortName(n) : n;
-      return { team: team, title: 'The ' + short + ' went ' + wk[0] + '–' + wk[1] + ' this week', sub: race ? race.rec + ' · ' + race.status : '', game: g || null };
+      var best = tw.g.filter(function (x) { return x[2] > x[3]; }).sort(function (a, b) { return (b[2] - b[3]) - (a[2] - a[3]); })[0] || tw.g[tw.g.length - 1];
+      return { team: team, name: _rcShort(team) || n, rec: tw.w + '–' + tw.l, title: tw.w > tw.l ? 'A winning week: ' + tw.w + '–' + tw.l : tw.w === tw.l ? 'A split week: ' + tw.w + '–' + tw.l : 'A tough week: ' + tw.w + '–' + tw.l, sub: race ? race.rec + ' · ' + race.status : '', results: tw.g, saveId: best ? best[5] : null };
     }
     if (g) {
       var mine = g.home.name === n ? g.home : g.away, other = mine === g.home ? g.away : g.home, won = mine.score > other.score;
       var mo = (r.moments || []).filter(function (m) { return String(m.gameId) === String(g.id); })[0];
-      var sn = function (t) { return typeof _teamShortName === 'function' ? _teamShortName(t.name) : t.short || t.name; };
       var w = won ? mine : other, l = won ? other : mine;
-      return { team: mine, title: sn(w) + ' ' + w.score + ', ' + sn(l) + ' ' + l.score + (g.note && g.note !== 'Final' ? ' (' + g.note.replace(/^F\//, '') + ')' : ''), sub: mo ? mo.title + '.' : (won ? 'A win' : 'A loss') + (g.date ? ' on ' + new Date(g.date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long' }) : '') + '.', game: g };
+      return { team: mine, name: _rcShort(mine), rec: won ? 'W' : 'L', title: _rcShort(w) + ' ' + w.score + ', ' + _rcShort(l) + ' ' + l.score + (g.note && !/^final$/i.test(g.note) ? ' (' + g.note.replace(/^F\//, '') + ')' : ''), sub: mo ? mo.title + '.' : '', game: g, saveId: g.id };
     }
   }
   return null;
 }
 function _rcSlides(r) {
   var s = [], week = _rcIsWeek(r), h = r.hero, hg = h && r._games[String(h.gameId)];
-  s.push({ dur: 4500, html: '<div class="rc-slide rc-end"><div class="rc-bgA" style="background:radial-gradient(90% 60% at 50% 30%,rgba(242,200,105,.3),transparent 70%),linear-gradient(180deg,#1d1450,#05030F)"></div><span class="rc-kk">' + _rcEsc(r.kick) + '</span><div class="rc-big">' + _rcEsc(r.title) + '</div><div class="rc-sm">' + _rcEsc(r.dek) + '</div></div>' });
+  var heroW = hg ? _rcWinner(hg) : null;
+  var open = function (id, label) { return '<button class="rc-btn" onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(id)) + '\')">' + (label || 'Open game') + ' ›</button>'; };
+  // 1 · cover — the headline and what's inside
+  var inside = (r.moments || []).slice(0, 3).map(function (m, i) {
+    var t = _rcTeam(r, m.team);
+    return '<div class="rc-in-row"><span class="rc-num">' + ('0' + (i + 1)) + '</span>' + _rcLo(t, 's') + '<span class="rc-in-t">' + _rcEsc(m.title) + '</span><span class="rc-in-w">' + _rcEsc(m.when || '') + '</span></div>';
+  }).join('');
+  var gcount = r.kind === 'week' && r.sport === 'mlbw' ? '' : (r.games || []).length;
+  s.push({ dur: 6000, html: '<div class="rc-slide"><div class="rc-bgA" style="' + (heroW ? _rcBg(heroW) : _rcBgPlain()) + '"></div>' +
+    '<span class="rc-kk">' + _rcEsc(r.kick) + '</span><div class="rc-big">' + _rcEsc(r.title) + '</div><div class="rc-sm">' + _rcEsc(r.dek) + '</div>' +
+    (inside ? '<div class="rc-card"><div class="rc-card-h"><span class="rc-kk rc-kk-dim">INSIDE</span>' + (gcount ? '<span class="rc-card-n">' + gcount + (gcount === 1 ? ' game' : ' games') + '</span>' : '') + '</div>' + inside + '</div>' : '') +
+    '<div class="rc-hint">Tap to start ›</div></div>' });
+  // 2 · game of the day / week
   if (hg) {
-    var w = _rcWinner(hg), wp = h.wp && h.wp.length > 3 ? (w === hg.home ? h.wp : h.wp.map(function (v) { return 100 - v; })) : null;
-    s.push({ dur: 6000, html: '<div class="rc-slide rc-end"><div class="rc-bgA" style="' + _rcBg(w) + '"></div><span class="rc-kk">' + (week ? 'GAME OF THE WEEK' : 'GAME OF THE DAY') + '</span>' +
-      '<div class="rc-scbig"><div class="rc-tm">' + _rcLo(hg.away, 'l') + '<b class="' + (w === hg.away ? '' : 'rc-lose') + '">' + hg.away.score + '</b></div><span class="rc-kk rc-kk-dim">' + _rcEsc(hg.note || 'Final').toUpperCase() + '</span><div class="rc-tm">' + _rcLo(hg.home, 'l') + '<b class="' + (w === hg.home ? '' : 'rc-lose') + '">' + hg.home.score + '</b></div></div>' +
-      '<div class="rc-mid">' + _rcEsc(h.line) + '</div>' +
-      (wp ? '<div class="rc-kk rc-kk-dim">WIN PROBABILITY · ' + _rcEsc(w.abbr) + '</div><div class="rc-wp">' + _rcWpSvg(wp, (w.colors && w.colors.accent) || '#A89FE8') + '</div>' : '') +
-      '<div class="rc-cta"><button onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(hg.id)) + '\')">Open game ›</button></div></div>' });
+    var wp = h.wp && h.wp.length > 3 ? (heroW === hg.home ? h.wp : h.wp.map(function (v) { return 100 - v; })) : null;
+    var side = function (t) { var win = t === heroW; return '<div class="rc-tm">' + _rcLo(t, 'l') + '<span class="rc-tn">' + _rcEsc(_rcShort(t)) + '</span><b class="' + (win ? '' : 'rc-lose') + '">' + t.score + '</b></div>'; };
+    s.push({ dur: 7000, html: '<div class="rc-slide"><div class="rc-bgA" style="' + _rcBg(heroW) + '"></div><span class="rc-kk">' + (week ? 'GAME OF THE WEEK' : 'GAME OF THE DAY') + '</span>' +
+      '<div class="rc-scbig">' + side(hg.away) + '<span class="rc-kk rc-kk-dim rc-note">' + _rcEsc(hg.note || 'Final').toUpperCase() + '</span>' + side(hg.home) + '</div>' +
+      '<div class="rc-mid rc-mid-s">' + _rcEsc(h.line) + '</div>' +
+      (wp ? '<div class="rc-wpbox"><div class="rc-wp-h"><span class="rc-kk rc-kk-dim">WIN PROBABILITY</span><span class="rc-wp-t">' + _rcLo(heroW, 's') + _rcEsc(heroW.abbr) + '</span></div><div class="rc-wp">' + _rcWpSvg(wp, (heroW.colors && heroW.colors.accent) || '#A89FE8') + '</div><div class="rc-wp-f"><span>First pitch</span><span>50%</span><span>Final</span></div></div>' : '') +
+      '<div class="rc-cta">' + open(hg.id) + '</div></div>' });
   }
+  // 3 · the moments
   (r.moments || []).forEach(function (m, i) {
     var t = _rcTeam(r, m.team), g = r._games[String(m.gameId)];
     var chip = g ? _rcEsc(g.away.abbr + ' @ ' + g.home.abbr) + (m.when ? ' · ' + _rcEsc(m.when) : '') : _rcEsc(m.when || '');
     s.push({ dur: 8500, moment: m, col: (t.colors && t.colors.accent) || '#A89FE8', html: '<div class="rc-slide rc-mo"><div class="rc-bgA" style="' + _rcBg(t) + '"></div>' +
       '<div class="rc-anim"><span class="rc-gm">' + _rcLo(t, 's') + chip + '</span><svg viewBox="0 0 360 250" class="rc-asvg" role="img" aria-label="' + _rcEsc(m.title) + '"></svg><button class="rc-rp" onclick="event.stopPropagation();recapsReplay()">↻ Replay</button></div>' +
-      '<span class="rc-kk" style="margin-top:6px">' + (i === 0 ? 'MOMENT OF THE ' + (week ? 'WEEK' : 'DAY') : 'NO. ' + (i + 1)) + '</span><div class="rc-mid">' + _rcEsc(m.title) + '</div><div class="rc-sm">' + _rcEsc(m.sub) + '</div>' +
-      (m.swing >= 5 ? '<div class="rc-row"><span class="rc-tag">+' + m.swing + '% WIN PROBABILITY</span></div>' : '') + _rcFinal(r, g) + '</div>' });
+      '<div class="rc-row"><span class="rc-kk">' + (i === 0 ? 'MOMENT OF THE ' + (week ? 'WEEK' : 'DAY') : 'NO. ' + (i + 1)) + '</span>' + (m.swing >= 5 ? '<span class="rc-tag">+' + m.swing + '% WIN PROB</span>' : '') + '</div>' +
+      '<div class="rc-mid">' + _rcEsc(m.title) + '</div>' + (m.sub ? '<div class="rc-sm">' + _rcEsc(m.sub) + '</div>' : '') + _rcFinal(r, g) + '</div>' });
   });
+  // 4 · by the numbers + around the league
   var games = (r.games || []).slice().sort(function (a, b) { return (b.ex || 0) - (a.ex || 0); }).slice(0, 10);
-  s.push({ dur: 5500, html: '<div class="rc-slide rc-end"><div class="rc-bgA" style="background:linear-gradient(180deg,#1d1450,#05030F)"></div>' +
+  s.push({ dur: 6500, html: '<div class="rc-slide"><div class="rc-bgA" style="' + _rcBgPlain() + '"></div>' +
     ((r.nums || []).length ? '<span class="rc-kk">BY THE NUMBERS</span><div class="rc-nums">' + r.nums.map(function (n) { return '<div><b>' + _rcEsc(n[0]) + '</b><span>' + _rcEsc(n[1]) + '</span></div>'; }).join('') + '</div>' : '') +
-    '<span class="rc-kk" style="margin-top:6px">AROUND THE LEAGUE</span><div class="rc-mini">' + games.map(function (g) { var aw = g.away.score > g.home.score; return '<button onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(g.id)) + '\')">' + _rcLo(g.away, 's') + '<span class="' + (aw ? 'rc-w' : 'rc-lz') + '">' + g.away.score + '</span><span style="opacity:.4">–</span><span class="' + (aw ? 'rc-lz' : 'rc-w') + '">' + g.home.score + '</span>' + _rcLo(g.home, 's') + '</button>'; }).join('') + '</div></div>' });
+    (games.length ? '<span class="rc-kk rc-gap">' + (week ? 'BEST GAMES' : 'AROUND THE LEAGUE') + '</span><div class="rc-mini">' + games.map(function (g) { var aw = g.away.score > g.home.score; return '<button onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(g.id)) + '\')">' + _rcLo(g.away, 's') + '<span class="' + (aw ? 'rc-w' : 'rc-lz') + '">' + g.away.score + '</span><span class="rc-dash">–</span><span class="' + (aw ? 'rc-lz' : 'rc-w') + '">' + g.home.score + '</span>' + _rcLo(g.home, 's') + (g.note && !/^final$/i.test(g.note) ? '<i>' + _rcEsc(g.note.replace(/^F\//, '')) + '</i>' : '') + '</button>'; }).join('') + '</div>' : '') + '</div>' });
+  // 5 · the race (MLB week)
   if (r.race && r.race.length) {
-    s.push({ dur: 6000, html: '<div class="rc-slide rc-end"><div class="rc-bgA" style="background:radial-gradient(90% 60% at 50% 20%,rgba(124,242,156,.18),transparent 70%),linear-gradient(180deg,#1d1450,#05030F)"></div><span class="rc-kk">THE RACE</span><div class="rc-mid">How the contenders played this week</div><div class="rc-race">' +
-      r.race.map(function (x) { var t = { abbr: x.abbr, colors: _rcColors('mlb', { abbr: x.abbr }) }; return '<div>' + _rcLo(t, 's') + '<span class="rc-rn">' + _rcEsc(typeof _teamShortName === 'function' ? _teamShortName(x.name) : x.name) + '<small>' + _rcEsc(x.rec + (x.status ? ' · ' + x.status : '')) + '</small></span><b class="' + (x.net > 0 ? 'rc-up' : x.net < 0 ? 'rc-down' : '') + '">' + _rcEsc(x.week) + '</b></div>'; }).join('') + '</div></div>' });
+    s.push({ dur: 6500, html: '<div class="rc-slide"><div class="rc-bgA" style="' + _rcBgPlain() + '"></div><span class="rc-kk">THE RACE</span><div class="rc-mid">How the contenders played this week</div><div class="rc-race">' +
+      r.race.map(function (x) { var t = { abbr: x.abbr, name: x.name, colors: _rcColors('mlb', { abbr: x.abbr }) }; return '<div>' + _rcLo(t, 's') + '<span class="rc-rn">' + _rcEsc(_rcShort(t)) + '<small>' + _rcEsc(x.rec + (x.status ? ' · ' + x.status : '')) + '</small></span><b class="' + (x.net > 0 ? 'rc-up' : x.net < 0 ? 'rc-down' : '') + '">' + _rcEsc(x.week) + '</b></div>'; }).join('') + '</div></div>' });
   }
+  // 6 · your team
   var y = _rcYours(r);
   if (y) {
-    s.push({ dur: 6000, yours: y, html: '<div class="rc-slide rc-end"><div class="rc-bgA" style="' + _rcBg(y.team) + '"></div><span class="rc-kk" style="color:#7CF29C">YOUR TEAM</span>' + _rcLo(y.team, 'l') + '<div class="rc-big" style="font-size:32px">' + _rcEsc(y.title) + '</div><div class="rc-sm">' + _rcEsc(y.sub) + '</div>' +
-      '<div class="rc-cta"><button onclick="event.stopPropagation();recapsShare()">↗ Share</button>' + (y.game ? '<button onclick="event.stopPropagation();recapsSaveMemory(\'' + _rcEsc(String(y.game.id)) + '\')">★ Save to memories</button>' : '') + '</div></div>' });
+    var body = '';
+    if (y.results) {
+      body = '<div class="rc-res">' + y.results.map(function (x) {
+        var won = x[2] > x[3];
+        return '<button class="' + (won ? 'rc-res-w' : 'rc-res-l') + '" onclick="event.stopPropagation();recapsOpenGame(\'' + _rcEsc(String(x[5])) + '\')"><span class="rc-res-d">' + _rcEsc(_rcDayName(x[0])) + '</span><b>' + (won ? 'W' : 'L') + '</b><span class="rc-res-s">' + x[2] + '–' + x[3] + '</span><span class="rc-res-o">' + (x[4] ? 'vs ' : '@ ') + _rcEsc(x[1]) + '</span></button>';
+      }).join('') + '</div>';
+    } else if (y.game) body = _rcFinal(r, y.game);
+    s.push({ dur: 7000, yours: y, html: '<div class="rc-slide"><div class="rc-bgA" style="' + _rcBg(y.team) + '"></div><span class="rc-kk" style="color:#7CF29C">YOUR TEAM</span>' +
+      '<div class="rc-yt">' + _rcLo(y.team, 'l') + '<span>' + _rcEsc(y.name) + '</span><em>' + _rcEsc(y.rec) + '</em></div>' +
+      '<div class="rc-big rc-big-s">' + _rcEsc(y.title) + '</div>' + (y.sub ? '<div class="rc-sm">' + _rcEsc(y.sub) + '</div>' : '') + body +
+      '<div class="rc-cta"><button class="rc-btn" onclick="event.stopPropagation();recapsShare()">↗ Share</button>' + (y.saveId ? '<button class="rc-btn rc-btn-gold" onclick="event.stopPropagation();recapsSaveMemory(\'' + _rcEsc(String(y.saveId)) + '\')">★ Save to memories</button>' : '') + '</div></div>' });
   }
   return s;
 }
@@ -565,8 +601,8 @@ function _rcEl() {
   }
   return el;
 }
-function recapsOpen(i) {
-  var R = window._rc; R.list = (window._rcOrder || window._rcList).slice(); R.cur = i; R.si = 0; R.slides = null;
+function recapsOpen(i, host) {
+  var R = window._rc; R.list = ((window._rcOrders || {})[host || 'p'] || window._rcList).slice(); R.cur = i; R.si = 0; R.slides = null;
   if (!R.list[i]) return;
   var el = _rcEl(); el.classList.add('rc-on');
   document.documentElement.classList.add('rc-lock');
@@ -624,7 +660,20 @@ function recapsStep(d) {
   else if (R.si >= R.slides.length) { if (R.cur < R.list.length - 1) { R.cur++; R.si = 0; R.slides = null; } else { recapsClose(); return; } }
   _rcShow();
 }
-function _rcGame(id) { var r = window._rc.list[window._rc.cur]; return { r: r, g: r && r._games[String(id)] }; }
+function _rcGame(id) {
+  var r = window._rc.list[window._rc.cur], g = r && r._games[String(id)];
+  if (!g && r && r.teamWeek) { // a game from your team's week that isn't one of the featured ones
+    Object.keys(r.teamWeek).some(function (n) {
+      var x = (r.teamWeek[n].g || []).filter(function (q) { return String(q[5]) === String(id); })[0];
+      if (!x) return false;
+      var us = { name: n, abbr: r.teamWeek[n].abbr, score: x[2] }, them = { name: '', abbr: x[1], score: x[3] };
+      Object.keys(r.teamWeek).forEach(function (m) { if (r.teamWeek[m].abbr === x[1]) them.name = m; });
+      g = { id: x[5], date: x[0], away: x[4] ? them : us, home: x[4] ? us : them };
+      return true;
+    });
+  }
+  return { r: r, g: g };
+}
 function recapsOpenGame(id) {
   var x = _rcGame(id); if (!x.g) return;
   recapsClose();
