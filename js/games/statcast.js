@@ -171,6 +171,147 @@ function _savZonesSvg(seq, x1, y1, x2, y2) {
   return out;
 }
 
+// ══ v7.7.0 · NEW PITCHER — his real numbers everywhere on the at-bat card ══
+// Savant's percentile colors: blue (poor) → grey (average) → red (great).
+function _savPctColor(p) {
+  var st = [[0, [50, 102, 204]], [50, [160, 160, 175]], [100, [214, 41, 50]]];
+  for (var i = 0; i < st.length - 1; i++) {
+    var a = st[i], b = st[i + 1];
+    if (p <= b[0]) {
+      var t = (p - a[0]) / (b[0] - a[0]);
+      return 'rgb(' + a[1].map(function (c, k) { return Math.round(c + (b[1][k] - c) * t); }).join(',') + ')';
+    }
+  }
+  return 'rgb(214,41,50)';
+}
+var _SAV_PITCH_COL = { FF: '#E8584C', FA: '#E8584C', SI: '#F2A33A', FT: '#F2A33A', FC: '#B07A4F', SL: '#4FB3E8', ST: '#37D0C8', SV: '#4FB3E8', CU: '#6C7BF2', KC: '#8A7BF2', CS: '#6C7BF2', CH: '#5CCB7A', FS: '#3FBF9A', FO: '#3FBF9A', SC: '#9BE8AC', KN: '#C9C2F5', EP: '#C9C2F5' };
+function _savPitchColor(code) { return _SAV_PITCH_COL[code] || '#A89FE8'; }
+function _savPlayerData(id) {
+  if (!id) return null;
+  return _savGet('player', String(id), '/api/mlb?mode=savant&smode=player&id=' + encodeURIComponent(id), 6 * 3600e3, _savRerender);
+}
+function _savSeasonData(id, onArrive) {
+  if (!id) return null;
+  return _savGet('season', String(id), '/api/mlb?mode=season&id=' + encodeURIComponent(id), 30 * 60e3, onArrive || _savRerender);
+}
+window._sav.season = window._sav.season || {};
+// K%, whiff, chase — plus his standout (highest other percentile, if 80+)
+function _savKeyPcts(d) {
+  var list = (d && d.pitcher && d.pitcher.percentiles) || [];
+  if (!list.length) return [];
+  var pick = [], used = {};
+  [/^k ?%/i, /^whiff/i, /^chase/i].forEach(function (re) {
+    var x = list.filter(function (y) { return re.test(y.label || ''); })[0];
+    if (x) { pick.push(x); used[x.label] = 1; }
+  });
+  var rest = list.filter(function (y) { return !used[y.label] && y.pct != null; }).sort(function (a, b) { return b.pct - a.pct; });
+  if (rest[0] && rest[0].pct >= 80) pick.push(rest[0]);
+  else { var xe = list.filter(function (y) { return /^xera/i.test(y.label || ''); })[0]; if (xe) pick.push(xe); }
+  return pick;
+}
+function _savShortLabel(l) { return String(l || '').replace(/\s*%$/, ' %').replace(/^Whiff %$/, 'Whiff').replace(/^Chase rate$/, 'Chase'); }
+function _savOpenAttrs(p) {
+  return 'data-name="' + _escapeHtml(p.name || '') + '" data-id="' + _escapeHtml(String(p.id)) + '" data-league="mlb" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id,this.dataset.league)"';
+}
+// The first batter a reliever faces: who he is, his season, his Savant profile.
+function _ghNowPitchingHtml(mp) {
+  if (!mp || !mp.id) return '';
+  var d = _savPlayerData(mp.id);
+  var se = mp.season;
+  var h = '<div class="np-card"><div class="np-top"><span class="np-chip">NOW PITCHING</span>' +
+    (mp.replaced ? '<span class="np-rep">replaces ' + _escapeHtml(mp.replaced) + '</span>' : '') + '</div>' +
+    '<div class="np-name"><button type="button" class="np-nm" ' + _savOpenAttrs(mp) + '>' + _escapeHtml(mp.name || '') + '</button>' +
+    '<span class="np-hand">' + _escapeHtml([mp.hand ? mp.hand + 'HP' : '', mp.teamAbbr || ''].filter(Boolean).join(' · ')) + '</span></div>';
+  if (se) {
+    var cells = [['ERA', se.era], ['IP', se.ip], ['K', se.k], ['WHIP', se.whip], ['AVG', se.avg]].filter(function (c) { return c[1] != null && c[1] !== ''; });
+    h += '<div class="np-eb">' + (window._activeBrowseGame && window._activeBrowseGame.season ? window._activeBrowseGame.season + ' ' : '') + 'REGULAR SEASON</div>' +
+      '<div class="np-grid" style="grid-template-columns:repeat(' + cells.length + ',minmax(0,1fr))">' + cells.map(function (c) { return '<div><b>' + _escapeHtml(String(c[1])) + '</b><span>' + c[0] + '</span></div>'; }).join('') + '</div>';
+    var bits = [];
+    if (se.g != null) bits.push(se.g + (se.g === 1 ? ' game' : ' games'));
+    if (se.w != null && se.l != null) bits.push(se.w + '–' + se.l);
+    if (se.gs) bits.push(se.gs + ' starts');
+    if (se.sv) bits.push(se.sv + (se.sv === 1 ? ' save' : ' saves'));
+    if (se.hld) bits.push(se.hld + (se.hld === 1 ? ' hold' : ' holds'));
+    if (bits.length) h += '<div class="np-sub">' + _escapeHtml(bits.join(' · ')) + '</div>';
+  }
+  var pcts = _savKeyPcts(d);
+  if (pcts.length) {
+    h += '<div class="np-sec"><div class="np-row"><span class="np-eb" style="margin:0">SAVANT PERCENTILES</span><span class="np-mut">vs all MLB pitchers</span></div>' +
+      pcts.map(function (x) {
+        var p = Math.max(1, Math.min(100, Math.round(x.pct))), c = _savPctColor(p);
+        return '<div class="np-pct"><span>' + _escapeHtml(x.label) + '</span><div class="np-trk"><i style="width:' + p + '%;background:' + c + '"></i><b style="left:calc((100% - 22px) * ' + (p / 100).toFixed(2) + ');background:' + c + '">' + p + '</b></div></div>';
+      }).join('') + '</div>';
+  }
+  var ars = (d && d.pitcher && d.pitcher.arsenal) || [];
+  if (ars.length) {
+    h += '<div class="np-sec"><span class="np-eb" style="margin:0">WHAT HE THROWS</span>' + ars.slice(0, 3).map(function (a) {
+      var c = _savPitchColor(a.code), u = a.usage != null ? a.usage : 0;
+      return '<div class="np-ars"><i style="background:' + c + '"></i><span class="np-an">' + _escapeHtml(_savPitchShort(a.name || a.code)) + '</span><div class="np-ab"><i style="width:' + Math.min(100, u) + '%;background:' + c + '"></i></div><b>' + Math.round(u) + '%</b><span class="np-mph">' + (a.mph != null ? a.mph.toFixed(1) + ' mph' : '') + '</span></div>';
+    }).join('') + (ars.length > 3 ? '<span class="np-mut">+ ' + _escapeHtml(ars.slice(3).map(function (a) { return _savPitchShort(a.name || a.code).toLowerCase(); }).join(', ')) + '</span>' : '') + '</div>';
+  } else if (!d && !(window._sav.player[String(mp.id)] || {}).failed) {
+    h += '<div class="np-mut" style="margin-top:10px">Loading Statcast…</div>';
+  }
+  h += '<button type="button" class="np-btn" ' + _savOpenAttrs(mp) + '>His Baseball Savant page<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button></div>';
+  return h;
+}
+function _savPitchShort(n) { return String(n || '').replace(/^4-Seam Fastball$/i, '4-Seam').replace(/^Four-Seam Fastball$/i, '4-Seam').replace(/^Knuckle Curve$/i, 'Knuckle curve'); }
+// The rest of his outing: percentile chips + a way to his page.
+function _ghPitcherChipsHtml(mp) {
+  if (!mp || !mp.id) return '';
+  var pcts = _savKeyPcts(_savPlayerData(mp.id));
+  if (!pcts.length) return '';
+  return '<div class="np-chips">' + pcts.map(function (x) {
+    var p = Math.max(1, Math.min(100, Math.round(x.pct)));
+    return '<span class="np-mini"><b style="background:' + _savPctColor(p) + '">' + p + '</b>' + _escapeHtml(_savShortLabel(x.label)) + '</span>';
+  }).join('') + '<button type="button" class="np-sv" ' + _savOpenAttrs(mp) + '>Savant ›</button></div>';
+}
+// Pitch mix today (every pitch he's thrown in this game) vs his season.
+function _ghMixTodayHtml(box, mp) {
+  if (!mp || !mp.id || !box) return '';
+  var d = _savPlayerData(mp.id), ars = (d && d.pitcher && d.pitcher.arsenal) || [];
+  if (!ars.length) return '';
+  var counts = {}, total = 0, add = function (code) { if (!code) return; counts[code] = (counts[code] || 0) + 1; total++; };
+  (box.allPlays || []).forEach(function (pl) {
+    if (!pl.anim || String(pl.anim.pitcherId) !== String(mp.id)) return;
+    (pl.pitches || []).forEach(function (x) { add(x.code); });
+  });
+  var seq = box.pitchSequence;
+  if (seq && String(seq.pitcherId) === String(mp.id) && !(box.allPlays || []).some(function (pl) { return pl.atBatIndex === seq.atBatIndex; })) (seq.pitches || []).forEach(function (x) { add(x.code); });
+  if (total < 8) return '';
+  var avg = {}; ars.forEach(function (a) { avg[a.code] = a; });
+  var rows = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 3);
+  return '<div class="np-mix"><div class="np-row"><span class="np-eb" style="margin:0">MIX TODAY VS SEASON</span><span class="np-mut">' + total + ' pitches</span></div><div class="np-mixg">' +
+    rows.map(function (code) {
+      var pct = Math.round(counts[code] / total * 100), a = avg[code], c = _savPitchColor(code);
+      return '<span class="np-mn"><i style="background:' + c + '"></i>' + _escapeHtml(_savPitchShort(a ? a.name : code)) + '</span><div class="np-ab"><i style="width:' + pct + '%;background:' + c + '"></i></div><b>' + pct + '%</b><span class="np-mut">' + (a && a.usage != null ? Math.round(a.usage) + '% avg' : '') + '</span>';
+    }).join('') + '</div></div>';
+}
+// Top of the player sheet: the regular-season line (hand, position, team).
+function _savSeasonHtml(id) {
+  var want = String(id);
+  var d = _savSeasonData(id, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); });
+  if (!d || d.error) return '';
+  var head = [d.hand && d.pos === 'P' ? d.hand + 'HP' : d.pos, d.team].filter(Boolean).join(' · ');
+  var blk = function (title, cells, sub) {
+    cells = cells.filter(function (c) { return c[1] != null && c[1] !== ''; });
+    if (!cells.length) return '';
+    return '<div class="sav-sec sav-season"><div class="np-row"><span class="gh-eyebrow">' + title + '</span>' + (head ? '<span class="np-mut">' + _escapeHtml(head) + '</span>' : '') + '</div>' +
+      '<div class="np-grid" style="grid-template-columns:repeat(' + cells.length + ',minmax(0,1fr))">' + cells.map(function (c) { return '<div><b>' + _escapeHtml(String(c[1])) + '</b><span>' + c[0] + '</span></div>'; }).join('') + '</div>' +
+      (sub ? '<div class="np-sub">' + _escapeHtml(sub) + '</div>' : '') + '</div>';
+  };
+  var out = '';
+  var p = d.pitching, b = d.hitting;
+  if (p && (d.pos === 'P' || !b)) {
+    var bits = [];
+    if (p.g != null) bits.push(p.g + ' games'); if (p.w != null) bits.push(p.w + '–' + p.l);
+    if (p.gs) bits.push(p.gs + ' starts'); if (p.sv) bits.push(p.sv + ' saves'); if (p.hld) bits.push(p.hld + ' holds');
+    out += blk(d.season + ' regular season', [['ERA', p.era], ['IP', p.ip], ['K', p.k], ['BB', p.bb], ['WHIP', p.whip]], bits.join(' · '));
+  } else if (b) {
+    out += blk(d.season + ' regular season', [['AVG', b.avg], ['OBP', b.obp], ['SLG', b.slg], ['HR', b.hr], ['RBI', b.rbi]], b.g != null ? b.g + ' games' + (b.pa != null ? ' · ' + b.pa + ' PA' : '') : '');
+  }
+  return out;
+}
+
 // ── 8, 9, 10 · Player sheet: percentiles, arsenal, spray chart
 function _savPlayerSheetFill(id) {
   var box = document.getElementById('player-sav');
@@ -184,21 +325,24 @@ function _savPlayerSheetFill(id) {
   if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' + (e.why ? '<span style="display:block;margin-top:4px;font-size:11px;color:#6F6A98">(' + _escapeHtml(String(e.why).slice(0, 140)) + ')</span>' : '') : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
   // a partial answer (Savant was slow) fills in with one more try
   if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/mlb?mode=savant&smode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
-  var html = _savMatchupHtml(id);
+  var html = _savSeasonHtml(id) + _savMatchupHtml(id);
   var pctBlock = function (title, list) {
     if (!list || !list.length) return '';
     return '<div class="sav-sec"><span class="gh-eyebrow">' + title + '</span>' + list.map(function (x) {
       var p = Math.max(1, Math.min(100, Math.round(x.pct)));
-      var col = p >= 70 ? '#F04848' : p < 35 ? '#4C9DFF' : '#9C95D0';
-      return '<div class="sav-pct"><span class="sav-pct-l">' + _escapeHtml(x.label) + '</span><span class="sav-pct-bar"><i style="width:' + p + '%;background:' + col + '"></i><b style="left:calc(' + p + '% - 11px);background:' + col + '">' + p + '</b></span></div>';
-    }).join('') + '</div>';
+      var col = _savPctColor(p);
+      // v7.7.0: Savant's own scale (blue poor → grey → red great); the circle stays inside the track
+      return '<div class="sav-pct"><span class="sav-pct-l">' + _escapeHtml(x.label) + '</span><span class="sav-pct-bar"><i style="width:' + p + '%;background:' + col + '"></i><b style="left:calc((100% - 22px) * ' + (p / 100).toFixed(2) + ');background:' + col + '">' + p + '</b></span></div>';
+    }).join('') + '<div class="sav-legend"><span>Poor</span><span>Average</span><span>Great</span></div></div>';
   };
   if (d.pitcher) html += pctBlock('Pitching percentiles · ' + d.year, d.pitcher.percentiles);
   if (d.batter) html += pctBlock('Hitting percentiles · ' + d.year, d.batter.percentiles);
   if (d.pitcher && d.pitcher.arsenal && d.pitcher.arsenal.length) {
-    html += '<div class="sav-sec"><span class="gh-eyebrow">Pitch arsenal</span><div class="sav-ars sav-ars-h"><span>Pitch</span><span>Use</span><span>MPH</span><span>Whiff</span></div>' +
+    html += '<div class="sav-sec"><span class="gh-eyebrow">Pitch arsenal</span><div class="sav-ars sav-ars-h"><span>Pitch</span><span>Use</span><span>MPH</span><span>Whiff</span><span>RV/100</span></div>' +
       d.pitcher.arsenal.map(function (a) {
-        return '<div class="sav-ars"><span style="font-weight:700">' + _escapeHtml(a.name || a.code) + '</span><span>' + (a.usage != null ? a.usage.toFixed(0) + '%' : '—') + '</span><span>' + (a.mph != null ? a.mph.toFixed(1) : '—') + '</span><span>' + (a.whiff != null ? a.whiff.toFixed(0) + '%' : '—') + '</span></div>';
+        var rv = a.rv100;
+        return '<div class="sav-ars"><span style="font-weight:700;display:flex;align-items:center;gap:7px;min-width:0"><i class="sav-dot" style="background:' + _savPitchColor(a.code) + '"></i>' + _escapeHtml(a.name || a.code) + '</span><span>' + (a.usage != null ? a.usage.toFixed(0) + '%' : '—') + '</span><span>' + (a.mph != null ? a.mph.toFixed(1) : '—') + '</span><span>' + (a.whiff != null ? a.whiff.toFixed(0) + '%' : '—') + '</span>' +
+          '<span style="color:' + (rv == null ? '#D9D4FA' : rv > 0 ? '#9BE8AC' : rv < 0 ? '#FFB3A8' : '#D9D4FA') + '">' + (rv == null ? '—' : (rv > 0 ? '+' : '') + rv.toFixed(1)) + '</span></div>';
       }).join('') + '</div>';
   }
   if (d.batter && d.batter.spray && d.batter.spray.length) html += '<div class="sav-sec"><span class="gh-eyebrow">Spray chart · ' + d.year + '</span>' + _savSprayHtml(d.batter.spray) + '</div>';

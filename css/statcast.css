@@ -21,12 +21,12 @@
 .sav-pct-bar{position:relative;flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08)}
 .sav-pct-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
 .sav-pct-bar b{position:absolute;top:-8px;width:22px;height:22px;border-radius:50%;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.sav-ars{display:grid;grid-template-columns:1fr 50px 50px 50px;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid rgba(168,159,232,.12)}
+.sav-ars{display:grid;grid-template-columns:minmax(0,1fr) 40px 44px 50px 56px;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid rgba(168,159,232,.12)}
 .sav-ars{color:#FFFFFF}
 .sav-ars span:first-child{font-weight:700;color:#FFFFFF}
 .sav-ars span:not(:first-child){text-align:right;color:#D9D4FA;font-variant-numeric:tabular-nums}
 .sav-ars-h span,.sav-ars-h span:first-child{color:#9C95D0;font-weight:700}
-.sav-ars-h{font-size:10px;font-weight:700;letter-spacing:.12em;color:#9C95D0;text-transform:uppercase;border-top:0;padding:0}
+.sav-ars-h{font-size:10px;font-weight:700;letter-spacing:.05em;color:#9C95D0;text-transform:uppercase;border-top:0;padding:0}
 .bp-card{display:flex;flex-direction:column;gap:12px;margin:4px 0 14px;padding:16px;border-radius:20px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2)}
 .bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .bp-tile{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:rgba(168,159,232,.10);border:1px solid rgba(168,159,232,.16)}
@@ -43,3 +43,50 @@
 .rc-big{font-size:34px;font-weight:800;line-height:1.15}
 .rc-sub{font-size:16px;color:#D9D4FA;line-height:1.5}
 .rc-share{align-self:flex-start;min-height:44px;padding:0 18px;border-radius:14px;border:0;background:#A89FE8;color:#0D0820;font:inherit;font-weight:800;cursor:pointer}
+
+/* v7.7.0 · new pitcher: "Now pitching" card, percentile chips, mix today vs season, sheet extras */
+.sav-legend{display:flex;justify-content:space-between;font-size:10.5px;color:#9C95D0;margin-top:-2px}
+.sav-legend span:first-child{color:#6E9BEA}.sav-legend span:last-child{color:#EE6A70}
+.sav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.sav-ars span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-card{border-radius:16px;padding:14px;margin-bottom:14px;background:linear-gradient(135deg,rgba(168,159,232,.2),rgba(168,159,232,.05));border:1px solid rgba(168,159,232,.35);animation:npIn .45s cubic-bezier(.22,1,.36,1) both}
+@keyframes npIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.np-card{animation:none}}
+.np-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.np-chip{font-size:10px;font-weight:900;letter-spacing:.2em;padding:4px 8px;border-radius:7px;background:#F2C869;color:#1A1640}
+.np-rep{font-size:11.5px;color:#CECBF6}
+.np-name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:10px}
+.np-nm{all:unset;cursor:pointer;font-size:22px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.np-nm:focus-visible,.np-btn:focus-visible,.np-sv:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.np-hand{font-size:12px;font-weight:700;color:#B9B3E6}
+.np-eb{display:block;margin-top:10px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#9C95D0}
+.np-grid{display:grid;gap:4px;margin-top:6px}
+.np-grid div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.np-grid b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;color:#fff}
+.np-grid span{font-size:8.5px;font-weight:700;letter-spacing:.12em;color:#9C95D0}
+.np-sub{margin-top:6px;font-size:12px;line-height:1.4;color:#CECBF6}
+.np-sec{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.np-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.np-mut{font-size:10.5px;color:#9C95D0}
+.np-pct{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:10px}
+.np-pct>span{font-size:11px;color:#D9D4FA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-trk{position:relative;height:22px}
+.np-trk:before{content:"";position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:rgba(255,255,255,.1)}
+.np-trk i{position:absolute;left:0;top:9px;height:4px;border-radius:2px}
+.np-trk b{position:absolute;top:0;width:22px;height:22px;border-radius:50%;border:2px solid #1D1850;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.np-ars{display:flex;align-items:center;gap:8px}
+.np-ars>i,.np-mn i{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.np-an{width:66px;flex-shrink:0;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-ab{flex:1;min-width:0;height:6px;border-radius:3px;background:rgba(255,255,255,.08);position:relative}
+.np-ab i{position:absolute;left:0;top:0;height:6px;border-radius:3px}
+.np-ars>b{width:34px;text-align:right;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+.np-mph{width:62px;text-align:right;font-size:11.5px;color:#CECBF6;white-space:nowrap;font-variant-numeric:tabular-nums}
+.np-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:12px;border:0;border-radius:12px;background:rgba(168,159,232,.16);color:#E9E5FF;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.np-chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 14px}
+.np-mini{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 3px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:10.5px;font-weight:700;color:#D9D4FA;white-space:nowrap}
+.np-mini b{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff}
+.np-sv{min-height:28px;padding:0 10px;border:0;border-radius:999px;background:rgba(168,159,232,.16);color:#E9E5FF;font-family:inherit;font-size:10.5px;font-weight:800;cursor:pointer}
+.np-mix{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.np-mixg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;column-gap:10px;row-gap:6px;margin-top:8px;font-size:12px}
+.np-mn{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.np-mixg b{font-variant-numeric:tabular-nums}

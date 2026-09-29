@@ -896,10 +896,10 @@ function _ghLiveDetailHtml(box) {
     if (mp || mb) {
       var who = function (label, p, right) {
         // v7.6.0: long names show as initial + last name rather than being cut off
-        var shown = p && p.name && p.name.length > 15 ? Object.assign({}, p, { name: p.name.split(' ')[0].charAt(0) + '. ' + _ghLastName(p.name) }) : p;
+        var short = p && p.name && p.name.length > 15 ? p.name.split(' ')[0].charAt(0) + '. ' + _ghLastName(p.name) : null;
         return '<div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;' + (right ? 'align-items:flex-end;text-align:right' : '') + '">' +
           '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + label + '</span>' +
-          '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(shown, 'mlb') + '</span>' +
+          '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + (short ? _clickablePlayerNameHtml(p, 'mlb').replace('>' + _escapeHtml(p.name) + '<', '>' + _escapeHtml(short) + '<') : _clickablePlayerNameHtml(p, 'mlb')) + '</span>' +
           (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') +
           (right && p && p.pinchFor ? '<span class="gh-ph">PH for ' + _escapeHtml(p.pinchFor) + '</span>' : '') +
           (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') +
@@ -909,8 +909,13 @@ function _ghLiveDetailHtml(box) {
       // of the at-bat, then moves under the batter, lined up with the
       // pitcher's TODAY numbers.
       var abStarted = !!(seq && seq.pitches && seq.pitches.length);
+      // v7.7.0: a reliever's first batter gets the "Now pitching" card;
+      // after that his Savant chips sit under the matchup
+      var entrance = !!(mp && mp.relief && mp.bf === 0 && typeof _ghNowPitchingHtml === 'function');
+      if (entrance) out += _ghNowPitchingHtml(mp);
       out += '<div class="gh-row" style="align-items:flex-start;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
-        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '') +
+        (!entrance && typeof _ghPitcherChipsHtml === 'function' ? _ghPitcherChipsHtml(mp) : '');
     }
     if (seq) {
       var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
@@ -942,7 +947,7 @@ function _ghLiveDetailHtml(box) {
             '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
             (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
             (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, box, s.half) : '');
-        }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '');
+        }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + (typeof _ghMixTodayHtml === 'function' ? _ghMixTodayHtml(box, mp) : '');
       } else if (!brk) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
       }

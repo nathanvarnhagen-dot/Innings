@@ -77,6 +77,19 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=season&id=<id>[&season=YYYY]  (v7.7.0)
+    // A player's regular-season line (pitching and/or hitting), hand,
+    // position and team — the top of the player sheet.
+    if (mode === 'season') {
+      const id = req.query.id;
+      if (!id) { res.status(400).json({ error: 'Missing id' }); return; }
+      const yr = parseInt(req.query.season, 10) || new Date().getFullYear();
+      const map = await _regSeason([id], yr);
+      res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
+      res.status(200).json(map[String(id)] ? Object.assign({ season: yr }, map[String(id)]) : { error: 'No season line' });
+      return;
+    }
+
     // GET /api/mlb?mode=bvp&batter=<id>&pitcher=<id>  (v5.89.0)
     // A hitter's career line against one pitcher (MLB Stats API vsPlayer).
     if (mode === 'bvp') {
@@ -118,7 +131,9 @@ module.exports = async function handler(req, res) {
       // newer); finished games can sit much longer.
       const st = (data && data.gameData && data.gameData.status && data.gameData.status.abstractGameState) || '';
       res.setHeader('Cache-Control', st === 'Live' ? 's-maxage=3, stale-while-revalidate=5' : st === 'Final' ? 's-maxage=300, stale-while-revalidate' : 's-maxage=30, stale-while-revalidate');
-      res.status(200).json(summarize(data, gamePk, req.query.plays === 'all'));
+      const out = summarize(data, gamePk, req.query.plays === 'all');
+      try { await _seasonLinesForMatchup(out, data); } catch (e) { /* keep the box score even if this lookup fails */ }
+      res.status(200).json(out);
       return;
     }
 
@@ -274,6 +289,27 @@ function summarize(data, gamePk, wantAllPlays) {
       pitcher: defense.pitcher ? _liveParticipant(defense.pitcher, boxTeams, 'pitching') : null,
       batter: batPerson ? _liveParticipant(batPerson, boxTeams, 'batting') : null
     };
+    // v7.7.0: pitcher's hand, team, batters faced today, and who he
+    // replaced (the previous name in his team's pitchers list) — the
+    // "Now pitching" card shows for a reliever's first batter.
+    if (matchup.pitcher && matchup.pitcher.id) {
+      var pId = matchup.pitcher.id, pInfo = (gameData.players || {})['ID' + pId] || {};
+      matchup.pitcher.hand = (pInfo.pitchHand && pInfo.pitchHand.code) || null;
+      ['away', 'home'].forEach(function (side) {
+        var bt = boxTeams[side] || {}, list = bt.pitchers || [];
+        var ix = list.indexOf(pId);
+        if (ix === -1) return;
+        matchup.pitcher.teamAbbr = (gameData.teams && gameData.teams[side] && gameData.teams[side].abbreviation) || null;
+        matchup.pitcher.relief = ix > 0;
+        if (ix > 0) {
+          var prev = (bt.players || {})['ID' + list[ix - 1]];
+          matchup.pitcher.replaced = prev && prev.person ? _lastNameOf(prev.person.fullName) : null;
+        }
+        var me = (bt.players || {})['ID' + pId];
+        var gp = me && me.stats && me.stats.pitching;
+        matchup.pitcher.bf = gp && gp.battersFaced != null ? gp.battersFaced : 0;
+      });
+    }
     if (matchup.batter) {
       var phOut = _pinchHitFor(batPerson.id, cpOpen ? cpNow : null, boxTeams, gameData.players || {});
       if (phOut) matchup.batter.pinchFor = phOut;
@@ -339,6 +375,7 @@ function summarize(data, gamePk, wantAllPlays) {
           return {
             call: _callText(e, p, _droppedK(p)),
             type: (d.type && d.type.description) || null,
+            code: (d.type && d.type.code) || null,   // v7.7.0: pitch mix today vs season
             speed: (e.pitchData && e.pitchData.startSpeed != null) ? Math.round(e.pitchData.startSpeed) : null
           };
         })
@@ -681,6 +718,53 @@ function _pinchHitFor(batterId, openPlay, boxTeams, players) {
     return best && best.person ? _lastNameOf(best.person.fullName) : null;
   }
   return null;
+}
+
+// ── v7.7.0: regular-season lines ─────────────────────────────────────
+// In a playoff game MLB's box score "season" stats are postseason-only, so
+// a reliever in his first October outing showed -.-- ERA and hitters
+// .000/.000/.000. This pulls the regular-season line from the people
+// endpoint (gameType=R), cached per warm instance for 10 minutes since the
+// live box score is polled every few seconds.
+const _RS_CACHE = global.__inningsRegSeason || (global.__inningsRegSeason = new Map());
+async function _regSeason(ids, season) {
+  ids = ids.filter(Boolean).map(String);
+  const out = {}, need = [];
+  ids.forEach(id => { const e = _RS_CACHE.get(id + ':' + season); if (e && Date.now() < e.exp) out[id] = e.v; else need.push(id); });
+  if (need.length) {
+    const url = 'https://statsapi.mlb.com/api/v1/people?personIds=' + need.join(',') + '&hydrate=currentTeam,stats(group=[pitching,hitting],type=[season],season=' + season + ',gameType=R)';
+    const r = await fetch(url);
+    const d = await r.json();
+    (d.people || []).forEach(p => {
+      const v = { id: p.id, name: p.fullName || null, hand: (p.pitchHand && p.pitchHand.code) || null, bats: (p.batSide && p.batSide.code) || null,
+        pos: (p.primaryPosition && p.primaryPosition.abbreviation) || null, team: (p.currentTeam && p.currentTeam.name) || null, pitching: null, hitting: null };
+      (p.stats || []).forEach(b => {
+        const g = b.group && b.group.displayName, st = b.splits && b.splits[0] && b.splits[0].stat;
+        if (!st) return;
+        if (g === 'pitching') v.pitching = { era: st.era, ip: st.inningsPitched, k: st.strikeOuts, bb: st.baseOnBalls, whip: st.whip, avg: st.avg, g: st.gamesPlayed, gs: st.gamesStarted, w: st.wins, l: st.losses, sv: st.saves, hld: st.holds };
+        if (g === 'hitting') v.hitting = { avg: st.avg, obp: st.obp, slg: st.slg, ops: st.ops, hr: st.homeRuns, rbi: st.rbi, g: st.gamesPlayed, pa: st.plateAppearances };
+      });
+      out[String(p.id)] = v;
+      _RS_CACHE.set(String(p.id) + ':' + season, { v: v, exp: Date.now() + 600000 });
+    });
+    if (_RS_CACHE.size > 800) _RS_CACHE.delete(_RS_CACHE.keys().next().value);
+  }
+  return out;
+}
+async function _seasonLinesForMatchup(out, data) {
+  var m = out && out.matchup;
+  if (!m || (!m.pitcher && !m.batter)) return;
+  var game = (data.gameData && data.gameData.game) || {};
+  var season = parseInt(game.season, 10) || new Date().getFullYear();
+  var post = /^[FDLW]$/.test(game.type || '');
+  var ids = [m.pitcher && m.pitcher.id, post && m.batter && m.batter.id];
+  var map = await _regSeason(ids, season);
+  var pl = m.pitcher && map[String(m.pitcher.id)], bl = m.batter && map[String(m.batter.id)];
+  if (pl && pl.pitching) {
+    m.pitcher.season = pl.pitching;
+    if (post) m.pitcher.line = pl.pitching.era + ' ERA · ' + pl.pitching.k + ' K · ' + pl.pitching.ip + ' IP';
+  }
+  if (post && bl && bl.hitting) m.batter.line = bl.hitting.avg + ' / ' + bl.hitting.obp + ' / ' + bl.hitting.slg;
 }
 
 function _liveParticipant(person, boxTeams, group) {
