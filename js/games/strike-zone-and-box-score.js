@@ -375,7 +375,8 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
   if (heroLive) situationHtml = '';
   if (heroFinal) { decisionLine = ''; hrLines = ''; }
   var strikeZoneHtml = _strikeZoneSectionHtml(box.pitchSequence, ruleColor, subColor, color);
-  var boxScoreDetailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, ruleColor, subColor, color);
+  // On the game screen (opts.hero) the full box score has its own Box tab (v7.5.0); memories still show it here
+  var boxScoreDetailHtml = opts.hero ? '' : _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, ruleColor, subColor, color);
 
   var playsHtml = '';
   var playIdsForReactions = [];

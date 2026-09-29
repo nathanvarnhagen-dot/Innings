@@ -914,9 +914,7 @@ function _ghLiveDetailHtml(box) {
   // Play by play, grouped into half-innings (v5.49.0)
   out += _ghPlaysByInningHtml(box);
 
-  // Full box score (same expand/team-toggle state as before)
-  var detailHtml = _boxScoreDetailSectionHtml(box.boxScoreDetail, box.away, box.home, 'rgba(255,255,255,.08)', sub, '#fff', true);
-  if (detailHtml) out += '<div class="gh-card">' + detailHtml + '</div>';
+  // Full box score: moved to the game's Box tab in v7.5.0 (js/games/watch-listen.js)
 
   if (box.venue) {
     out += '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9C95D0;padding:0 4px"><i class="ti ti-map-pin"></i>' + _escapeHtml(box.venue) + '</div>';

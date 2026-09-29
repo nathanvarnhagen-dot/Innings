@@ -27,6 +27,16 @@ const NHL = 'https://api-web.nhle.com/v1';
 const ESPN_PATH = { nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
 
 module.exports = async function handler(req, res) {
+  // v7.5.0: the Watch & Listen tab asks this same function where one game is on
+  // (GET /api/recap?watch=<sport>&id=<gameId>&date=YYYY-MM-DD), so it doesn't
+  // need a serverless function of its own.
+  if (req.query.watch) {
+    let out = null;
+    try { out = await watchInfo(String(req.query.watch), String(req.query.id || ''), String(req.query.date || '')); } catch (e) { out = null; }
+    res.setHeader('Cache-Control', out ? 's-maxage=300, stale-while-revalidate=1800' : 's-maxage=120');
+    res.status(200).json(out || { empty: true });
+    return;
+  }
   const sport = String(req.query.sport || '');
   const start = String(req.query.start || '');
   const end = String(req.query.end || start);
@@ -637,4 +647,87 @@ function scGame(data, ctx) {
   G.comeback = G.home.score === G.away.score ? 0 : winnerHome ? -minHome : maxHome;
   if (G.comeback >= 2 && (!ctx.facts.comeback || G.comeback > ctx.facts.comeback.n)) ctx.facts.comeback = { n: G.comeback, team: winnerHome ? G.home.short : G.away.short };
   G.ex += G.comeback * 8 + G.home.score + G.away.score;
+}
+
+
+// ═══ WATCH & LISTEN (v7.5.0) ═══════════════════════════════════════════
+// Where one game is on: TV, streaming and radio, each tagged national, home
+// or away so the app can keep only what works where you are.
+//   { sport, national: bool, home:{name,abbr}, away:{name,abbr},
+//     list: [{ kind:'tv'|'radio'|'stream', name, call, side:'national'|'home'|'away', lang }] }
+async function watchInfo(sport, id, date) {
+  if (!id) return null;
+  if (sport === 'mlb') return mlbWatch(id);
+  if (sport === 'nhl') return nhlWatch(id);
+  if (ESPN_PATH[sport]) return espnWatch(sport, id, date);
+  return null;
+}
+async function mlbWatch(id) {
+  const d = await getJson(MLB + '/schedule?sportId=1&gamePk=' + encodeURIComponent(id) + '&hydrate=broadcasts(all),team');
+  const g = d && d.dates && d.dates[0] && (d.dates[0].games || []).filter(function (x) { return String(x.gamePk) === String(id); })[0];
+  if (!g) return null;
+  const list = [], seen = {};
+  (g.broadcasts || []).forEach(function (b) {
+    const name = String(b.name || b.callSign || '').trim();
+    if (!name) return;
+    const type = String(b.type || '').toUpperCase();
+    // MLB.TV and MLB app audio entries are added by the app itself
+    if (/^MLB\.?TV$|Gameday Audio|^MLB Audio/i.test(name)) return;
+    const kind = type === 'TV' ? 'tv' : (type === 'AM' || type === 'FM' || type === 'RADIO') ? 'radio' : 'stream';
+    const side = b.isNational ? 'national' : (b.homeAway === 'away' ? 'away' : 'home');
+    const key = kind + '|' + name + '|' + side + '|' + (b.language || '');
+    if (seen[key]) return; seen[key] = 1;
+    list.push({ kind: kind, name: name, call: b.callSign || '', side: side, lang: b.language || 'en' });
+  });
+  const t = function (x) { return { name: x.team.name, abbr: x.team.abbreviation || '' }; };
+  const st = String((g.status && g.status.abstractGameState) || '').toLowerCase();
+  return { sport: 'mlb', id: String(id), state: st === 'live' ? 'live' : st === 'final' ? 'final' : 'pre', home: t(g.teams.home), away: t(g.teams.away), national: list.some(function (b) { return b.kind === 'tv' && b.side === 'national'; }) && !list.some(function (b) { return b.kind === 'tv' && b.side !== 'national'; }), list: list };
+}
+async function espnWatch(sport, id, date) {
+  let comp = null, state = 'pre';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const sb = await getJson(ESPN + ESPN_PATH[sport] + '/scoreboard?dates=' + date.replace(/-/g, ''));
+    const ev = sb && (sb.events || []).filter(function (e) { return String(e.id) === String(id); })[0];
+    comp = ev && ev.competitions && ev.competitions[0];
+    if (ev && ev.status && ev.status.type) state = ev.status.type.completed ? 'final' : ev.status.type.state === 'in' ? 'live' : 'pre';
+  }
+  if (!comp) {
+    const sum = await getJson(ESPN + ESPN_PATH[sport] + '/summary?event=' + encodeURIComponent(id), 9000);
+    comp = sum && sum.header && sum.header.competitions && sum.header.competitions[0];
+    const t = comp && comp.status && comp.status.type;
+    if (t) state = t.completed ? 'final' : t.state === 'in' ? 'live' : 'pre';
+  }
+  if (!comp) return null;
+  const list = [], seen = {};
+  const add = function (kind, name, side, lang) {
+    name = String(name || '').trim(); if (!name) return;
+    const key = kind + '|' + name + '|' + side; if (seen[key]) return; seen[key] = 1;
+    list.push({ kind: kind, name: name, call: '', side: side, lang: lang || 'en' });
+  };
+  (comp.geoBroadcasts || []).forEach(function (b) {
+    if (b.region && String(b.region).toLowerCase() !== 'us') return;
+    const ty = String((b.type && b.type.shortName) || 'TV').toLowerCase();
+    const mk = String((b.market && b.market.type) || 'National').toLowerCase();
+    add(ty === 'radio' ? 'radio' : ty === 'streaming' ? 'stream' : 'tv', b.media && b.media.shortName, mk === 'home' ? 'home' : mk === 'away' ? 'away' : 'national', b.lang);
+  });
+  if (!list.length) (comp.broadcasts || []).forEach(function (b) {
+    const mk = String(b.market || 'national').toLowerCase();
+    (b.names || []).forEach(function (n) { add('tv', n, mk === 'home' ? 'home' : mk === 'away' ? 'away' : 'national'); });
+  });
+  const team = function (side) { const c = (comp.competitors || []).filter(function (x) { return x.homeAway === side; })[0] || {}; const tm = c.team || {}; return { name: tm.displayName || tm.name || '', abbr: tm.abbreviation || '' }; };
+  return { sport: sport, id: String(id), state: state, home: team('home'), away: team('away'), national: list.some(function (b) { return b.kind === 'tv' && b.side === 'national'; }), list: list };
+}
+async function nhlWatch(id) {
+  const d = await getJson(NHL + '/gamecenter/' + encodeURIComponent(id) + '/landing');
+  if (!d) return null;
+  const list = [], seen = {};
+  (d.tvBroadcasts || []).forEach(function (b) {
+    if (b.countryCode && b.countryCode !== 'US') return;
+    const side = b.market === 'H' ? 'home' : b.market === 'A' ? 'away' : 'national';
+    const name = String(b.network || '').trim(); if (!name || seen[name + side]) return; seen[name + side] = 1;
+    list.push({ kind: /\+$|ESPN\+|MAX|HBO|Prime|Hulu/i.test(name) ? 'stream' : 'tv', name: name, call: '', side: side, lang: 'en' });
+  });
+  const t = function (x) { x = x || {}; const place = (x.placeName && x.placeName.default) || '', nm = (x.commonName && x.commonName.default) || ''; return { name: (place + ' ' + nm).trim(), abbr: x.abbrev || '' }; };
+  const gs = String(d.gameState || '');
+  return { sport: 'nhl', id: String(id), state: /LIVE|CRIT/.test(gs) ? 'live' : /OFF|FINAL/.test(gs) ? 'final' : 'pre', home: t(d.homeTeam), away: t(d.awayTeam), national: list.some(function (b) { return b.side === 'national' && b.kind === 'tv'; }), list: list };
 }

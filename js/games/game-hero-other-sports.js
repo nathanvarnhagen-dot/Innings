@@ -797,7 +797,7 @@ function _gxDetailHtml(m) {
   } else if (m.phase === 'final' && m.sport === 'basketball') {
     out += _gxFeedHtml(m);
   }
-  out += _gxBoxHtml(m);
+  // The box score has its own Box tab on the game page (v7.5.0, js/games/watch-listen.js)
   return out ? '<div class="gh-detail">' + out + '</div>' : '';
 }
 
