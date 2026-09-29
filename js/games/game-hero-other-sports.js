@@ -1080,8 +1080,8 @@ function renderGameCheatSheet() {
     // since the box score is all that's needed at that point. Either
     // way, show whatever box score HTML exists and stop — there's
     // nothing else to render without state.data.
-    if (state.boxScoreHtml) { el.innerHTML = _ghHtmlForState(state) + state.boxScoreHtml; el.scrollTop = scrollPos; }
-    else if (state.gx) { el.innerHTML = _ghHtmlForState(state) + (state.pendingNote || ''); el.scrollTop = scrollPos; }
+    if (state.boxScoreHtml) { if (!_ghPatch(el, _ghHtmlForState(state) + state.boxScoreHtml)) el.scrollTop = scrollPos; }
+    else if (state.gx) { if (!_ghPatch(el, _ghHtmlForState(state) + (state.pendingNote || ''))) el.scrollTop = scrollPos; }
     return;
   }
   var data = state.data;
@@ -1152,6 +1152,74 @@ function renderGameCheatSheet() {
 
   h += '<div style="color:rgba(255,255,255,.45);font-size:11.5px;line-height:1.6;padding:12px 2px">Lavender chips go straight to the player page. Faded chips run a name search instead.</div>';
 
-  el.innerHTML = h;
-  el.scrollTop = scrollPos;
+  if (!_ghPatch(el, h)) el.scrollTop = scrollPos;
+}
+
+// ── v7.8.0 · CALMER LIVE REFRESH ─────────────────────────────────────
+// Every tick used to throw the whole screen away (innerHTML) and build it
+// again: entrance animations replayed, anything mid-animation restarted,
+// and when a block above the reader grew or shrank the page jumped under
+// them. _ghPatch updates the existing page in place instead: nodes that
+// didn't change are left alone (so their animations keep running and the
+// browser's scroll anchoring keeps the reader's spot), changed text and
+// attributes are edited, and only genuinely new pieces are inserted.
+// An element whose animation timing changed, or that carries SVG SMIL
+// animation, is swapped whole so time-based animations restart correctly.
+// Returns false (caller falls back to its old scroll restore) only if
+// patching isn't possible.
+function _ghPatch(el, html) {
+  try {
+    if (!el.firstChild) { el.innerHTML = html; return true; }
+    var tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    // Keep the reader's place by hand (iOS Safari has no scroll anchoring):
+    // note where the element at the top of the view sits, patch, then
+    // scroll by however far it moved.
+    var anchor = null, before = 0;
+    if (el.scrollTop > 0 && document.elementFromPoint) {
+      var r = el.getBoundingClientRect();
+      var hit = document.elementFromPoint(r.left + r.width / 2, Math.max(r.top, 0) + 60);
+      if (hit && el.contains(hit) && hit !== el) { anchor = hit; before = hit.getBoundingClientRect().top; }
+    }
+    _ghMorphChildren(el, tpl.content);
+    if (anchor && anchor.isConnected) {
+      var moved = anchor.getBoundingClientRect().top - before;
+      if (Math.abs(moved) > 1) el.scrollTop += moved;
+    }
+    return true;
+  } catch (e) {
+    console.error('[patch] falling back to full render', e);
+    el.innerHTML = html;
+    return false;
+  }
+}
+var _GH_SMIL = /^(animate|animateMotion|animateTransform|set)$/i;
+function _ghHasSmil(n) { return n.nodeType === 1 && (_GH_SMIL.test(n.nodeName) || !!(n.querySelector && n.querySelector('animate,animateMotion,animateTransform,set'))); }
+function _ghMorphChildren(from, to) {
+  var a = from.childNodes, b = to.childNodes;
+  var i = 0;
+  for (; i < b.length; i++) {
+    var nn = b[i], on = a[i];
+    if (!on) { from.appendChild(nn.cloneNode(true)); continue; }
+    _ghMorphNode(from, on, nn);
+  }
+  while (from.childNodes.length > b.length) from.removeChild(from.lastChild);
+}
+function _ghMorphNode(parent, on, nn) {
+  if (on.isEqualNode(nn)) return;
+  if (on.nodeType !== nn.nodeType || on.nodeName !== nn.nodeName) { parent.replaceChild(nn.cloneNode(true), on); return; }
+  if (on.nodeType === 3 || on.nodeType === 8) { if (on.nodeValue !== nn.nodeValue) on.nodeValue = nn.nodeValue; return; }
+  if (on.nodeType !== 1) { parent.replaceChild(nn.cloneNode(true), on); return; }
+  var os = on.getAttribute('style') || '', ns = nn.getAttribute('style') || '';
+  var animChanged = os !== ns && /animation/.test(os + ns);
+  if (animChanged || _ghHasSmil(on) || _ghHasSmil(nn)) { parent.replaceChild(nn.cloneNode(true), on); return; }
+  // attributes
+  var oa = on.attributes, na = nn.attributes, k;
+  for (k = oa.length - 1; k >= 0; k--) { if (!nn.hasAttribute(oa[k].name)) on.removeAttribute(oa[k].name); }
+  for (k = 0; k < na.length; k++) { if (on.getAttribute(na[k].name) !== na[k].value) on.setAttribute(na[k].name, na[k].value); }
+  // Slots other code fills after each render (play reactions, the play
+  // animation, its label/strip): keep what's there instead of blanking it
+  // for a moment — the filler overwrites it right after.
+  if (!nn.firstChild && on.firstChild && /^(play-react-|gh-pa-|reel)/.test(on.id || '')) return;
+  _ghMorphChildren(on, nn);
 }

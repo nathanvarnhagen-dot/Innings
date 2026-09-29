@@ -90,3 +90,4 @@
 .np-mixg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;column-gap:10px;row-gap:6px;margin-top:8px;font-size:12px}
 .np-mn{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .np-mixg b{font-variant-numeric:tabular-nums}
+.np-skel .np-mini{color:transparent;opacity:.5}.np-skel .np-mini b{background:rgba(255,255,255,.12)}

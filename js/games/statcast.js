@@ -68,7 +68,7 @@ function _bvpColsHtml(mb, mp) {
 function _bvpLineHtml(mb, mp) {
   if (!mb || !mp || !mb.id || !mp.id) return '';
   var v = _bvp(mb.id, mp.id);
-  if (!v) return '';
+  if (!v) return '<div aria-hidden="true" style="height:18px;margin:-4px 0 14px"></div>'; // v7.8.0: same height as the line, so its arrival doesn't shift the page
   var slash = v.pa && v.avg ? '<span style="color:#9C95D0"> · ' + _escapeHtml(v.avg + '/' + v.obp + '/' + v.slg) + '</span>' : '';
   return '<div style="display:flex;justify-content:center;align-items:baseline;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;font-size:12.5px;color:#D9D4FA;text-align:center">' +
     '<span class="gh-eyebrow" style="font-size:9.5px">Career</span><b style="color:#fff">' + _escapeHtml(_ghLastName(mb.name)) + ' vs ' + _escapeHtml(_ghLastName(mp.name)) + '</b><span>' + _escapeHtml(_bvpText(v)) + '</span>' + slash + '</div>';
@@ -262,7 +262,11 @@ function _savPitchName(code, arsenalRow) { return arsenalRow && arsenalRow.name 
 function _ghPitcherChipsHtml(mp) {
   if (!mp || !mp.id) return '';
   var pcts = _savKeyPcts(_savPlayerData(mp.id));
-  if (!pcts.length) return '';
+  if (!pcts.length) {
+    // v7.8.0: hold the row's space while Savant loads so nothing below jumps
+    var e = window._sav.player[String(mp.id)];
+    return (!e || (!e.data && !e.failed)) ? '<div class="np-chips np-skel" aria-hidden="true"><span class="np-mini"><b></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="np-mini"><b></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="np-mini"><b></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>' : '';
+  }
   return '<div class="np-chips">' + pcts.map(function (x) {
     var p = Math.max(1, Math.min(100, Math.round(x.pct)));
     return '<span class="np-mini"><b style="background:' + _savPctColor(p) + '">' + p + '</b>' + _escapeHtml(_savShortLabel(x.label)) + '</span>';
