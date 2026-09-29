@@ -213,7 +213,10 @@ function _ghSideFromPregame(s) {
     name: s.name, short: _teamShortName(s.name), abbr: abbr, colors: _ghTeamColors(abbr),
     record: s.record || null, divRank: st.divRank || null, divName: st.divName || null,
     l10: st.l10 || null, streak: st.streak || null,
-    last10: (s.last10 && s.last10.length) ? s.last10 : null,
+    // Postseason: keep an empty list too — game 1 has no playoff games yet,
+    // and that must not fall back to the regular-season bars.
+    last10: s.postseason ? (s.last10 || []) : ((s.last10 && s.last10.length) ? s.last10 : null),
+    post: !!s.postseason,
     pitcher: f ? { name: f.name, id: f.id || null, hand: f.hand || null, stats: f.stats || null } : null
   };
 }
@@ -383,7 +386,9 @@ function _ghPreHtml(m, st, animating) {
   }
   h += '</div>';
 
-  if (m.away.last10 || m.home.last10) {
+  if (m.away.post || m.home.post) {
+    h += _ghPostseasonHtml(m, st, animating);
+  } else if (m.away.last10 || m.home.last10) {
     h += _ghLast10Html(m, st, animating);
   } else if (m.away.l10 || m.home.l10) {
     var formRow = function (s, delay) {
@@ -427,7 +432,7 @@ function _ghL10DetailInner(g, key, i) {
   var line = '<div class="gh-l10-line">' +
     '<span class="gh-tag" style="font-size:11px;' + (win ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + g.res + ' ' + g.us + '–' + g.them + '</span>' +
     '<span style="font-weight:700">' + (g.home ? 'vs ' : 'at ') + _escapeHtml(_teamShortName(g.oppName || '') || g.opp || '') + '</span>' +
-    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml(_ghL10DateLabel(g.date)) + '</span></div>';
+    '<span style="color:#9C95D0;margin-left:auto">' + _escapeHtml((g.round ? g.round + ' · ' : '') + _ghL10DateLabel(g.date)) + '</span></div>';
   if (key == null || (!g.gamePk && !g.date)) return line; // nothing to find that game by
   return line + '<button class="gh-l10-open" onclick="ghL10Open(\'' + key + '\',' + i + ',this)">' +
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>Open this game</button>';
@@ -495,8 +500,7 @@ function _ghLast10Html(m, st, animating) {
     var base = 1.45 + ti * 0.08;
     h += '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<div style="display:flex;align-items:center;gap:8px">' +
-        '<span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';width:36px">' + _escapeHtml(s.abbr) + '</span>' +
-        '<span class="gh-sub" style="flex:1">' + _escapeHtml(s.short) + '</span>' +
+        '<span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';flex:1">' + _escapeHtml(s.abbr) + '</span>' +
         '<span id="gh-l10-rec-' + key + '" class="gh-num" style="font-size:17px">' + (animating ? '0–0' : r.rec) + '</span>' +
         (r.streak ? '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + (streakWin ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + r.streak + '</span>' : '') +
       '</div>' +
@@ -519,6 +523,71 @@ function _ghLast10Html(m, st, animating) {
   });
   return h + '</div>';
 }
+// ── POSTSEASON FORM — this postseason's games only, grouped by round
+// (WC, ALDS/NLDS, ALCS/NLCS, WS) with a divider and label between rounds.
+// Same circles, colors, tap-for-score and "Open this game" as Last 10;
+// capped at the latest 10 so a deep run still fits one row.
+function _ghPostseasonHtml(m, st, animating) {
+  var sel = st && st.l10Sel;
+  var any = (m.away.last10 || []).length || (m.home.last10 || []).length;
+  var h = '<div class="gh-up" style="' + _ghDelay(1.3) + 'display:flex;flex-direction:column;gap:12px">' +
+    '<div class="gh-row" style="align-items:baseline"><span class="gh-eyebrow">Postseason</span>' +
+    (any ? '<span style="font-size:11px;color:#9C95D0">oldest → latest · tap a game</span>' : '') + '</div>';
+  [['away', m.away], ['home', m.home]].forEach(function (pair, ti) {
+    var key = pair[0], s = pair[1];
+    var all = s.last10 || [];
+    var offset = Math.max(0, all.length - 10);
+    var games = all.slice(offset);
+    var base = 1.45 + ti * 0.08;
+    var abbr = '<span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';flex:1">' + _escapeHtml(s.abbr) + '</span>';
+    if (!games.length) {
+      h += '<div style="display:flex;align-items:center;gap:8px">' + abbr + '<span class="gh-sub">First postseason game</span></div>';
+      return;
+    }
+    // Record + streak cover the whole postseason, even past the 10 shown
+    var r = _ghL10Record(all);
+    var countUp = animating && offset === 0;
+    var streakWin = /^W/.test(r.streak);
+    // A deep run (9-10 games plus round dividers) needs smaller circles
+    var dot = games.length > 8 ? 25 : 28;
+    var dotCss = 'width:' + dot + 'px;height:' + dot + 'px;' + (dot < 28 ? 'font-size:8px;' : '');
+    h += '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<div style="display:flex;align-items:center;gap:8px">' + abbr +
+        '<span id="gh-l10-rec-' + key + '" class="gh-num" style="font-size:17px">' + (countUp ? '0–0' : r.rec) + '</span>' +
+        (r.streak ? '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + (streakWin ? 'background:rgba(124,242,156,.16);color:#9be8ac' : 'background:rgba(255,122,107,.16);color:#FFC2BA') + '">' + r.streak + '</span>' : '') +
+      '</div>';
+    var groups = [];
+    games.forEach(function (g, j) {
+      var lab = g.round || 'Postseason';
+      if (!groups.length || groups[groups.length - 1].label !== lab) groups.push({ label: lab, idx: [] });
+      groups[groups.length - 1].idx.push(j);
+    });
+    h += '<div style="display:flex;align-items:stretch;gap:6px">';
+    groups.forEach(function (grp, gi) {
+      if (gi > 0) h += '<span aria-hidden="true" style="width:1px;align-self:stretch;background:rgba(168,159,232,.45);flex-shrink:0"></span>';
+      h += '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">' +
+        '<span class="gh-l10-pop" style="' + _ghDelay(base + grp.idx[0] * 0.11) + 'font-size:9.5px;font-weight:800;letter-spacing:.08em;color:#A89FE8">' + _escapeHtml(grp.label) + '</span>' +
+        '<div style="display:flex;gap:3px">';
+      grp.idx.forEach(function (j) {
+        var g = games[j], i = j + offset; // index into the full list, which pick/open read from
+        var win = g.res === 'W';
+        var c = _ghTeamColors(g.opp);
+        var isSel = sel && sel.side === key && sel.i === i;
+        var label = (g.round ? g.round + ': ' : '') + (win ? 'Won ' : 'Lost ') + g.us + ' to ' + g.them + (g.home ? ' vs ' : ' at ') + (g.oppName || g.opp || '') + ', ' + _ghL10DateLabel(g.date);
+        h += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' +
+          '<button class="gh-l10-dot gh-l10-pop' + (win ? '' : ' loss') + (isSel ? ' sel' : '') + '" data-side="' + key + '" data-i="' + i + '" onclick="ghL10Pick(this)" aria-label="' + _escapeHtml(label) + '" aria-pressed="' + (isSel ? 'true' : 'false') + '"' +
+          ' style="' + _ghDelay(base + j * 0.11) + dotCss + 'background:' + c.bg + ';color:' + c.fg + ';box-shadow:0 0 0 2px ' + (win ? '#7CF29C' : '#FF7A6B') + '">' + _escapeHtml(g.opp || '?') + '</button>' +
+          '<span class="gh-l10-wl gh-l10-pop" aria-hidden="true" style="' + _ghDelay(base + j * 0.11 + 0.05) + 'width:' + dot + 'px;color:' + (win ? '#7CF29C' : '#FF9A8E') + '">' + g.res + '</span></div>';
+      });
+      h += '</div></div>';
+    });
+    var selGame = sel && sel.side === key ? all[sel.i] : null;
+    h += '</div><div id="gh-l10-detail-' + key + '" class="gh-l10-detail' + (selGame ? ' on' : '') + '">' + (selGame ? _ghL10DetailInner(selGame, key, sel.i) : '') + '</div></div>';
+    if (countUp) _ghL10CountUp(key, games, base);
+  });
+  return h + '</div>';
+}
+
 function _ghL10CountUp(key, games, base) {
   if (_ghReducedMotion()) { setTimeout(function () { var el = document.getElementById('gh-l10-rec-' + key); if (el) el.textContent = _ghL10Record(games).rec; }, 0); return; }
   games.forEach(function (g, i) {

@@ -672,16 +672,20 @@ async function summarizePregame(data) {
 
   var officialDate = (gameData.datetime && gameData.datetime.officialDate) || null;
   var thisPk = gameData.game && gameData.game.pk;
+  // Postseason game (F = Wild Card, D = Division Series, L = LCS, W = World
+  // Series): the form row shows only this postseason's games, each tagged
+  // with its round, instead of the regular-season last 10.
+  var post = /^[FDLW]$/.test((gameData.game && gameData.game.type) || '');
   var results = await Promise.all([
     _pregameSide(teams.away, boxTeams.away, probable.away, season, gameData.players),
     _pregameSide(teams.home, boxTeams.home, probable.home, season, gameData.players),
     _standingsByTeam(season),
-    _lastTenGames(teams.away && teams.away.id, officialDate, thisPk),
-    _lastTenGames(teams.home && teams.home.id, officialDate, thisPk)
+    _lastTenGames(teams.away && teams.away.id, officialDate, thisPk, post),
+    _lastTenGames(teams.home && teams.home.id, officialDate, thisPk, post)
   ]);
   var away = results[0], home = results[1], standings = results[2];
-  if (away) away.last10 = results[3];
-  if (home) home.last10 = results[4];
+  if (away) { away.last10 = results[3]; away.postseason = post; }
+  if (home) { home.last10 = results[4]; home.postseason = post; }
 
   if (!away || !home) return { error: 'No pregame data available' };
   [[away, teams.away], [home, teams.home]].forEach(function (pair) {
@@ -710,12 +714,26 @@ var _MLB_ABBR_BY_ID = { 108: 'LAA', 109: 'AZ', 110: 'BAL', 111: 'BOS', 112: 'CHC
   118: 'KC', 119: 'LAD', 120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD', 136: 'SEA', 137: 'SF', 138: 'STL', 139: 'TB',
   140: 'TEX', 141: 'TOR', 142: 'MIN', 143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL' };
 function _isoDay(d) { return d.toISOString().slice(0, 10); }
-async function _lastTenGames(teamId, endDate, excludePk) {
+var _MLB_AL_IDS = { 108: 1, 110: 1, 111: 1, 114: 1, 116: 1, 117: 1, 118: 1, 133: 1, 136: 1, 139: 1, 140: 1, 141: 1, 142: 1, 145: 1, 147: 1 };
+// Short round label for a postseason game: WC, ALDS/NLDS, ALCS/NLCS, WS.
+// League comes from the hydrated team (103 AL, 104 NL), then the series
+// description ("NL Division Series"), then the static AL id list.
+function _postRound(g, me) {
+  var t = g.gameType;
+  if (t === 'F') return 'WC';
+  if (t === 'W') return 'WS';
+  var lgId = me && me.team && me.team.league && me.team.league.id;
+  var lg = lgId === 103 ? 'AL' : lgId === 104 ? 'NL' : null;
+  if (!lg) { var m = /^(AL|NL)\b/.exec(g.seriesDescription || ''); lg = m ? m[1] : null; }
+  if (!lg && me && me.team) lg = _MLB_AL_IDS[me.team.id] ? 'AL' : 'NL';
+  return (lg || '') + (t === 'D' ? 'DS' : 'CS');
+}
+async function _lastTenGames(teamId, endDate, excludePk, postseason) {
   if (!teamId) return [];
   try {
     var end = endDate ? new Date(endDate + 'T12:00:00Z') : new Date();
     var start = new Date(end.getTime() - 45 * 86400000);
-    var url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&gameType=R&hydrate=team&teamId=' + encodeURIComponent(teamId) +
+    var url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&gameType=' + (postseason ? 'F,D,L,W' : 'R') + '&hydrate=team&teamId=' + encodeURIComponent(teamId) +
       '&startDate=' + _isoDay(start) + '&endDate=' + _isoDay(end);
     var r = await fetch(url);
     var data = await r.json();
@@ -744,6 +762,7 @@ async function _lastTenGames(teamId, endDate, excludePk) {
           them: opp.score,
           home: !!isHome,
           date: d.date || g.officialDate || null,
+          round: postseason ? _postRound(g, me) : undefined,
           t: g.gameDate || '',
           n: g.gameNumber || 1
         });

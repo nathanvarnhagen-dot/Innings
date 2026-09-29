@@ -248,8 +248,8 @@ function _gxFormHtml(m, st) {
     var base = 1.45 + ti * 0.08;
     var seasonLine = '<span aria-hidden="true" style="width:1px;align-self:stretch;background:rgba(168,159,232,.45);flex-shrink:0"></span>';
     h += '<div style="display:flex;flex-direction:column;gap:8px">' +
-      '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';width:42px">' + _escapeHtml(s.abbr) + '</span>' +
-      '<span class="gh-sub" style="flex:1">' + _escapeHtml(s.short || '') + '</span><span class="gh-num" style="font-size:17px">' + rec + '</span>' +
+      '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:800;color:' + s.colors.accent + ';flex:1">' + _escapeHtml(s.abbr) + '</span>' +
+      '<span class="gh-num" style="font-size:17px">' + rec + '</span>' +
       (streak ? '<span class="gh-tag gh-l10-pop" style="' + _ghDelay(base + games.length * 0.11) + streakStyle + '">' + streak + '</span>' : '') + '</div>' +
       '<div style="display:flex;justify-content:space-between;gap:2px">';
     games.forEach(function (g, i) {
