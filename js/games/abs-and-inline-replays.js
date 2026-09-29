@@ -185,12 +185,20 @@ function _paiRemount() { if (window._pai) _paiMount(null, false); }
     var slot = document.getElementById('gh-pa-slot'), s = window._pa;
     var key = s.play && s.startAt ? s.play.atBatIndex + ':' + s.startAt : '';
     if (_paActive() && slot && slot.firstChild && slot.getAttribute('data-pa') === key) { window._paDeferred = true; return; }
+    // v7.8.5: the strip / label / reel below get filled in AFTER the redraw,
+    // and the redraw restored the scroll position before they were back —
+    // so each refresh drifted the page (desktop) or jumped it (iPhone) by
+    // their height. Remember the position here and put it back once
+    // everything is filled in again.
+    var panel = document.getElementById('game-sheet-panel');
+    var keepScroll = panel ? panel.scrollTop : null;
     var r = prevRender.apply(this, arguments);
     try { _paFill(); } catch (e) { console.error('[play anim]', e); }
     try { if (typeof _reelFill === 'function') _reelFill(); } catch (e) { console.error('[reel]', e); }
     try { if (typeof _paiRemount === 'function') _paiRemount(); } catch (e) { console.error('[inline replay]', e); }
     try { if (typeof _psDecorate === 'function') _psDecorate(); } catch (e) { console.error('[postseason]', e); }
     try { if (typeof _gshRefresh === 'function') _gshRefresh(); } catch (e) { console.error('[score bar]', e); }
+    if (panel && keepScroll != null && panel.scrollTop !== keepScroll) panel.scrollTop = keepScroll;
     return r;
   };
   var prevTap = _playDoubleTap;

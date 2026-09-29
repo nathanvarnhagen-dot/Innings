@@ -97,7 +97,7 @@ function _bbStatsHtml(lp, s, OFF) {
   return '<div class="ps-in" data-t0="' + t0.toFixed(2) + '" data-t1="' + t1.toFixed(2) + '" data-start="' + s.startAt + '" style="--t0:' + (t0 - E).toFixed(2) + 's">' +
     (trWord ? '<span class="ps-tr">' + trWord + '</span>' : '') +
     '<div class="ps-g">' + m('ev', ev, 1, 'MPH', 'EXIT VELO') + m('la', la, 0, '\u00b0', 'LAUNCH') + m('d', (tr === 'ground_ball' ? null : dist), 0, 'FT', 'DISTANCE') + '</div>' +
-    _bbXbaRowHtml(lp, sp, s.startAt) + '</div>';
+    '</div>'; // v7.8.4: no xBA on the live play — Statcast is too slow; it's in the play-by-play and replays
 }
 // v7.6.0: xBA on every ball in play, in its own row under the three stats.
 // Statcast posts it 20-60 s after the play, so until then the row shows
@@ -141,7 +141,7 @@ function _bbStatsStaticHtml(lp, since) {
   };
   return '<div class="ps-in ps-static">' + (trWord ? '<span class="ps-tr">' + trWord + '</span>' : '') +
     '<div class="ps-g">' + m(ev, 1, 'MPH', 'EXIT VELO') + m(la, 0, '\u00b0', 'LAUNCH') + m(tr === 'ground_ball' ? null : dist, 0, 'FT', 'DISTANCE') + '</div>' +
-    _bbXbaRowHtml(lp, sp, since) + '</div>';
+    '</div>'; // v7.8.4: no xBA on the live play
 }
 function _bbKeptStripHtml() {
   var k = window._bbKeep;
