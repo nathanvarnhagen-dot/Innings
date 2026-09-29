@@ -163,7 +163,7 @@ function _wlOptions(d, metro) {
   }
   // YouTube TV carries the national channels and the NBC Sports regionals
   var ytCarries = /ESPN(?!\+)|ABC|FOX|FS1|FS2|CBS|NBC|TNT|TBS|truTV|MLB Net|MLBN|NFL Net|NBA TV|Big Ten|BTN|SEC Net|ACC Net|USA Net/i;
-  var carried = watch.filter(function (w) { return w.kind === 'watch' && ytCarries.test(w.name) && !/Peacock|NFL\+|MLB\.TV|League Pass/.test(w.name); })[0];
+  var carried = watch.filter(function (w) { return w.kind === 'watch' && ytCarries.test(w.name) && !/^(Peacock|NFL\+|MLB\.TV|.*League Pass)$/i.test(w.name); })[0]; // "NBC/Peacock" is NBC, which YouTube TV has
   if (carried && !watch.some(function (w) { return /YouTube/i.test(w.name); })) {
     watch.push({ kind: 'watch', name: 'YouTube TV', sub: 'Carries ' + carried.name, tile: 'YT', color: '#C4302B', url: 'https://tv.youtube.com/', scheme: 'youtubetv://', cta: 'Watch on YouTube TV', rank: carried.rank + 0.5 }); // app first, website if it isn't installed
   }
