@@ -144,6 +144,7 @@ function _bbStatsStaticHtml(lp, since) {
     '</div>'; // v7.8.4: no xBA on the live play
 }
 function _bbKeptStripHtml() {
+  return ''; // v7.8.6: the strip shows only during the play animation again (kept strip removed)
   var k = window._bbKeep;
   if (!k || !k.lp) return '';
   var g = window._activeBrowseGame;

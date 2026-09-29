@@ -911,11 +911,12 @@ function _ghLiveDetailHtml(box) {
       var abStarted = !!(seq && seq.pitches && seq.pitches.length);
       // v7.7.0: a reliever's first batter gets the "Now pitching" card;
       // after that his Savant chips sit under the matchup
-      var entrance = !!(mp && mp.relief && mp.bf === 0 && typeof _ghNowPitchingHtml === 'function');
-      if (entrance) out += _ghNowPitchingHtml(mp);
+      // v7.8.6: Savant pieces removed from the at-bat card (Now pitching card,
+      // percentile chips, pitch mix) — they made the page jump
+      var entrance = false;
       out += '<div class="gh-row" style="align-items:flex-start;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
         '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '') +
-        (!entrance && typeof _ghPitcherChipsHtml === 'function' ? _ghPitcherChipsHtml(mp) : '');
+        '';
     }
     if (seq) {
       var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
@@ -948,7 +949,7 @@ function _ghLiveDetailHtml(box) {
             '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
             (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
             (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, box, s.half) : '') + '</div>';
-        }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + (typeof _ghMixTodayHtml === 'function' ? _ghMixTodayHtml(box, mp) : '');
+        }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '');
       } else if (!brk) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
       }
