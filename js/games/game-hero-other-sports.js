@@ -1168,6 +1168,10 @@ function renderGameCheatSheet() {
 // Returns false (caller falls back to its old scroll restore) only if
 // patching isn't possible.
 function _ghPatch(el, html) {
+  // v7.8.2: in-place patching turned OFF — it made the page jump badly on
+  // desktop. Back to the full re-render with the old scroll restore
+  // (returning false tells the caller to put scrollTop back).
+  if (!window.INNINGS_PATCH_ON) { el.innerHTML = html; return false; }
   try {
     if (!el.firstChild) { el.innerHTML = html; return true; }
     var tpl = document.createElement('template');
