@@ -251,6 +251,14 @@ function summarize(data, gamePk, wantAllPlays) {
   if (abstractState === 'Live') {
     var offense = linescore.offense || {};
     var defense = linescore.defense || {};
+    // v7.6.0: one source of truth for who's batting. The at-bat in progress
+    // (currentPlay, not yet complete) knows about a pinch hitter the moment
+    // he's announced; linescore.offense.batter can lag behind and kept
+    // showing the replaced hitter. Between at-bats (current play already
+    // complete) linescore.offense is the next man up, as before.
+    var cpNow = liveData.plays && liveData.plays.currentPlay;
+    var cpOpen = !!(cpNow && cpNow.about && !cpNow.about.isComplete && cpNow.matchup && cpNow.matchup.batter && cpNow.matchup.batter.id);
+    var batPerson = cpOpen ? cpNow.matchup.batter : offense.batter;
     situation = {
       balls: linescore.balls != null ? linescore.balls : null,
       strikes: linescore.strikes != null ? linescore.strikes : null,
@@ -264,8 +272,12 @@ function summarize(data, gamePk, wantAllPlays) {
     };
     matchup = {
       pitcher: defense.pitcher ? _liveParticipant(defense.pitcher, boxTeams, 'pitching') : null,
-      batter: offense.batter ? _liveParticipant(offense.batter, boxTeams, 'batting') : null
+      batter: batPerson ? _liveParticipant(batPerson, boxTeams, 'batting') : null
     };
+    if (matchup.batter) {
+      var phOut = _pinchHitFor(batPerson.id, cpOpen ? cpNow : null, boxTeams, gameData.players || {});
+      if (phOut) matchup.batter.pinchFor = phOut;
+    }
   }
 
   // ── Recent plays — last 5 plays with a completed description, most
@@ -321,6 +333,7 @@ function summarize(data, gamePk, wantAllPlays) {
           third: !!(p.matchup && p.matchup.postOnThird)
         },
         anim: (p.about && p.about.isComplete) ? _playAnimSummary(p, _fp[fpIdx - 1]) : null,
+        subs: _subsIn(p, gameData.players || {}),   // v7.6.0: pinch hitters/runners, kept with the play
         pitches: (p.playEvents || []).filter(function (e) { return e && e.isPitch; }).map(function (e) {
           var d = e.details || {};
           return {
@@ -617,6 +630,57 @@ function _starOfGame(boxscore, detail) {
   if (b.rbi) bits.push(b.rbi + ' RBI');
   if (b.r && !b.hr) bits.push(b.r + ' R');
   return { name: b.name, id: b.id, side: best.side, summary: bits.join(' · ') };
+}
+
+// ── v7.6.0: pinch hitters and pinch runners ──────────────────────────
+// MLB records a substitution as an 'action' event inside the play it
+// belongs to ("Offensive Substitution: Pinch-hitter X replaces Y.") with
+// the incoming player on e.player and the outgoing one on e.replacedPlayer.
+// Names come from gameData.players by id, falling back to the text.
+function _lastNameOf(n) { var p = String(n || '').trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(' ') : (p[0] || ''); }
+function _subsIn(play, players) {
+  var out = [];
+  (play && play.playEvents || []).forEach(function (e) {
+    var d = (e && e.details) || {};
+    if (!e || e.type !== 'action' || d.eventType !== 'offensive_substitution') return;
+    var m = /Pinch-(hitter|runner)\s+(.+?)\s+replaces\s+(.+?)\.?\s*$/i.exec(d.description || '');
+    if (!m) return;
+    var kind = m[1].toLowerCase() === 'hitter' ? 'PH' : 'PR';
+    var byId = function (pp) { return pp && pp.id != null && players['ID' + pp.id] && players['ID' + pp.id].fullName; };
+    var inName = byId(e.player) || m[2], outName = byId(e.replacedPlayer) || m[3];
+    out.push({
+      kind: kind, inId: (e.player && e.player.id) || null, outId: (e.replacedPlayer && e.replacedPlayer.id) || null,
+      inName: inName, outName: outName,
+      text: _lastNameOf(inName) + (kind === 'PH' ? ' pinch-hits for ' : ' pinch-runs for ') + _lastNameOf(outName)
+    });
+  });
+  return out.length ? out : undefined;
+}
+// Who a pinch hitter replaced: first the substitution event in the at-bat
+// in progress, then the box score (his position is 'PH' and his batting
+// order is a later entry in the same lineup slot, e.g. 301 after 300).
+function _pinchHitFor(batterId, openPlay, boxTeams, players) {
+  if (!batterId) return null;
+  var subs = openPlay ? (_subsIn(openPlay, players) || []) : [];
+  for (var i = subs.length - 1; i >= 0; i--) {
+    if (subs[i].kind === 'PH' && subs[i].inId === batterId) return _lastNameOf(subs[i].outName);
+  }
+  var sides = ['away', 'home'];
+  for (var k = 0; k < sides.length; k++) {
+    var pl = (boxTeams[sides[k]] && boxTeams[sides[k]].players) || {};
+    var me = pl['ID' + batterId];
+    if (!me) continue;
+    var pos = me.position && me.position.abbreviation;
+    var bo = parseInt(me.battingOrder, 10);
+    if (pos !== 'PH' || !bo || bo % 100 === 0) return null;
+    var slot = Math.floor(bo / 100), best = null, bestBo = -1;
+    Object.keys(pl).forEach(function (key) {
+      var o = parseInt(pl[key].battingOrder, 10);
+      if (o && Math.floor(o / 100) === slot && o < bo && o > bestBo) { bestBo = o; best = pl[key]; }
+    });
+    return best && best.person ? _lastNameOf(best.person.fullName) : null;
+  }
+  return null;
 }
 
 function _liveParticipant(person, boxTeams, group) {

@@ -895,10 +895,13 @@ function _ghLiveDetailHtml(box) {
     out += '<div class="gh-card"><div class="gh-card-head"><span class="gh-eyebrow">At bat</span><span class="gh-sub">' + _escapeHtml(sitText) + '</span></div>';
     if (mp || mb) {
       var who = function (label, p, right) {
+        // v7.6.0: long names show as initial + last name rather than being cut off
+        var shown = p && p.name && p.name.length > 15 ? Object.assign({}, p, { name: p.name.split(' ')[0].charAt(0) + '. ' + _ghLastName(p.name) }) : p;
         return '<div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;' + (right ? 'align-items:flex-end;text-align:right' : '') + '">' +
           '<span class="gh-eyebrow" style="font-size:9.5px;color:#9C95D0">' + label + '</span>' +
-          '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(p, 'mlb') + '</span>' +
+          '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + _clickablePlayerNameHtml(shown, 'mlb') + '</span>' +
           (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') +
+          (right && p && p.pinchFor ? '<span class="gh-ph">PH for ' + _escapeHtml(p.pinchFor) + '</span>' : '') +
           (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') +
           (right && abStarted && typeof _bvpColsHtml === 'function' ? _bvpColsHtml(mb, mp) : '') + '</div>';
       };
@@ -906,8 +909,8 @@ function _ghLiveDetailHtml(box) {
       // of the at-bat, then moves under the batter, lined up with the
       // pitcher's TODAY numbers.
       var abStarted = !!(seq && seq.pitches && seq.pitches.length);
-      out += '<div class="gh-row" style="align-items:center;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
-        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
+      out += '<div class="gh-row" style="align-items:flex-start;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '');
     }
     if (seq) {
       var lastP = seq.pitches.length ? seq.pitches[seq.pitches.length - 1] : null;
@@ -1004,12 +1007,27 @@ function _ghLiveDetailHtml(box) {
 // box.recentPlays, which only carries the last handful. On that fallback
 // only the half-innings actually covered are listed, so a finished game
 // shows five plays in two innings rather than eighteen empty rows.
+function _ghPbpStatcastHtml(box, pl) {
+  var a = pl.anim, hit = a && a.hit;
+  if (!hit || (hit.speed == null && hit.angle == null)) return '';
+  var sp = (typeof _savPlay === 'function' && box.gamePk != null && pl.atBatIndex != null) ? (_savPlay(box.gamePk, pl.atBatIndex) || {}) : {};
+  var et = a.eventType || '', tr = hit.trajectory || '';
+  var bits = [];
+  var ev = hit.speed != null ? hit.speed : sp.ev;
+  if (ev != null) bits.push('<span>' + Math.round(ev) + ' mph</span>');
+  if (sp.xba != null) bits.push('<span>xBA ' + sp.xba.toFixed(3).replace(/^0/, '') + '</span>');
+  if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
+    bits.push('<span class="hr">' + (et === 'home_run' ? 'Gone in ' : 'HR in ') + sp.parks + '/30 parks</span>');
+  }
+  return bits.length ? '<div class="pbp-sc">' + bits.join('') + '</div>' : '';
+}
 function _ghHalfLabel(half, inning) {
   return (half === 'top' ? 'Top ' : 'Bottom ') + _ordinalSuffix(inning);
 }
 function _ghPlaysByInningHtml(box, bare) {
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
+  if (typeof _savGame === 'function' && box.gamePk != null && (!window._activeBrowseGame || (window._activeBrowseGame.sport || 'mlb') === 'mlb')) _savGame(box.gamePk, m.phase === 'live');
   var full = !!(box.allPlays && box.allPlays.length);
   var plays = full ? box.allPlays : (box.recentPlays || []);
   if (!plays.length) return '';
@@ -1085,13 +1103,19 @@ function _ghPlaysByInningHtml(box, bare) {
       var rowAttrs = playId
         ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(pl.text) + '"'
         : '';
-      rows += '<div class="gh-plays-row"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' +
+      // v7.6.0: pinch hitters/runners stay listed with the play they came in
+      // for, and every ball in play carries exit velo + xBA (+ parks)
+      var subsHtml = (pl.subs || []).map(function (sb) {
+        return '<div class="pbp-sub"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2C869" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg>' + _escapeHtml(sb.text) + '</div>';
+      }).join('');
+      rows += '<div class="gh-plays-row"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' + subsHtml +
         '<div style="display:flex;gap:10px;align-items:flex-start">' +
           '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(pl.text) + '</span>' +
           (chip ? '<span class="gh-num" style="font-size:12px;color:#D9D4FA;flex-shrink:0;white-space:nowrap">' + _escapeHtml(chip) + '</span>' : '') +
           '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(pl.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
         '</div>' +
+        _ghPbpStatcastHtml(box, pl) +
         (typeof _ruleChipHtml === 'function' ? _ruleChipHtml('mlb', pl.text) : '') +
         (playId ? '<div id="play-react-' + _escapeHtml(playId) + '"></div>' : '') +
         '</div>';

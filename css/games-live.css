@@ -175,13 +175,35 @@
 .pa-lab .pl-n{font-size:11px;font-weight:900;letter-spacing:.14em;color:#F2C869;padding:5px 10px;border-radius:9px;background:rgba(242,200,105,.1);border:1px solid rgba(242,200,105,.3);text-transform:uppercase}
 /* Statcast strip under the square */
 .pa-sc:empty{display:none}
-.pa-sc .ps-in{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:6px;border-radius:14px;background:linear-gradient(180deg,rgba(168,159,232,.1),rgba(168,159,232,.03));border:1px solid rgba(168,159,232,.22);overflow:visible;max-height:0;opacity:0;padding:0 12px;margin-top:0;animation:paScIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
-@keyframes paScIn{to{max-height:90px;opacity:1;padding:20px 12px 10px;margin-top:12px}}
+.pa-sc .ps-in{position:relative;display:block;border-radius:14px;background:linear-gradient(180deg,rgba(168,159,232,.1),rgba(168,159,232,.03));border:1px solid rgba(168,159,232,.22);overflow:visible;max-height:0;opacity:0;padding:0 12px;margin-top:0;animation:paScIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes paScIn{to{max-height:220px;opacity:1;padding:20px 10px 12px;margin-top:12px}}
+/* v7.6.0: the three stats sit in their own grid; xBA gets a full-width row under them */
+.pa-sc .ps-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:6px}
+.pa-sc .ps-static{animation:none;max-height:none;opacity:1;padding:20px 10px 12px;margin-top:12px}
+.pa-sc .ps-x{display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.pa-sc .ps-xv{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex-shrink:0;min-width:52px}
+.pa-sc .ps-xv b{font-size:23px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;color:#FFFFFF;display:flex;align-items:center;gap:4px;min-height:24px}
+.pa-sc .ps-xv span{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0}
+.pa-sc .ps-dots i{width:6px;height:6px;border-radius:50%;background:#C9C2F5;animation:psDot 1.2s ease-in-out infinite}
+.pa-sc .ps-dots i:nth-child(2){animation-delay:.2s}.pa-sc .ps-dots i:nth-child(3){animation-delay:.4s}
+@keyframes psDot{0%,100%{opacity:.25}50%{opacity:1}}
+.pa-sc .ps-xw{flex:1;min-width:0;font-size:12px;line-height:1.35;color:#CECBF6}
+.pa-sc .ps-xt{flex-shrink:0;font-size:10px;font-weight:900;letter-spacing:.12em;padding:5px 9px;border-radius:8px}
+.pa-sc .ps-xt.good{background:rgba(124,242,156,.14);border:1px solid rgba(124,242,156,.4);color:#9BE8AC}
+.pa-sc .ps-xt.bad{background:rgba(255,122,107,.14);border:1px solid rgba(255,122,107,.4);color:#FFB3A8}
+.pa-sc .ps-hr{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:700;color:#F2C869}
+.pa-sc .ps-hr.out{color:#F5E3B0}
+/* play-by-play: Statcast chips under a ball in play, and pinch-hit / pinch-run lines */
+.pbp-sc{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.pbp-sc span{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:7px;background:rgba(168,159,232,.14);color:#D9D4FA;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pbp-sc span.hr{background:rgba(242,200,105,.12);color:#F2C869}
+.pbp-sub{display:flex;align-items:center;gap:7px;margin:0 0 6px;padding:6px 9px;border-radius:9px;background:rgba(242,200,105,.07);border:1px solid rgba(242,200,105,.2);font-size:12px;color:#F5E3B0}
+.gh-ph{align-self:flex-end;margin-top:3px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:7px;background:rgba(242,200,105,.12);border:1px solid rgba(242,200,105,.35);color:#F2C869;white-space:nowrap}
 .pa-sc .ps-m{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
 .pa-sc .ps-m+.ps-m{border-left:1px solid rgba(255,255,255,.08)}
-.pa-sc .ps-m b{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;color:#FFFFFF}
+.pa-sc .ps-m b{white-space:nowrap;font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.05;color:#FFFFFF}
 .pa-sc .ps-m b span{font:inherit;letter-spacing:inherit;color:#FFFFFF}  /* v6.5.0: the number itself, not a label */
-.pa-sc .ps-m b small{font-size:11px;font-weight:700;color:#9C95D0;margin-left:2px;letter-spacing:.04em}
+.pa-sc .ps-m b small{font-size:9.5px;font-weight:800;color:#9C95D0;margin-left:1px;letter-spacing:.02em}
 .pa-sc .ps-m > span{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;white-space:nowrap}
 .pa-sc .ps-tr{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:.14em;padding:4px 9px;border-radius:8px;background:#2A2460;border:1px solid rgba(168,159,232,.35);color:#E9E5FF;white-space:nowrap}
 /* home run takeover inside the square (reuses the football takeover's motion) */

@@ -24,7 +24,7 @@ function _savRerender() {
 }
 function _savGame(pk, live) {
   if (pk == null) return null;
-  return _savGet('game', String(pk), '/api/mlb?mode=savant&smode=game&gamePk=' + encodeURIComponent(pk) + (live ? '&live=1' : ''), live ? 20000 : null, live ? _savRerender : null);
+  return _savGet('game', String(pk), '/api/mlb?mode=savant&smode=game&gamePk=' + encodeURIComponent(pk) + (live ? '&live=1' : ''), live ? 20000 : null, _savRerender);
 }
 function _savPlay(pk, atBatIndex) {
   var g = pk != null ? (window._sav.game[String(pk)] || {}).data : null;
@@ -104,12 +104,12 @@ function _savPlayPillsHtml(lp, t, E) {
   if (ev != null) left.push(pill(_escapeHtml(String(ev)) + ' mph'));
   if (la != null) left.push(pill(_escapeHtml(String(la)) + '&deg;'));
   if (dist != null && tr !== 'ground_ball') left.push(pill(_escapeHtml(String(dist)) + ' ft'));
-  if (sp.xba != null) {
+  if (sp.xba != null && !inStrip) {
     var x = sp.xba, tag = isHit && x < .25 ? ' · Lucky' : (!isHit && x >= .6 ? ' · Robbed' : '');
     var good = isHit ? '#9BE8AC' : '#FFB3A8';
     right.push(pill('xBA ' + x.toFixed(3).replace(/^0/, '') + tag, tag ? 'rgba(11,8,32,.85)' : null, tag ? good : null));
   }
-  if (sp.parks != null && (et === 'home_run' || /fly_ball|line_drive/.test(tr))) right.push(pill('HR in ' + sp.parks + '/30 parks', null, sp.parks >= 15 ? '#9BE8AC' : null));
+  if (sp.parks != null && !inStrip && (et === 'home_run' || /fly_ball|line_drive/.test(tr))) right.push(pill('HR in ' + sp.parks + '/30 parks', null, sp.parks >= 15 ? '#9BE8AC' : null));
   var caught = et === 'field_out' && /fly_ball|line_drive|popup/.test(tr);
   if (caught && sp.catchProb != null && sp.catchProb <= .75) {
     var cp = sp.catchProb, stars = cp <= .25 ? 5 : cp <= .5 ? 4 : 3;

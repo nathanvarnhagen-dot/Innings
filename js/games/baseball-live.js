@@ -96,7 +96,64 @@ function _bbStatsHtml(lp, s, OFF) {
   };
   return '<div class="ps-in" data-t0="' + t0.toFixed(2) + '" data-t1="' + t1.toFixed(2) + '" data-start="' + s.startAt + '" style="--t0:' + (t0 - E).toFixed(2) + 's">' +
     (trWord ? '<span class="ps-tr">' + trWord + '</span>' : '') +
-    m('ev', ev, 1, 'MPH', 'EXIT VELO') + m('la', la, 0, '\u00b0', 'LAUNCH') + m('d', (tr === 'ground_ball' ? null : dist), 0, 'FT', 'DISTANCE') + '</div>';
+    '<div class="ps-g">' + m('ev', ev, 1, 'MPH', 'EXIT VELO') + m('la', la, 0, '\u00b0', 'LAUNCH') + m('d', (tr === 'ground_ball' ? null : dist), 0, 'FT', 'DISTANCE') + '</div>' +
+    _bbXbaRowHtml(lp, sp, s.startAt) + '</div>';
+}
+// v7.6.0: xBA on every ball in play, in its own row under the three stats.
+// Statcast posts it 20-60 s after the play, so until then the row shows
+// "Waiting on Statcast" and fills in on the next refresh. After 3 minutes
+// with nothing it says so rather than waiting forever. A fly ball or
+// liner that would have left at least one park says how many.
+function _bbXbaRowHtml(lp, sp, since) {
+  sp = sp || {};
+  var et = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
+  var isHit = /^(single|double|triple|home_run)$/.test(et);
+  var x = sp.xba, h;
+  if (x != null) {
+    var tag = isHit && x < .25 ? 'LUCKY' : (!isHit && x >= .6 ? 'ROBBED' : '');
+    h = '<div class="ps-x"><div class="ps-xv"><b>' + x.toFixed(3).replace(/^0/, '') + '</b><span>xBA</span></div>' +
+      '<span class="ps-xw">Lands for a hit ' + Math.round(x * 100) + '% of the time</span>' +
+      (tag ? '<span class="ps-xt ' + (isHit ? 'good' : 'bad') + '">' + tag + '</span>' : '') + '</div>';
+  } else {
+    var stale = since && Date.now() - since > 180000;
+    h = '<div class="ps-x"><div class="ps-xv">' + (stale ? '<b>\u2014</b>' : '<b class="ps-dots" role="img" aria-label="xBA loading"><i></i><i></i><i></i></b>') + '<span>xBA</span></div>' +
+      '<span class="ps-xw">' + (stale ? 'Statcast hasn\u2019t posted xBA for this ball' : 'Waiting on Statcast') + '</span></div>';
+  }
+  if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
+    h += '<div class="ps-hr' + (et === 'home_run' ? '' : ' out') + '">' +
+      (et === 'home_run' ? 'Gone in ' + sp.parks + ' of 30 parks' : 'Home run in ' + sp.parks + ' of 30 parks') + '</div>';
+  }
+  return h;
+}
+// The same strip with final numbers and no entrance motion — shown after
+// the play animation ends and kept until the next batter's first pitch,
+// so xBA has time to arrive. Re-rendered on every refresh.
+function _bbStatsStaticHtml(lp, since) {
+  var h = lp.hit || {};
+  var g = window._activeBrowseGame, sp = (typeof _savPlay === 'function' && g) ? (_savPlay(g.gamePk, lp.atBatIndex) || {}) : {};
+  var ev = h.speed != null ? h.speed : sp.ev, la = h.angle != null ? h.angle : sp.la, dist = h.distance != null ? h.distance : sp.dist;
+  var tr = h.trajectory || '';
+  if (ev == null && la == null && dist == null) return '';
+  var trWord = { ground_ball: 'GROUND BALL', line_drive: 'LINE DRIVE', fly_ball: 'FLY BALL', popup: 'POP UP', bunt_grounder: 'BUNT', bunt_popup: 'BUNT' }[tr] || '';
+  if ((lp.eventType || '') === 'home_run') trWord = trWord ? trWord + ' \u00b7 HOME RUN' : 'HOME RUN';
+  var m = function (v, dec, unit, label) {
+    return '<div class="ps-m"><b><span>' + (v == null ? '\u2014' : Number(v).toFixed(dec)) + '</span><small>' + (v == null ? '' : unit) + '</small></b><span>' + label + '</span></div>';
+  };
+  return '<div class="ps-in ps-static">' + (trWord ? '<span class="ps-tr">' + trWord + '</span>' : '') +
+    '<div class="ps-g">' + m(ev, 1, 'MPH', 'EXIT VELO') + m(la, 0, '\u00b0', 'LAUNCH') + m(tr === 'ground_ball' ? null : dist, 0, 'FT', 'DISTANCE') + '</div>' +
+    _bbXbaRowHtml(lp, sp, since) + '</div>';
+}
+function _bbKeptStripHtml() {
+  var k = window._bbKeep;
+  if (!k || !k.lp) return '';
+  var g = window._activeBrowseGame;
+  if (!g || String(g.gamePk) !== k.pk) { window._bbKeep = null; return ''; }
+  var box = typeof _gcBox === 'function' ? _gcBox() : null;
+  var seq = box && box.pitchSequence, st = (box && box.situation) || {};
+  if (st.inningState === 'Middle' || st.inningState === 'End') return '';
+  // next batter has seen a pitch: this ball's moment is over
+  if (seq && seq.atBatIndex != null && seq.atBatIndex !== k.lp.atBatIndex && seq.pitches && seq.pitches.length) { window._bbKeep = null; return ''; }
+  return _bbStatsStaticHtml(k.lp, k.since);
 }
 function _bbStatsTick() {
   if (window._bbStatsRaf) return;

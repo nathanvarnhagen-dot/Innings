@@ -63,7 +63,10 @@ function _paFill() {
   window._pa.labelOut = !!(labSlot && !slot.getAttribute('data-inline'));
   slot.innerHTML = _paOverlayHtml();
   if (labSlot) labSlot.innerHTML = slot.innerHTML ? (window._pa._labelHtml || '') : '';
-  if (stSlot) { stSlot.innerHTML = slot.innerHTML ? (window._pa._statsHtml || '') : ''; if (stSlot.innerHTML) _bbStatsTick(); }
+  if (stSlot) {
+    if (slot.innerHTML && window._pa._statsHtml) { stSlot.innerHTML = window._pa._statsHtml; _bbStatsTick(); }
+    else stSlot.innerHTML = (window._pa.labelOut && typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; // v7.6.0
+  }
   var s0 = window._pa;
   slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
   clearTimeout(window._paEndT);
@@ -71,7 +74,7 @@ function _paFill() {
     // One full run, then hand the square back and catch up on any
     // refresh that waited (see the render hook below).
     window._paEndT = setTimeout(function () {
-      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) lb.innerHTML = ''; var st2 = document.getElementById('gh-pa-stats'); if (st2) st2.innerHTML = ''; }
+      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) lb.innerHTML = ''; var st2 = document.getElementById('gh-pa-stats'); if (st2) { var s1 = window._pa; if (s1 && s1.labelOut && s1._statsHtml && s1.play) { var g1 = window._activeBrowseGame; window._bbKeep = { lp: s1.play, since: s1.startAt, pk: g1 ? String(g1.gamePk) : '' }; } st2.innerHTML = (typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; } }
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
     }, Math.max(0, ((window._pa.total || PA.END) + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
