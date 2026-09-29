@@ -62,10 +62,11 @@ function _paFill() {
   var labSlot = document.getElementById('gh-pa-label'), stSlot = document.getElementById('gh-pa-stats');
   window._pa.labelOut = !!(labSlot && !slot.getAttribute('data-inline'));
   slot.innerHTML = _paOverlayHtml();
-  if (labSlot) labSlot.innerHTML = slot.innerHTML ? (window._pa._labelHtml || '') : '';
+  if (labSlot) { var labNew = slot.innerHTML ? (window._pa._labelHtml || '') : ''; if (labNew) { _paSoftCancel(labSlot); labSlot.innerHTML = labNew; } else _paSoftClear(labSlot); }
   if (stSlot) {
-    if (slot.innerHTML && window._pa._statsHtml) { stSlot.innerHTML = window._pa._statsHtml; _bbStatsTick(); }
-    else stSlot.innerHTML = (window._pa.labelOut && typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; // v7.6.0
+    if (slot.innerHTML && window._pa._statsHtml) { _paSoftCancel(stSlot); stSlot.innerHTML = window._pa._statsHtml; _bbStatsTick(); }
+    else { var keptH = (window._pa.labelOut && typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; // v7.6.0
+      if (keptH) { _paSoftCancel(stSlot); if (stSlot.innerHTML !== keptH) stSlot.innerHTML = keptH; } else _paSoftClear(stSlot); } // v7.8.1: fold away, don't snap
   }
   var s0 = window._pa;
   slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
@@ -74,10 +75,28 @@ function _paFill() {
     // One full run, then hand the square back and catch up on any
     // refresh that waited (see the render hook below).
     window._paEndT = setTimeout(function () {
-      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) lb.innerHTML = ''; var st2 = document.getElementById('gh-pa-stats'); if (st2) { var s1 = window._pa; if (s1 && s1.labelOut && s1._statsHtml && s1.play) { var g1 = window._activeBrowseGame; window._bbKeep = { lp: s1.play, since: s1.startAt, pk: g1 ? String(g1.gamePk) : '' }; } st2.innerHTML = (typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; } }
+      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) _paSoftClear(lb); var st2 = document.getElementById('gh-pa-stats'); if (st2) { var s1 = window._pa; if (s1 && s1.labelOut && s1._statsHtml && s1.play) { var g1 = window._activeBrowseGame; window._bbKeep = { lp: s1.play, since: s1.startAt, pk: g1 ? String(g1.gamePk) : '' }; } var k2 = (typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; if (k2) st2.innerHTML = k2; else _paSoftClear(st2); } }
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
     }, Math.max(0, ((window._pa.total || PA.END) + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
+}
+// v7.8.1: the label above the square and the stats strip under it fold
+// shut when their moment ends instead of vanishing (which snapped
+// everything below them upward).
+function _paSoftClear(node) {
+  if (!node) return;
+  if (!node.firstChild || node._softT) { if (!node._softT) node.innerHTML = ''; return; }
+  if (typeof _ghReducedMotion === 'function' && _ghReducedMotion()) { node.innerHTML = ''; return; }
+  node.style.overflow = 'hidden'; node.style.height = node.offsetHeight + 'px';
+  void node.offsetHeight;
+  node.style.transition = 'height .36s cubic-bezier(.22,1,.36,1), opacity .22s ease';
+  node.style.height = '0px'; node.style.opacity = '0';
+  node._softT = setTimeout(function () { node._softT = null; node.innerHTML = ''; node.style.height = ''; node.style.overflow = ''; node.style.opacity = ''; node.style.transition = ''; }, 380);
+}
+function _paSoftCancel(node) {
+  if (!node || !node._softT) return;
+  clearTimeout(node._softT); node._softT = null;
+  node.style.height = ''; node.style.overflow = ''; node.style.opacity = ''; node.style.transition = '';
 }
 function _paSec(t, E) { return (t - E).toFixed(2) + 's'; }
 function _paPath(pts) { return 'M ' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L '); }

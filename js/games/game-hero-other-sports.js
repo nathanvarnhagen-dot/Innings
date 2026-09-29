@@ -1172,36 +1172,108 @@ function _ghPatch(el, html) {
     if (!el.firstChild) { el.innerHTML = html; return true; }
     var tpl = document.createElement('template');
     tpl.innerHTML = html;
-    // Keep the reader's place by hand (iOS Safari has no scroll anchoring):
-    // note where the element at the top of the view sits, patch, then
-    // scroll by however far it moved.
+    var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
+    var er = el.getBoundingClientRect();
+    var viewTop = Math.max(er.top, 0), viewBot = Math.min(er.bottom, window.innerHeight || er.bottom);
+    // 1. What the reader is looking at: the element just below the top of
+    //    the view. It must end up exactly where it was.
     var anchor = null, before = 0;
-    if (el.scrollTop > 0 && document.elementFromPoint) {
-      var r = el.getBoundingClientRect();
-      var hit = document.elementFromPoint(r.left + r.width / 2, Math.max(r.top, 0) + 60);
+    if (document.elementFromPoint) {
+      var hit = document.elementFromPoint(er.left + er.width / 2, viewTop + 60);
       if (hit && el.contains(hit) && hit !== el) { anchor = hit; before = hit.getBoundingClientRect().top; }
     }
+    // 2. Where every block sits now (for gliding moved ones afterwards)
+    var blocks = reduce ? [] : Array.prototype.slice.call(el.querySelectorAll(_GH_BLOCKS));
+    var was = new Map();
+    blocks.forEach(function (b) { var r = b.getBoundingClientRect(); if (r.bottom > viewTop - 200 && r.top < viewBot + 200) was.set(b, r.top); });
+    // 3. Patch in place; new nodes are collected
+    _ghAdded = [];
     _ghMorphChildren(el, tpl.content);
+    var added = _ghAdded; _ghAdded = null;
+    // 4. New pieces at or below the view start folded shut and open up;
+    //    ones above the view go in at full size (the anchor fix hides them)
+    var grow = [];
+    if (!reduce) added.forEach(function (n) {
+      if (n.nodeType !== 1 || !n.isConnected) return;
+      for (var p = n.parentNode; p && p !== el; p = p.parentNode) { if (added.indexOf(p) !== -1) return; } // parent already growing
+      var r = n.getBoundingClientRect();
+      if (r.height < 2 || r.bottom <= viewTop + 1) return;
+      n.style.overflow = 'hidden'; n.style.height = '0px'; n.style.opacity = '0';
+      grow.push({ n: n, h: r.height });
+    });
+    // 5. Keep the anchor still
     if (anchor && anchor.isConnected) {
       var moved = anchor.getBoundingClientRect().top - before;
       if (Math.abs(moved) > 1) el.scrollTop += moved;
     }
+    // 6. Anything else that shifted glides from its old spot to its new one
+    //    (only the outermost block of a group that moved together)
+    var moves = [];
+    was.forEach(function (top, b) {
+      if (!b.isConnected) return;
+      var dy = top - b.getBoundingClientRect().top;
+      if (Math.abs(dy) < 2 || Math.abs(dy) > 600) return;
+      moves.push({ b: b, dy: dy });
+    });
+    moves = moves.filter(function (m) {
+      for (var p = m.b.parentNode; p && p !== el; p = p.parentNode) {
+        for (var j = 0; j < moves.length; j++) if (moves[j].b === p && Math.abs(moves[j].dy - m.dy) < 2) return false;
+      }
+      return true;
+    });
+    moves.forEach(function (m) { m.b.style.transition = 'none'; m.b.style.transform = 'translateY(' + m.dy.toFixed(1) + 'px)'; });
+    if (moves.length || grow.length) {
+      void el.offsetHeight; // commit the starting positions
+      requestAnimationFrame(function () {
+        moves.forEach(function (m) {
+          m.b.style.transition = 'transform .38s cubic-bezier(.22,1,.36,1)'; m.b.style.transform = '';
+          setTimeout(function () { m.b.style.transition = ''; }, 420);
+        });
+        grow.forEach(function (g) {
+          g.n.style.transition = 'height .38s cubic-bezier(.22,1,.36,1), opacity .3s ease .08s';
+          g.n.style.height = g.h + 'px'; g.n.style.opacity = '1';
+          setTimeout(function () { g.n.style.height = ''; g.n.style.overflow = ''; g.n.style.opacity = ''; g.n.style.transition = ''; }, 440);
+        });
+      });
+    }
     return true;
   } catch (e) {
     console.error('[patch] falling back to full render', e);
+    _ghAdded = null;
     el.innerHTML = html;
     return false;
   }
 }
+// Blocks that glide when they move (cards, rows, the count, the strip…)
+var _GH_BLOCKS = '.gh-card,.gh-detail>*,[data-k],.np-card,.np-chips,.np-mix,.bbc,.pa-sc,.pa-lab,.gh-plays-row';
+var _ghAdded = null;
 var _GH_SMIL = /^(animate|animateMotion|animateTransform|set)$/i;
 function _ghHasSmil(n) { return n.nodeType === 1 && (_GH_SMIL.test(n.nodeName) || !!(n.querySelector && n.querySelector('animate,animateMotion,animateTransform,set'))); }
+function _ghKeyOf(n) { return n && n.nodeType === 1 ? n.getAttribute('data-k') : null; }
+// Children are matched by data-k when they have one (a new pitch goes in at
+// the top instead of rewriting every row), otherwise by position.
 function _ghMorphChildren(from, to) {
-  var a = from.childNodes, b = to.childNodes;
-  var i = 0;
-  for (; i < b.length; i++) {
-    var nn = b[i], on = a[i];
-    if (!on) { from.appendChild(nn.cloneNode(true)); continue; }
-    _ghMorphNode(from, on, nn);
+  var b = Array.prototype.slice.call(to.childNodes);
+  var keyed = {};
+  Array.prototype.forEach.call(from.childNodes, function (c) { var k = _ghKeyOf(c); if (k) keyed[k] = c; });
+  for (var i = 0; i < b.length; i++) {
+    var nn = b[i], cur = from.childNodes[i] || null, k = _ghKeyOf(nn);
+    if (k) {
+      var match = keyed[k];
+      if (match) {
+        delete keyed[k];
+        if (match !== cur) { from.insertBefore(match, cur); cur = match; }
+        _ghMorphNode(from, cur, nn);
+      } else {
+        var fresh = nn.cloneNode(true);
+        from.insertBefore(fresh, cur);
+        if (_ghAdded) _ghAdded.push(fresh);
+      }
+      continue;
+    }
+    if (!cur) { var c2 = nn.cloneNode(true); from.appendChild(c2); if (_ghAdded) _ghAdded.push(c2); continue; }
+    if (_ghKeyOf(cur)) { var c3 = nn.cloneNode(true); from.insertBefore(c3, cur); if (_ghAdded) _ghAdded.push(c3); continue; }
+    _ghMorphNode(from, cur, nn);
   }
   while (from.childNodes.length > b.length) from.removeChild(from.lastChild);
 }
@@ -1213,9 +1285,10 @@ function _ghMorphNode(parent, on, nn) {
   var os = on.getAttribute('style') || '', ns = nn.getAttribute('style') || '';
   var animChanged = os !== ns && /animation/.test(os + ns);
   if (animChanged || _ghHasSmil(on) || _ghHasSmil(nn)) { parent.replaceChild(nn.cloneNode(true), on); return; }
-  // attributes
+  // attributes (a glide/grow in progress owns transform/height inline — the
+  // renderer never sets those, so leave style alone when only they differ)
   var oa = on.attributes, na = nn.attributes, k;
-  for (k = oa.length - 1; k >= 0; k--) { if (!nn.hasAttribute(oa[k].name)) on.removeAttribute(oa[k].name); }
+  for (k = oa.length - 1; k >= 0; k--) { if (!nn.hasAttribute(oa[k].name) && !(oa[k].name === 'style' && _ghOnlyMotionStyle(on))) on.removeAttribute(oa[k].name); }
   for (k = 0; k < na.length; k++) { if (on.getAttribute(na[k].name) !== na[k].value) on.setAttribute(na[k].name, na[k].value); }
   // Slots other code fills after each render (play reactions, the play
   // animation, its label/strip): keep what's there instead of blanking it
@@ -1223,3 +1296,4 @@ function _ghMorphNode(parent, on, nn) {
   if (!nn.firstChild && on.firstChild && /^(play-react-|gh-pa-|reel)/.test(on.id || '')) return;
   _ghMorphChildren(on, nn);
 }
+function _ghOnlyMotionStyle(n) { return /^(\s*(transform|transition|height|overflow|opacity)\s*:[^;]*;?)*\s*$/.test(n.getAttribute('style') || ''); }

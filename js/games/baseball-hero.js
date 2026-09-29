@@ -941,12 +941,13 @@ function _ghLiveDetailHtml(box) {
       if (!brk && seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
           var c = _pitchCallColor(p.call);
-          return '<div style="display:flex;align-items:center;gap:10px;min-height:26px">' +
+          // v7.8.1: keyed wrapper (pitch number) so a new pitch slides in at the top
+          return '<div data-k="p' + seq.atBatIndex + '_' + p.num + '" style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;min-height:26px">' +
             '<span style="width:20px;height:20px;border-radius:50%;background:' + c + ';color:#0D0820;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + p.num + '</span>' +
             (p.speed ? '<span class="gh-num" style="font-size:14px;flex-shrink:0">' + p.speed + ' mph</span>' : '') +
             '<span style="font-size:13px;color:#D9D4FA;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(p.type || '') + '</span>' +
             (typeof _savPitchExtrasHtml === 'function' ? _savPitchExtrasHtml(p, seq, window._activeBrowseGame && window._activeBrowseGame.gamePk) : '') +
-            (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, box, s.half) : '');
+            (p.call ? '<span style="font-size:11.5px;font-weight:700;color:' + c + ';flex-shrink:0;filter:brightness(1.25)">' + _escapeHtml(p.call) + '</span>' : '') + '</div>' + (typeof _absLineHtml === 'function' ? _absLineHtml(p, box, s.half) : '') + '</div>';
         }).join('') + '</div>' + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + (typeof _ghMixTodayHtml === 'function' ? _ghMixTodayHtml(box, mp) : '');
       } else if (!brk) {
         out += '<div class="gh-sub" style="margin-top:12px">No pitches yet this at-bat</div>';
@@ -1081,7 +1082,7 @@ function _ghPlaysByInningHtml(box, bare) {
     var batting = grp.half === 'top' ? m.away : m.home;
     var runs = runsIn(grp.inning, grp.half);
     var isOpen = open[k] != null ? !!open[k] : (k === startOpen);
-    rows += '<div style="border-top:.5px solid rgba(255,255,255,.07)">' +
+    rows += '<div data-k="inn' + k + '" style="border-top:.5px solid rgba(255,255,255,.07)">' +
       '<button onclick="ghInningToggle(\'' + k + '\',this)" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="gh-inn-' + k + '" ' +
         'style="width:100%;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;background:none;border:0;color:#fff;font-family:inherit;text-align:left;cursor:pointer">' +
         '<svg data-chev width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B9B3E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;transition:transform .18s ease' + (isOpen ? ';transform:rotate(90deg)' : '') + '"><polyline points="9 5 16 12 9 19"/></svg>' +
@@ -1113,7 +1114,7 @@ function _ghPlaysByInningHtml(box, bare) {
       var subsHtml = (pl.subs || []).map(function (sb) {
         return '<div class="pbp-sub"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2C869" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg>' + _escapeHtml(sb.text) + '</div>';
       }).join('');
-      rows += '<div class="gh-plays-row"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' + subsHtml +
+      rows += '<div class="gh-plays-row" data-k="pl' + _escapeHtml(String(idPart)) + '"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' + subsHtml +
         '<div style="display:flex;gap:10px;align-items:flex-start">' +
           '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(pl.text) + '</span>' +
           (chip ? '<span class="gh-num" style="font-size:12px;color:#D9D4FA;flex-shrink:0;white-space:nowrap">' + _escapeHtml(chip) + '</span>' : '') +
