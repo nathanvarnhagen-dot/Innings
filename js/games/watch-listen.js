@@ -83,8 +83,10 @@ var WL_NETS = [
 // Short network codes some feeds use (the NHL's especially), spelled out
 var WL_NAMES = { NBCSCA: 'NBC Sports California', NBCSBA: 'NBC Sports Bay Area', 'NBCS-BA': 'NBC Sports Bay Area', NBCSB: 'NBC Sports Boston', NBCSCH: 'NBC Sports Chicago', NBCSP: 'NBC Sports Philadelphia', MSGSN: 'MSG Sportsnet', 'MSG-B': 'MSG Sportsnet', 'SNLA': 'SportsNet LA', 'SN-PIT': 'SportsNet Pittsburgh', 'NESN+': 'NESN+' };
 function _wlPretty(name) { var k = String(name || '').trim(); return WL_NAMES[k] || WL_NAMES[k.toUpperCase()] || k; }
+// Links that open an app directly (the web link is always offered next to it)
+var WL_SCHEMES = { 'ESPN app': 'sportscenter://', 'Netflix': 'nflx://', 'Prime Video': 'aiv://', 'Apple TV': 'videos://', 'YouTube TV': 'youtubetv://' };
 function _wlNet(name) {
-  for (var i = 0; i < WL_NETS.length; i++) if (WL_NETS[i][0].test(name)) return { tile: WL_NETS[i][1], color: WL_NETS[i][2], url: WL_NETS[i][3], app: WL_NETS[i][4] };
+  for (var i = 0; i < WL_NETS.length; i++) if (WL_NETS[i][0].test(name)) return { tile: WL_NETS[i][1], color: WL_NETS[i][2], url: WL_NETS[i][3], app: WL_NETS[i][4], scheme: WL_SCHEMES[WL_NETS[i][4]] || '' };
   var words = String(name).replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   var tile = words.length > 1 ? words.slice(0, 4).map(function (w) { return w.charAt(0); }).join('').toUpperCase() : String(name).slice(0, 4).toUpperCase();
   return { tile: tile, color: '#3D3580', url: 'https://www.google.com/search?q=' + encodeURIComponent('watch ' + name + ' live'), app: null };
@@ -147,7 +149,7 @@ function _wlOptions(d, metro) {
     if (seen[n.app || b.name]) return; // ESPN + ABC etc. open the same app — one row each is enough
     seen[n.app || b.name] = 1;
     var local = b.side !== 'national';
-    watch.push({ kind: 'watch', name: b.name, sub: local ? 'Your local ' + _wlShort(b.side === 'home' ? d.home : d.away) + ' channel' : b.kind === 'stream' ? 'Streaming' : 'National broadcast', tile: n.tile, color: n.color, url: n.url, cta: n.app ? 'Watch in the ' + n.app.replace(/ app$/, '') + ' app' : 'Find ' + b.name,
+    watch.push({ kind: 'watch', name: b.name, sub: local ? 'Your local ' + _wlShort(b.side === 'home' ? d.home : d.away) + ' channel' : b.kind === 'stream' ? 'Streaming' : 'National broadcast', tile: n.tile, color: n.color, url: n.url, scheme: n.scheme, cta: n.app ? 'Watch in the ' + n.app.replace(/ app$/, '') + ' app' : 'Find ' + b.name,
       tag: local ? 'LOCAL' : '', rank: local ? 0 : b.kind === 'tv' ? 1 : 2 });
   });
   // Streams the league itself offers
@@ -208,10 +210,14 @@ function _wlRender() {
   if (phase === 'live' && _wlListenPref() && listenMain) best = listenMain;
   else if (o.watch.length) best = o.watch[0];
   else if (listenMain) best = listenMain;
+  // Every option opens either way: in the app, or on the website. On a computer the website comes first.
+  var desk = !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
+  var appLink = function (x, cls, label) { return '<a class="' + cls + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" data-kind="' + x.kind + '" data-scheme="' + esc(x.scheme || '') + '" onclick="return wlGo(event,this)" aria-label="Open ' + esc(x.name) + ' in the app">' + label + '</a>'; };
+  var webLink = function (x, cls, label) { return '<a class="' + cls + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="wlOpen(\'' + x.kind + '\')" aria-label="Open ' + esc(x.name) + ' website">' + label + '</a>'; };
   var row = function (x) {
-    var play = x.kind === 'listen';
+    var app = appLink(x, 'wl-go' + (desk ? '' : ' wl-go-main'), 'App'), web = webLink(x, 'wl-go' + (desk ? ' wl-go-main' : ''), 'Web');
     return '<div class="wl-row"><span class="wl-ap wl-ap-s" style="background:' + x.color + '">' + esc(x.tile) + '</span><div class="wl-t"><b>' + esc(x.name) + (x.tag ? '<span class="wl-tag">' + esc(x.tag) + '</span>' : '') + '</b><small>' + esc(x.sub) + '</small></div>' +
-      '<a class="wl-go' + (play ? ' wl-ply' : '') + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" data-kind="' + x.kind + '" data-scheme="' + esc(x.scheme || '') + '" onclick="return wlGo(event,this)" aria-label="' + (play ? 'Listen to ' : 'Open ') + esc(x.name) + '">' + (play ? '▶' : 'Open') + '</a></div>';
+      '<div class="wl-btns">' + (desk ? web + app : app + web) + '</div></div>';
   };
   var restWatch = o.watch.filter(function (x) { return x !== best; });
   var restListen = o.listen.filter(function (x) { return x !== best && !(x.main && best && best.main); });
@@ -220,7 +226,9 @@ function _wlRender() {
   if (best) {
     h += '<div class="wl-k">' + (best.kind === 'listen' ? 'BEST WAY TO FOLLOW' : 'BEST WAY TO WATCH') + pickArea + '</div>' +
       '<div class="wl-best"><div class="wl-top"><span class="wl-ap" style="background:' + best.color + '">' + esc(best.tile) + '</span><div class="wl-nm"><b>' + esc(best.name) + '</b><small>' + esc(best.sub) + '</small></div></div>' +
-      '<a class="wl-cta wl-' + best.kind + '" href="' + esc(best.url) + '" target="_blank" rel="noopener" data-kind="' + best.kind + '" data-scheme="' + esc(best.scheme || '') + '" onclick="return wlGo(event,this)">' + (best.kind === 'listen' ? '🎧 ' : '▶ ') + esc(best.cta || best.name) + '</a></div>';
+      '<div class="wl-ctas">' + (desk
+        ? webLink(best, 'wl-cta wl-' + best.kind, (best.kind === 'listen' ? '🎧 ' : '▶ ') + esc((best.name === 'Listen live' ? 'MLB.com' : best.name) + ' website')) + appLink(best, 'wl-cta2', 'App')
+        : appLink(best, 'wl-cta wl-' + best.kind, (best.kind === 'listen' ? '🎧 ' : '▶ ') + esc(best.cta || best.name)) + webLink(best, 'wl-cta2', 'Website')) + '</div></div>';
   } else h += '<div class="wl-k">WATCH &amp; LISTEN' + pickArea + '</div>';
   if (restWatch.length) h += '<div class="wl-k">' + (best && best.kind === 'watch' ? 'ALSO ON' : 'WATCH') + '</div><div class="wl-list">' + restWatch.map(row).join('') + '</div>';
   if (restListen.length) h += '<div class="wl-k">LISTEN<em>' + restListen.length + (restListen.length === 1 ? ' call' : ' calls') + '</em></div><div class="wl-list">' + restListen.map(row).join('') + '</div>';
