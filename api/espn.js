@@ -184,45 +184,39 @@ module.exports = async function handler(req, res) {
       return;
     }
     if (mode === 'teams') {
-      // Same site.api.espn.com host already confirmed working for
-      // schedule/boxscore/pregame (unlike the standings endpoint's
-      // wrong-domain issue) — moderate-high confidence in this shape,
-      // but still not tested against a live response.
-      //
-      // CFB is on its second fix: college football has 762 teams across
-      // every division (FBS, FCS, DII/DIII). The first attempt added
-      // groups=80 on site.api.espn.com, which turned out not to be
-      // enough on its own — Oregon (a real FBS/Big Ten school) was
-      // still missing after that. This version switches to
-      // site.web.api.espn.com with groups=80&groupType=conference&
-      // enable=groups, a combination confirmed working by someone who
-      // hit this exact problem (not a guess this time) — but since one
-      // "confirmed" fix already turned out incomplete, a debug block is
-      // included below so if Oregon is STILL missing, the actual count
-      // and whether it's present are visible immediately by hitting
-      // this URL directly, instead of a third blind attempt.
-      const cfbParams = '&groups=80&groupType=conference&enable=groups';
-      const host = (league === 'cfb') ? 'site.web.api.espn.com' : 'site.api.espn.com';
-      const params = (league === 'cfb') ? cfbParams : '';
-      const url = 'https://' + host + '/apis/site/v2/sports/' + path + '/teams?limit=300' + params;
-      const r = await fetch(url);
-      const data = await r.json();
-      const list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
-      const teams = (list.teams || []).map(function (t) {
-        return { id: t.team && t.team.id, name: t.team && (t.team.displayName || t.team.name) };
-      }).filter(function (t) { return t.name; }).sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      // v7.5.5: college football. The conference view (FBS only, groups=80)
+      // nests teams inside each conference — sports[0].leagues[0].groups[].teams[]
+      // — not in leagues[0].teams, which is why this list came back empty.
+      // Walk every group (and any sub-groups); if that still finds too few
+      // teams, fall back to ESPN's full alphabetical list of every school.
+      const collect = function (data) {
+        const lg = (((data && data.sports) || [])[0] || {}).leagues || [];
+        const out = [], seenIds = {};
+        const take = function (t) {
+          const tm = (t && t.team) || t || {};
+          const name = tm.displayName || tm.name;
+          if (!name || seenIds[tm.id || name]) return;
+          seenIds[tm.id || name] = 1;
+          out.push({ id: tm.id, name: name });
+        };
+        const walk = function (g) { (g.teams || []).forEach(take); (g.groups || g.children || []).forEach(walk); };
+        lg.forEach(walk);
+        return out;
+      };
+      let teams = [];
       if (league === 'cfb') {
-        res.status(200).json({
-          teams: teams,
-          debug: {
-            totalCount: teams.length,
-            hasOregon: teams.some(function (t) { return /oregon/i.test(t.name); }),
-            topLevelKeys: Object.keys(data || {}),
-            hasSports: Array.isArray(data.sports)
-          }
-        });
-        return;
+        const fbs = await fetch('https://site.web.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=500&groups=80&groupType=conference&enable=groups').then(function (r) { return r.json(); }).catch(function () { return null; });
+        teams = collect(fbs);
+        if (teams.length < 100) {
+          const all = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=1000').then(function (r) { return r.json(); }).catch(function () { return null; });
+          teams = collect(all);
+        }
+      } else {
+        const data = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300').then(function (r) { return r.json(); });
+        teams = collect(data);
       }
+      teams.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      if (!teams.length) { res.setHeader('Cache-Control', 's-maxage=60'); res.status(200).json({ teams: [] }); return; }
       res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
       res.status(200).json({ teams: teams });
       return;
