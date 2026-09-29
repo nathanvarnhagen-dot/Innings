@@ -255,6 +255,9 @@ function _ghNowPitchingHtml(mp) {
   return h;
 }
 function _savPitchShort(n) { return String(n || '').replace(/^4-Seam Fastball$/i, '4-Seam').replace(/^Four-Seam Fastball$/i, '4-Seam').replace(/^Knuckle Curve$/i, 'Knuckle curve'); }
+// v7.7.1: MLB's pitch codes in words, for pitches Savant's season arsenal doesn't list
+var _PITCH_NAMES = { FF: '4-Seam', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam', FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', SV: 'Slurve', CU: 'Curveball', KC: 'Knuckle curve', CS: 'Slow curve', CH: 'Changeup', FS: 'Splitter', FO: 'Forkball', SC: 'Screwball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout' };
+function _savPitchName(code, arsenalRow) { return arsenalRow && arsenalRow.name ? _savPitchShort(arsenalRow.name) : (_PITCH_NAMES[code] || code); }
 // The rest of his outing: percentile chips + a way to his page.
 function _ghPitcherChipsHtml(mp) {
   if (!mp || !mp.id) return '';
@@ -280,11 +283,12 @@ function _ghMixTodayHtml(box, mp) {
   if (total < 8) return '';
   var avg = {}; ars.forEach(function (a) { avg[a.code] = a; });
   var rows = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 3);
+  var missing = rows.some(function (code) { return !(avg[code] && avg[code].usage != null); });
   return '<div class="np-mix"><div class="np-row"><span class="np-eb" style="margin:0">MIX TODAY VS SEASON</span><span class="np-mut">' + total + ' pitches</span></div><div class="np-mixg">' +
     rows.map(function (code) {
       var pct = Math.round(counts[code] / total * 100), a = avg[code], c = _savPitchColor(code);
-      return '<span class="np-mn"><i style="background:' + c + '"></i>' + _escapeHtml(_savPitchShort(a ? a.name : code)) + '</span><div class="np-ab"><i style="width:' + pct + '%;background:' + c + '"></i></div><b>' + pct + '%</b><span class="np-mut">' + (a && a.usage != null ? Math.round(a.usage) + '% avg' : '') + '</span>';
-    }).join('') + '</div></div>';
+      return '<span class="np-mn"><i style="background:' + c + '"></i>' + _escapeHtml(_savPitchName(code, a)) + '</span><div class="np-ab"><i style="width:' + pct + '%;background:' + c + '"></i></div><b>' + pct + '%</b><span class="np-mut">' + (a && a.usage != null ? Math.round(a.usage) + '% avg' : '\u2014') + '</span>';
+    }).join('') + '</div>' + (missing ? '<div class="np-mut" style="margin-top:8px">\u2014 not in his season mix on Baseball Savant</div>' : '') + '</div>';
 }
 // Top of the player sheet: the regular-season line (hand, position, team).
 function _savSeasonHtml(id) {

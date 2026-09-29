@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.7.0-new-pitcher';
+window.INNINGS_BUILD = 'v7.7.1-pitch-names';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
