@@ -151,6 +151,7 @@ function loadNotifications() {
       if (n.type === 'tagged') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> marked a memory with you';
       else if (n.type === 'friend_request') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a friend request';
       else if (n.type === 'friend_accepted') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> accepted your friend request';
+      else if (n.type === 'friend_joined') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> joined from your invite — you’re friends now';
       else if (n.type === 'added_to_group') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> added you to a group';
       else if (n.type === 'feedback_post') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted feedback';
       else if (n.type === 'game_watch_joined') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started watching ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' with you';
@@ -191,7 +192,7 @@ function notifTap(notifId) {
   } else if (n.type === 'added_to_group' && n.groupId) {
     if (typeof openGroupById === 'function') openGroupById(n.groupId);
     if (typeof loadMyGroups === 'function') loadMyGroups();
-  } else if ((n.type === 'friend_request' || n.type === 'friend_accepted') && n.fromUid) {
+  } else if ((n.type === 'friend_request' || n.type === 'friend_accepted' || n.type === 'friend_joined') && n.fromUid) {
     if (typeof openUserProfile === 'function') openUserProfile(n.fromUid);
   } else if (n.type === 'feedback_post') {
     nav('feedback-group');

@@ -47,8 +47,40 @@ function ib_toast(msg) {
     var params = new URLSearchParams(window.location.search);
     var gid = params.get('groupInvite');
     var fid = params.get('futureInvite');
-    if (!gid && !fid) return;
+    var frid = params.get('friendInvite');
+    if (!frid) {
+      // No link this load — pick up one saved earlier (within 14 days)
+      try {
+        var saved = JSON.parse(localStorage.getItem('innings_pendingFriendInvite') || 'null');
+        if (saved && saved.uid && Date.now() - (saved.ts || 0) < 14 * 864e5) {
+          window._pendingFriendInviteUid = saved.uid;
+          window._pendingFriendInviteName = saved.name || 'A friend';
+          var b0 = document.getElementById('ob-group-invite-banner');
+          if (b0 && !gid && !fid) {
+            b0.textContent = window._pendingFriendInviteName + ' invited you to Innings — verify your number below and you’ll be friends.';
+            b0.style.display = 'block';
+          }
+        } else if (saved) {
+          localStorage.removeItem('innings_pendingFriendInvite');
+        }
+      } catch (e) {}
+    }
+    if (!gid && !fid && !frid) return;
     var banner = document.getElementById('ob-group-invite-banner');
+    if (frid) {
+      window._pendingFriendInviteUid = frid;
+      window._pendingFriendInviteName = params.get('inviter') || 'A friend';
+      // Also persist it — the URL gets cleared below, so a reload mid-signup
+      // (switching to Messages for the code, Safari evicting the tab) would
+      // otherwise lose the invite and they'd never become friends.
+      try {
+        localStorage.setItem('innings_pendingFriendInvite', JSON.stringify({ uid: frid, name: window._pendingFriendInviteName, ts: Date.now() }));
+      } catch (e) {}
+      if (banner) {
+        banner.textContent = window._pendingFriendInviteName + ' invited you to Innings — verify your number below and you’ll be friends.';
+        banner.style.display = 'block';
+      }
+    }
     if (gid) {
       window._pendingGroupInviteId = gid;
       window._pendingGroupInviteName = params.get('groupName') || 'a group';
@@ -198,6 +230,7 @@ window.saveProfile = function() {
     window.userData = { name: name, phone: user.phoneNumber };
     ib_setProfileDisplay(name);
     if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, name);
+    if (typeof innings_initNativePush === 'function') innings_initNativePush(user);
     playLoginSplash(function(){ nav('welcome-intro'); wiRender(); });
   }).catch(function(err) {
     console.error('Save error:', err);
@@ -286,6 +319,7 @@ auth.onAuthStateChanged(function(user) { var _self = this, _args = arguments; _a
         if (typeof _convertOslToMemoryIfNeeded === 'function') _convertOslToMemoryIfNeeded(user, pdata);
         if (typeof _archiveFeedbackIfNeeded === 'function') _archiveFeedbackIfNeeded(user, pdata);
         if (typeof startNotifBadge === 'function') startNotifBadge(user);
+        if (typeof innings_initNativePush === 'function') innings_initNativePush(user);
         if (pdata.welcomeIntroDone) {
           playLoginSplash(function(){ nav('feed'); });
         } else {

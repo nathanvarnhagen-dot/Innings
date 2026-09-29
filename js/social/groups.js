@@ -600,6 +600,11 @@ function _shareInviteLink(url, message, shareTitle) {
 // someone signs in — it's a no-op once there's nothing pending.
 function consumePendingInviteLinks(user, name) {
   if (!user || !window.db) return;
+  var frid = window._pendingFriendInviteUid;
+  if (frid) {
+    window._pendingFriendInviteUid = null;
+    _acceptFriendInviteLink(user, name, frid, window._pendingFriendInviteName || 'your friend');
+  }
   var gid = window._pendingGroupInviteId;
   var gName = window._pendingGroupInviteName;
   if (gid) {
@@ -624,6 +629,65 @@ function consumePendingInviteLinks(user, name) {
       if (typeof ib_toast === 'function') ib_toast('Added to "' + (fTitle || 'the plan') + '" 🎉');
     }).catch(function(err){ console.error('Join plan via link error:', err); });
   }
+}
+
+// Friend invite link → friendship. Checks for an existing request between the
+// two first (either direction) so a repeat tap never duplicates anything:
+// already friends → no-op; they already asked you → accept theirs; otherwise
+// write an accepted request from you to them. If the Firestore rules refuse
+// an accepted-on-create doc, falls back to a normal pending request so the
+// link still does something the inviter can see and accept.
+function _acceptFriendInviteLink(user, name, inviterUid, inviterName) {
+  if (!inviterUid || inviterUid === user.uid) {
+    try { localStorage.removeItem('innings_pendingFriendInvite'); } catch (e) {}
+    return;
+  }
+  var db = window.db;
+  var myName = name || (window.userData && window.userData.name) || 'Someone';
+  var stage = 'lookup';
+  Promise.all([
+    db.collection('friendRequests').where('fromUid','==',user.uid).where('toUid','==',inviterUid).get(),
+    db.collection('friendRequests').where('fromUid','==',inviterUid).where('toUid','==',user.uid).get()
+  ]).then(function(res){
+    var all = res[0].docs.concat(res[1].docs);
+    if (all.some(function(d){ return (d.data() || {}).status === 'accepted'; })) return 'already';
+    var theirs = res[1].docs.filter(function(d){ return (d.data() || {}).status === 'pending'; })[0];
+    if (theirs) {
+      stage = 'accept-theirs';
+      return theirs.ref.update({ status: 'accepted' }).then(function(){ return 'accepted'; });
+    }
+    var mine = res[0].docs.filter(function(d){ return (d.data() || {}).status === 'pending'; })[0];
+    if (mine) {
+      stage = 'upgrade-mine';
+      return mine.ref.update({ status: 'accepted', viaInvite: true }).then(function(){ return 'accepted'; })
+        .catch(function(){ return 'pending'; });
+    }
+    stage = 'create-accepted';
+    return db.collection('friendRequests').add({ fromUid: user.uid, toUid: inviterUid, status: 'accepted', viaInvite: true, ts: Date.now() })
+      .then(function(){ return 'accepted'; })
+      .catch(function(err){
+        console.warn('Invite link: accepted-on-create refused, falling back to pending', err);
+        stage = 'create-pending';
+        return db.collection('friendRequests').add({ fromUid: user.uid, toUid: inviterUid, status: 'pending', viaInvite: true, ts: Date.now() })
+          .then(function(docRef){ window._inviteReqId = docRef.id; return 'pending'; });
+      });
+  }).then(function(outcome){
+    // Done (or already friends) — stop retrying on future loads
+    try { localStorage.removeItem('innings_pendingFriendInvite'); } catch (e) {}
+    if (!outcome || outcome === 'already') return;
+    if (typeof _ensureFriendListed === 'function' && outcome === 'accepted') _ensureFriendListed(inviterUid);
+    if (typeof loadMyFriendsList === 'function') loadMyFriendsList();
+    if (typeof ib_toast === 'function') {
+      ib_toast(outcome === 'accepted' ? 'You and ' + inviterName + ' are friends now' : 'Friend request sent to ' + inviterName);
+    }
+    var notif = outcome === 'accepted'
+      ? { toUid: inviterUid, type: 'friend_joined', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false }
+      : { toUid: inviterUid, type: 'friend_request', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false, requestId: window._inviteReqId || null };
+    return db.collection('notifications').add(notif);
+  }).catch(function(err){
+    console.error('Friend invite link error [' + stage + ']:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not add ' + inviterName + ' [' + stage + '] — ' + (err && err.message ? err.message : 'try again'));
+  });
 }
 
 // ── ADD A FEATURE TO A GROUP (blank canvas → chosen modules) ──

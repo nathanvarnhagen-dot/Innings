@@ -1,7 +1,12 @@
 function sendInviteText() {
-  var code = document.getElementById('user-code');
-  var userCode = code ? code.textContent.trim() : 'YourCode2026';
-  var inviteUrl = 'https://innings-zeta.vercel.app?invite=' + encodeURIComponent(userCode);
+  // Friend invite — carries the sender's uid so whoever signs up (or logs in)
+  // from this link becomes their friend automatically. See the link parser in
+  // firebase-and-auth.js and consumePendingInviteLinks in groups.js.
+  var me = window.currentUser || (window.auth && window.auth.currentUser);
+  var myName = (window.userData && window.userData.name) || '';
+  var inviteUrl = 'https://innings-zeta.vercel.app/' + (me
+    ? '?friendInvite=' + encodeURIComponent(me.uid) + '&inviter=' + encodeURIComponent(myName || 'A friend')
+    : '');
   var message = "Hey! I want you to join me on Innings — a private space for memories with the people that matter: " + inviteUrl;
   
   // Try native SMS share

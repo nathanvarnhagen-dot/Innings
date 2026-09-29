@@ -607,7 +607,7 @@ function showAddFriendsPrimingStep() {
     '<div style="font-size:13.5px;color:var(--mid);text-align:center;line-height:1.6;margin-top:10px;padding:0 8px">Your phone will ask which contacts to share. Innings only checks their phone numbers against people already using the app — nothing else is read, sent, or stored.</div>' +
     '<div style="display:flex;align-items:flex-start;gap:8px;background:var(--bg);border-radius:14px;padding:12px 14px;margin-top:16px">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8EA8" stroke-width="1.8" style="flex-shrink:0;margin-top:1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
-      '<div style="font-size:12px;color:var(--subtle);line-height:1.5">You pick which contacts to share — Innings never sees your full address book.</div>' +
+      '<div style="font-size:12px;color:var(--subtle);line-height:1.5">Innings only uses phone numbers to find friends already here — your contacts are never saved.</div>' +
     '</div>';
   if (footer) {
     footer.style.display = 'block';
@@ -628,6 +628,31 @@ function showAddFriendsLoadingStep() {
 }
 
 function addFriendsRequestContacts() {
+  // Inside the iOS app: the native contacts plugin (js/core/native-bridge.js)
+  if (typeof innings_nativeContactsAvailable === 'function' && innings_nativeContactsAvailable()) {
+    showAddFriendsLoadingStep();
+    innings_getNativeContacts().then(function(contacts){
+      if (!contacts.length) { showAddFriendsMenuStep(); return; }
+      _matchContactsAgainstUsers(contacts);
+    }).catch(function(err){
+      console.error('Native contacts error:', err);
+      if (err && err.code === 'denied') {
+        var b = document.getElementById('add-friends-sheet-body');
+        var f = document.getElementById('add-friends-sheet-footer');
+        if (f) f.style.display = 'none';
+        if (b) b.innerHTML =
+          '<div style="text-align:center;padding:20px 8px">' +
+            '<div style="font-size:14px;font-weight:700;color:var(--black)">Contacts access is off</div>' +
+            '<div style="font-size:13px;color:var(--subtle);margin-top:6px;line-height:1.5">Turn it on in Settings › Innings › Contacts, or invite people by link — they’ll show up here once they join.</div>' +
+          '</div>' +
+          '<button onclick="addFriendsShareInviteLink()" style="width:100%;background:var(--indigo);color:white;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">Invite by link</button>';
+      } else {
+        if (typeof ib_toast === 'function') ib_toast('Could not read contacts [native] — ' + (err && err.message ? err.message : 'try again'));
+        showAddFriendsMenuStep();
+      }
+    });
+    return;
+  }
   if (!navigator.contacts || typeof navigator.contacts.select !== 'function') {
     var body = document.getElementById('add-friends-sheet-body');
     var footer = document.getElementById('add-friends-sheet-footer');
