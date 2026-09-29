@@ -9,9 +9,14 @@ function _savGet(kind, key, url, ttlMs, onArrive) {
   if (!fresh && !S.pending[kind + key]) {
     S.pending[kind + key] = fetch(url).then(function (r) { S.lastStatus = r.ok ? '' : 'HTTP ' + r.status; return r.json().catch(function () { return null; }).then(function (j) { return r.ok ? j : (j && j.error ? j : null); }); }).then(function (d) {
       delete S.pending[kind + key];
-      if (d && !d.error) { bucket[key] = { at: Date.now(), data: d }; if (onArrive) onArrive(d); }
-      else { if (!e) bucket[key] = { at: Date.now(), data: null, failed: true, why: (d && (d.detail || d.error)) || S.lastStatus || '' }; if (onArrive) onArrive(null); }
-    }).catch(function (err) { delete S.pending[kind + key]; if (!e) bucket[key] = { at: Date.now(), data: null, failed: true, why: String(err && err.message || err) }; if (onArrive) onArrive(null); });
+      if (d && !d.error) { var same = !!(e && e.data && JSON.stringify(e.data) === JSON.stringify(d)); bucket[key] = { at: Date.now(), data: d }; if (onArrive && !same) onArrive(d); }
+      // v7.8.3: a failed refresh used to leave the old entry's timestamp
+      // alone, so the redraw it triggered asked again at once — a
+      // fetch/redraw loop for as long as Savant kept failing. Now a failure
+      // counts as "checked just now" (the old data stays on screen) and
+      // doesn't force a redraw when nothing changed.
+      else { if (!e) { bucket[key] = { at: Date.now(), data: null, failed: true, why: (d && (d.detail || d.error)) || S.lastStatus || '' }; if (onArrive) onArrive(null); } else e.at = Date.now(); }
+    }).catch(function (err) { delete S.pending[kind + key]; if (!e) { bucket[key] = { at: Date.now(), data: null, failed: true, why: String(err && err.message || err) }; if (onArrive) onArrive(null); } else e.at = Date.now(); });
   }
   return e ? e.data : null;
 }
