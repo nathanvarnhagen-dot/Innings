@@ -130,6 +130,7 @@ function _wlOptions(d, metro) {
   var inHome = !!metro && metro === homeMetro, inAway = !!metro && metro === awayMetro, inMarket = inHome || inAway;
   var reachable = function (b) { return b.side === 'national' || !metro || (b.side === 'home' ? inHome : inAway); };
   var gameUrl = 'https://www.mlb.com/gameday/' + encodeURIComponent(d.id);
+  var mlbApp = 'mlbatbat://gameday/' + encodeURIComponent(d.id); // opens the MLB app; the website is the fallback
   var watch = [], listen = [], seen = {};
   (d.list || []).forEach(function (b) {
     if (b.kind === 'radio') {
@@ -137,7 +138,7 @@ function _wlOptions(d, metro) {
       if (sport !== 'mlb' && !reachable(b)) return;
       var side = b.lang === 'es' ? 'Spanish call' : b.side === 'national' ? 'National radio' : b.side === 'home' ? (_wlShort(d.home) + ' radio') : (_wlShort(d.away) + ' radio');
       listen.push({ kind: 'listen', name: b.name, sub: side + (sport === 'mlb' ? ' · in the MLB app' : ''), tile: _wlRadioTile(b), color: b.lang === 'es' ? '#2A5E4A' : '#3A2C7A',
-        url: sport === 'mlb' ? gameUrl : 'https://tunein.com/search/?query=' + encodeURIComponent(b.name), tag: b.lang === 'es' ? 'ESP' : b.side === 'national' ? 'NATIONAL' : b.side.toUpperCase(), rank: b.side === 'national' ? 1 : (b.side === 'home' ? 2 : 3) + (b.lang === 'es' ? 2 : 0) });
+        url: sport === 'mlb' ? gameUrl : 'https://tunein.com/search/?query=' + encodeURIComponent(b.name), scheme: sport === 'mlb' ? mlbApp : '', tag: b.lang === 'es' ? 'ESP' : b.side === 'national' ? 'NATIONAL' : b.side.toUpperCase(), rank: b.side === 'national' ? 1 : (b.side === 'home' ? 2 : 3) + (b.lang === 'es' ? 2 : 0) });
       return;
     }
     if (!reachable(b)) return;
@@ -151,8 +152,8 @@ function _wlOptions(d, metro) {
   });
   // Streams the league itself offers
   if (sport === 'mlb') {
-    if (!d.national && !inMarket && metro) watch.push({ kind: 'watch', name: 'MLB.TV', sub: 'Out-of-market stream', tile: 'MLB', color: '#0C2C56', url: 'https://www.mlb.com/tv/g' + encodeURIComponent(d.id), cta: 'Watch on MLB.TV', rank: 3 });
-    listen.unshift({ kind: 'listen', name: 'Listen live', sub: 'Home, away and Spanish calls in the MLB app', tile: 'MLB', color: '#0C2C56', url: gameUrl, cta: 'Listen in the MLB app', rank: 0, main: true });
+    if (!d.national && !inMarket && metro) watch.push({ kind: 'watch', name: 'MLB.TV', sub: 'Out-of-market stream', tile: 'MLB', color: '#0C2C56', url: 'https://www.mlb.com/tv/g' + encodeURIComponent(d.id), scheme: mlbApp, cta: 'Watch on MLB.TV', rank: 3 });
+    listen.unshift({ kind: 'listen', name: 'Listen live', sub: 'Home, away and Spanish calls in the MLB app', tile: 'MLB', color: '#0C2C56', url: gameUrl, scheme: mlbApp, cta: 'Listen in the MLB app', rank: 0, main: true });
   } else if (sport === 'nfl') {
     watch.push({ kind: 'watch', name: 'NFL+', sub: 'Live on phones and tablets', tile: 'NFL+', color: '#013369', url: 'https://www.nfl.com/plus/', cta: 'Watch on NFL+', rank: 4 });
   } else if ((sport === 'nba' || sport === 'wnba') && !d.national && !inMarket && metro) {
@@ -160,12 +161,33 @@ function _wlOptions(d, metro) {
   } else if (sport === 'mls' && !watch.some(function (w) { return /Apple/i.test(w.name); })) {
     watch.push({ kind: 'watch', name: 'Apple TV', sub: 'MLS Season Pass · every match', tile: 'tv', color: '#111111', url: 'https://tv.apple.com/', cta: 'Watch on Apple TV', rank: 1 });
   }
+  // YouTube TV carries the national channels and the NBC Sports regionals
+  var ytCarries = /ESPN(?!\+)|ABC|FOX|FS1|FS2|CBS|NBC|TNT|TBS|truTV|MLB Net|MLBN|NFL Net|NBA TV|Big Ten|BTN|SEC Net|ACC Net|USA Net/i;
+  var carried = watch.filter(function (w) { return w.kind === 'watch' && ytCarries.test(w.name) && !/Peacock|NFL\+|MLB\.TV|League Pass/.test(w.name); })[0];
+  if (carried && !watch.some(function (w) { return /YouTube/i.test(w.name); })) {
+    watch.push({ kind: 'watch', name: 'YouTube TV', sub: 'Carries ' + carried.name, tile: 'YT', color: '#C4302B', url: 'https://tv.youtube.com/', cta: 'Watch on YouTube TV', rank: carried.rank + 0.5 });
+  }
   watch.sort(function (a, b) { return a.rank - b.rank; });
   listen.sort(function (a, b) { return a.rank - b.rank; });
   return { watch: watch, listen: listen, inMarket: inMarket };
 }
 function _wlShort(t) { return t ? (typeof _teamShortName === 'function' ? _teamShortName(t.name) : (t.name || '').split(' ').pop()) : ''; }
 function _wlListenPref() { try { return localStorage.getItem('innings_wl_listen') === '1'; } catch (e) { return false; } }
+// Tap on an option that has an app link: try the app, and open the website only if the app didn't take over
+function wlGo(ev, a) {
+  var kind = a.getAttribute('data-kind'); wlOpen(kind);
+  var scheme = a.getAttribute('data-scheme');
+  if (!scheme) return true;
+  ev.preventDefault();
+  var web = a.getAttribute('href'), left = false;
+  var gone = function () { left = true; };
+  document.addEventListener('visibilitychange', gone, { once: true });
+  window.addEventListener('pagehide', gone, { once: true });
+  window.addEventListener('blur', gone, { once: true });
+  window.location.href = scheme;
+  setTimeout(function () { if (!left && !document.hidden) window.open(web, '_blank', 'noopener'); }, 1600);
+  return false;
+}
 function wlOpen(kind) { try { if (kind === 'listen') localStorage.setItem('innings_wl_listen', '1'); else if (kind === 'watch') localStorage.removeItem('innings_wl_listen'); } catch (e) {} return true; }
 
 // ── render ───────────────────────────────────────────────────────────────
@@ -189,7 +211,7 @@ function _wlRender() {
   var row = function (x) {
     var play = x.kind === 'listen';
     return '<div class="wl-row"><span class="wl-ap wl-ap-s" style="background:' + x.color + '">' + esc(x.tile) + '</span><div class="wl-t"><b>' + esc(x.name) + (x.tag ? '<span class="wl-tag">' + esc(x.tag) + '</span>' : '') + '</b><small>' + esc(x.sub) + '</small></div>' +
-      '<a class="wl-go' + (play ? ' wl-ply' : '') + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="wlOpen(\'' + x.kind + '\')" aria-label="' + (play ? 'Listen to ' : 'Open ') + esc(x.name) + '">' + (play ? '▶' : 'Open') + '</a></div>';
+      '<a class="wl-go' + (play ? ' wl-ply' : '') + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" data-kind="' + x.kind + '" data-scheme="' + esc(x.scheme || '') + '" onclick="return wlGo(event,this)" aria-label="' + (play ? 'Listen to ' : 'Open ') + esc(x.name) + '">' + (play ? '▶' : 'Open') + '</a></div>';
   };
   var restWatch = o.watch.filter(function (x) { return x !== best; });
   var restListen = o.listen.filter(function (x) { return x !== best && !(x.main && best && best.main); });
@@ -198,7 +220,7 @@ function _wlRender() {
   if (best) {
     h += '<div class="wl-k">' + (best.kind === 'listen' ? 'BEST WAY TO FOLLOW' : 'BEST WAY TO WATCH') + pickArea + '</div>' +
       '<div class="wl-best"><div class="wl-top"><span class="wl-ap" style="background:' + best.color + '">' + esc(best.tile) + '</span><div class="wl-nm"><b>' + esc(best.name) + '</b><small>' + esc(best.sub) + '</small></div></div>' +
-      '<a class="wl-cta wl-' + best.kind + '" href="' + esc(best.url) + '" target="_blank" rel="noopener" onclick="wlOpen(\'' + best.kind + '\')">' + (best.kind === 'listen' ? '🎧 ' : '▶ ') + esc(best.cta || best.name) + '</a></div>';
+      '<a class="wl-cta wl-' + best.kind + '" href="' + esc(best.url) + '" target="_blank" rel="noopener" data-kind="' + best.kind + '" data-scheme="' + esc(best.scheme || '') + '" onclick="return wlGo(event,this)">' + (best.kind === 'listen' ? '🎧 ' : '▶ ') + esc(best.cta || best.name) + '</a></div>';
   } else h += '<div class="wl-k">WATCH &amp; LISTEN' + pickArea + '</div>';
   if (restWatch.length) h += '<div class="wl-k">' + (best && best.kind === 'watch' ? 'ALSO ON' : 'WATCH') + '</div><div class="wl-list">' + restWatch.map(row).join('') + '</div>';
   if (restListen.length) h += '<div class="wl-k">LISTEN<em>' + restListen.length + (restListen.length === 1 ? ' call' : ' calls') + '</em></div><div class="wl-list">' + restListen.map(row).join('') + '</div>';
