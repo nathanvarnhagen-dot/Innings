@@ -177,6 +177,8 @@ window._bsDetailState = { expanded: false, side: 'away' };
 function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subColor, color, bare) {
   if (!detail || (!detail.away.batters.length && !detail.home.batters.length)) return '';
   var state = window._bsDetailState;
+  // v7.8.7: the batter currently at the plate (live games only) gets the .batting highlight
+  var _lb = window._lastLiveBox, curBatId = (_lb && _lb.gameState === 'Live' && _lb.matchup && _lb.matchup.batter && _lb.matchup.batter.id != null) ? _lb.matchup.batter.id : null;
   var teamData = detail[state.side] || { batters: [], pitchers: [] };
   var colHead = function (cols, withLead) {
     return '<div style="display:flex;gap:6px;padding:2px 0;font-size:9px;color:' + subColor + ';font-weight:700">' +
@@ -194,8 +196,9 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
       leadHtml = '<div style="width:14px;flex-shrink:0;text-align:right;color:' + subColor + ';font-weight:700">' + (isSub || !lead.slot ? '' : lead.slot) + '</div>';
       if (isSub) indent = 'padding-left:10px;border-left:1.5px solid rgba(168,159,232,.35);margin-left:2px;';
     }
-    return '<div style="display:flex;gap:6px;padding:5px 0;border-top:0.5px solid ' + ruleColor + ';font-size:11px;color:' + color + '">' + leadHtml +
-      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + indent + '">' + _clickablePlayerNameHtml({ name: name, id: id }, 'mlb') + (pos ? ' <span style="color:' + subColor + ';font-size:9px">' + _escapeHtml(pos) + '</span>' : '') + '</div>' +
+    var nowBat = id != null && curBatId != null && String(id) === String(curBatId);
+    return '<div' + (nowBat ? ' class="row batting" aria-current="true"' : ' class="row"') + ' style="display:flex;gap:6px;padding:5px 0;border-top:0.5px solid ' + ruleColor + ';font-size:11px;color:' + color + '">' + leadHtml +
+      '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + indent + '">' + _clickablePlayerNameHtml({ name: name, id: id }, 'mlb') + (pos ? ' <span style="color:' + subColor + ';font-size:9px">' + _escapeHtml(pos) + '</span>' : '') + (nowBat ? ' <span class="now-batting">AT BAT</span>' : '') + '</div>' +
       cells.map(function (v) { return '<div style="width:22px;text-align:right">' + v + '</div>'; }).join('') + '</div>';
   };
 

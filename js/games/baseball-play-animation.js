@@ -8,7 +8,13 @@
 // re-rendering every 15 seconds picks the animation up where it was.
 var PA = { SW: 2.4, T0: 3.4, END: 14, THROW: .6, LEG: .7 };
 window._pa = { gamePk: null, seen: null, startAt: 0, play: null, box: null };
-var PA_H = [250, 366], PA_B = { '1B': [330, 286], '2B': [250, 206], '3B': [170, 286], 'score': [250, 366], 'HM': [250, 366] };
+var PA_H = [250, 366], PA_B = { '1B': [330, 286], '2B': [250, 206], '3B': [170, 286], 'score': [250, 366], 'HM': [250, 366], '4B': [250, 366] };
+// v7.8.7: base code → words for play text. MLB reports home as '4B' (or 'HM'/'score'); base 4 reads as "home".
+function _paBaseLabel(b) {
+  var k = String(b == null ? '' : b);
+  if (k === 'score' || k === 'HM' || k === 'H' || /^(4B|[4-9])$/.test(k)) return 'home';
+  return { '1B': '1st', '2B': '2nd', '3B': '3rd', '1': '1st', '2': '2nd', '3': '3rd' }[k] || k;
+}
 var PA_F = { '1': [250, 290], '2': [250, 378], '3': [312, 262], '4': [288, 222], '5': [188, 262], '6': [212, 222], '7': [128, 160], '8': [250, 128], '9': [372, 160] };
 var PA_POS = { '1': 'P', '2': 'C', '3': '1B', '4': '2B', '5': '3B', '6': 'SS', '7': 'LF', '8': 'CF', '9': 'RF' };
 
@@ -104,7 +110,7 @@ function _paOff(o, pts) { return 'M ' + pts.map(function (p) { return (p[0] - o[
 function _paRel(pts) { var o = pts[0]; return 'M 0 0 L ' + pts.slice(1).map(function (p) { return (p[0] - o[0]).toFixed(1) + ' ' + (p[1] - o[1]).toFixed(1); }).join(' L '); }
 function _paBasesBetween(start, end) {
   var order = ['H', '1B', '2B', '3B', 'HM'];
-  var a = order.indexOf(start || 'H'), b = order.indexOf(end === 'score' ? 'HM' : end);
+  var a = order.indexOf(start || 'H'), b = order.indexOf(end === 'score' || end === '4B' ? 'HM' : end);
   if (a < 0) a = 0;
   if (b < 0 || b < a) return [];
   var out = [];
@@ -183,7 +189,7 @@ function _paNote2(lp, box, land) {
   else if (t === 'single' || t === 'double' || t === 'triple') { if (land) bits.push((trWord || 'To') + (trWord ? ' to ' : ' ') + _paDir(land.ang)); }
   if (/^(single|double|triple)$/.test(t)) {
     (lp.runners || []).forEach(function (r) {
-      if (r.out && r.outBase) bits.push((r.batter ? 'Batter' : 'Runner') + ' out at ' + ({ '1B': '1st', '2B': '2nd', '3B': '3rd', 'HM': 'home' }[r.outBase] || r.outBase) + (f.length > 1 ? ' (' + f.join('-') + ')' : ''));
+      if (r.out && r.outBase) bits.push((r.batter ? 'Batter' : 'Runner') + ' out at ' + _paBaseLabel(r.outBase) + (f.length > 1 ? ' (' + f.join('-') + ')' : ''));
     });
   }
   else if (t === 'field_out') {
