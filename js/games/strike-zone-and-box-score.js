@@ -417,6 +417,8 @@ function _boxScoreCardHtml(box, dark, allowPlayReply, opts) {
   if (heroFinal && typeof _ghPlaysByInningHtml === 'function') {
     var groupedPlays = _ghPlaysByInningHtml(box, true);
     if (groupedPlays) { playsHtml = groupedPlays; playIdsForReactions = []; }
+    // v7.12.0: while the Plays tab is up the plays live there, not here (one copy per play row)
+    if (window._gdPlaysOn) { playsHtml = ''; playIdsForReactions = []; }
   }
 
   // Reaction badges need an async Firestore read, but this function

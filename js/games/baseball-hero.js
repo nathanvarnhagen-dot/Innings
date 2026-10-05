@@ -737,6 +737,49 @@ function _ghHlButtonHtml(count, expanded, pulse) {
 
 function _ghPlayKey(p) { return String(p.atBatIndex != null ? p.atBatIndex : (p.inning + p.half + p.text)); }
 
+// ── LIVE LINE SCORE HERO (v7.12.0) ───────────────────────────────────
+// Top of a live MLB game: both teams' runs by inning with R / H / E, the
+// inning being played picked out, then one strip with the half-inning,
+// the runners, outs and the count. Scrolls away; the slim score bar
+// (js/games/score-bar.js) takes over below it.
+function _ghLineScoreHero(m, s, prev) {
+  var inns = m.innings || [], n = Math.max(inns.length, 9);
+  var brk = s.outs === 3;
+  var curIdx = s.inning ? s.inning - 1 : -1, curKey = s.half === 'top' ? 'away' : 'home';
+  var cols = 'grid-template-columns:52px repeat(' + n + ',minmax(0,1fr)) 30px 22px 22px';
+  var head = '<span></span>';
+  for (var i = 0; i < n; i++) head += '<span' + (i === curIdx ? ' class="ls-cur"' : '') + '>' + ((inns[i] && inns[i].num != null) ? inns[i].num : i + 1) + '</span>';
+  head += '<span class="ls-r">R</span><span>H</span><span>E</span>';
+  var row = function (t, key) {
+    var tap = _tmTapAttrs('mlb', t.id, t.name);
+    var r = '<span class="ls-team"><span class="ls-badge' + (tap ? ' tm-tap' : '') + '"' + tap + ' style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</span></span>';
+    for (var j = 0; j < n; j++) {
+      var v = inns[j] ? inns[j][key] : null;
+      var live = !brk && j === curIdx && key === curKey;
+      r += '<span class="' + (live ? 'ls-live' : (v == null ? 'ls-empty' : '')) + '">' + (v != null ? v : (live ? '0' : '\u00b7')) + '</span>';
+    }
+    var flash = !!(prev && prev[key] !== t.score);
+    r += '<span class="ls-r"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '\u2013') + '</span></span>' +
+      '<span class="ls-he">' + (t.hits != null ? t.hits : '') + '</span><span class="ls-he">' + (t.errors != null ? t.errors : '') + '</span>';
+    return '<div class="ls-row ls-body" style="' + cols + '" aria-label="' + _escapeHtml(t.name + ' ' + (t.score != null ? t.score : 0)) + '">' + r + '</div>';
+  };
+  var out = '<div class="apl-ls gh-up" style="' + _ghDelay(.15) + '"><div class="apl-ls-in" style="min-width:' + (52 + n * 22 + 74) + 'px">' +
+    '<div class="ls-row ls-head" style="' + cols + '" aria-hidden="true">' + head + '</div>' + row(m.away, 'away') + row(m.home, 'home') + '</div></div>';
+  if (!s.inning) return out;
+  if (brk) return out + '<div class="apl-state brk">' + (s.half === 'top' ? 'MIDDLE' : 'END') + ' OF THE ' + _escapeHtml(_ordinalSuffix(s.inning).toUpperCase()) + '</div>';
+  var b = s.bases || {};
+  var runners = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
+  var runnerText = !runners.length ? 'Bases empty' : (runners.length === 3 ? 'Bases loaded' : 'Runner' + (runners.length > 1 ? 's' : '') + ' on ' + runners.join(' & '));
+  var dia = function (x, y, on, cx, cy) { return '<rect x="' + x + '" y="' + y + '" width="10" height="10" transform="rotate(45 ' + cx + ' ' + cy + ')" fill="' + (on ? '#F2C869' : 'none') + '" stroke="' + (on ? '#F2C869' : '#B3ACE0') + '" stroke-width="1.6"/>'; };
+  var o = s.outs || 0, outs = '';
+  for (var k = 0; k < 3; k++) outs += '<i class="' + (k < o ? 'on' : '') + '"></i>';
+  return out + '<div class="apl-state">' +
+    '<span class="inn"><i>' + (s.half === 'top' ? '\u25B2' : '\u25BC') + '</i>' + (s.half === 'top' ? 'TOP ' : 'BOT ') + _escapeHtml(_ordinalSuffix(s.inning).toUpperCase()) + '</span>' +
+    '<svg width="36" height="26" viewBox="0 0 36 26" role="img" aria-label="' + runnerText + '">' + dia(13, 1, b.second, 18, 6) + dia(4, 10, b.third, 9, 15) + dia(22, 10, b.first, 27, 15) + '</svg>' +
+    '<span class="outs" role="img" aria-label="' + o + (o === 1 ? ' out' : ' outs') + '">' + outs + '<b>' + o + ' OUT</b></span>' +
+    '<span class="cnt" aria-label="Count ' + (s.balls || 0) + ' and ' + (s.strikes || 0) + '">' + (s.balls != null ? s.balls : 0) + '\u2013' + (s.strikes != null ? s.strikes : 0) + '</span></div>';
+}
+
 function _ghLiveHtml(m, st) {
   var s = m.situation || {};
   var plays = m.plays.slice().reverse();
@@ -751,12 +794,21 @@ function _ghLiveHtml(m, st) {
 
   // Header — LIVE chip + highlights toggle
   var expanded = mode === 'open';
+  // v7.12.0: MLB shows the series tag ("ALDS · GAME 2") between LIVE and Highlights
+  var aplMlb = !m.sport && !!m.innings;
+  var aplTag = aplMlb && typeof _psShortTag === 'function' ? _psShortTag().replace(/ \u00b7 G(\d)/, ' \u00b7 GAME $1') : '';
   var h = '<div class="gh-row"><span class="gh-chip live"><span class="gh-dot live"></span>LIVE</span>' +
+    (aplTag ? '<span class="apl-tag">' + _escapeHtml(aplTag) + '</span>' : '') +
     (plays.length
       ? _ghHlButtonHtml(plays.length, expanded, recentNew)
       : '<span class="gh-meta">' + _escapeHtml((m.status && !/in progress/i.test(m.status)) ? m.status : (m.venue || '')) + '</span>') +
     '</div>';
 
+  // v7.12.0: MLB's live hero is the line score (runs by inning, R/H/E) with
+  // the inning, runners, outs and count under it; other sports keep the big scoreboard
+  if (aplMlb) {
+    h += _ghLineScoreHero(m, s, st.lastScore);
+  } else {
   // Scoreboard — condenses via the mode class
   var prev = st.lastScore;
   var betweenHalves = s.outs === 3;
@@ -796,6 +848,7 @@ function _ghLiveHtml(m, st) {
     h += betweenHalves
       ? '<div class="gh-panel gh-strip" style="text-align:center;font-size:12.5px;color:#D9D4FA">' + (s.half === 'top' ? 'Middle' : 'End') + ' of the ' + _escapeHtml(_ordinalSuffix(s.inning)) + '</div>'
       : _ghSituationStrip(s).replace('class="gh-panel gh-up gh-row"', 'class="gh-panel gh-strip gh-row"').replace(/animation-delay:[\d.]+s;/, ''); // inline delay would override the collapse timing
+  }
   }
 
   h += _ghHighlightsListHtml(m, plays, st, { cap: 8, withNew: true });
@@ -878,6 +931,13 @@ function _ghInningBreakHtml(box, m, s) {
   '</div>';
 }
 
+// v7.12.0: the pitcher's TODAY line and the career VS line as two tiles
+function _aplTilesHtml(mp, mb, abStarted) {
+  var t = mp && mp.today ? _ghPitcherTodayHtml(mp.today) : '';
+  var v = abStarted && typeof _bvpColsHtml === 'function' ? _bvpColsHtml(mb, mp) : '';
+  if (!t && !v) return '';
+  return '<div class="apl-tiles">' + (t ? '<div class="apl-tile">' + t + '</div>' : '') + (v ? '<div class="apl-tile apl-vs">' + v + '</div>' : '') + '</div>';
+}
 function _ghLiveDetailHtml(box) {
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
@@ -902,8 +962,7 @@ function _ghLiveDetailHtml(box) {
           '<span style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">' + (short ? _clickablePlayerNameHtml(p, 'mlb').replace('>' + _escapeHtml(p.name) + '<', '>' + _escapeHtml(short) + '<') : _clickablePlayerNameHtml(p, 'mlb')) + '</span>' +
           (p && p.line ? '<span style="font-size:12px;color:#CECBF6">' + _escapeHtml(p.line) + '</span>' : '') +
           (right && p && p.pinchFor ? '<span class="gh-ph">PH for ' + _escapeHtml(p.pinchFor) + '</span>' : '') +
-          (!right && p && p.today ? _ghPitcherTodayHtml(p.today) : '') +
-          (right && abStarted && typeof _bvpColsHtml === 'function' ? _bvpColsHtml(mb, mp) : '') + '</div>';
+          '</div>'; // v7.12.0: TODAY and VS sit in their own tiles under the matchup
       };
       // v5.90.0: career batter-vs-pitcher sits centered until the first pitch
       // of the at-bat, then moves under the batter, lined up with the
@@ -915,7 +974,7 @@ function _ghLiveDetailHtml(box) {
       // percentile chips, pitch mix) — they made the page jump
       var entrance = false;
       out += '<div class="gh-row" style="align-items:flex-start;margin-bottom:' + (seq ? '14px' : '0') + '">' + who('Pitching', mp, false) +
-        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '') +
+        '<span style="font-size:11px;font-weight:800;color:#9C95D0;flex-shrink:0;margin-top:17px">VS</span>' + who('At bat', mb, true) + '</div>' + _aplTilesHtml(mp, mb, abStarted) + (!abStarted && typeof _bvpLineHtml === 'function' ? _bvpLineHtml(mb, mp) : '') +
         '';
     }
     if (seq) {
@@ -963,37 +1022,13 @@ function _ghLiveDetailHtml(box) {
     out += '</div>';
   }
 
-  // Line score
-  var inns = box.innings || [];
-  if (inns.length) {
-    var n = Math.max(inns.length, 9);
-    var cols = 'grid-template-columns:38px repeat(' + n + ',minmax(0,1fr)) repeat(3,24px)';
-    var curIdx = s.inning ? s.inning - 1 : -1;
-    var cell = function (txt, idx, bright, extra) {
-      var cur = idx === curIdx;
-      return '<span style="' + (cur ? 'background:rgba(168,159,232,.14);border-radius:6px;' : '') + (bright ? 'color:#fff;' : '') + (extra || '') + '">' + txt + '</span>';
-    };
-    var head = '<span></span>';
-    for (var i = 0; i < n; i++) head += cell((inns[i] && inns[i].num != null) ? inns[i].num : i + 1, i, i === curIdx);
-    head += '<span style="border-left:1px solid rgba(168,159,232,.22);color:#D9D4FA">R</span><span style="color:#D9D4FA">H</span><span style="color:#D9D4FA">E</span>';
-    var teamRow = function (t, key) {
-      var r = '<span style="text-align:left;color:' + t.colors.accent + '">' + _escapeHtml(t.abbr) + '</span>';
-      for (var j = 0; j < n; j++) {
-        var v = inns[j] ? inns[j][key] : null;
-        r += cell(v != null ? v : '', j, v > 0 || j === curIdx);
-      }
-      r += '<span style="border-left:1px solid rgba(168,159,232,.22);color:#fff">' + (t.score != null ? t.score : '') + '</span>' +
-        '<span style="color:#F5F3FF">' + (t.hits != null ? t.hits : '') + '</span><span style="color:#F5F3FF">' + (t.errors != null ? t.errors : '') + '</span>';
-      return '<div class="gh-ls gh-num" style="' + cols + ';height:24px;font-size:' + (n > 10 ? 12.5 : 14) + 'px;color:#9C95D0">' + r + '</div>';
-    };
-    out += '<div class="gh-card" style="padding:14px 16px"><div class="gh-eyebrow" style="margin-bottom:8px">Line score</div>' +
-      '<div style="overflow-x:auto"><div style="min-width:' + (38 + n * 20 + 72) + 'px;display:flex;flex-direction:column;gap:4px">' +
-      '<div class="gh-ls gh-num" style="' + cols + ';height:18px;font-size:11px;color:#9C95D0">' + head + '</div>' +
-      teamRow(m.away, 'away') + teamRow(m.home, 'home') + '</div></div></div>';
-  }
+  // Line score: moved to the top of the page in v7.12.0 (_ghLineScoreHero)
 
-  // Play by play, grouped into half-innings (v5.49.0)
-  out += _ghPlaysByInningHtml(box);
+  // Play by play, grouped into half-innings (v5.49.0). v7.12.0: the whole game
+  // lives on the Plays tab (js/games/plays-tab.js); the cheat sheet keeps the
+  // half-inning being played. Left out while the Plays tab is up so every
+  // play row (and its reactions) is on the page once.
+  if (!window._gdPlaysOn) out += _ghPlaysByInningHtml(box, false, 'current');
 
   // Full box score: moved to the game's Box tab in v7.5.0 (js/games/watch-listen.js)
 
@@ -1033,7 +1068,8 @@ function _ghPbpStatcastHtml(box, pl) {
 function _ghHalfLabel(half, inning) {
   return (half === 'top' ? 'Top ' : 'Bottom ') + _ordinalSuffix(inning);
 }
-function _ghPlaysByInningHtml(box, bare) {
+function _ghPlaysByInningHtml(box, bare, mode) {
+  var cur = mode === 'current'; // v7.12.0: only the half-inning being played, always open
   var m = _ghModelFromMlbBox(box);
   if (!m) return '';
   if (typeof _savGame === 'function' && box.gamePk != null && (!window._activeBrowseGame || (window._activeBrowseGame.sport || 'mlb') === 'mlb')) _savGame(box.gamePk, m.phase === 'live');
@@ -1079,21 +1115,24 @@ function _ghPlaysByInningHtml(box, bare) {
   // Live games list the current half-inning first (v5.66.1); finals keep
   // reading top of the 1st down to the last out.
   if (m.phase === 'live') keys.reverse();
+  if (cur) keys = [startOpen];
 
   keys.forEach(function (k) {
     var grp = groups[k];
     var batting = grp.half === 'top' ? m.away : m.home;
     var runs = runsIn(grp.inning, grp.half);
-    var isOpen = open[k] != null ? !!open[k] : (k === startOpen);
-    rows += '<div data-k="inn' + k + '" style="border-top:.5px solid rgba(255,255,255,.07)">' +
-      '<button onclick="ghInningToggle(\'' + k + '\',this)" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="gh-inn-' + k + '" ' +
+    var isOpen = cur ? true : (open[k] != null ? !!open[k] : (k === startOpen));
+    // v7.12.0: on the cheat sheet the one half-inning shown is a plain heading
+    var hdOpen = cur ? '<div class="apl-half">'
+      : '<button onclick="ghInningToggle(\'' + k + '\',this)" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="gh-inn-' + k + '" ' +
         'style="width:100%;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;background:none;border:0;color:#fff;font-family:inherit;text-align:left;cursor:pointer">' +
-        '<svg data-chev width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B9B3E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;transition:transform .18s ease' + (isOpen ? ';transform:rotate(90deg)' : '') + '"><polyline points="9 5 16 12 9 19"/></svg>' +
+        '<svg data-chev width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B9B3E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;transition:transform .18s ease' + (isOpen ? ';transform:rotate(90deg)' : '') + '"><polyline points="9 5 16 12 9 19"/></svg>';
+    rows += '<div data-k="inn' + k + '" style="border-top:.5px solid rgba(255,255,255,.07)">' + hdOpen +
         '<span class="gh-tag" style="background:' + _ghHexAlpha(batting.colors.accent, .2) + ';color:' + batting.colors.accent + '">' + (grp.half === 'top' ? 'T' : 'B') + grp.inning + '</span>' +
         '<span style="flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_ghHalfLabel(grp.half, grp.inning)) +
           '<span class="gh-sub" style="font-weight:400"> · ' + _escapeHtml(batting.short || batting.abbr) + '</span></span>' +
         (runs > 0 ? '<span class="gh-tag" style="background:rgba(124,242,156,.16);color:#9be8ac">' + runs + (runs === 1 ? ' run' : ' runs') + '</span>' : '') +
-      '</button>' +
+      (cur ? '</div>' : '</button>') +
       '<div id="gh-inn-' + k + '" style="display:' + (isOpen ? 'flex' : 'none') + ';flex-direction:column;padding-bottom:6px">';
 
     var ordered = grp.plays.slice();
@@ -1133,6 +1172,10 @@ function _ghPlaysByInningHtml(box, bare) {
   });
 
   if (playIds.length) setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+  // v7.12.0: the cheat sheet's copy is "This half-inning" with a way to the Plays tab
+  if (cur) return '<div class="gh-card apl-cur" style="padding-bottom:10px"><div class="gh-card-head" style="margin-bottom:2px"><span class="gh-eyebrow">This half-inning</span>' +
+    '<button type="button" class="apl-all" onclick="gameDetailTab(\'plays\')">All plays <span aria-hidden="true">\u2192</span></button></div>' +
+    '<div class="gh-sub" style="font-size:11px;margin:0 0 2px">' + (full ? 'Double-tap a play to react' : 'Latest plays only') + '</div>' + rows + '</div>';
   var head = '<div class="gh-card-head" style="margin-bottom:2px"><span class="gh-eyebrow">Play by play</span>' +
     '<span style="font-size:11px;color:#9C95D0">' + (full ? 'Double-tap a play to react' : 'Latest plays only') + '</span></div>';
   if (bare) return '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,.1)">' + head + rows + '</div>';

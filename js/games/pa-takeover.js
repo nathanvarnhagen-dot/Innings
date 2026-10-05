@@ -273,14 +273,15 @@ function _bbPaPanelHtml(lp, box, opt) {
   var still = !!opt.still;
   var E = opt.hold ? 99 : opt.E || 99, at = opt.at != null ? opt.at : 0;
   var seqN = ((lp.pitches || []).length ? 1 : 0);
-  var rows = R.rows.map(function (r, i) {
+  // v7.12.0: the rows are tiles, two to a line (the lone last one spans both)
+  var rows = '<div class="pap-g' + (R.rows.length % 2 ? ' odd' : '') + '">' + R.rows.map(function (r, i) {
     var delay = opt.hold ? 0 : (at + .4 + (i + seqN) * .11 - E);
     var pend = r.sav && (r.v == null || r.v === '');
-    var val = r.txt ? '' : '<span class="pap-v">' + (pend ? (stale ? '—' : '<span class="pap-dots" role="img" aria-label="Waiting on Statcast"><i></i><i></i><i></i></span>') : (r.v == null || r.v === '' ? '—' : _escapeHtml(String(r.v)) + '<small>' + _escapeHtml(r.u) + '</small>')) + '</span>';
-    var mid = r.txt ? '<span class="pap-tx">' + _escapeHtml(r.txt) + '</span>' :
-      (r.p != null && !pend ? '<span class="pap-bar"><i style="width:' + r.p + '%;background:' + _savPctColor(r.p) + '"></i><b style="left:calc((100% - 22px) * ' + (r.p / 100).toFixed(2) + ');background:' + _savPctColor(r.p) + '">' + r.p + '</b></span>' : '<span></span>');
-    return '<div class="pap-r"' + (still ? '' : ' style="animation-delay:' + delay.toFixed(2) + 's"') + '><span class="pap-l">' + _escapeHtml(r.l) + (r.sav ? '<em>Savant</em>' : '') + '</span>' + mid + val + '</div>';
-  }).join('');
+    var val = r.txt ? '<span class="pap-tx">' + _escapeHtml(r.txt) + '</span>' :
+      '<span class="pap-v">' + (pend ? (stale ? '—' : '<span class="pap-dots" role="img" aria-label="Waiting on Statcast"><i></i><i></i><i></i></span>') : (r.v == null || r.v === '' ? '—' : _escapeHtml(String(r.v)) + '<small>' + _escapeHtml(String(r.u || '').trim()) + '</small>')) + '</span>';
+    var bar = (!r.txt && r.p != null && !pend) ? '<span class="pap-bar"><i style="width:' + r.p + '%;background:' + _savPctColor(r.p) + '"></i><b style="left:calc((100% - 24px) * ' + (r.p / 100).toFixed(2) + ');background:' + _savPctColor(r.p) + '">' + r.p + '</b></span>' : '';
+    return '<div class="pap-r"' + (still ? '' : ' style="animation-delay:' + delay.toFixed(2) + 's"') + '><span class="pap-l">' + _escapeHtml(r.l) + (r.sav ? '<em>Savant</em>' : '') + '</span>' + val + bar + '</div>';
+  }).join('') + '</div>';
   // the highlight badge takes the legend's place in the header, so it never
   // changes the panel's height when Savant's numbers arrive
   var bd = R.badge ? '<span class="pap-bd"' + (still ? '' : ' style="animation-delay:' + (opt.hold ? 0 : (at + .5 + (R.rows.length + seqN) * .11 - E)).toFixed(2) + 's"') + '><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-5 3.6L16.8 20 12 16.6 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg><span>' + _escapeHtml(R.badge) + '</span></span>' : '';
@@ -313,7 +314,7 @@ function _patBuildHtml(sq, box) {
   window._patSeenN[abi] = ps.length;
   var tag = (st.half === 'top' ? 'T' : st.half === 'bottom' ? 'B' : '') + (st.inning || '');
   return _bbPaPanelHtml({ pitches: ps }, box, {
-    label: 'AT BAT' + (tag ? ' · ' + tag : '') + ' · PITCH ' + num, hold: true, still: true,
+    label: (tag ? tag + ' · ' : '') + 'PITCH ' + num + ' OF ' + ps.length, hold: true, still: true, // v7.12.0
     rows: _patPitchRows(p, { zoneTop: sq.zoneTop, zoneBottom: sq.zoneBottom, batSide: sq.batSide, pitcherId: sq.pitcherId }),
     seq: { pick: abi, sel: num, fresh: fresh }
   });

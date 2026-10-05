@@ -58,7 +58,7 @@ html.desk .imm-hero{padding-left:max(28px,calc((100% - 1068px) / 2))!important;p
 /* Game: cheat sheet on the left, chat always open on the right */
 html.desk #screen-game{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr) auto}
 html.desk #screen-game > div:first-child{grid-column:1 / -1}
-html.desk #game-sheet-panel,html.desk #game-rules-panel{grid-column:1;grid-row:2 / 4;padding-left:max(28px,calc((100% - 820px) / 2))!important;padding-right:max(28px,calc((100% - 820px) / 2))!important}
+html.desk #game-sheet-panel,html.desk #game-rules-panel,html.desk #game-plays-panel{grid-column:1;grid-row:2 / 4;padding-left:max(28px,calc((100% - 820px) / 2))!important;padding-right:max(28px,calc((100% - 820px) / 2))!important}
 html.desk #game-chat-panel{grid-column:2;grid-row:2;display:flex!important;border-left:1px solid rgba(168,159,232,.12);padding-left:16px!important;padding-right:16px!important}
 html.desk #game-chat-input-zone{grid-column:2;grid-row:3;display:flex!important;border-left:1px solid rgba(168,159,232,.12)}
 html.desk #game-tab-chat{display:none!important}
