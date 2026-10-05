@@ -168,8 +168,6 @@ function _patRows(lp, box) {
     if (avg != null && mph != null) { var d = mph - avg; R('vs his avg', (d >= 0 ? '+' : '') + d.toFixed(1), ' mph'); }
     if (p && p.spin != null) R('Spin', p.spin.toLocaleString(), ' rpm', _patPct(p.spin, _PAT_LG.spin[code]));
     if (p && p.ivb != null && _PAT_LG.ivb[code]) R('Ride (IVB)', p.ivb.toFixed(1), ' in', _patPct(p.ivb, _PAT_LG.ivb[code]));
-    var ps = lp.pitches || [], wh = ps.filter(function (x) { return /swinging|foul tip/i.test(x.call || ''); }).length;
-    R('Whiffs this AB', wh, ' of ' + ps.length);
     // fastest pitch of his outing
     if (mph != null && lp.pitcherId) {
       var top = 0, nP = 0;
@@ -201,37 +199,81 @@ function _patRows(lp, box) {
   return { rows: rows.slice(0, 5), badge: badge };
 }
 
-// ── The panel. opt.hold: show everything at once (replays, sheets).
+// ── The panel (v7.11.1 layout): the plate appearance's pitches as a strip
+// of dots, then the stat rows. opt.hold shows everything at once (replays,
+// sheets). opt.still turns every entrance motion off: the live panel is
+// rebuilt on each refresh, and a fade-in each time read as a flicker.
 // Otherwise rows come in after the takeover, timed from the play's start
 // with negative delays so a refresh mid-animation resumes in place.
+
+// a pitch's call as one short word that fits under its dot
+function _patCallWord(call) {
+  var c = String(call || '').toLowerCase();
+  if (/in play/.test(c)) return 'In play';
+  if (/hit by/.test(c)) return 'HBP';
+  if (/swinging|foul tip|missed bunt/.test(c)) return 'Swing';
+  if (/foul/.test(c)) return 'Foul';
+  if (/called/.test(c)) return 'Called';
+  if (/strike/.test(c)) return 'Strike';
+  if (/ball|pitchout/.test(c)) return 'Ball';
+  return c ? c.charAt(0).toUpperCase() + c.slice(1, 6) : '';
+}
+// the at-bat as a strip: one dot per pitch in the app's ball / strike /
+// in-play colors, the deciding pitch ringed in gold. Long at-bats show
+// the last seven with a "+N" in front.
+function _patSeqHtml(lp, delay, still) {
+  var ps = ((lp && lp.pitches) || []).filter(function (p) { return p; });
+  if (!ps.length) return '';
+  var vis = ps.slice(-7), more = ps.length - vis.length;
+  var words = vis.map(function (p) { return _patCallWord(p.call); });
+  var motion = still ? '' : ' style="animation-delay:' + delay.toFixed(2) + 's"';
+  return '<div class="pap-sq" role="img" aria-label="Pitches: ' + _escapeHtml(words.join(', ')) + '"' + motion + '>' +
+    (more ? '<span class="pap-mr">+' + more + '</span>' : '') +
+    vis.map(function (p, i) {
+      var fin = i === vis.length - 1;
+      return '<div class="pap-pt' + (fin ? ' fin' : '') + '"><span class="pap-pd" style="background:' + _pitchCallColor(p.call) + '">' + _escapeHtml(String(p.num != null ? p.num : more + i + 1)) + '</span><span class="pap-pl">' + _escapeHtml(words[i]) + '</span></div>';
+    }).join('') + '</div>';
+}
 function _bbPaPanelHtml(lp, box, opt) {
   opt = opt || {};
-  var head = '<div class="pap-hd"><span>' + _escapeHtml(opt.label || 'LAST PLAY') + '</span><span class="pap-lg">PCTL VS MLB<i></i></span></div>';
-  if (!lp || !_patTier(lp)) return '<div class="pap">' + head + '<div class="pap-empty">' + (opt.empty || 'Statcast for each plate appearance shows here') + '</div></div>';
+  var lab = '<span class="pap-hl">' + _escapeHtml(opt.label || 'LAST PLAY') + '</span>';
+  var legend = '<span class="pap-lg">PCTL VS MLB<i></i></span>';
+  if (!lp || !_patTier(lp)) return '<div class="pap pap-e"><div class="pap-hd">' + lab + legend + '</div><div class="pap-empty">' + _escapeHtml(opt.empty || 'Statcast for each plate appearance shows here') + '</div></div>';
   var R = _patRows(lp, box), since = opt.since || 0;
   var stale = since && Date.now() - since > 180000;
+  var still = !!opt.still;
   var E = opt.hold ? 99 : opt.E || 99, at = opt.at != null ? opt.at : 0;
+  var seqN = ((lp.pitches || []).length ? 1 : 0);
   var rows = R.rows.map(function (r, i) {
-    var delay = opt.hold ? 0 : (at + .4 + i * .11 - E);
+    var delay = opt.hold ? 0 : (at + .4 + (i + seqN) * .11 - E);
     var pend = r.sav && (r.v == null || r.v === '');
     var val = r.txt ? '' : '<span class="pap-v">' + (pend ? (stale ? '—' : '<span class="pap-dots" role="img" aria-label="Waiting on Statcast"><i></i><i></i><i></i></span>') : (r.v == null || r.v === '' ? '—' : _escapeHtml(String(r.v)) + '<small>' + _escapeHtml(r.u) + '</small>')) + '</span>';
     var mid = r.txt ? '<span class="pap-tx">' + _escapeHtml(r.txt) + '</span>' :
       (r.p != null && !pend ? '<span class="pap-bar"><i style="width:' + r.p + '%;background:' + _savPctColor(r.p) + '"></i><b style="left:calc((100% - 22px) * ' + (r.p / 100).toFixed(2) + ');background:' + _savPctColor(r.p) + '">' + r.p + '</b></span>' : '<span></span>');
-    return '<div class="pap-r" style="animation-delay:' + delay.toFixed(2) + 's"><span class="pap-l">' + _escapeHtml(r.l) + (r.sav ? '<em>Savant</em>' : '') + '</span>' + mid + val + '</div>';
+    return '<div class="pap-r"' + (still ? '' : ' style="animation-delay:' + delay.toFixed(2) + 's"') + '><span class="pap-l">' + _escapeHtml(r.l) + (r.sav ? '<em>Savant</em>' : '') + '</span>' + mid + val + '</div>';
   }).join('');
-  var bd = R.badge ? '<div class="pap-bd" style="animation-delay:' + (opt.hold ? 0 : (at + .5 + R.rows.length * .11 - E)).toFixed(2) + 's"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-5 3.6L16.8 20 12 16.6 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg>' + _escapeHtml(R.badge) + '</div>' : '';
-  return '<div class="pap">' + head + rows + bd + '</div>';
+  // the highlight badge takes the legend's place in the header, so it never
+  // changes the panel's height when Savant's numbers arrive
+  var bd = R.badge ? '<span class="pap-bd"' + (still ? '' : ' style="animation-delay:' + (opt.hold ? 0 : (at + .5 + (R.rows.length + seqN) * .11 - E)).toFixed(2) + 's"') + '><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-5 3.6L16.8 20 12 16.6 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg><span>' + _escapeHtml(R.badge) + '</span></span>' : '';
+  return '<div class="pap' + (still ? ' pap-still' : '') + '"><div class="pap-hd">' + lab + (bd || legend) + '</div>' + _patSeqHtml(lp, opt.hold ? 0 : (at + .3 - E), still) + rows + '</div>';
 }
 
-// ── Live: the panel under the square always shows the last plate
-// appearance. During its animation the rows wait for the takeover.
+// ── Live: the panel under the square shows the last plate appearance, and
+// only until the next at-bat gets going. During its animation the rows wait
+// for the takeover.
+function _patNextAbStarted(box, lp) {
+  var sq = box && box.pitchSequence;
+  return !!(sq && sq.pitches && sq.pitches.length && String(sq.atBatIndex) !== String(lp.atBatIndex));
+}
 function _patLivePanelHtml(box) {
   var s = window._pa, lp = box && box.lastPlay;
-  if (!lp || (typeof _paIsAction === 'function' && _paIsAction(lp))) return _bbPaPanelHtml(null, box);
+  if (!lp || (typeof _paIsAction === 'function' && _paIsAction(lp)) || !_patTier(lp)) return '';
+  // a pitch has been thrown in the next at-bat: this panel's moment is over
+  if (_patNextAbStarted(box, lp)) return '';
   var animating = !!(s && s.play && s.startAt && String(s.play.atBatIndex) === String(lp.atBatIndex) && _paActive());
   window._patSince = window._patSince || {};
   if (!window._patSince[lp.atBatIndex]) window._patSince[lp.atBatIndex] = animating ? s.startAt : Date.now();
-  return _bbPaPanelHtml(lp, box, { label: 'LAST PLAY \u00b7 ' + _patTag(lp), hold: !animating, E: animating ? (Date.now() - s.startAt) / 1000 : 99,
+  return _bbPaPanelHtml(lp, box, { label: 'LAST PLAY · ' + _patLabel(lp), hold: !animating, still: !animating, E: animating ? (Date.now() - s.startAt) / 1000 : 99,
     at: (s && s._patAt != null ? s._patAt : PA.T0 + 2), since: window._patSince[lp.atBatIndex] });
 }
 // the latest play may still be waiting on Savant; anything older isn't coming
@@ -241,12 +283,41 @@ function _patSinceFor(a, box) {
   return 1;
 }
 function _patTag(lp) { return (lp.half === 'top' ? 'T' : 'B') + (lp.inning || ''); }
+// "B2 · 6-PITCH K" for strikeouts and walks, plain "B2" otherwise
+function _patLabel(lp) {
+  var n = (lp.pitches || []).length, t = lp.eventType || '';
+  if (n && /^strikeout/.test(t)) return _patTag(lp) + ' · ' + n + '-PITCH K';
+  if (n && t === 'walk') return _patTag(lp) + ' · ' + n + '-PITCH BB';
+  return _patTag(lp);
+}
+// Fold a panel shut instead of letting it vanish, so the pitch list below
+// slides up rather than snapping (same idea as _paSoftClear, plus the margin).
+function _patFold(el, html) {
+  el.innerHTML = html;
+  var pap = el.firstChild;
+  if (pap && pap.classList) pap.classList.add('pap-still');
+  if (typeof _ghReducedMotion === 'function' && _ghReducedMotion()) { el.innerHTML = ''; return; }
+  el.style.overflow = 'hidden'; el.style.marginTop = '12px'; el.style.height = el.offsetHeight + 'px';
+  void el.offsetHeight;
+  el.style.transition = 'height .36s cubic-bezier(.22,1,.36,1), margin-top .36s cubic-bezier(.22,1,.36,1), opacity .22s ease';
+  el.style.height = '0px'; el.style.marginTop = '0px'; el.style.opacity = '0';
+  setTimeout(function () { if (el.firstChild && el.getAttribute('data-fold')) { el.innerHTML = ''; el.removeAttribute('style'); el.removeAttribute('data-fold'); } }, 400);
+  el.setAttribute('data-fold', '1');
+}
 function _patFillLive() {
   var el = document.getElementById('gh-pa-panel');
   if (!el) return;
   var box = (typeof _gcBox === 'function' && _gcBox()) || window._pa.box;
   var html = _patLivePanelHtml(box);
-  if (el.innerHTML !== html) el.innerHTML = html;
+  var pk = window._activeBrowseGame ? window._activeBrowseGame.gamePk : null;
+  if (html) {
+    window._patShown = { pk: pk, html: html, t: Date.now() };
+    if (el.innerHTML !== html) el.innerHTML = html;
+    return;
+  }
+  // nothing to show now: if the panel was up a moment ago (same game), fold it away
+  var was = window._patShown; window._patShown = null;
+  if (was && was.pk === pk && Date.now() - was.t < 20000 && !el.firstChild) _patFold(el, was.html);
 }
 
 // The old Statcast strip under the square (counts up while the ball flies)
