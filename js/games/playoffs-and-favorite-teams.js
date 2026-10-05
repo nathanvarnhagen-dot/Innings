@@ -355,7 +355,7 @@ function _tpTeamsUrl(sport) {
 
 window._tpSport = null;
 window._tpTeams = [];
-window._tpPrefs = { favorite: null, following: [] };
+window._tpPrefs = { favorite: null, following: [], rivals: [] };
 
 function openTeamPrefs(sport) {
   window._tpSport = sport;
@@ -381,7 +381,7 @@ function openTeamPrefs(sport) {
   ]).then(function (results) {
     if (window._tpSport !== sport) return; // superseded by a later visit
     window._tpTeams = (results[0] && results[0].teams) || [];
-    window._tpPrefs = { favorite: results[1].favorite || null, following: results[1].following || [] };
+    window._tpPrefs = { favorite: results[1].favorite || null, following: results[1].following || [], rivals: results[1].rivals || [] };
     if (!window._tpTeams.length) {
       if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load the team list right now.</div>';
       return;
@@ -401,9 +401,11 @@ function _tpRenderList() {
   listEl.innerHTML = teams.map(function (t) {
     var isFav = window._tpPrefs.favorite === t.name;
     var isFollowing = window._tpPrefs.following.indexOf(t.name) !== -1;
+    var isRival = (window._tpPrefs.rivals || []).indexOf(t.name) !== -1;
     return '<div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:0.5px solid rgba(255,255,255,.06)">' +
       '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFavorite(this.dataset.team)" style="cursor:pointer;font-size:19px;width:24px;text-align:center;flex-shrink:0;color:' + (isFav ? '#F2C869' : 'rgba(255,255,255,.25)') + '">' + (isFav ? '★' : '☆') + '</div>' +
       '<div style="flex:1;font-size:14px;font-weight:600;color:#fff">' + _escapeHtml(t.name) + '</div>' +
+      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleRival(this.dataset.team)" role="button" aria-pressed="' + isRival + '" aria-label="Mark ' + _escapeHtml(t.name) + ' as a rival" style="cursor:pointer;height:24px;padding:0 8px;border-radius:7px;border:1.5px solid ' + (isRival ? 'rgba(255,154,142,.6)' : 'rgba(255,255,255,.2)') + ';background:' + (isRival ? 'rgba(255,154,142,.18)' : 'transparent') + ';display:flex;align-items:center;flex-shrink:0;color:' + (isRival ? '#FF9A8E' : 'rgba(255,255,255,.45)') + ';font-size:10.5px;font-weight:800;letter-spacing:.06em">RIVAL</div>' +
       '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFollow(this.dataset.team)" style="cursor:pointer;width:22px;height:22px;border-radius:7px;border:1.5px solid ' + (isFollowing ? 'rgba(124,242,156,.5)' : 'rgba(255,255,255,.2)') + ';background:' + (isFollowing ? 'rgba(124,242,156,.18)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#9be8ac;font-size:13px;font-weight:800">' + (isFollowing ? '✓' : '') + '</div>' +
     '</div>';
   }).join('');
@@ -413,8 +415,11 @@ function _tpSavePrefs() {
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!user || !window.db || !window._tpSport) return;
   window.db.collection('users').doc(user.uid).collection('teamPrefs').doc(window._tpSport)
-    .set({ favorite: window._tpPrefs.favorite, following: window._tpPrefs.following, updatedAt: Date.now() })
-    .then(function () { if (typeof _invalidateFavTeamsCache === 'function') _invalidateFavTeamsCache(window._tpSport); })
+    .set({ favorite: window._tpPrefs.favorite, following: window._tpPrefs.following, rivals: window._tpPrefs.rivals || [], updatedAt: Date.now() })
+    .then(function () {
+      if (typeof _invalidateFavTeamsCache === 'function') _invalidateFavTeamsCache(window._tpSport);
+      if (window._yw && window._yw.prefs) delete window._yw.prefs[window._tpSport]; // the fan angle reads these
+    })
     .catch(function (err) {
       console.error('Save team prefs error:', err);
       if (typeof ib_toast === 'function') ib_toast('Could not save — ' + (err && err.message ? err.message : 'check Firestore rules'));
@@ -423,6 +428,20 @@ function _tpSavePrefs() {
 
 function tpToggleFavorite(teamName) {
   window._tpPrefs.favorite = (window._tpPrefs.favorite === teamName) ? null : teamName;
+  if (window._tpPrefs.favorite && window._tpPrefs.rivals) { // a team can't be both your favorite and your rival
+    var ri = window._tpPrefs.rivals.indexOf(teamName);
+    if (ri !== -1) window._tpPrefs.rivals.splice(ri, 1);
+  }
+  _tpRenderList();
+  _tpSavePrefs();
+}
+
+function tpToggleRival(teamName) {
+  if (window._tpPrefs.favorite === teamName) { if (typeof ib_toast === 'function') ib_toast('That\u2019s your favorite team'); return; }
+  if (!window._tpPrefs.rivals) window._tpPrefs.rivals = [];
+  var idx = window._tpPrefs.rivals.indexOf(teamName);
+  if (idx === -1) window._tpPrefs.rivals.push(teamName);
+  else window._tpPrefs.rivals.splice(idx, 1);
   _tpRenderList();
   _tpSavePrefs();
 }

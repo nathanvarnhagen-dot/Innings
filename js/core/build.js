@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.8.7-home-label-batter-highlight';
+window.INNINGS_BUILD = 'v7.10.1-fan-angle-in-hero';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

@@ -109,7 +109,7 @@ function _mdGameCardHtml(m) {
   return '<div class="gh" style="margin:12px 0 0"><div class="gh-orb" style="right:-80px;top:-90px"></div><div class="gh-body">' + html + '</div></div>';
 }
 function _mdGameBlockHtml(m) {
-  try { return _mdTicketHtml(m) + _mdGameCardHtml(m); }
+  try { return _mdTicketHtml(m) + (typeof _ywVerdictSlotHtml === 'function' ? _ywVerdictSlotHtml(m) : '') + _mdGameCardHtml(m); }
   catch (e) { console.error('[memory ticket] render failed, falling back:', e); return _boxScoreCardHtml(m.boxScore, true); }
 }
 function mdOpenGame() {

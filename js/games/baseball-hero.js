@@ -1234,6 +1234,7 @@ function _ghFinalHtml(m, st) {
   var extra = m.innings.length > 9 ? '<span class="gh-sub" style="font-weight:700">' + m.innings.length + ' inn</span>' : '';
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">FINAL</span>' + extra + '</div>';
   h += _ghScoreboard(m, center, { away: false, home: false }, true);
+  if (typeof _ywHeroSlotHtml === 'function') { try { h += _ywHeroSlotHtml(); } catch (e) { console.error('[yw] hero slot failed:', e); } }
   h += reel ? reel : _ghHighlightsListHtml(m, allPlays, st, { title: 'Every scoring play' });
 
   var recap = _ghRecap(m);
@@ -1313,7 +1314,9 @@ function _ghHtmlForState(state) {
   var model = _ghModelFromMlbBox(state.heroBox) || _ghModelFromMlbPregame(state.data && (state.data.league || 'mlb') === 'mlb' ? state.data : null);
   if (!model) return '';
   _gattNoteModel(model);
+  if (typeof _ywObserve === 'function') { try { _ywObserve(state.heroBox, model); } catch (e) { console.error('[yw] observe failed:', e); } }
 
+  window._ywCurBox = state.heroBox;
   var body;
   try {
     if (model.phase === 'pre') body = _ghPreHtml(model, st, !st.animated.pre);
