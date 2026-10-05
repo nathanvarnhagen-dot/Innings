@@ -492,7 +492,10 @@ function _paOverlayHtml() {
   // v6.0.0: Statcast strip (counts up while the ball is in the air) and the
   // home run takeover in the batting team's colors, inside the square.
   s._statsHtml = (s.labelOut && showField && typeof _bbStatsHtml === 'function') ? _bbStatsHtml(lp, s, OFF) : '';
-  if (showField && (lp.eventType || '') === 'home_run' && typeof _bbHrTakeoverHtml === 'function') out += _bbHrTakeoverHtml(lp, box, s, Es);
+  // v7.9.0: every plate appearance gets a takeover, tiered by the moment (js/games/pa-takeover.js);
+  // the home-run-only takeover stays as the fallback
+  if (typeof _bbPaTakeoverHtml === 'function') out += _bbPaTakeoverHtml(lp, box, s, Es, showField, tT);
+  else if (showField && (lp.eventType || '') === 'home_run' && typeof _bbHrTakeoverHtml === 'function') out += _bbHrTakeoverHtml(lp, box, s, Es);
   out += '</div>';
   return out;
 }

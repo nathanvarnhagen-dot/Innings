@@ -939,6 +939,8 @@ function _ghLiveDetailHtml(box) {
       out += '<div id="gh-pa-label" class="pa-lab"></div>';
       out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div>' + (!brk && typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') + '</div>';
       out += '<div id="gh-pa-stats" class="pa-sc"></div>';
+      // v7.9.0: fixed-height Statcast panel for the last plate appearance (js/games/pa-takeover.js)
+      if (typeof _patLivePanelHtml === 'function') out += '<div id="gh-pa-panel">' + _patLivePanelHtml(box) + '</div>';
       if (!brk && seq.pitches.length) {
         out += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">' + seq.pitches.slice().reverse().map(function (p) {
           var c = _pitchCallColor(p.call);

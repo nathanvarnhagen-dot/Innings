@@ -302,3 +302,43 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 .ptr-ind.busy .ptr-spin{animation:ptrSpin .8s linear infinite}
 @keyframes ptrSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.ptr-ind.busy .ptr-spin{animation:none}}
+
+/* ═══ PLATE APPEARANCE TAKEOVER + STATCAST PANEL (v7.9.0) — every result
+   gets the home run takeover's motion (full / lite), balls in play carry a
+   still spray chart, and a fixed-height panel under the square holds the
+   last play's Statcast so the page never grows. ═══ */
+.pat.pat-f .ct{padding-right:128px}
+.pat.pat-f .st{opacity:.22}.pat.pat-f .st.b{opacity:.14}
+.pat .pat-fld{position:absolute;right:12px;top:50%;width:108px;height:96px;margin-top:-48px;animation:fbxFade .4s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--t0) + 620ms)}
+.pat-lite .bg{background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 55%,var(--tdark) 100%)}
+.pat-lite .sm{font-size:12px;letter-spacing:.28em}
+.pat-lite .who{font-size:14px;font-weight:800;margin-top:2px}
+#gh-pa-panel{margin-top:12px}
+.pap{position:relative;height:228px;box-sizing:border-box;border-radius:16px;background:linear-gradient(180deg,rgba(168,159,232,.1),rgba(168,159,232,.03));border:1px solid rgba(168,159,232,.22);padding:10px 14px;overflow:hidden}
+.pap-hd{display:flex;justify-content:space-between;align-items:center;font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;padding-bottom:4px}
+.pap-lg{display:flex;align-items:center;gap:6px}
+.pap-lg i{width:30px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgb(50,102,204),rgb(160,160,175),rgb(214,41,50))}
+.pap-r{display:grid;grid-template-columns:96px minmax(0,1fr) 78px;align-items:center;gap:10px;height:32px;opacity:0;animation:paIn .3s linear both}
+.pap-r+.pap-r{border-top:1px solid rgba(255,255,255,.06)}
+.pap-l{font-size:11.5px;font-weight:700;color:#B9B3E6;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pap-l em{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:.1em;color:#7F77DD;margin-left:5px;text-transform:uppercase}
+.pap-v{font-size:16px;font-weight:800;letter-spacing:-.02em;color:#fff;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pap-v small{font-size:10px;font-weight:700;color:#9C95D0;margin-left:2px;letter-spacing:0}
+.pap-tx{grid-column:2/4;font-size:12.5px;font-weight:600;color:#E9E5FF;line-height:1.3}
+.pap-bar{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08)}
+.pap-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.pap-bar b{position:absolute;top:50%;width:22px;height:18px;margin-top:-9px;border-radius:9px;font-size:10px;font-weight:800;color:#fff;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.pap-dots{display:inline-flex;gap:3px;vertical-align:middle}
+.pap-dots i{width:5px;height:5px;border-radius:50%;background:#C9C2F5;animation:psDot 1.2s ease-in-out infinite}
+.pap-dots i:nth-child(2){animation-delay:.2s}.pap-dots i:nth-child(3){animation-delay:.4s}
+.pap-bd{position:absolute;left:14px;bottom:10px;display:inline-flex;align-items:center;gap:6px;max-width:calc(100% - 28px);font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:9px;background:rgba(242,200,105,.1);border:1px solid rgba(242,200,105,.3);color:#F2C869;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;animation:paIn .3s linear both}
+.pap-empty{display:flex;align-items:center;justify-content:center;height:170px;font-size:12.5px;color:#7F77DD;text-align:center;padding:0 20px}
+.pap-i{margin:10px 0 4px}
+.pat-hold{position:relative;height:150px;border-radius:16px;overflow:hidden;margin:10px 0}
+.pat-hold .fbx-to{animation:patHoldIn .6s cubic-bezier(.22,1,.36,1) both!important}
+@keyframes patHoldIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.pat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pat-chip{font-family:inherit;font-size:12px;font-weight:700;padding:6px 11px;min-height:32px;border-radius:10px;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#E9E5FF;cursor:pointer}
+.pat-chip.on{background:#A89FE8;color:#1A1640;border-color:#A89FE8}
+.pat-chip:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.pap-r,.pap-bd{animation:none;opacity:1}.pat .pat-fld{animation:none}.pat-hold .fbx-to{animation:none!important}}

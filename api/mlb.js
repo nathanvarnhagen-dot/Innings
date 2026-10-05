@@ -1262,7 +1262,11 @@ function _playAnimSummary(p, prev) {
     var d = e.details || {};
     return { num: e.pitchNumber || (i + 1), px: e.pitchData.coordinates.pX, pz: e.pitchData.coordinates.pZ,
       call: _callText(e, p, _droppedK(p)), type: (d.type && d.type.description) || null, code: (d.type && d.type.code) || null,
-      speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null, abs: _absOf(e) };
+      speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null, abs: _absOf(e),
+      // v7.9.0: exact velo, spin and induced vertical break for the result panel
+      mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null,
+      spin: (e.pitchData.breaks && e.pitchData.breaks.spinRate != null) ? Math.round(e.pitchData.breaks.spinRate) : null,
+      ivb: (e.pitchData.breaks && e.pitchData.breaks.breakVerticalInduced != null) ? Math.round(e.pitchData.breaks.breakVerticalInduced * 10) / 10 : null };
   });
   var lastPd = null;
   for (var i = pitchEvs.length - 1; i >= 0; i--) { if (pitchEvs[i].pitchData) { lastPd = pitchEvs[i].pitchData; break; } }
@@ -1347,6 +1351,7 @@ function _playAnimSummary(p, prev) {
     batter: (p.matchup && p.matchup.batter && p.matchup.batter.fullName) || null,
     batterId: (p.matchup && p.matchup.batter && p.matchup.batter.id) || null,
     pitcherId: (p.matchup && p.matchup.pitcher && p.matchup.pitcher.id) || null,
+    pitcher: (p.matchup && p.matchup.pitcher && p.matchup.pitcher.fullName) || null, // v7.9.0
     pitchHand: (p.matchup && p.matchup.pitchHand && p.matchup.pitchHand.code) || null,
     batSide: (p.matchup && p.matchup.batSide && p.matchup.batSide.code) || null,
     zoneTop: (lastPd && lastPd.strikeZoneTop != null) ? lastPd.strikeZoneTop : 3.5,
