@@ -671,7 +671,7 @@ function _paFieldSvg(lp, land, E) {
   });
   // runners: pre-play runners visible from the swap; everyone moves after contact (after the catch on a fly)
   var runStart = caught ? t1 : T0 + .25;
-  var lastScore = 0;
+  var lastScore = 0, allDone = 0; // v7.11.2: allDone = last runner to finish
   runners.forEach(function (r) {
     var from = r.batter ? 'H' : r.start;
     if (!from) return;
@@ -686,6 +686,7 @@ function _paFieldSvg(lp, land, E) {
     var dur = r.out && outTimes[r.outBase] ? Math.max(.45, outTimes[r.outBase] - st) : PA.LEG * legs;
     if (r.batter && ihPos && to === '1B' && outTimes['1B-safe']) dur = Math.max(.6, outTimes['1B-safe'] - .15 - st); // beats the throw by a step
     var done = st + dur;
+    allDone = Math.max(allDone, done);
     var fade = r.out || (to === 'score');
     if (to === 'score') lastScore = Math.max(lastScore, done);
     var col = r.batter ? '#FFFFFF' : '#FD7A48';
@@ -700,5 +701,8 @@ function _paFieldSvg(lp, land, E) {
   });
   s._titleAt = Math.max(ballEnd, lastScore, t1) + .35;
   s._t1 = t1; // v6.0.0: when the ball finishes its flight
+  // v7.11.2: when everything on the field is done (last throw, last runner),
+  // so the result takeover never covers a play that's still going
+  s._fieldEnd = Math.max(ballEnd, lastScore, t1, allDone);
   return g + '</svg>';
 }

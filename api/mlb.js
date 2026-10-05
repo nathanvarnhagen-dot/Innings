@@ -415,6 +415,9 @@ function summarize(data, gamePk, wantAllPlays) {
           code: (e.details && e.details.type && e.details.type.code) || null,   // v5.87.0: FF, SL… for "vs his normal"
           mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null,
           speed: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed) : null,
+          // v7.11.2: spin and ride for the panel that builds through the at-bat
+          spin: (e.pitchData.breaks && e.pitchData.breaks.spinRate != null) ? Math.round(e.pitchData.breaks.spinRate) : null,
+          ivb: (e.pitchData.breaks && e.pitchData.breaks.breakVerticalInduced != null) ? Math.round(e.pitchData.breaks.breakVerticalInduced * 10) / 10 : null,
           abs: _absOf(e)   // v6.3.0: ABS challenge on this pitch
         };
       }).filter(function (p) { return p.px != null && p.pz != null; });

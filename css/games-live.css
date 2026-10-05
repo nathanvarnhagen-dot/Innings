@@ -319,12 +319,20 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 .pap-hl{white-space:nowrap;flex-shrink:0}
 .pap-lg{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .pap-lg i{width:30px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgb(50,102,204),rgb(160,160,175),rgb(214,41,50))}
-.pap-sq{display:flex;justify-content:center;align-items:flex-start;height:50px;margin:2px 0 0;opacity:0;animation:paIn .3s linear both}
-.pap-mr{align-self:flex-start;margin:6px 6px 0 0;font-size:11px;font-weight:800;color:#B9B3E6;font-variant-numeric:tabular-nums}
-.pap-pt{position:relative;flex:1 1 0;max-width:50px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pap-sq{position:relative;height:60px;margin:2px -6px 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;opacity:0;animation:paIn .3s linear both}
+.pap-sq::-webkit-scrollbar{display:none}
+.pap-sw{display:flex;align-items:flex-start;width:max-content;margin:0 auto;padding:6px 8px 0}
+.pap-pt{position:relative;flex:0 0 42px;width:42px;height:52px;padding:0;margin:0;border:0;background:none;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent}
+button.pap-pt{cursor:pointer}
+button.pap-pt:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px;border-radius:10px}
 .pap-pt+.pap-pt::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:rgba(168,159,232,.28)}
 .pap-pd{position:relative;z-index:1;width:28px;height:28px;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#0D0820;font-variant-numeric:tabular-nums}
 .pap-pt.fin .pap-pd{box-shadow:0 0 0 3px #1B1740,0 0 0 5px #F2C869}
+.pap-pt.sel .pap-pd{box-shadow:0 0 0 3px #1B1740,0 0 0 5px #FFFFFF}
+.pap-pt.sel .pap-pl{color:#FFFFFF;font-weight:800}
+.pap-pt.pap-new .pap-pd{animation:patPop .42s cubic-bezier(.22,1.4,.36,1) both}
+.pap-pt.pap-new .pap-pl{animation:paIn .3s linear .12s both}
+@keyframes patPop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 .pap-pl{font-size:10px;font-weight:700;color:#B9B3E6;white-space:nowrap}
 .pap-pt.fin .pap-pl{color:#F2C869;font-weight:800}
 .pap-r{display:grid;grid-template-columns:118px minmax(0,1fr) 84px;align-items:center;gap:10px;height:32px;opacity:0;animation:paIn .3s linear both;border-top:1px solid rgba(255,255,255,.07)}
@@ -352,4 +360,4 @@ textarea.gatt-in{min-height:72px;resize:none;line-height:1.4}
 .pat-chip{font-family:inherit;font-size:12px;font-weight:700;padding:6px 11px;min-height:32px;border-radius:10px;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#E9E5FF;cursor:pointer}
 .pat-chip.on{background:#A89FE8;color:#1A1640;border-color:#A89FE8}
 .pat-chip:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
-@media (prefers-reduced-motion: reduce){.pap-sq,.pap-r,.pap-bd{animation:none;opacity:1}.pat .pat-fld{animation:none}.pat-hold .fbx-to{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.pap-sq,.pap-r,.pap-bd,.pap-pt.pap-new .pap-pd,.pap-pt.pap-new .pap-pl{animation:none;opacity:1}.pat .pat-fld{animation:none}.pat-hold .fbx-to{animation:none!important}}
