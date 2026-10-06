@@ -162,14 +162,16 @@ function loadNotifications() {
       var acceptBtn = n.type === 'friend_request'
         ? '<div onclick="notifAcceptFriend(event,\'' + n._id + '\')" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:800;color:#0D0820;background:#D4A24C;padding:6px 14px;border-radius:10px;cursor:pointer">Accept friend request</div>'
         : '';
-      return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:' + (n.read ? 'var(--card)' : 'var(--indigo-light)') + ';border:0.5px solid var(--rule);cursor:pointer">' +
+      // v7.16.3: unread was var(--indigo-light) — a near-white card under
+      // the dark theme's light text. Now a lit lilac card with a dot.
+      return '<div onclick="notifTap(\'' + n._id + '\')" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;' + (n.read ? 'background:var(--card);border:0.5px solid var(--rule)' : 'background:linear-gradient(135deg,rgba(124,108,240,.30),rgba(168,159,232,.12));border:1px solid rgba(168,159,232,.5);box-shadow:0 6px 20px rgba(91,76,214,.18)') + ';cursor:pointer">' +
         '<div class="av av-a" style="width:36px;height:36px;font-size:12px;flex-shrink:0">' + _escapeHtml(_initialsFallback(n.fromName || '?')) + '</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:13.5px;color:var(--black);line-height:1.4">' + label + '</div>' +
-          (subLabel ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(subLabel) + '</div>' : '') +
+          (subLabel ? '<div style="font-size:12px;color:' + (n.read ? 'var(--subtle)' : 'rgba(244,242,255,.72)') + ';margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(subLabel) + '</div>' : '') +
           acceptBtn +
         '</div>' +
-        '<div style="font-size:11px;color:var(--subtle);flex-shrink:0;align-self:flex-start">' + _fmtRelativeTime(n.ts) + '</div>' +
+        '<div style="font-size:11px;color:' + (n.read ? 'var(--subtle)' : '#CFC7FF;font-weight:700') + ';flex-shrink:0;align-self:flex-start;display:flex;align-items:center;gap:6px">' + (n.read ? '' : '<span style="width:7px;height:7px;border-radius:50%;background:#A89FE8;box-shadow:0 0 8px #A89FE8"></span>') + _fmtRelativeTime(n.ts) + '</div>' +
       '</div>';
     }).join('');
     _markAllNotificationsRead(user, items);
