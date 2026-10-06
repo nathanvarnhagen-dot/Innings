@@ -99,7 +99,105 @@ function _plsFlip(src, name) {
     var r = orig.apply(this, arguments);
     var lines = document.getElementById('player-lines');
     if (lines) { if (league === 'mlb' && id) _plsLinesFill(id); else lines.innerHTML = ''; }
+    window._plsSrc = src; window._plsSrcId = id != null ? String(id) : null;
     try { _plsFlip(src, name); } catch (e) { console.error('[player sheet]', e); }
     return r;
   };
+})();
+
+// ── v7.14.2: closing is the open in reverse — the sheet slides away and
+// the name flies back to where it was tapped (or the same player's name if
+// the page re-rendered meanwhile). Drag the sheet down to close it too.
+function _plsBackTarget() {
+  var src = window._plsSrc;
+  if (src && document.body.contains(src)) return src;
+  var id = window._plsSrcId;
+  if (!id) return null;
+  var list = document.querySelectorAll('.screen.active [data-id="' + id.replace(/"/g, '') + '"]');
+  for (var i = 0; i < list.length; i++) { var r = list[i].getBoundingClientRect(); if (r.width && r.bottom > 0 && r.top < (window.innerHeight || 2000)) return list[i]; }
+  return null;
+}
+function _plsFlyBack() {
+  var nm = document.querySelector('#player-link-name .pls-nm'), dst = _plsBackTarget();
+  if (!nm || !dst || !nm.animate) return;
+  var a = nm.getBoundingClientRect(), b = dst.getBoundingClientRect();
+  if (!a.width || !b.width) return;
+  var cs = getComputedStyle(nm);
+  var ghost = document.createElement('div');
+  ghost.className = 'pls-ghost';
+  ghost.textContent = nm.textContent;
+  ghost.style.fontSize = cs.fontSize; ghost.style.fontWeight = cs.fontWeight; ghost.style.fontFamily = cs.fontFamily; ghost.style.letterSpacing = cs.letterSpacing;
+  document.body.appendChild(ghost);
+  var W = ghost.offsetWidth || a.width, H = ghost.offsetHeight || a.height;
+  var sx = a.left + a.width / 2 - W / 2, sy = a.top + a.height / 2 - H / 2;
+  var ex = b.left + b.width / 2 - W / 2, ey = b.top + b.height / 2 - H / 2;
+  var k1 = Math.max(.35, Math.min(1.4, b.height / H));
+  nm.style.opacity = '0';
+  dst.classList.add('pls-src');
+  var an = ghost.animate([
+    { transform: 'translate(' + sx + 'px,' + sy + 'px) scale(1)', opacity: 1 },
+    { transform: 'translate(' + (sx + (ex - sx) * .45) + 'px,' + (sy + (ey - sy) * .5 - 22) + 'px) scale(' + (1 + (k1 - 1) * .4) + ')', opacity: 1, offset: .45 },
+    { transform: 'translate(' + ex + 'px,' + ey + 'px) scale(' + k1 + ')', opacity: .9 }
+  ], { duration: 400, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+  var done = function () {
+    if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    dst.classList.remove('pls-src');
+  };
+  an.onfinish = function () {
+    // the real name fades back in under the ghost
+    dst.style.transition = 'opacity .18s'; dst.classList.remove('pls-src');
+    ghost.animate([{ opacity: .9 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }).onfinish = done;
+  };
+  setTimeout(done, 900);
+}
+(function () {
+  if (typeof closePlayerLinkSheet !== 'function') return;
+  closePlayerLinkSheet = function () {
+    var backdrop = document.getElementById('player-link-backdrop');
+    if (!backdrop || backdrop.style.display === 'none' || backdrop.classList.contains('pls-out')) return;
+    window._savSheetId = null;
+    var sheet = backdrop.firstElementChild;
+    var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
+    if (reduce) { backdrop.style.display = 'none'; if (sheet) sheet.style.transform = ''; return; }
+    try { _plsFlyBack(); } catch (e) { console.error('[player sheet]', e); }
+    // a drag may have left the sheet part-way down: slide on from there
+    var from = sheet && sheet.style.transform ? sheet.style.transform : 'translateY(0px)';
+    if (sheet && sheet.animate) {
+      sheet.style.transition = '';
+      sheet.animate([{ transform: from }, { transform: 'translateY(105%)' }], { duration: 360, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+    }
+    clearTimeout(window._plsCloseT);
+    backdrop.classList.remove('pls-in'); backdrop.classList.add('pls-out');
+    window._plsCloseT = setTimeout(function () {
+      backdrop.style.display = 'none'; backdrop.classList.remove('pls-out');
+      if (sheet) { sheet.style.transform = ''; if (sheet.getAnimations) sheet.getAnimations().forEach(function (x) { x.cancel(); }); }
+      var nm = document.querySelector('#player-link-name .pls-nm'); if (nm) nm.style.opacity = '';
+    }, 380);
+  };
+})();
+// drag down from the top of the sheet to close it
+(function () {
+  var backdrop = document.getElementById('player-link-backdrop');
+  var sheet = backdrop && backdrop.firstElementChild;
+  if (!sheet) return;
+  var y0 = null, dy = 0, t0 = 0;
+  sheet.addEventListener('touchstart', function (e) {
+    if (sheet.scrollTop > 0 || !e.touches || e.touches.length !== 1) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); sheet.style.transition = 'none';
+  }, { passive: true });
+  sheet.addEventListener('touchmove', function (e) {
+    if (y0 == null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    if (dy > 0 && sheet.scrollTop <= 0) sheet.style.transform = 'translateY(' + dy + 'px)';
+    else if (dy === 0) sheet.style.transform = '';
+  }, { passive: true });
+  sheet.addEventListener('touchend', function () {
+    if (y0 == null) return;
+    var fast = dy > 40 && Date.now() - t0 < 250;
+    y0 = null;
+    if (dy > 110 || fast) { closePlayerLinkSheet(); return; }
+    sheet.style.transition = 'transform .3s cubic-bezier(.2,.8,.2,1)';
+    sheet.style.transform = '';
+    setTimeout(function () { sheet.style.transition = ''; }, 320);
+  });
 })();

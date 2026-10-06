@@ -115,3 +115,8 @@
 .pll-dot{display:inline-block;width:14px;height:3px;border-radius:2px;background:rgba(255,255,255,.18);vertical-align:middle;animation:plsPulse 1s ease-in-out infinite alternate}
 .pll-wait .pll-r{background:rgba(255,255,255,.03);margin-top:4px}
 @media (prefers-reduced-motion: reduce){#player-link-backdrop.pls-in>div,.pll-r{animation:none}}
+/* v7.14.2: the close mirrors the open — backdrop fades while JS slides the sheet down */
+#player-link-backdrop.pls-out{animation:plsFadeOut .36s ease both}
+#player-link-backdrop.pls-out>div{animation:none}
+@keyframes plsFadeOut{from{opacity:1}to{opacity:0}}
+.pls-src{transition:opacity .18s}

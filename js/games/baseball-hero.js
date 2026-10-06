@@ -952,9 +952,11 @@ function _ghLiveDetailHtml(box) {
   var seq = box.pitchSequence;
   if (mp || mb || seq) {
     var sitText = s.inning ? ((s.half === 'top' ? 'Top' : 'Bottom') + ' ' + _ordinalSuffix(s.inning) + (s.outs != null && s.outs < 3 ? ' · ' + s.outs + (s.outs === 1 ? ' out' : ' outs') : '')) : '';
-    out += '<div class="gh-card"><div class="gh-card-head"><span class="gh-eyebrow">At bat</span><span class="gh-sub">' + _escapeHtml(sitText) + '</span></div>';
     // v7.14.0: mid at-bat everything lives on one stage (js/games/at-bat-stage.js)
     var stageOn = !!seq && !(s.inningState === 'Middle' || s.inningState === 'End') && typeof _gstRailHtml === 'function';
+    // v7.14.2: on the stage the inning/outs are already in the scorebug, so the PLAY / DEFENSE switch takes that spot
+    var headRight = stageOn && typeof _gstToggleHtml === 'function' && _gstToggleHtml(box) ? _gstToggleHtml(box) : '<span class="gh-sub">' + _escapeHtml(sitText) + '</span>';
+    out += '<div class="gh-card"><div class="gh-card-head"><span class="gh-eyebrow">At bat</span>' + headRight + '</div>';
     if ((mp || mb) && !stageOn) {
       var who = function (label, p, right) {
         // v7.6.0: long names show as initial + last name rather than being cut off
@@ -999,7 +1001,7 @@ function _ghLiveDetailHtml(box) {
       if (stageOn) {
         svg = _bbZoneGlow(svg, seq); if (typeof _absZoneMarks === 'function') svg = _absZoneMarks(svg, seq.pitches);
         out += '<div id="gh-stage" class="gst' + (window._gstDef ? ' def' : '') + '"><div class="gst-sq">' + svg + '<div id="gh-pa-slot"></div>' + (typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') +
-          _gstDefenseHtml(box) + '<div id="gh-pa-label" class="pa-lab gst-lab"></div>' + _gstRailHtml(s, seq, box) + _gstToggleHtml(box) + '</div>' + _gstL3Html(mp, mb, box) + '</div>';
+          _gstDefenseHtml(box) + '<div id="gh-pa-label" class="pa-lab gst-lab"></div>' + _gstRailHtml(s, seq, box) + '</div>' + _gstL3Html(mp, mb, box) + '</div>';
         out += '<div id="gh-pa-stats" class="pa-sc"></div>';
         if (typeof _patLivePanelHtml === 'function') out += '<div id="gh-pa-panel">' + _patLivePanelHtml(box) + '</div>';
         out += _gstStripHtml(seq, box, s) + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + _gstSavantHtml(mp, mb, box);
