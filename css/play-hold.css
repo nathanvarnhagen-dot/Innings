@@ -34,6 +34,8 @@
 .pah .nx i{flex-shrink:0;width:7px;height:7px;border-radius:50%;background:#7BE3A6;box-shadow:0 0 8px #7BE3A6;animation:pahBlink 1.6s ease-in-out infinite}
 .pah .rp{flex-shrink:0;pointer-events:auto;height:30px;padding:0 11px;border:0;border-radius:15px;background:rgba(5,3,14,.32);color:#fff;font-family:inherit;font-size:12px;font-weight:700;line-height:1;display:flex;align-items:center;gap:5px;cursor:pointer}
 .pah .rp:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* v7.19.1: once the card is up, the play label and the ABS note step aside */
+.pah-on>.gst-lab,.pah-on>.gst-absc,.pah-on .abs-nt{opacity:0!important;transition:opacity .25s ease}
 /* the defense view swaps the square for the alignment; the card steps aside */
 .gst.def #gh-pa-slot .pah{display:none}
 @keyframes pahIn{to{clip-path:inset(0 0 0 0)}}

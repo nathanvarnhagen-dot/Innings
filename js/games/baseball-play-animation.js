@@ -76,6 +76,18 @@ function _paFill() {
   }
   var s0 = window._pa;
   slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
+  // v7.19.1: when the result card sweeps in, the play label (top left) and
+  // the ABS note (bottom right) fade so nothing sits on top of it
+  var pf = slot.parentNode, card = slot.querySelector('.pah');
+  clearTimeout(window._pahOnT);
+  if (pf && pf.classList) {
+    pf.classList.remove('pah-on');
+    if (card) {
+      var t0 = parseFloat((card.style.getPropertyValue('--t0') || '0').replace('s', '')) || 0;
+      if (t0 <= 0) pf.classList.add('pah-on');
+      else window._pahOnT = setTimeout(function () { var c2 = document.querySelector('#gh-pa-slot .pah'); if (c2 && c2.parentNode && c2.parentNode.parentNode) c2.parentNode.parentNode.classList.add('pah-on'); }, t0 * 1000);
+    }
+  }
   clearTimeout(window._paEndT);
   if (_paActive()) {
     // One full run, then hand the square back and catch up on any
@@ -463,7 +475,7 @@ function _paOverlayHtml() {
   if (!lp || !box) return '';
   // v7.19.0: between batters the last play's result card holds (pa-takeover.js)
   var hold = typeof _patHoldOn === 'function' && _patHoldOn(lp, box, s);
-  if (!s.startAt) return hold ? _patHeldHtml(lp, box) : '';
+  if (!s.startAt) { if (hold) { s._labelHtml = ''; s._statsHtml = ''; } return hold ? _patHeldHtml(lp, box) : ''; }
   if (typeof _paIsAction === 'function' && _paIsAction(lp)) return _paActionHtml(lp, s, box);
   var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
   var E = (Date.now() - s.startAt) / 1000;
@@ -481,7 +493,7 @@ function _paOverlayHtml() {
   var END = (showField ? PA.END : 9) + OFF;
   s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
-  else if (E > END + 0.6) return hold ? _patHeldHtml(lp, box) : '';
+  else if (E > END + 0.6) { if (hold) { s._labelHtml = ''; s._statsHtml = ''; } return hold ? _patHeldHtml(lp, box) : ''; }
   if (s.quick) { OFF = 0; E = E + PA.SW + .6; } // reel: straight to the field
   var Es = E - OFF; // clock for everything after the pitches
   var land = _paLanding(lp);

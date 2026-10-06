@@ -534,6 +534,8 @@ function _patHoldInfo(lp, box) {
   else if (tier.kind === 'walk') { var n = (lp.pitches || []).length; who += n ? ' · ' + n + '-pitch walk' : ''; }
   else if (tier.kind === 'out') { var f = (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; }
   var big = tier.full ? String(_teamShortName(team.name || '') || team.abbr || '').toUpperCase() : bat.toUpperCase();
+  // lite cards already lead with the batter's name; don't say it twice
+  if (!tier.full) { var cut = who.indexOf(' · '); who = cut > -1 ? who.slice(cut + 3) : ''; }
   // under the batter: where it went and the score after it
   var sub = [];
   var land = typeof _paLanding === 'function' ? _paLanding(lp) : null;
@@ -619,7 +621,7 @@ function _patHoldCardHtml(lp, box, t0) {
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
     '<div class="ct"><div class="top"><div class="wd"><span class="sm">' + _escapeHtml(o.title) + '</span>' +
       '<span class="big' + (o.big.length > 11 ? ' long' : '') + '">' + _escapeHtml(o.big) + '</span>' +
-      '<span class="who">' + _escapeHtml(o.who) + '</span>' + (o.sub ? '<span class="sub">' + _escapeHtml(o.sub) + '</span>' : '') +
+      (o.who ? '<span class="who">' + _escapeHtml(o.who) + '</span>' : '') + (o.sub ? '<span class="sub">' + _escapeHtml(o.sub) + '</span>' : '') +
       (info.badge ? '<span class="bdg">' + _escapeHtml(info.badge) + '</span>' : '') + '</div>' +
       (mini ? '<div class="mini' + (spray ? '' : ' zn') + '">' + mini + '</div>' : '') + '</div>' +
     (tileHtml ? '<div class="tiles">' + tileHtml + '</div>' : '') +
