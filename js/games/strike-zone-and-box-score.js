@@ -202,6 +202,11 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
       cells.map(function (v) { return '<div style="width:22px;text-align:right">' + v + '</div>'; }).join('') + '</div>';
   };
 
+  var totRow = function (cells, withLead) {
+    return '<div class="row bs-tot" style="display:flex;gap:6px;padding:6px 0 5px;border-top:1px solid rgba(255,255,255,.22);font-size:11px;font-weight:800;color:' + color + '">' +
+      (withLead ? '<div style="width:14px;flex-shrink:0"></div>' : '') + '<div style="flex:1;letter-spacing:.06em">TOTALS</div>' +
+      cells.map(function (v) { return '<div style="width:22px;text-align:right">' + v + '</div>'; }).join('') + '</div>';
+  };
   var header = '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleBoxScoreDetail()">' +
     '<div style="font-size:12px;font-weight:700;color:' + color + '">Box Score</div>' +
     '<div style="font-size:11px;color:' + subColor + '">' + (state.expanded ? '▲ Hide' : '▼ Show') + '</div></div>';
@@ -227,11 +232,19 @@ function _boxScoreDetailSectionHtml(detail, awayName, homeName, ruleColor, subCo
       }
       body += colHead([{ label: 'AB', w: 22 }, { label: 'R', w: 22 }, { label: 'H', w: 22 }, { label: 'RBI', w: 26 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }], hasOrder);
       body += batters.map(function (b) { return statRow(b.name, b.id, b.pos, [b.ab, b.r, b.h, b.rbi, b.bb, b.so], hasOrder ? { slot: b.slot || null, sub: b.sub || 0 } : undefined); }).join('');
+      // v7.14.1: team totals
+      var bs = function (k) { return batters.reduce(function (a, b) { return a + (Number(b[k]) || 0); }, 0); };
+      body += totRow([bs('ab'), bs('r'), bs('h'), bs('rbi'), bs('bb'), bs('so')], hasOrder);
     }
     if (teamData.pitchers.length) {
       body += '<div style="font-size:9px;color:' + subColor + ';text-transform:uppercase;letter-spacing:.04em;margin:12px 0 2px">Pitching</div>';
-      body += colHead([{ label: 'IP', w: 26 }, { label: 'H', w: 22 }, { label: 'R', w: 22 }, { label: 'ER', w: 22 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }]);
-      body += teamData.pitchers.map(function (p) { return statRow(p.name, p.id, null, [p.ip, p.h, p.r, p.er, p.bb, p.so]); }).join('');
+      // v7.14.1: pitch count (NP) per pitcher, and team totals
+      var hasNp = teamData.pitchers.some(function (p) { return p.np != null; });
+      body += colHead([{ label: 'IP', w: 22 }, { label: 'H', w: 22 }, { label: 'R', w: 22 }, { label: 'ER', w: 22 }, { label: 'BB', w: 22 }, { label: 'SO', w: 22 }].concat(hasNp ? [{ label: 'NP', w: 22 }] : []));
+      body += teamData.pitchers.map(function (p) { return statRow(p.name, p.id, null, [p.ip, p.h, p.r, p.er, p.bb, p.so].concat(hasNp ? [p.np != null ? p.np : '\u2013'] : [])); }).join('');
+      var ps = function (k) { return teamData.pitchers.reduce(function (a, p) { return a + (Number(p[k]) || 0); }, 0); };
+      var outs = teamData.pitchers.reduce(function (a, p) { var x = String(p.ip || '0').split('.'); return a + (Number(x[0]) || 0) * 3 + (Number(x[1]) || 0); }, 0);
+      body += totRow([Math.floor(outs / 3) + '.' + (outs % 3), ps('h'), ps('r'), ps('er'), ps('bb'), ps('so')].concat(hasNp ? [ps('np')] : []), false);
     }
   }
   if (bare) { // caller supplies its own card — header restyled to match it

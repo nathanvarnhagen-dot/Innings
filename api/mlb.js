@@ -643,7 +643,9 @@ function _extractTeamBoxScore(teamData) {
       r: s.runs != null ? s.runs : 0,
       er: s.earnedRuns != null ? s.earnedRuns : 0,
       bb: s.baseOnBalls != null ? s.baseOnBalls : 0,
-      so: s.strikeOuts != null ? s.strikeOuts : 0
+      so: s.strikeOuts != null ? s.strikeOuts : 0,
+      np: s.numberOfPitches != null ? s.numberOfPitches : (s.pitchesThrown != null ? s.pitchesThrown : null), // v7.14.1
+      hr: s.homeRuns != null ? s.homeRuns : 0
     };
   }).filter(Boolean);
   return { batters: batters, pitchers: pitchers };

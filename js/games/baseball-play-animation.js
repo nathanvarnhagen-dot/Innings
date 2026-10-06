@@ -170,6 +170,40 @@ function _paTitle(lp) {
   if (t === 'field_out') return tr === 'fly_ball' ? 'FLY OUT' : tr === 'line_drive' ? 'LINE OUT' : tr === 'popup' ? 'POP OUT' : 'GROUND OUT';
   return map[t] || String(lp.event || 'PLAY').toUpperCase();
 }
+// v7.14.1: "7th K today" on a strikeout; a reliever's also carries his
+// team's total. Counted from the game's plays up to this one when they're
+// all here (so a replay shows the count at the time), else the box score.
+function _paKCountText(lp, box) {
+  if (!lp || !box || !lp.pitcherId) return '';
+  var side = lp.half === 'top' ? 'home' : lp.half === 'bottom' ? 'away' : null;
+  var isK = function (t) { return /^strikeout/.test(t || ''); };
+  var mine = null, team = null, starter = null;
+  var plays = (box.allPlays || []).map(function (p) { return p.anim || p; }).filter(function (a) { return a && a.atBatIndex != null && a.pitcherId; });
+  if (plays.length && lp.atBatIndex != null && side) {
+    var upTo = plays.filter(function (a) { return a.half === lp.half && a.atBatIndex <= lp.atBatIndex; });
+    if (upTo.length) {
+      starter = upTo.slice().sort(function (a, b) { return a.atBatIndex - b.atBatIndex; })[0].pitcherId;
+      mine = upTo.filter(function (a) { return isK(a.eventType) && String(a.pitcherId) === String(lp.pitcherId); }).length;
+      team = upTo.filter(function (a) { return isK(a.eventType); }).length;
+      if (!upTo.some(function (a) { return a.atBatIndex === lp.atBatIndex; })) { mine++; team++; }
+    }
+  }
+  if (mine == null) {
+    var d = side && box.boxScoreDetail && box.boxScoreDetail[side], list = (d && d.pitchers) || [];
+    var ix = -1; list.forEach(function (x, i) { if (String(x.id) === String(lp.pitcherId)) ix = i; });
+    if (ix < 0) return '';
+    mine = Number(list[ix].so) || 0; starter = list[0].id;
+    team = list.reduce(function (a, x) { return a + (Number(x.so) || 0); }, 0);
+  }
+  if (!mine) return '';
+  var ord = function (n) { var t = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (t[(v - 20) % 10] || t[v] || t[0]); };
+  var txt = ord(mine) + ' K today';
+  if (String(starter) !== String(lp.pitcherId) && team) {
+    var ab = side === 'home' ? (box.homeAbbr || _ghAbbrFallback(box.home)) : (box.awayAbbr || _ghAbbrFallback(box.away));
+    txt += ' \u00b7 ' + ab + ' ' + team + ' K';
+  }
+  return txt;
+}
 function _paNote2(lp, box, land) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
   var f = lp.fielders || [];
@@ -183,6 +217,8 @@ function _paNote2(lp, box, land) {
     bits.push(last && /called/i.test(last.call || '') ? '\u24C0K looking' : 'K swinging'); // marker → mirrored K when drawn
     if (lp.droppedK === 'out') bits.push('Dropped third strike' + (f.length > 1 ? ' \u00b7 ' + f.join('-') : ''));
     else if (lp.droppedK === 'safe') bits.push('Reached on dropped third strike');
+    var kn = _paKCountText(lp, box); // v7.14.1
+    if (kn) bits.push(kn);
   } else if (t === 'walk' || t === 'intent_walk') bits.push(t === 'intent_walk' ? 'IBB' : 'BB');
   else if (t === 'home_run') { if (land) bits.push('To ' + _paDir(land.ang)); if (lp.hit && lp.hit.distance) bits.push(lp.hit.distance + ' ft'); }
   else if (t === 'single' && _paInfieldHitPos(lp)) { bits.push('Infield single to ' + ({ '1': 'the pitcher', '2': 'the catcher', '3': 'first', '4': 'second', '5': 'third', '6': 'short' })[_paInfieldHitPos(lp)] + ' · beat the throw'); }
