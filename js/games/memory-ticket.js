@@ -176,7 +176,7 @@ function _gcPlayQuoteHtml(rt, mine) {
   var play = rt.play || { tag: rt.author, text: rt.text, playId: null };
   var score = play.score ? ' · ' + play.score : '';
   var bd = mine ? 'rgba(255,255,255,0.45)' : 'rgba(168,159,232,.6)';
-  return '<button class="gc-pq" data-tag="' + _escapeHtml(play.tag || '') + '" data-text="' + _escapeHtml(play.text || '') + '" data-pid="' + _escapeHtml(play.playId || '') + '" onclick="event.stopPropagation();openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid||null)" style="border-left-color:' + bd + '">' +
+  return '<button class="gc-pq' + (mine ? ' me' : '') + '" data-tag="' + _escapeHtml(play.tag || '') + '" data-text="' + _escapeHtml(play.text || '') + '" data-pid="' + _escapeHtml(play.playId || '') + '" onclick="event.stopPropagation();openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid||null)" style="border-left-color:' + bd + '">' +
     '<span class="gc-pq-hd"><span>' + _escapeHtml((play.tag || 'Play') + score) + '</span><span class="gc-pq-go">View play ›</span></span>' +
     '<span class="gc-pq-tx">' + _escapeHtml(play.text || '') + '</span></button>';
 }

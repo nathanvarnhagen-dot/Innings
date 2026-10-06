@@ -23,8 +23,10 @@
 .gc-photo{display:block;width:100%;max-width:240px;max-height:320px;object-fit:cover;border-radius:12px;margin:2px 0 4px;cursor:zoom-in}
 .bubble.gc-has-photo{padding:6px 6px 8px}
 .bubble.gc-has-photo .b-txt,.bubble.gc-has-photo .b-t,.bubble.gc-has-photo .b-who{padding:0 6px}
-.gc-pq{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:6px 9px;margin-bottom:6px;border:0;border-left:3px solid;border-radius:8px;background:rgba(11,8,32,.28);color:inherit;font-family:inherit;cursor:pointer}
-.gc-pq-hd{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;font-weight:800}
+.gc-pq{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:7px 10px;margin-bottom:6px;border:0;border-left:3px solid;border-radius:8px;background:rgba(168,159,232,.12);color:#F5F3FF;font-family:inherit;cursor:pointer}
+.gc-pq.me{background:rgba(11,8,32,.28)}
+.gc-pq-hd{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;font-weight:800;color:#CFC7FF}
+.gc-pq.me .gc-pq-hd{color:#fff}
 .gc-pq-go{font-weight:700;opacity:.8;white-space:nowrap}
 .gc-pq-tx{font-size:13px;opacity:.9;line-height:1.35}
 .gc-sys{align-self:center;display:flex;align-items:center;gap:8px;max-width:92%;margin:2px auto;padding:8px 12px;border-radius:14px;background:rgba(168,159,232,.1);border:1px solid rgba(168,159,232,.2);color:#D9D4FA;font-size:12.5px;line-height:1.35;text-align:left;font-family:inherit;cursor:pointer}
