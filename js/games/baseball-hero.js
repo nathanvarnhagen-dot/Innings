@@ -953,7 +953,9 @@ function _ghLiveDetailHtml(box) {
   if (mp || mb || seq) {
     var sitText = s.inning ? ((s.half === 'top' ? 'Top' : 'Bottom') + ' ' + _ordinalSuffix(s.inning) + (s.outs != null && s.outs < 3 ? ' · ' + s.outs + (s.outs === 1 ? ' out' : ' outs') : '')) : '';
     out += '<div class="gh-card"><div class="gh-card-head"><span class="gh-eyebrow">At bat</span><span class="gh-sub">' + _escapeHtml(sitText) + '</span></div>';
-    if (mp || mb) {
+    // v7.14.0: mid at-bat everything lives on one stage (js/games/at-bat-stage.js)
+    var stageOn = !!seq && !(s.inningState === 'Middle' || s.inningState === 'End') && typeof _gstRailHtml === 'function';
+    if ((mp || mb) && !stageOn) {
       var who = function (label, p, right) {
         // v7.6.0: long names show as initial + last name rather than being cut off
         var short = p && p.name && p.name.length > 15 ? p.name.split(' ')[0].charAt(0) + '. ' + _ghLastName(p.name) : null;
@@ -994,6 +996,14 @@ function _ghLiveDetailHtml(box) {
       // Tap a play in the play-by-play to replay it here.
       // v6.0.0: count panel, purple zone glow, play label above the square
       // and the Statcast strip under it.
+      if (stageOn) {
+        svg = _bbZoneGlow(svg, seq); if (typeof _absZoneMarks === 'function') svg = _absZoneMarks(svg, seq.pitches);
+        out += '<div id="gh-stage" class="gst' + (window._gstDef ? ' def' : '') + '"><div class="gst-sq">' + svg + '<div id="gh-pa-slot"></div>' + (typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') +
+          _gstDefenseHtml(box) + '<div id="gh-pa-label" class="pa-lab gst-lab"></div>' + _gstRailHtml(s, seq, box) + _gstToggleHtml(box) + '</div>' + _gstL3Html(mp, mb, box) + '</div>';
+        out += '<div id="gh-pa-stats" class="pa-sc"></div>';
+        if (typeof _patLivePanelHtml === 'function') out += '<div id="gh-pa-panel">' + _patLivePanelHtml(box) + '</div>';
+        out += _gstStripHtml(seq, box, s) + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + _gstSavantHtml(mp, mb, box);
+      } else {
       if (!brk) { out += _bbCountHtml(s) + (typeof _absLeftHtml === 'function' ? _absLeftHtml(box) : ''); svg = _bbZoneGlow(svg, seq); if (typeof _absZoneMarks === 'function') svg = _absZoneMarks(svg, seq.pitches); }
       out += '<div id="gh-pa-label" class="pa-lab"></div>';
       out += '<div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(13,8,32,.45);border:1px solid rgba(168,159,232,.12)">' + svg + '<div id="gh-pa-slot"></div>' + (!brk && typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') + '</div>';
@@ -1018,6 +1028,7 @@ function _ghLiveDetailHtml(box) {
         ['Ball', 'Strike', 'In play'].map(function (label) {
           return '<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:' + _pitchCallColor(label) + '"></span>' + label + '</span>';
         }).join('') + '</div>';
+      }
     }
     out += '</div>';
   }

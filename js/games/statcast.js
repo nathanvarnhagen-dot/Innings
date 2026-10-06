@@ -338,7 +338,7 @@ function _savPlayerSheetFill(id) {
   if (!d) { box.innerHTML = _savMatchupHtml(id) + '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">' + (e.failed ? 'Couldn\u2019t reach Baseball Savant right now \u2014 try again in a minute.' + (e.why ? '<span style="display:block;margin-top:4px;font-size:11px;color:#6F6A98">(' + _escapeHtml(String(e.why).slice(0, 140)) + ')</span>' : '') : 'No Statcast data for this player yet.') + '</div>'; if (e.failed) delete window._sav.player[want]; return; }
   // a partial answer (Savant was slow) fills in with one more try
   if (d.partial && !e.retried) { e.retried = true; setTimeout(function () { if (window._savSheetId !== want) return; e.at = 0; _savGet('player', want, '/api/mlb?mode=savant&smode=player&id=' + encodeURIComponent(id), 6 * 3600e3, function () { if (window._savSheetId === want) _savPlayerSheetFill(id); }); }, 6000); }
-  var html = _savSeasonHtml(id) + _savMatchupHtml(id);
+  var html = _savMatchupHtml(id); // v7.14.0: the season line moved to the top of the sheet (js/games/player-lines.js)
   var pctBlock = function (title, list) {
     if (!list || !list.length) return '';
     return '<div class="sav-sec"><span class="gh-eyebrow">' + title + '</span>' + list.map(function (x) {

@@ -30,3 +30,105 @@
 /* v7.8.7: box score — the batter currently at the plate */
 .row.batting{background:linear-gradient(90deg,rgba(168,159,232,.22),rgba(61,53,128,.12));box-shadow:inset 3px 0 0 #A89FE8;border-radius:6px;padding-left:6px!important;padding-right:4px!important;font-weight:700}
 .row.batting .now-batting{display:inline-block;margin-left:4px;padding:1px 5px;border-radius:999px;background:#A89FE8;color:#1A1640;font-size:8px;font-weight:800;letter-spacing:.08em;vertical-align:middle}
+
+/* ═══ AT-BAT STAGE (v7.14.0) — js/games/at-bat-stage.js ═══ */
+.gst{position:relative;border-radius:22px;overflow:hidden;background:#0A0718;box-shadow:0 0 0 .5px rgba(255,255,255,.14),0 18px 44px rgba(0,0,0,.4);margin-top:2px}
+.gst-sq{position:relative;background:radial-gradient(120% 90% at 50% 45%,rgba(61,53,128,.28),rgba(10,7,24,0) 70%)}
+.gst-sq>svg,.gst #gh-pa-slot svg[viewBox="0 0 500 386"]{height:272px}
+.gst-lab{position:absolute!important;top:10px;left:10px;z-index:6;max-width:calc(100% - 118px);pointer-events:none;margin:0!important;transition:opacity .25s}
+.gst-lab .pl-in{align-items:flex-start;text-align:left;gap:2px;padding:7px 11px;border-radius:12px;background:rgba(9,6,24,.64);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:.5px solid rgba(255,255,255,.16)}
+.gst-lab .pl-t{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:.07em}
+.gst-lab .pl-n{font-size:11px}
+.gst-rail{position:absolute;top:10px;right:10px;width:88px;z-index:6;border-radius:14px;background:rgba(9,6,24,.62);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:.5px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);transition:transform .5s cubic-bezier(.22,1,.36,1),opacity .35s ease}
+.gst.rail-out .gst-rail,.gst.def .gst-rail{transform:translateX(112px);opacity:0;pointer-events:none}
+.gst.def .gst-lab{opacity:0}
+.gst-rs{padding:8px 10px;display:flex;flex-direction:column}
+.gst-rs+.gst-rs{border-top:.5px solid rgba(255,255,255,.1)}
+.gst-k{font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.18em;color:#A89FE8;text-transform:uppercase}
+.gst-cr{display:flex;align-items:center;gap:6px;height:20px;font-family:'Barlow Condensed',sans-serif}
+.gst-cl{font-size:11px;font-weight:600;letter-spacing:.1em;color:rgba(255,255,255,.5);width:9px}
+.gst-cd{display:flex;gap:3px;flex:1}
+.gst-cd i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.14)}
+.gst-cr.b i.on{background:#7CF29C;box-shadow:0 0 6px rgba(124,242,156,.6)}
+.gst-cr.s i.on{background:#FF6A58;box-shadow:0 0 6px rgba(255,106,88,.6)}
+.gst-cr.o i.on{background:#F2C869;box-shadow:0 0 6px rgba(242,200,105,.6)}
+.gst-cr b{font-size:17px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.gst-cr b.hit{animation:bbcHit .6s cubic-bezier(.22,1,.36,1)}
+.gst-mph{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1;margin-top:3px;color:#fff}
+.gst-mph small{font-size:11px;color:#C7C0E8;margin-left:2px;letter-spacing:.06em}
+.gst-lt{font-size:10.5px;color:#D9D4FA;margin-top:2px;line-height:1.3}
+.gst-pp{align-self:flex-start;margin-top:5px;font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:#fff;border-radius:999px;padding:1px 7px}
+.gst-abs{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;margin-top:3px;letter-spacing:.03em;color:#fff;white-space:nowrap}
+.gst-tg{position:absolute;left:10px;bottom:10px;z-index:7;display:flex;gap:2px;padding:3px;border-radius:11px;background:rgba(9,6,24,.66);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:.5px solid rgba(255,255,255,.16)}
+.gst-tg button{border:0;border-radius:8px;background:transparent;height:28px;padding:0 10px;font-family:'Barlow Condensed',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.14em;color:rgba(255,255,255,.55);cursor:pointer;transition:background .25s,color .25s}
+.gst-tg button.on{background:#F5F3FF;color:#0D0820}
+.gst-tg button:focus-visible{outline:2px solid #A89FE8;outline-offset:1px}
+.gst-def{position:absolute;inset:0;z-index:5;opacity:0;pointer-events:none;transition:opacity .35s ease}
+.gst.def .gst-def{opacity:1;pointer-events:auto}
+.gst-def svg{position:absolute;inset:0;width:100%;height:100%}
+.gst-fl{position:absolute;transform:translateX(-50%);font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:.05em;padding:1px 6px;border-radius:6px;background:rgba(9,6,24,.8);border:.5px solid rgba(196,206,212,.4);white-space:nowrap;color:#fff;cursor:pointer;line-height:1.35}
+.gst-fl small{color:#A89FE8;margin-right:3px;font-size:10.5px}
+.gst-dtag{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:7px;height:30px;padding:0 11px;border-radius:10px;background:rgba(9,6,24,.66);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:.5px solid rgba(255,255,255,.16);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;color:#fff}
+.gst-dtag i{width:9px;height:9px;border-radius:3px}
+.gst-l3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#130E2E;border-top:.5px solid rgba(255,255,255,.1)}
+.gst-l3s{position:relative;display:flex;flex-direction:column;padding:9px 12px 2px;min-width:0}
+.gst-l3s.r{align-items:flex-end;text-align:right;border-left:.5px solid rgba(255,255,255,.08)}
+.gst-bar{position:absolute;top:11px;bottom:2px;left:0;width:2px;border-radius:2px}
+.gst-l3s.r .gst-bar{left:auto;right:0}
+.gst-nm{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff}
+.gst-sl{font-size:10.5px;color:#C7C0E8;margin-top:1px;white-space:nowrap}
+.gst-l3t{padding:2px 12px 9px;font-size:10.5px;color:#E4E0FA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:22px}
+.gst-l3t.r{text-align:right;border-left:.5px solid rgba(255,255,255,.08)}
+.gst-strip{display:flex;margin-top:10px;border-radius:16px;background:#130E2E;box-shadow:0 0 0 .5px rgba(255,255,255,.1);overflow-x:auto;scrollbar-width:none}
+.gst-strip::-webkit-scrollbar{display:none}
+.gst-pc{position:relative;flex:1 0 64px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:11px 0 8px}
+.gst-pc+.gst-pc{border-left:.5px solid rgba(255,255,255,.07)}
+.gst-pc>i{width:6px;height:6px;border-radius:50%;margin-bottom:3px}
+.gst-pc b{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;line-height:1;color:#fff}
+.gst-pc span{font-size:9.5px;color:#C7C0E8;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gst-pc em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;filter:brightness(1.25)}
+.gst-pc em.gst-absb{color:#F2C869;filter:none}
+.gst-pc.now{background:rgba(168,159,232,.1)}
+.gst-pc.now::before{content:'NOW';position:absolute;top:2px;font-family:'Barlow Condensed',sans-serif;font-size:8.5px;letter-spacing:.16em;color:#A89FE8}
+.gst-pb{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:16px;padding:0 5px;margin-top:4px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff}
+.gst-pb0{visibility:hidden}
+.gst-cap{font-size:10px;color:rgba(255,255,255,.38);text-align:center;margin-top:6px}
+.gst-none{justify-content:center;padding:14px;font-size:12px;color:#B9B3E6}
+.gst-sv{margin-top:12px;height:170px;border-radius:16px;background:#130E2E;box-shadow:0 0 0 .5px rgba(255,255,255,.1);padding:10px 12px;overflow:hidden}
+.gst-svt{display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.18em;color:#A89FE8}
+.gst-svt span:last-child{color:rgba(255,255,255,.38)}
+.gst-svg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:8px}
+.gst-svh{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#fff}
+.gst-sr{display:flex;align-items:center;gap:6px;height:24px}
+.gst-sr>span:first-child{width:46px;font-size:10.5px;color:#C7C0E8;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gst-trk{position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
+.gst-trk i{position:absolute;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #130E2E}
+.gst-sr0 .gst-trk{background:rgba(255,255,255,.06)}
+@media (prefers-reduced-motion: reduce){.gst-rail,.gst-def,.gst-lab,.gst-tg button{transition:none}}
+/* v7.14.0 refinements */
+.gst-rail{width:98px}
+.gst-k{letter-spacing:.13em}
+.gst-abs{font-size:13.5px}
+.gst-fl.al{transform:translateX(-100%)}
+.gst-fl.ar{transform:none}
+.gst-tg button{height:26px;padding:0 9px;font-size:12px}
+.gst-nm{font-size:19px;letter-spacing:.03em}
+button.gst-pc{border:0;margin:0;background:transparent;color:inherit;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.gst-pc+button.gst-pc{border-left:.5px solid rgba(255,255,255,.07)}
+.gst-pc.sel{background:rgba(255,255,255,.08);box-shadow:inset 0 -2px 0 #F5F3FF}
+.gst-pc:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px;border-radius:10px}
+/* the Statcast panel under the stage: one compact row; the stage's strip holds the pitches */
+#gh-stage~#gh-pa-panel .pap{padding:10px 12px;gap:6px;margin-top:10px}
+#gh-stage~#gh-pa-panel .pap-sq{display:none}
+#gh-stage~#gh-pa-panel .pap-g{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px}
+#gh-stage~#gh-pa-panel .pap-g.odd .pap-r:last-child{grid-column:auto}
+#gh-stage~#gh-pa-panel .pap-r{min-height:0;padding:8px 8px 9px;gap:5px;border-radius:12px}
+#gh-stage~#gh-pa-panel .pap-l{font-size:10px;letter-spacing:.1em}
+#gh-stage~#gh-pa-panel .pap-l em{display:none}
+#gh-stage~#gh-pa-panel .pap-v{font-size:20px}
+#gh-stage~#gh-pa-panel .pap-v small{font-size:10px;margin-left:2px}
+#gh-stage~#gh-pa-panel .pap-tx{font-size:12.5px}
+#gh-stage~#gh-pa-panel .pap-bar{height:4px}
+#gh-stage~#gh-pa-panel .pap-bar b{width:22px;height:15px;margin-top:-7.5px;font-size:10.5px}
+.gst-sq>svg{width:calc(100% - 84px)}
+.pll-h>span{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.14em;color:#9C95D0}

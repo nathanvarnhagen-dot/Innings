@@ -90,6 +90,44 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=splits&id=<id>[&season=YYYY]  (v7.14.0)
+    // The top of the player sheet: postseason line (once he has one), and
+    // the last 7 / 14 / 30 days — regular season and postseason added
+    // together, since a window in October spans both.
+    if (mode === 'splits') {
+      const id = req.query.id;
+      if (!id) { res.status(400).json({ error: 'Missing id' }); return; }
+      const yr = parseInt(req.query.season, 10) || new Date().getFullYear();
+      const day = d => d.toISOString().slice(0, 10);
+      const now = new Date(), end = day(now);
+      const back = n => day(new Date(now.getTime() - (n - 1) * 86400000));
+      const base = 'https://statsapi.mlb.com/api/v1/people/' + encodeURIComponent(id) + '/stats?group=hitting,pitching&sportId=1';
+      const get = async (q) => { try { const r = await fetch(base + q); const j = await r.json(); return j.stats || []; } catch (e) { return []; } };
+      const pick = (blocks, g) => { const b = blocks.find(x => x.group && x.group.displayName === g); return b && b.splits && b.splits[0] ? b.splits[0].stat : null; };
+      const N = v => v == null ? 0 : Number(v) || 0;
+      const outsOf = st => st.outs != null ? N(st.outs) : (function (ip) { const p = String(ip || '0').split('.'); return N(p[0]) * 3 + N(p[1]); })(st.inningsPitched);
+      const sumH = list => { const t = { g: 0, pa: 0, ab: 0, h: 0, tb: 0, hr: 0, rbi: 0, bb: 0, hbp: 0, sf: 0, k: 0 }; let any = false;
+        list.forEach(st => { if (!st) return; any = true; t.g += N(st.gamesPlayed); t.pa += N(st.plateAppearances); t.ab += N(st.atBats); t.h += N(st.hits); t.tb += N(st.totalBases); t.hr += N(st.homeRuns); t.rbi += N(st.rbi); t.bb += N(st.baseOnBalls); t.hbp += N(st.hitByPitch); t.sf += N(st.sacFlies); t.k += N(st.strikeOuts); });
+        if (!any || !t.pa) return null;
+        const r3 = x => x == null || !isFinite(x) ? null : (x >= 1 ? x.toFixed(3) : x.toFixed(3).replace(/^0/, ''));
+        const obpD = t.ab + t.bb + t.hbp + t.sf;
+        return { g: t.g, pa: t.pa, avg: t.ab ? r3(t.h / t.ab) : null, obp: obpD ? r3((t.h + t.bb + t.hbp) / obpD) : null, slg: t.ab ? r3(t.tb / t.ab) : null, hr: t.hr, rbi: t.rbi, bb: t.bb, k: t.k, h: t.h, ab: t.ab }; };
+      const sumP = list => { const t = { g: 0, outs: 0, er: 0, k: 0, bb: 0, h: 0 }; let any = false;
+        list.forEach(st => { if (!st) return; any = true; t.g += N(st.gamesPlayed); t.outs += outsOf(st); t.er += N(st.earnedRuns); t.k += N(st.strikeOuts); t.bb += N(st.baseOnBalls); t.h += N(st.hits); });
+        if (!any || !t.outs) return null;
+        return { g: t.g, ip: Math.floor(t.outs / 3) + '.' + (t.outs % 3), era: (t.er * 27 / t.outs).toFixed(2), whip: ((t.bb + t.h) * 3 / t.outs).toFixed(2), k: t.k, bb: t.bb }; };
+      const win = n => '&stats=byDateRange&startDate=' + back(n) + '&endDate=' + end + '&season=' + yr;
+      const qs = [ '&stats=season&season=' + yr + '&gameType=P' ];
+      [7, 14, 30].forEach(n => { qs.push(win(n) + '&gameType=R'); qs.push(win(n) + '&gameType=P'); });
+      const res2 = await Promise.all(qs.map(get));
+      const line = (blocks) => ({ hitting: sumH(blocks.map(b => pick(b, 'hitting'))), pitching: sumP(blocks.map(b => pick(b, 'pitching'))) });
+      const post = line([res2[0]]);
+      const out = { season: yr, post: (post.hitting || post.pitching) ? post : null, last7: line([res2[1], res2[2]]), last14: line([res2[3], res2[4]]), last30: line([res2[5], res2[6]]) };
+      res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+
     // GET /api/mlb?mode=bvp&batter=<id>&pitcher=<id>  (v5.89.0)
     // A hitter's career line against one pitcher (MLB Stats API vsPlayer).
     if (mode === 'bvp') {
@@ -289,6 +327,12 @@ function summarize(data, gamePk, wantAllPlays) {
       pitcher: defense.pitcher ? _liveParticipant(defense.pitcher, boxTeams, 'pitching') : null,
       batter: batPerson ? _liveParticipant(batPerson, boxTeams, 'batting') : null
     };
+    // v7.14.0: who's at every position for the team in the field (the
+    // game page's Defense view)
+    var _dPos = { pitcher: 'P', catcher: 'C', first: '1B', second: '2B', third: '3B', shortstop: 'SS', left: 'LF', center: 'CF', right: 'RF' };
+    var _dOut = {};
+    Object.keys(_dPos).forEach(function (k) { var dp = defense[k]; if (dp && dp.id) _dOut[_dPos[k]] = { id: dp.id, name: dp.fullName || null }; });
+    matchup.defense = Object.keys(_dOut).length ? _dOut : null;
     // v7.7.0: pitcher's hand, team, batters faced today, and who he
     // replaced (the previous name in his team's pitchers list) — the
     // "Now pitching" card shows for a reliever's first batter.
