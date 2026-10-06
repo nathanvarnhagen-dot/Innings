@@ -285,6 +285,7 @@ function _consumeReplyForSend(collection) {
   if (window._replyingTo && window._replyingTo.collection === collection) {
     replyTo = { msgId: window._replyingTo.msgId, author: window._replyingTo.author, text: window._replyingTo.text };
     if (window._replyingTo.play) replyTo.play = window._replyingTo.play;
+    if (window._replyingTo.stat) replyTo.stat = window._replyingTo.stat; // v7.18.0: a stat from a player card
   }
   _cancelReply();
   return replyTo;

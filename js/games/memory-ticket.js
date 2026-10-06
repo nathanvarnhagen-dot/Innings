@@ -183,7 +183,15 @@ function _gcPlayQuoteHtml(rt, mine) {
 // Replies to a play are the only replies with no message id (plays
 // aren't messages) — older ones predate the saved play details but
 // still carry its tag (as author) and text.
-function _gcIsPlayReply(rt) { return !!(rt && (rt.play || rt.msgId == null)); }
+function _gcIsPlayReply(rt) { return !!(rt && !rt.stat && (rt.play || rt.msgId == null)); }
+// v7.18.0: a stat quoted from a player card — tap it to open his card
+function _gcStatQuoteHtml(rt, mine) {
+  var st = rt.stat || {};
+  var bd = mine ? 'rgba(255,255,255,0.45)' : 'rgba(232,199,102,.65)';
+  return '<button class="gc-pq gc-sq' + (mine ? ' me' : '') + '" data-n="' + _escapeHtml(st.player || '') + '" data-id="' + _escapeHtml(st.playerId || '') + '" onclick="event.stopPropagation();sqOpenCard(this.dataset.n,this.dataset.id)" style="border-left-color:' + bd + '">' +
+    '<span class="gc-pq-hd"><span>' + _escapeHtml([st.player, st.label].filter(Boolean).join(' · ') || rt.author || 'Stat') + '</span><span class="gc-pq-go">Player card ›</span></span>' +
+    '<span class="gc-pq-tx">' + _escapeHtml(st.text || rt.text || '') + '</span></button>';
+}
 
 function renderGameChat(msgs) {
   var box = document.getElementById('game-chat-msgs');
@@ -198,7 +206,7 @@ function renderGameChat(msgs) {
         '<span class="gc-sys-e">' + _escapeHtml(c.emoji || '') + '</span><span><b>' + _escapeHtml(mine ? 'You' : (c.author || 'Someone')) + '</b> reacted to <b>' + _escapeHtml(c.play.tag || 'a play') + '</b> · ' + _escapeHtml(c.play.text || '') + '</span></button>';
     }
     var badges = _reactionBadgesHtml(c.reactions, true);
-    var quote = c.replyTo ? (_gcIsPlayReply(c.replyTo) ? _gcPlayQuoteHtml(c.replyTo, mine) : _replyQuoteHtml(c.replyTo, mine)) : '';
+    var quote = c.replyTo ? (c.replyTo.stat ? _gcStatQuoteHtml(c.replyTo, mine) : _gcIsPlayReply(c.replyTo) ? _gcPlayQuoteHtml(c.replyTo, mine) : _replyQuoteHtml(c.replyTo, mine)) : '';
     var photo = c.photo ? '<img class="gc-photo" src="' + c.photo + '" alt="Photo from ' + _escapeHtml(c.author || 'a friend') + '" data-src="' + (mine ? 'me' : 'them') + '" onclick="event.stopPropagation();openPhotoLightbox(this.src)">' : '';
     var lp = c.linkPreview && typeof _linkPreviewCardHtml === 'function' ? _linkPreviewCardHtml(c.linkPreview) : '';
     var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);

@@ -1,0 +1,24 @@
+/* ══ REPLY TO A STAT (v7.18.0) — player card → game chat ══ */
+#sq-hint{text-align:center;font-size:11.5px;color:#8F88C4;margin:-2px 0 10px}
+#player-link-backdrop.sq-live .pll-r:not(.pll-h),
+#player-link-backdrop.sq-live .sav-pct,
+#player-link-backdrop.sq-live .sav-bvp,
+#player-link-backdrop.sq-live .sav-ars:not(.sav-ars-h),
+#player-link-backdrop.sq-live .sav-x{position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .15s ease}
+#player-link-backdrop .sq-on{z-index:6;outline:2px solid rgba(168,159,232,.8);outline-offset:4px;border-radius:10px;background-color:rgba(168,159,232,.1)}
+#player-link-backdrop .pll-r.sq-on{outline-offset:1px}
+
+/* the iOS-style callout above whatever you tapped */
+.sq-pill{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:7px;height:38px;padding:0 15px;border:0;border-radius:19px;background:#2C2C30;color:#fff;font:600 14px/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;letter-spacing:-.2px;white-space:nowrap;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.5),inset 0 .5px 0 rgba(255,255,255,.14);animation:sqIn .32s cubic-bezier(.3,1.5,.5,1) backwards}
+.sq-pill::after{content:'';position:absolute;left:50%;bottom:-5px;width:11px;height:11px;margin-left:-5.5px;background:#2C2C30;transform:rotate(45deg);border-radius:2px}
+.sq-pill.below{bottom:auto;top:calc(100% + 12px)}
+.sq-pill.below::after{bottom:auto;top:-5px}
+.sq-pill:active{background:#3A3A40}
+.sq-pill:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+@keyframes sqIn{from{opacity:0;transform:translateX(-50%) translateY(6px) scale(.7)}}
+
+/* in chat: a quoted stat, gold edge (a play's is lilac) */
+.gc-sq .gc-pq-hd{color:#F2D98A}
+.gc-sq.me .gc-pq-hd{color:#fff}
+
+@media (prefers-reduced-motion:reduce){.sq-pill{animation:none}}

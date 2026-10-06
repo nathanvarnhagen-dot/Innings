@@ -91,7 +91,7 @@ function _savMatchupHtml(id) {
   var who = isB ? 'vs ' + other : other + ' against him';
   var stats = v.pa ? [['PA', v.pa], ['H', v.h], ['HR', v.hr], ['BB', v.bb], ['K', v.so], ['AVG', v.avg || '—'], ['OPS', v.ops || '—']] : null;
   return '<div class="sav-sec"><span class="gh-eyebrow" style="color:#9C95D0">This matchup · career</span><span style="font-size:14px;font-weight:700;color:#FFFFFF">' + _escapeHtml(who) + (v.pa ? '' : ' — first career meeting') + '</span>' +
-    (stats ? '<div style="display:grid;grid-template-columns:repeat(' + stats.length + ',auto);column-gap:14px;row-gap:2px;justify-content:start;padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.12);border:1px solid rgba(168,159,232,.2)">' + stats.map(function (x) { return '<span class="gh-num" style="font-size:15px;color:#FFFFFF">' + _escapeHtml(String(x[1])) + '</span>'; }).join('') + stats.map(function (x) { return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#B9B3E6">' + x[0] + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    (stats ? '<div class="sav-bvp" data-who="' + _escapeHtml(who) + '" style="display:grid;grid-template-columns:repeat(' + stats.length + ',auto);column-gap:14px;row-gap:2px;justify-content:start;padding:10px 12px;border-radius:14px;background:rgba(168,159,232,.12);border:1px solid rgba(168,159,232,.2)">' + stats.map(function (x) { return '<span class="gh-num" style="font-size:15px;color:#FFFFFF">' + _escapeHtml(String(x[1])) + '</span>'; }).join('') + stats.map(function (x) { return '<span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#B9B3E6">' + x[0] + '</span>'; }).join('') + '</div>' : '') + '</div>';
 }
 
 // ── 1, 2, 3, 5 · Stat pills in the play animation (corners of the square)
@@ -360,8 +360,8 @@ function _savPlayerSheetFill(id) {
   }
   if (d.batter && d.batter.spray && d.batter.spray.length) html += '<div class="sav-sec"><span class="gh-eyebrow">Spray chart · ' + d.year + '</span>' + _savSprayHtml(d.batter.spray) + '</div>';
   var extra = [];
-  if (d.sprintSpeed != null) extra.push('Sprint speed <b>' + d.sprintSpeed.toFixed(1) + ' ft/s</b>');
-  if (d.batter && d.batter.avgBatSpeed != null) extra.push('Avg bat speed <b>' + d.batter.avgBatSpeed.toFixed(1) + ' mph</b>');
+  if (d.sprintSpeed != null) extra.push('<span class="sav-x">Sprint speed <b>' + d.sprintSpeed.toFixed(1) + ' ft/s</b></span>');
+  if (d.batter && d.batter.avgBatSpeed != null) extra.push('<span class="sav-x">Avg bat speed <b>' + d.batter.avgBatSpeed.toFixed(1) + ' mph</b></span>');
   if (extra.length) html += '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#D9D4FA;padding:0 2px 10px">' + extra.join('') + '</div>';
   if (d.partial) html += '<div style="font-size:12px;color:#9C95D0;padding:0 2px 10px">Still loading some of it…</div>';
   box.innerHTML = html || '<div style="font-size:12.5px;color:#9C95D0;padding:6px 2px 12px">No Statcast data for this player yet.</div>';
