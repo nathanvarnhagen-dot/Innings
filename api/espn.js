@@ -50,7 +50,9 @@ module.exports = async function handler(req, res) {
       const r = await fetch(url);
       const data = await r.json();
       const games = (data.events || []).map(summarizeEvent).filter(Boolean);
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+      // v7.16.0: a day with a game in progress refreshes every 20s, not 5 min
+      const anyLive = games.some(function (g) { return g.state === 'in'; });
+      res.setHeader('Cache-Control', anyLive ? 's-maxage=20, stale-while-revalidate' : 's-maxage=300, stale-while-revalidate');
       res.status(200).json({ games: games });
       return;
     }
@@ -247,7 +249,16 @@ function summarizeEvent(event) {
     awayScore: parts.away.score != null ? Number(parts.away.score) : null,
     homeScore: parts.home.score != null ? Number(parts.home.score) : null,
     venue: (parts.comp.venue && parts.comp.venue.fullName) || null,
-    startTime: event.date || null
+    startTime: event.date || null,
+    // v7.16.0: for the Home "Live now" list — clock text, live flag, colors
+    state: (status && status.state) || null,
+    statusDetail: (status && (status.shortDetail || status.detail)) || null,
+    awayAbbr: (parts.away.team && parts.away.team.abbreviation) || null,
+    homeAbbr: (parts.home.team && parts.home.team.abbreviation) || null,
+    awayColor: (parts.away.team && parts.away.team.color) || null,
+    homeColor: (parts.home.team && parts.home.team.color) || null,
+    awayAlt: (parts.away.team && parts.away.team.alternateColor) || null,
+    homeAlt: (parts.home.team && parts.home.team.alternateColor) || null
   };
 }
 

@@ -1,0 +1,177 @@
+/* ══ GLASS (v7.16.0) — the new main interface ═══════════════════════════
+   Home, Friends, the floating glass tab bar, and the small touches on
+   Games, Memories/Calendar and Profile. Everything is scoped to html.glass
+   (set by js/core/glass.js) so the classic layout is untouched — except the
+   Layout switch at the bottom, which shows in both so you can always flip
+   back. */
+
+/* ── classic pieces this layout replaces ── */
+html.glass .bottom-nav{display:none!important}
+
+/* ── shared surface ── */
+#screen-home,#screen-friends{background:#09061A;color:#F4F2FF;overflow:hidden;-webkit-font-smoothing:antialiased}
+.gl-amb{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.gl-amb i{position:absolute;border-radius:50%;filter:blur(72px);transition:background .8s ease}
+.gl-amb .b1{left:-90px;top:60px;width:300px;height:300px;background:#3D3580;opacity:.5}
+.gl-amb .b2{right:-100px;top:150px;width:290px;height:290px;background:#6B3A8C;opacity:.34}
+.gl-amb .b3{left:60px;top:600px;width:260px;height:260px;background:#3D3580;opacity:.42}
+#screen-friends .gl-amb .b1{opacity:.34}
+#screen-friends .gl-amb .b2{opacity:.22}
+.gl-top{position:relative;z-index:1;padding:calc(env(safe-area-inset-top,20px) + 22px) 20px 14px;display:flex;align-items:flex-end;gap:8px;flex-shrink:0}
+.gl-hd{margin-right:auto;min-width:0}
+.gl-hd small{display:block;font-size:13px;font-weight:600;color:rgba(244,242,255,.62);margin-bottom:6px}
+.gl-hd b{display:block;font-size:32px;font-weight:700;letter-spacing:-.9px;line-height:1.05;color:#F4F2FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-ib{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;padding:0;color:#F4F2FF;flex-shrink:0;cursor:pointer;font-family:inherit}
+.gl-ib .gl-dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:#FF5A6E;box-shadow:0 0 0 2px #1A1438;display:none}
+.gl-ib.has .gl-dot{display:block}
+.gl-me{width:44px;height:44px;border-radius:50%;border:0;padding:0;background:#CFC7FF center/cover no-repeat;color:#0B0718;font-weight:700;font-size:16px;flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,.2);cursor:pointer;font-family:inherit}
+.gl-scroll{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 16px calc(130px + env(safe-area-inset-bottom,0px))}
+.gl-scroll::-webkit-scrollbar{display:none}
+.gl-num{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-variant-numeric:tabular-nums}
+.gl-lab{font-size:13px;font-weight:600;color:rgba(244,242,255,.66);display:flex;align-items:center;gap:7px;min-width:0}
+.gl-ldot{width:7px;height:7px;border-radius:50%;background:#FF5A6E;box-shadow:0 0 10px #FF5A6E;flex-shrink:0}
+.gl-av{width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#0B0718;background:#CFC7FF;flex-shrink:0}
+.gl-avs{display:flex;flex-shrink:0}
+.gl-avs .gl-av{box-shadow:0 0 0 2px rgba(20,16,44,.9);margin-left:-8px}
+.gl-avs .gl-av:first-child{margin-left:0}
+.gl-avs .gl-av:nth-child(2){background:#9FD6C2}
+.gl-avs .gl-av:nth-child(3){background:#F2B880}
+
+/* ── Home bento ── */
+.gl-bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gl-c2{grid-column:span 2}
+.gl-g{border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 20px 40px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(30px) saturate(150%);backdrop-filter:blur(30px) saturate(150%);padding:18px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;text-align:left;color:#F4F2FF;font-family:inherit;width:100%;position:relative;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.gl-g:active{transform:scale(.985)}
+.gl-lh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gl-hero{min-height:256px}
+.gl-board{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center}
+.gl-team{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.gl-team .gl-d{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),0 8px 20px rgba(0,0,0,.3)}
+.gl-team span:last-child{font-size:13px;font-weight:600;color:rgba(244,242,255,.75);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-score{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 6px}
+.gl-sc{display:flex;align-items:center;gap:14px;font-size:58px;line-height:1}
+.gl-sc .dim{color:rgba(244,242,255,.45)}
+.gl-sc i{width:10px;height:2px;background:rgba(244,242,255,.35)}
+.gl-sc.sm{font-size:30px;color:rgba(244,242,255,.85)}
+.gl-inn{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:rgba(244,242,255,.72);white-space:nowrap}
+.gl-lf{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)}
+.gl-lf p{margin:0;flex:1;min-width:0;font-size:13px;font-weight:600;color:rgba(244,242,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-join{height:40px;padding:0 18px;border-radius:20px;background:#F4F2FF;color:#0B0718;font-weight:700;font-size:13.5px;display:inline-flex;align-items:center;flex-shrink:0}
+.gl-more{border:0;background:transparent;color:#CFC7FF;font-family:inherit;font-size:12.5px;font-weight:600;padding:0;min-height:28px;cursor:pointer}
+
+.gl-live{padding:16px 16px 6px;cursor:default}
+.gl-lchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.gl-lchips::-webkit-scrollbar{display:none}
+.gl-lchip{flex-shrink:0;height:34px;padding:0 12px;border-radius:17px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.08em;color:rgba(244,242,255,.75);display:flex;align-items:center;gap:6px;cursor:pointer}
+.gl-lchip i{font-style:normal;font-size:12px;color:rgba(244,242,255,.5)}
+.gl-lchip.on{background:#F4F2FF;border-color:#F4F2FF;color:#0B0718}
+.gl-lchip.on i{color:rgba(11,7,24,.55)}
+.gl-lrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border:0;border-bottom:1px solid rgba(255,255,255,.07);background:transparent;text-align:left;color:#F4F2FF;font-family:inherit;cursor:pointer}
+.gl-lrow:last-child{border-bottom:0}
+.gl-lrow .lg{width:40px;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;color:rgba(244,242,255,.56)}
+.gl-lrow .tms{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.gl-tl{display:flex;align-items:center;gap:9px;min-width:0}
+.gl-tl .sw{width:4px;height:16px;border-radius:2px;flex-shrink:0}
+.gl-tl .ab{flex:1;min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-tl .sc{font-size:20px;line-height:1}
+.gl-tl.lo .ab,.gl-tl.lo .sc{color:rgba(244,242,255,.5)}
+.gl-lrow .st{width:92px;flex-shrink:0;text-align:right;font-size:13px;font-weight:600;color:#FF8A98}
+.gl-lrow .st small{display:block;font-size:11.5px;font-weight:500;color:rgba(244,242,255,.56);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-lrow .st small.fr{color:#CFC7FF;font-weight:600}
+.gl-empty-note{font-size:12.5px;color:rgba(244,242,255,.56);padding:10px 0 12px}
+
+.gl-sm{min-height:164px}
+.gl-sm b{display:block;font-size:21px;font-weight:700;letter-spacing:-.4px;line-height:1.1}
+.gl-sm small{display:block;font-size:12.5px;color:rgba(244,242,255,.62);margin-top:4px}
+.gl-sm .gl-bar{display:block;width:28px;height:4px;border-radius:2px;margin-bottom:12px}
+.gl-rc .rc-rings{display:flex;gap:10px;overflow:hidden;padding:0;margin:0}
+.gl-rc .rc-ring{width:56px;gap:4px}
+.gl-rc .rc-ring .rc-r{width:54px;height:54px;padding:2.5px}
+.gl-rc .rc-ring .rc-in{font-size:20px;border-color:#1B1640}
+.gl-rc .rc-ring .rc-l{font-size:10.5px;max-width:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.gl-coming{min-height:128px}
+.gl-pcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.gl-pc{display:flex;gap:10px;align-items:flex-start;border:0;background:transparent;padding:0;text-align:left;color:#F4F2FF;font-family:inherit;cursor:pointer;min-width:0}
+.gl-pc .gl-num{font-size:30px;line-height:1;color:#CFC7FF;flex-shrink:0}
+.gl-pc p{margin:0;font-size:14px;font-weight:600;line-height:1.25;min-width:0;overflow:hidden}
+.gl-pc p small{display:block;font-size:12px;font-weight:500;color:rgba(244,242,255,.62);margin-top:2px}
+.gl-plus{height:32px;padding:0 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#F4F2FF;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.gl-cta{align-self:flex-start;height:40px;padding:0 16px;border-radius:20px;border:0;background:#F4F2FF;color:#0B0718;font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
+
+.gl-otd{min-height:92px;flex-direction:row;align-items:center;justify-content:flex-start;gap:16px}
+.gl-otd .gl-num{font-size:44px;line-height:1;color:#CFC7FF}
+.gl-otd .t{flex:1;min-width:0}
+.gl-otd .t b{display:block;font-size:16px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-otd .t small{display:block;font-size:12.5px;color:rgba(244,242,255,.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-chev{color:rgba(244,242,255,.45);flex-shrink:0}
+
+/* desktop only: the recent-memories list that used to sit in the Feed rail */
+.gl-desk{display:none}
+html.desk .gl-desk{display:block}
+.gl-desk .imm-eyebrow{margin:0 2px 10px!important}
+
+/* wide screens (iPad landscape, desktop): keep Home and Friends a readable width */
+@media (orientation:landscape){
+  html.is-tablet #screen-home .gl-top,html.is-tablet #screen-home .gl-bento,
+  html.is-tablet #screen-friends .gl-top,html.is-tablet #gl-friends-body>*{max-width:760px;width:100%;margin-left:auto;margin-right:auto}
+}
+
+/* ── Friends ── */
+.gl-sec{margin-bottom:22px}
+.gl-sech{display:flex;align-items:center;justify-content:space-between;margin:4px 4px 10px}
+.gl-sech b{font-size:13px;font-weight:600;color:rgba(244,242,255,.62)}
+#screen-friends .sec-title{color:rgba(244,242,255,.62)!important;font-size:13px!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important}
+#screen-friends #feed-live-feed-section .imm-eyebrow{color:rgba(244,242,255,.62);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0}
+#screen-friends .imm-section{padding:0 4px!important;margin:0 0 10px}
+#screen-friends .imm-section .imm-eyebrow{color:rgba(244,242,255,.62);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0}
+.gl-row{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:22px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05);text-align:left;color:#F4F2FF;font-family:inherit;cursor:pointer;margin-top:10px}
+.gl-row .ic{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;color:#CFC7FF;flex-shrink:0}
+.gl-row .tx{flex:1;min-width:0}
+.gl-row .tx b{display:block;font-size:15px;font-weight:600}
+.gl-row .tx small{display:block;font-size:12.5px;color:rgba(244,242,255,.6);margin-top:2px}
+
+/* ── the floating glass tab bar ── */
+#glass-dock{display:none}
+html.glass.gd-on #glass-dock{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);height:66px;border-radius:33px;background:rgba(30,24,64,.72);border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 20px 40px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);display:flex;align-items:center;gap:2px;padding:0 9px;z-index:50}
+.gd-b{flex:1;height:50px;border:0;border-radius:25px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(244,242,255,.55);font-family:inherit;font-size:10.5px;font-weight:600;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gd-b.on{background:rgba(255,255,255,.12);color:#F4F2FF}
+.gd-fab{width:50px;height:50px;border-radius:50%;border:0;background:#F4F2FF;color:#0B0718;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;margin-left:4px;cursor:pointer}
+@media (orientation:landscape){html.is-tablet #glass-dock{display:none!important}}
+
+/* screens that sit above the tab bar keep their last row clear of it */
+html.glass.gd-on #screen-games .scroll-bare,
+html.glass.gd-on #screen-games-picker .scroll-bare,
+html.glass.gd-on #screen-games-soon .scroll-bare,
+html.glass.gd-on #screen-memories .imm-body,
+html.glass.gd-on #screen-calendar .imm-body,
+html.glass.gd-on #screen-profile .imm-body{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+@media (orientation:landscape){
+  html.glass.is-tablet.gd-on #screen-games .scroll-bare,
+  html.glass.is-tablet.gd-on #screen-games-picker .scroll-bare,
+  html.glass.is-tablet.gd-on #screen-games-soon .scroll-bare,
+  html.glass.is-tablet.gd-on #screen-memories .imm-body,
+  html.glass.is-tablet.gd-on #screen-calendar .imm-body,
+  html.glass.is-tablet.gd-on #screen-profile .imm-body{padding-bottom:24px!important}
+}
+
+/* ── Games: league pill beside the title ── */
+.gl-league{height:30px;padding:0 10px 0 12px;border-radius:15px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#F4F2FF;display:inline-flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.06em;cursor:pointer;flex-shrink:0}
+
+/* ── Archive: Memories | Calendar switch ── */
+.gl-arch{display:flex;gap:4px;padding:4px;margin:12px 16px 4px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.gl-arch button{flex:1;height:38px;border:0;border-radius:12px;background:transparent;font-family:inherit;font-size:13.5px;font-weight:600;color:rgba(244,242,255,.62);cursor:pointer}
+.gl-arch button.on{background:#F4F2FF;color:#0B0718}
+
+/* ── Profile rows + the Layout switch (shows in both layouts) ── */
+.gl-prows{display:flex;flex-direction:column;gap:10px;margin:4px 0 16px}
+.gl-prow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);text-align:left;color:#F4F2FF;font-family:inherit;cursor:pointer}
+.gl-prow .ic{width:38px;height:38px;border-radius:12px;background:rgba(168,159,232,.14);display:flex;align-items:center;justify-content:center;color:#CFC7FF;flex-shrink:0}
+.gl-prow .tx{flex:1;min-width:0}
+.gl-prow .tx b{display:block;font-size:14.5px;font-weight:600;color:#F4F2FF}
+.gl-prow .tx small{display:block;font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
+.gl-seg2{display:flex;gap:3px;padding:3px;border-radius:12px;background:rgba(0,0,0,.25);flex-shrink:0}
+.gl-seg2 button{height:32px;padding:0 12px;border:0;border-radius:9px;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.6);cursor:pointer}
+.gl-seg2 button.on{background:#F4F2FF;color:#0B0718}
+#gl-recent:has(#feed-rail-recent:empty){display:none}
+#gl-tonight>.gl-g,#gl-recaps>.gl-g{height:100%}

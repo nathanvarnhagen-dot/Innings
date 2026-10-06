@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
       const date = req.query.date;
       if (!date) { res.status(400).json({ error: 'Missing date' }); return; }
       // v6.8.0: team + seriesStatus hydrated for postseason games
-      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus,probablePitcher&date=' + encodeURIComponent(date);
+      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus,probablePitcher,linescore&date=' + encodeURIComponent(date);
       const r = await fetch(url);
       const data = await r.json();
       const games = [];
@@ -37,7 +37,12 @@ module.exports = async function handler(req, res) {
             awayScore: g.teams && g.teams.away ? g.teams.away.score : null,
             homeScore: g.teams && g.teams.home ? g.teams.home.score : null,
             venue: g.venue && g.venue.name,
-            startTime: g.gameDate || null
+            startTime: g.gameDate || null,
+            // v7.16.0: where a live game stands, for the Home "Live now" list
+            inning: (g.linescore && g.linescore.currentInning) || null,
+            inningHalf: (g.linescore && g.linescore.inningHalf) || null,
+            inningState: (g.linescore && g.linescore.inningState) || null,
+            outs: g.linescore && g.linescore.outs != null ? g.linescore.outs : null
           }, _postseasonFields(g)));
         });
       });
