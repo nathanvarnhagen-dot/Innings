@@ -77,6 +77,7 @@ var GL_ICON = {
   plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   addUser: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>',
   chev: '<svg class="gl-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>',
+  trophy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6l-1-3h-4z"/></svg>',
   down: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>',
   chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
   layout: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
@@ -377,7 +378,25 @@ function _glAmbient(cols) {
   b.style.background = cols ? cols[1] : '';
 }
 
-// ── Live now · every sport ──
+// ── Today's biggest games (v7.16.1) ──
+// Playoff games in any sport lead Home, started or not: when anything on
+// today's slate is a postseason game, the tile shows only those, grouped
+// by sport (baseball first, then the WNBA, …) — live, then upcoming by
+// start time, then finished. With no playoffs it's every live game plus
+// the rest of today's games for your favorite and followed teams.
+var GL_PO_ORDER = ['mlb', 'wnba', 'nfl', 'nba', 'nhl', 'cfb', 'mls', 'nwsl'];
+function _glIsPost(sport, g) {
+  if (!g) return false;
+  if (sport === 'mlb') return !!(g.gameType && /^[FDLW]$/.test(g.gameType));
+  if (g.seasonType != null) return Number(g.seasonType) === 3;
+  return /playoff|semifinal|final|championship|round/i.test(g.headline || '');
+}
+function _glPhase(sport, g) {
+  if (_glIsLive(sport, g)) return 'live';
+  if (g.state) return g.state === 'post' ? 'post' : 'pre';
+  return typeof _isGameConcluded === 'function' && _isGameConcluded(g.status) ? 'post' : 'pre';
+}
+function _glTbd(g) { return !!g.startTimeTBD || /\bTBD\b/i.test(g.statusDetail || ''); }
 function _glLoadLive(force) {
   if (typeof _bsModalScheduleUrl !== 'function' || typeof GAMES_SPORTS === 'undefined') return;
   if (!force && window._glLiveAt && Date.now() - window._glLiveAt < 25000) return;
@@ -390,9 +409,15 @@ function _glLoadLive(force) {
       .catch(function () { return { sport: s.key, games: [] }; });
   })).then(function (res) {
     window._glSched = res;
-    var live = [];
-    res.forEach(function (x) { x.games.forEach(function (g) { if (_glIsLive(x.sport, g)) live.push({ sport: x.sport, g: g }); }); });
+    var live = [], po = [];
+    res.forEach(function (x) {
+      x.games.forEach(function (g) {
+        if (_glIsLive(x.sport, g)) live.push({ sport: x.sport, g: g });
+        if (_glIsPost(x.sport, g)) po.push({ sport: x.sport, g: g });
+      });
+    });
     window._glLive = live;
+    window._glPlayoffs = po;
     window._glLiveLoaded = true;
     _glRenderLive();
     _glComputeTonight();
@@ -413,41 +438,82 @@ function _glLiveStatus(sport, g) {
   }
   return g.statusDetail || g.status || 'Live';
 }
+function _glRowStatus(sport, g, phase) {
+  if (phase === 'live') return _glLiveStatus(sport, g);
+  if (phase === 'post') { var d = g.statusDetail || g.status || ''; return /^final/i.test(d) ? d : 'Final'; }
+  if (/postponed|suspended|delayed/i.test(g.status || '')) return g.status;
+  if (_glTbd(g)) return 'TBD';
+  return (typeof _formatGameTime === 'function' && _formatGameTime(g.startTime)) || 'Today';
+}
+// The round line over a playoff game: "NLDS · GAME 3 · LAD LEADS 2–0"
+function _glPoLine(sport, g) {
+  if (sport === 'mlb') {
+    if (typeof _psRound !== 'function') return '';
+    var R = _psRound(g); if (!R) return '';
+    var stakes = typeof _psStakes === 'function' ? _psStakes(g) : '';
+    var sc = typeof _psScoreText === 'function' ? _psScoreText(g) : '';
+    return '<span class="gl-pst"><b style="color:' + R.rc + '">' + _glEsc((_psName(g) + (g.seriesGameNumber ? ' · Game ' + g.seriesGameNumber : '')).toUpperCase()) + '</b>' +
+      (stakes ? '<em>' + _glEsc(stakes.replace(/ TONIGHT$/, '')) + '</em>' : sc ? '<span>' + _glEsc(sc.toUpperCase()) + '</span>' : '') + '</span>';
+  }
+  var head = String(g.headline || 'Playoffs').replace(/\s+-\s+/g, ' · ');
+  var ser = g.seriesSummary && !/^series starts/i.test(g.seriesSummary) ? g.seriesSummary.replace(/ series /i, ' ') : '';
+  return '<span class="gl-pst"><b>' + _glEsc(head.toUpperCase()) + '</b>' + (ser ? '<span>' + _glEsc(ser.toUpperCase()) + '</span>' : '') + '</span>';
+}
 function glassLiveFilter(f) { window._glLiveFilter = f; _glRenderLive(); }
 function _glRenderLive() {
   var el = _gl$('gl-live');
   if (!el) return;
-  var all = window._glLive || [];
+  var po = window._glPlayoffs || [];
+  var mode = po.length ? 'po' : 'live';
+  var all;
+  if (mode === 'po') all = po.slice();
+  else {
+    all = (window._glLive || []).slice();
+    (window._glFavGames || []).forEach(function (x) {
+      if (!all.some(function (y) { return y.sport === x.sport && String(y.g.gamePk) === String(x.g.gamePk); })) all.push(x);
+    });
+  }
   if (!all.length) { el.style.display = 'none'; el.innerHTML = ''; _glGamesCta(); return; }
-  var counts = {};
+  var order = mode === 'po' ? GL_PO_ORDER.concat(GAMES_SPORTS.map(function (s) { return s.key; })) : GAMES_SPORTS.map(function (s) { return s.key; });
+  var counts = {}, anyLive = false;
   all.forEach(function (x) { counts[x.sport] = (counts[x.sport] || 0) + 1; });
   var f = window._glLiveFilter && counts[window._glLiveFilter] ? window._glLiveFilter : 'all';
-  var order = GAMES_SPORTS.map(function (s) { return s.key; });
   var rows = all.filter(function (x) { return f === 'all' || x.sport === f; }).map(function (x) {
-    var fw = _glFriendsOn(x.g.gamePk);
-    return { x: x, fw: fw, rank: (fw.names.length || fw.mine ? 0 : 1) * 100 + order.indexOf(x.sport) };
-  }).sort(function (a, b) { return a.rank - b.rank; });
+    var ph = _glPhase(x.sport, x.g), fw = _glFriendsOn(x.g.gamePk), t = Date.parse(x.g.startTime || '') || 0;
+    if (ph === 'live') anyLive = true;
+    var phR = { live: 0, pre: 1, post: 2 }[ph], fr = fw.names.length || fw.mine ? 0 : 1, tbd = ph === 'pre' && _glTbd(x.g) ? 1 : 0;
+    var key = mode === 'po' ? [order.indexOf(x.sport), phR, ph === 'live' ? fr : 0, tbd, t]
+      : (ph === 'live' ? [0, fr, order.indexOf(x.sport), 0, t] : [1, phR, x.fav ? 0 : 1, tbd, t]);
+    return { x: x, ph: ph, fw: fw, key: key };
+  }).sort(function (a, b) { for (var k = 0; k < a.key.length; k++) { if (a.key[k] !== b.key[k]) return a.key[k] - b.key[k]; } return 0; });
   window._glLiveShown = rows.map(function (r) { return r.x; });
   var chips = '<button class="gl-lchip' + (f === 'all' ? ' on' : '') + '" aria-pressed="' + (f === 'all') + '" onclick="glassLiveFilter(\'all\')">All<i>' + all.length + '</i></button>' +
-    order.filter(function (k) { return counts[k]; }).map(function (k) {
+    order.filter(function (k, i) { return counts[k] && order.indexOf(k) === i; }).map(function (k) {
       return '<button class="gl-lchip' + (f === k ? ' on' : '') + '" aria-pressed="' + (f === k) + '" onclick="glassLiveFilter(\'' + k + '\')">' + _glEsc(_glLeagueName(k)) + '<i>' + counts[k] + '</i></button>';
     }).join('');
   var body = rows.map(function (r, i) {
-    var g = r.x.g, sp = r.x.sport;
+    var g = r.x.g, sp = r.x.sport, ph = r.ph;
     var aAb = g.awayAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(g.away) : ''), hAb = g.homeAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(g.home) : '');
     var ca = _glColors(sp, aAb, g.awayColor, g.awayAlt), ch = _glColors(sp, hAb, g.homeColor, g.homeAlt);
-    var as = g.awayScore, hs = g.homeScore, scored = as != null && hs != null;
+    var as = g.awayScore, hs = g.homeScore, scored = ph !== 'pre' && as != null && hs != null;
     var aLo = scored && Number(as) < Number(hs), hLo = scored && Number(hs) < Number(as);
+    var friend = r.fw.names.length || r.fw.mine;
     var sub = r.fw.names.length ? r.fw.names[0] + (r.fw.names.length > 1 ? ' + ' + (r.fw.names.length - 1) : '') + ' here'
       : r.fw.mine ? 'You’re watching'
-      : (sp === 'mlb' && g.gameType && typeof _psName === 'function' ? _psName(g) + (g.seriesGameNumber ? ' · G' + g.seriesGameNumber : '') : '');
-    return '<button class="gl-lrow" onclick="glassOpenLive(' + i + ')" aria-label="' + _glEsc((g.away || '') + ' at ' + (g.home || '')) + '">' +
+      : mode === 'live' && ph !== 'live' ? (r.x.fav ? '★ Your team' : 'Following')
+      : (mode === 'live' && sp === 'mlb' && g.gameType && typeof _psName === 'function' ? _psName(g) + (g.seriesGameNumber ? ' · G' + g.seriesGameNumber : '') : '');
+    var team = function (name, ab, c, sc, lo) {
+      return '<span class="gl-tl' + (lo ? ' lo' : '') + '"><span class="sw" style="background:' + c.accent + '"></span><span class="ab">' + _glEsc(_glShort(name) || ab || 'TBD') + '</span><span class="sc gl-num">' + (scored ? _glEsc(sc) : '') + '</span></span>';
+    };
+    var poLine = mode === 'po' ? _glPoLine(sp, g) : '';
+    return '<button class="gl-lrow' + (ph !== 'live' ? ' ' + ph : '') + (poLine ? ' ps' : '') + '" onclick="glassOpenLive(' + i + ')" aria-label="' + _glEsc((g.away || '') + ' at ' + (g.home || '')) + '">' + poLine +
       '<span class="lg">' + _glEsc(_glLeagueName(sp)) + '</span>' +
-      '<span class="tms"><span class="gl-tl' + (aLo ? ' lo' : '') + '"><span class="sw" style="background:' + ca.accent + '"></span><span class="ab">' + _glEsc(_glShort(g.away)) + '</span><span class="sc gl-num">' + (scored ? _glEsc(as) : '') + '</span></span>' +
-      '<span class="gl-tl' + (hLo ? ' lo' : '') + '"><span class="sw" style="background:' + ch.accent + '"></span><span class="ab">' + _glEsc(_glShort(g.home)) + '</span><span class="sc gl-num">' + (scored ? _glEsc(hs) : '') + '</span></span></span>' +
-      '<span class="st">' + _glEsc(_glLiveStatus(sp, g)) + (sub ? '<small class="' + (r.fw.names.length || r.fw.mine ? 'fr' : '') + '">' + _glEsc(sub) + '</small>' : '') + '</span></button>';
+      '<span class="tms">' + team(g.away, aAb, ca, as, aLo) + team(g.home, hAb, ch, hs, hLo) + '</span>' +
+      '<span class="st">' + _glEsc(_glRowStatus(sp, g, ph)) + (sub ? '<small class="' + (friend ? 'fr' : '') + '">' + _glEsc(sub) + '</small>' : '') + '</span></button>';
   }).join('');
-  el.innerHTML = '<div class="gl-g gl-live"><div class="gl-lh"><span class="gl-lab"><span class="gl-ldot"></span>Live now · every sport</span><span class="gl-lab">' + all.length + (all.length === 1 ? ' game' : ' games') + '</span></div>' +
+  var title = mode === 'po' ? (anyLive ? '<span class="gl-ldot"></span>' : '<span class="gl-trophy" aria-hidden="true">' + GL_ICON.trophy + '</span>') + 'Playoffs today'
+    : '<span class="gl-ldot"></span>' + (rows.some(function (r) { return r.ph !== 'live'; }) ? 'Today · live + your teams' : 'Live now · every sport');
+  el.innerHTML = '<div class="gl-g gl-live' + (mode === 'po' ? ' po' : '') + '"><div class="gl-lh"><span class="gl-lab">' + title + '</span><span class="gl-lab">' + all.length + (all.length === 1 ? ' game' : ' games') + '</span></div>' +
     (Object.keys(counts).length > 1 ? '<div class="gl-lchips">' + chips + '</div>' : '') + '<div>' + body + '</div></div>';
   el.style.display = '';
   _glGamesCta();
@@ -476,19 +542,24 @@ function _glComputeTonight() {
     return _loadFavTeams(x.sport).then(function (f) { return { sport: x.sport, games: x.games, fav: f || { favorite: null, following: [] } }; })
       .catch(function () { return { sport: x.sport, games: x.games, fav: { favorite: null, following: [] } }; });
   })).then(function (arr) {
-    var pick = null;
+    var pick = null, mine = [];
     arr.forEach(function (x) {
       x.games.forEach(function (g) {
         var involves = function (t) { return !!t && (g.away === t || g.home === t); };
         var isFav = involves(x.fav.favorite), team = isFav ? x.fav.favorite : (x.fav.following || []).filter(involves)[0];
         if (!team || (typeof _isGameConcluded === 'function' && _isGameConcluded(g.status))) return;
         var live = _glIsLive(x.sport, g), t = Date.parse(g.startTime || '') || 0;
+        if (!live) mine.push({ sport: x.sport, g: g, fav: isFav });
         var score = (live ? 0 : 1) * 1e13 + (isFav ? 0 : 5e12) + t;
         if (!pick || score < pick.score) pick = { sport: x.sport, g: g, fav: isFav, live: live, team: team, score: score };
       });
     });
     window._glTonight = pick;
+    var had = (window._glFavGames || []).length;
+    // the Tonight tile already shows its game, so the list skips that one
+    window._glFavGames = mine.filter(function (m) { return !pick || m.g !== pick.g; });
     _glRenderTonight();
+    if (window._glFavGames.length || had) _glRenderLive();
   });
 }
 function glassOpenTonight() {

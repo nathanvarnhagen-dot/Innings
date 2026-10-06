@@ -42,7 +42,9 @@ module.exports = async function handler(req, res) {
             inning: (g.linescore && g.linescore.currentInning) || null,
             inningHalf: (g.linescore && g.linescore.inningHalf) || null,
             inningState: (g.linescore && g.linescore.inningState) || null,
-            outs: g.linescore && g.linescore.outs != null ? g.linescore.outs : null
+            outs: g.linescore && g.linescore.outs != null ? g.linescore.outs : null,
+            // v7.16.1: playoff games often go up before their time is set
+            startTimeTBD: !!(g.status && g.status.startTimeTBD)
           }, _postseasonFields(g)));
         });
       });

@@ -78,6 +78,15 @@ button.gl-g:active{transform:scale(.985)}
 .gl-lrow .st{width:92px;flex-shrink:0;text-align:right;font-size:13px;font-weight:600;color:#FF8A98}
 .gl-lrow .st small{display:block;font-size:11.5px;font-weight:500;color:rgba(244,242,255,.56);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gl-lrow .st small.fr{color:#CFC7FF;font-weight:600}
+/* v7.16.1: upcoming and finished rows, and the playoff round line */
+.gl-lrow.pre .st{color:#F4F2FF}
+.gl-lrow.post .st{color:rgba(244,242,255,.5)}
+.gl-lrow.ps{flex-wrap:wrap;row-gap:7px}
+.gl-pst{flex-basis:100%;box-sizing:border-box;padding-left:52px;display:flex;align-items:baseline;gap:8px;min-width:0;font-family:'Barlow Condensed',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.08em;white-space:nowrap;overflow:hidden;color:rgba(244,242,255,.6)}
+.gl-pst b{flex-shrink:0;font-weight:800;color:#CFC7FF}
+.gl-pst span,.gl-pst em{min-width:0;overflow:hidden;text-overflow:ellipsis;font-style:normal}
+.gl-pst em{color:#FF9A8C}
+.gl-trophy{display:inline-flex;color:#F2C869}
 .gl-empty-note{font-size:12.5px;color:rgba(244,242,255,.56);padding:10px 0 12px}
 
 .gl-sm{min-height:164px}

@@ -258,7 +258,11 @@ function summarizeEvent(event) {
     awayColor: (parts.away.team && parts.away.team.color) || null,
     homeColor: (parts.home.team && parts.home.team.color) || null,
     awayAlt: (parts.away.team && parts.away.team.alternateColor) || null,
-    homeAlt: (parts.home.team && parts.home.team.alternateColor) || null
+    homeAlt: (parts.home.team && parts.home.team.alternateColor) || null,
+    // v7.16.1: playoff games lead Home — season type 3 is the postseason
+    seasonType: (event.season && event.season.type) || null,
+    headline: (parts.comp.notes && parts.comp.notes[0] && parts.comp.notes[0].headline) || null,
+    seriesSummary: (parts.comp.series && parts.comp.series.summary) || null
   };
 }
 

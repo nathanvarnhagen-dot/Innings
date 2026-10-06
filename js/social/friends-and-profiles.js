@@ -571,6 +571,24 @@ function hideAddFriendsSheet() {
   if (m) m.style.display = 'none';
 }
 
+// ── FIND PEOPLE ALREADY ON INNINGS (v7.16.1) ──
+// The sheet opens on a search box and "People you may know". A full phone
+// number finds anyone on Innings (still the only way a stranger can find
+// you — see the privacy note on Profile); names only match people you're
+// already connected to: friends of friends, people in your groups, people
+// tagged in your memories, anyone who's sent you a request, and friends.
+window._afRel = {};        // uid -> { s: 'friends' | 'sent' | 'received', req: requestId }
+window._afPeople = [];     // suggestions + incoming requests: { uid, name, photo, why, score }
+window._afFriendNames = {};
+window._afSeq = 0;
+window._afSearchSeq = 0;
+window._afLastHit = null;
+var _afTimer = null;
+function _afUser() { return window.currentUser || (window.auth && window.auth.currentUser); }
+var AF_BTN = 'flex-shrink:0;height:32px;padding:0 15px;border:none;border-radius:16px;background:var(--indigo);color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer';
+var AF_HEAD = 'font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin:4px 2px 4px';
+function _afNote(html) { return '<div style="font-size:13px;color:var(--subtle);line-height:1.5;padding:14px 4px">' + html + '</div>'; }
+
 function showAddFriendsMenuStep() {
   var body = document.getElementById('add-friends-sheet-body');
   var footer = document.getElementById('add-friends-sheet-footer');
@@ -578,7 +596,15 @@ function showAddFriendsMenuStep() {
   if (!body) return;
   body.innerHTML =
     '<div style="font-size:16px;font-weight:700;color:var(--black);margin-bottom:4px">Add friends</div>' +
-    '<div style="font-size:13px;color:var(--subtle);margin-bottom:18px;line-height:1.5">Bring people into Innings, or find ones already here.</div>' +
+    '<div style="font-size:13px;color:var(--subtle);margin-bottom:14px;line-height:1.5">Find people already on Innings, or bring new ones in.</div>' +
+    '<div style="position:relative">' +
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8E8EA8" stroke-width="2" stroke-linecap="round" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>' +
+      '<input id="af-q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Phone number or name" aria-label="Search by phone number or name" oninput="_afOnInput()" style="width:100%;box-sizing:border-box;height:46px;border-radius:14px;border:1px solid var(--rule);background:var(--bg);padding:0 14px 0 40px;font-size:16px;font-family:inherit;color:var(--black);outline:none">' +
+    '</div>' +
+    '<div style="font-size:11.5px;color:var(--subtle);line-height:1.5;margin:7px 2px 12px">A full phone number finds anyone on Innings. Names match people you share friends, groups or memories with.</div>' +
+    '<div id="af-results"></div>' +
+    '<div id="af-sugg">' + _afNote('Finding people you may know…') + '</div>' +
+    '<div style="' + AF_HEAD + ';margin-top:18px;margin-bottom:10px">More ways</div>' +
     '<div onclick="addFriendsShareInviteLink()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--bg);border:1px solid var(--rule);cursor:pointer;margin-bottom:10px">' +
       '<div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">🔗</div>' +
       '<div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--black)">Invite by link</div><div style="font-size:12.5px;color:var(--subtle);margin-top:2px;line-height:1.4">Share a link — they show up here once they join</div></div>' +
@@ -587,6 +613,190 @@ function showAddFriendsMenuStep() {
       '<div style="width:44px;height:44px;border-radius:12px;background:var(--indigo-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">📇</div>' +
       '<div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--black)">Find from contacts</div><div style="font-size:12.5px;color:var(--subtle);margin-top:2px;line-height:1.4">See which of your contacts already use Innings</div></div>' +
     '</div>';
+  _afLoad();
+}
+
+// Your relationships, then everyone you're connected to who isn't a friend yet
+function _afLoad() {
+  var user = _afUser();
+  var sug = document.getElementById('af-sugg');
+  if (!user || !window.db) { if (sug) sug.innerHTML = ''; return; }
+  var seq = ++window._afSeq;
+  var db = window.db;
+  Promise.all([
+    db.collection('friendRequests').where('fromUid', '==', user.uid).get(),
+    db.collection('friendRequests').where('toUid', '==', user.uid).get(),
+    db.collection('groups').where('memberUids', 'array-contains', user.uid).get().catch(function () { return null; })
+  ]).then(function (r) {
+    var rel = {};
+    r[0].forEach(function (d) { var x = d.data() || {}; if (!x.toUid) return; if (x.status === 'accepted') rel[x.toUid] = { s: 'friends' }; else if (!rel[x.toUid]) rel[x.toUid] = { s: 'sent', req: d.id }; });
+    r[1].forEach(function (d) { var x = d.data() || {}; if (!x.fromUid) return; if (x.status === 'accepted') rel[x.fromUid] = { s: 'friends' }; else if (!rel[x.fromUid] || rel[x.fromUid].s === 'sent') rel[x.fromUid] = { s: 'received', req: d.id }; });
+    window._afRel = rel;
+    var cand = {};
+    var add = function (uid, kind, label) {
+      if (!uid || uid === user.uid || (rel[uid] && rel[uid].s === 'friends')) return;
+      var c = cand[uid] || (cand[uid] = { mutual: 0, groups: [], tagged: 0 });
+      if (kind === 'group') { if (c.groups.indexOf(label) === -1) c.groups.push(label); }
+      else c[kind]++;
+    };
+    Object.keys(rel).forEach(function (u) { if (rel[u].s === 'received') add(u, 'tagged'); });
+    if (r[2]) r[2].forEach(function (d) {
+      var g = d.data() || {}, m = g.memberUids || [];
+      if (/feedback/i.test(g.name || '') || m.length > 40) return; // app-wide groups aren't "your people"
+      m.forEach(function (u) { add(u, 'group', g.name || 'a group'); });
+    });
+    (window._moments || []).concat(window._feedMomentsCache || []).forEach(function (mo) { ((mo && mo.taggedUids) || []).forEach(function (u) { add(u, 'tagged'); }); });
+    // Friends' friend lists — readable once you're on theirs; a miss is just skipped
+    var friends = Object.keys(rel).filter(function (u) { return rel[u].s === 'friends'; }).slice(0, 25);
+    return Promise.all(friends.map(function (f) {
+      return db.collection('users').doc(f).collection('private').doc('friends').get()
+        .then(function (doc) { return (doc.exists && (doc.data() || {}).uids) || []; })
+        .catch(function () { return []; });
+    })).then(function (lists) {
+      lists.forEach(function (l) { l.forEach(function (u) { add(u, 'mutual'); }); });
+      var uids = Object.keys(cand).map(function (u) {
+        var c = cand[u], rec = rel[u] && rel[u].s === 'received';
+        return { uid: u, c: c, score: (rec ? 1000 : 0) + c.mutual * 3 + c.groups.length * 2 + c.tagged };
+      }).sort(function (a, b) { return b.score - a.score; }).slice(0, 30);
+      return Promise.all(uids.map(function (x) {
+        return db.collection('users').doc(x.uid).get().then(function (doc) {
+          if (!doc.exists) return null;
+          var d = doc.data() || {}, c = x.c, rec = rel[x.uid] && rel[x.uid].s === 'received';
+          var why = rec ? 'Sent you a friend request'
+            : c.mutual ? c.mutual + ' mutual friend' + (c.mutual === 1 ? '' : 's')
+            : c.groups.length ? 'In ' + c.groups[0] + (c.groups.length > 1 ? ' + ' + (c.groups.length - 1) + ' more' : '')
+            : 'In your memories';
+          return { uid: x.uid, name: d.name || 'Innings user', photo: (d.profilePhotos && d.profilePhotos[0]) || null, why: why, score: x.score };
+        }).catch(function () { return null; });
+      }));
+    });
+  }).then(function (people) {
+    if (seq !== window._afSeq) return;
+    window._afPeople = (people || []).filter(Boolean);
+    _afRenderSugg();
+    if (typeof _ensureMyFriendsLoaded === 'function') _ensureMyFriendsLoaded(function (p) { window._afFriendNames = p || {}; });
+  }).catch(function (err) {
+    console.error('People you may know error:', err);
+    var s = document.getElementById('af-sugg');
+    if (s && seq === window._afSeq) s.innerHTML = '';
+  });
+}
+
+function _afRowHtml(p) {
+  var rel = window._afRel[p.uid] || {}, uid = _escapeHtml(p.uid);
+  var right = rel.s === 'friends' ? '<span style="flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--subtle)">Friends ✓</span>'
+    : rel.s === 'sent' ? '<span style="flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--subtle)">Requested</span>'
+    : rel.s === 'received' ? '<button onclick="_afAccept(\'' + uid + '\')" style="' + AF_BTN + '">Accept</button>'
+    : '<button onclick="_afAdd(\'' + uid + '\',this)" style="' + AF_BTN + '">Add</button>';
+  var av = p.photo
+    ? '<div style="width:42px;height:42px;border-radius:50%;flex-shrink:0;background:var(--indigo-light) center/cover no-repeat;background-image:url(\'' + _escapeHtml(String(p.photo).replace(/'/g, '%27')) + '\')"></div>'
+    : '<div style="width:42px;height:42px;border-radius:50%;background:var(--indigo-light);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">' + _escapeHtml(_initialsFallback(p.name)) + '</div>';
+  return '<div style="display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--rule)">' +
+    '<div onclick="_afOpenProfile(\'' + uid + '\')" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer">' + av +
+      '<div style="min-width:0"><div style="font-size:14.5px;font-weight:600;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _escapeHtml(p.name) + '</div>' +
+      (p.why ? '<div style="font-size:11.5px;color:var(--subtle);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _escapeHtml(p.why) + '</div>' : '') + '</div>' +
+    '</div>' + right + '</div>';
+}
+
+function _afRenderSugg() {
+  var el = document.getElementById('af-sugg');
+  if (!el) return;
+  var all = window._afPeople || [];
+  var reqs = all.filter(function (p) { return (window._afRel[p.uid] || {}).s === 'received'; });
+  var rest = all.filter(function (p) { return reqs.indexOf(p) === -1; }).slice(0, 12);
+  if (!reqs.length && !rest.length) { el.innerHTML = _afNote('No suggestions yet. Search a friend’s phone number, or invite people below.'); return; }
+  el.innerHTML = (reqs.length ? '<div style="' + AF_HEAD + '">Requests</div>' + reqs.map(_afRowHtml).join('') + '<div style="height:14px"></div>' : '') +
+    (rest.length ? '<div style="' + AF_HEAD + '">People you may know</div>' + rest.map(_afRowHtml).join('') : '');
+}
+
+function _afOnInput() {
+  clearTimeout(_afTimer);
+  _afTimer = setTimeout(_afSearch, 300);
+}
+function _afSearch() {
+  var input = document.getElementById('af-q'), res = document.getElementById('af-results'), sug = document.getElementById('af-sugg');
+  if (!input || !res) return;
+  var q = input.value.trim(), seq = ++window._afSearchSeq;
+  window._afLastHit = null;
+  if (!q) { res.innerHTML = ''; if (sug) sug.style.display = ''; return; }
+  if (sug) sug.style.display = 'none';
+  var user = _afUser();
+  if (/^[\d\s()+\-.]+$/.test(q)) {
+    var digits = q.replace(/\D/g, '');
+    if (digits.length < 10) { res.innerHTML = _afNote('Keep going — enter their full phone number.'); return; }
+    var e164 = _normalizePhoneToE164(digits);
+    if (!user || !window.db || !e164) { res.innerHTML = _afNote('Sign in to search.'); return; }
+    res.innerHTML = _afNote('Searching…');
+    window.db.collection('users').where('phone', '==', e164).limit(1).get().then(function (snap) {
+      if (seq !== window._afSearchSeq) return;
+      if (snap.empty) {
+        res.innerHTML = _afNote('No one on Innings with that number yet.') +
+          '<button onclick="addFriendsShareInviteLink()" style="' + AF_BTN + ';width:100%;height:46px;border-radius:14px;font-size:14.5px">Invite them by link</button>';
+        return;
+      }
+      var doc = snap.docs[0], d = doc.data() || {};
+      if (doc.id === user.uid) { res.innerHTML = _afNote('That’s your number.'); return; }
+      var p = { uid: doc.id, name: d.name || 'Innings user', photo: (d.profilePhotos && d.profilePhotos[0]) || null, why: 'On Innings' };
+      window._afLastHit = p;
+      res.innerHTML = _afRowHtml(p);
+    }).catch(function (err) {
+      console.error('Phone search error:', err);
+      if (seq === window._afSearchSeq) res.innerHTML = _afNote('Couldn’t search right now — try again.');
+    });
+    return;
+  }
+  var ql = q.toLowerCase();
+  var pool = (window._afPeople || []).slice();
+  var fn = window._afFriendNames || {};
+  Object.keys(fn).forEach(function (u) { if (!pool.some(function (p) { return p.uid === u; })) pool.push({ uid: u, name: fn[u], photo: null, why: '' }); });
+  var hits = pool.filter(function (p) { return String(p.name || '').toLowerCase().split(/\s+/).some(function (w) { return w.indexOf(ql) === 0; }) || String(p.name || '').toLowerCase().indexOf(ql) === 0; }).slice(0, 20);
+  res.innerHTML = hits.length ? hits.map(_afRowHtml).join('') + _afNote('Not here? Search their phone number.')
+    : _afNote('No one you’re connected to by that name. To find anyone else on Innings, search their phone number.');
+}
+function _afRerender() {
+  _afRenderSugg();
+  var input = document.getElementById('af-q');
+  if (input && input.value.trim()) {
+    var res = document.getElementById('af-results'), hit = window._afLastHit;
+    if (hit && /^[\d\s()+\-.]+$/.test(input.value.trim()) && res) { res.innerHTML = _afRowHtml(hit); return; }
+    _afSearch();
+  }
+}
+
+function _afAdd(uid, btn) {
+  var user = _afUser();
+  if (!user || !window.db || !uid) return;
+  var rel = window._afRel[uid];
+  if (rel && rel.s) { _afRerender(); return; }
+  if (btn) { btn.disabled = true; btn.style.opacity = '.55'; }
+  var myName = (window.userData && window.userData.name) || 'Someone';
+  window._afRel[uid] = { s: 'sent' };
+  window.db.collection('friendRequests').add({ fromUid: user.uid, toUid: uid, status: 'pending', ts: Date.now() }).then(function (docRef) {
+    window._afRel[uid] = { s: 'sent', req: docRef.id };
+    _afRerender();
+    if (typeof ib_toast === 'function') ib_toast('Friend request sent');
+    return window.db.collection('notifications').add({ toUid: uid, type: 'friend_request', fromUid: user.uid, fromName: myName, ts: Date.now(), read: false, requestId: docRef.id })
+      .catch(function (err) { console.error('Friend request notification error:', err); });
+  }).catch(function (err) {
+    delete window._afRel[uid];
+    _afRerender();
+    console.error('Send friend request error:', err);
+    if (typeof ib_toast === 'function') ib_toast('Could not send request — ' + (err && err.message ? err.message : 'try again'));
+  });
+}
+function _afAccept(uid) {
+  var rel = window._afRel[uid];
+  if (!rel || !rel.req || typeof acceptFriendRequest !== 'function') return;
+  acceptFriendRequest(rel.req);
+  window._afRel[uid] = { s: 'friends' };
+  (window._afPeople || []).forEach(function (p) { if (p.uid === uid) p.why = 'You’re friends now'; });
+  if (typeof _ensureFriendListed === 'function') _ensureFriendListed(uid);
+  window._myFriendProfiles = null;
+  _afRerender();
+}
+function _afOpenProfile(uid) {
+  hideAddFriendsSheet();
+  if (typeof openUserProfile === 'function') openUserProfile(uid);
 }
 
 function addFriendsShareInviteLink() {
