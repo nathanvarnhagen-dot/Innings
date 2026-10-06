@@ -283,7 +283,7 @@ function openPlayContext(tag, text, playId) {
       (next ? '<div class="pctx-near">' + _escapeHtml(next) + '</div>' : '') + '</div>';
   }
   html += '<div id="pctx-reacts"></div>' +
-    '<div class="pctx-actions"><button class="rb-btn" onclick="pctxOpenSheet()">Open in cheat sheet</button><button class="rb-btn rb-btn-pri" onclick="pctxReply()">Reply</button></div>';
+    '<div class="pctx-actions"><button class="rb-btn" onclick="pctxOpenSheet()">' + (_pctxTarget(window._pctx) === 'plays' ? 'Open in plays' : 'Open in cheat sheet') + '</button><button class="rb-btn rb-btn-pri" onclick="pctxReply()">Reply</button></div>';
   body.innerHTML = html;
   ov.style.display = 'flex';
   if (playId && window.db) {
@@ -310,23 +310,78 @@ function pctxReply() {
   closePlayContext();
   if (c) _replyToPlay(c.tag, c.text);
 }
+// v7.17.2: the cheat sheet only carries the half-inning being played, so
+// a play from an earlier half (or any play once the game's over) opens on
+// the Plays tab instead — its half-inning opened, scrolled to and lit up.
+function _pctxTarget(c) {
+  if (!c || !(typeof _gdPlaysMlb === 'function' && _gdPlaysMlb())) return 'sheet';
+  var box = _gcBox(), s = (box && box.situation) || {};
+  var m = String(c.tag || '').match(/^([TB])(\d+)$/);
+  var mdl = box && typeof _ghModelFromMlbBox === 'function' ? _ghModelFromMlbBox(box) : null;
+  if (mdl && mdl.phase === 'live' && m && s.inning && Number(m[2]) === Number(s.inning) && (m[1] === 'T') === (s.half === 'top')) return 'sheet';
+  return 'plays';
+}
+function _pctxRowIn(rootId, c) {
+  var root = document.getElementById(rootId);
+  if (!root || !c) return null;
+  var rows = root.querySelectorAll('[data-rtext]'), byId = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (c.text && rows[i].getAttribute('data-rtext') === c.text) return rows[i];
+    if (!byId && c.playId && _gcPlayIdFromRow(rows[i]) === c.playId) byId = rows[i];
+  }
+  return byId;
+}
+function _pctxGo(where, c) {
+  if (typeof gameDetailTab !== 'function') return null;
+  gameDetailTab(where);
+  return _pctxRowIn(where === 'plays' ? 'game-plays-panel' : 'game-sheet-panel', c);
+}
 function pctxOpenSheet() {
   var c = window._pctx;
   closePlayContext();
-  if (typeof gameDetailTab === 'function') gameDetailTab('sheet');
-  var row = c && _gcPlayRow(c.text);
-  if (!row) { if (typeof ib_toast === 'function') ib_toast('That play isn\u2019t on the cheat sheet right now'); return; }
+  if (!c) return;
+  var first = _pctxTarget(c), other = first === 'plays' ? 'sheet' : (typeof _gdPlaysMlb === 'function' && _gdPlaysMlb() ? 'plays' : null);
+  var where = first, row = _pctxGo(first, c);
+  if (!row && other) { where = other; row = _pctxGo(other, c); }
+  if (!row) { if (typeof ib_toast === 'function') ib_toast('Couldn\u2019t find that play in this game'); return; }
   // Open the collapsed inning / drive it lives in first.
   var wrap = row.closest('[id^="gh-inn-"],[id^="gx-drive-"]');
   if (wrap && wrap.style.display === 'none') {
-    wrap.style.display = 'flex';
     var key = wrap.id.replace(/^gh-inn-|^gx-drive-/, '');
-    if (/^gh-inn-/.test(wrap.id)) { window._ghInningOpen = window._ghInningOpen || {}; window._ghInningOpen[key] = true; }
-    else { window._gxDriveOpen = window._gxDriveOpen || {}; window._gxDriveOpen[key] = true; }
+    var btn = document.querySelector('[aria-controls="' + wrap.id + '"]');
+    if (/^gh-inn-/.test(wrap.id) && btn && typeof ghInningToggle === 'function') ghInningToggle(key, btn);
+    else {
+      wrap.style.display = 'flex';
+      if (/^gh-inn-/.test(wrap.id)) { window._ghInningOpen = window._ghInningOpen || {}; window._ghInningOpen[key] = true; }
+      else { window._gxDriveOpen = window._gxDriveOpen || {}; window._gxDriveOpen[key] = true; }
+    }
+  }
+  setTimeout(function () { _pctxFlash(where === 'plays' ? 'game-plays-panel' : 'game-sheet-panel', c); }, 80);
+}
+// Scrolls to the play and lights it up. The list can redraw underneath
+// (a live tick, Savant numbers arriving), so the highlight follows the row
+// onto its redrawn copy for as long as it lasts.
+function _pctxFlash(panelId, c) {
+  var panel = document.getElementById(panelId);
+  var row = _pctxRowIn(panelId, c);
+  if (!panel || !row) return;
+  // scroll just this panel — scrollIntoView also scrolls the screen itself
+  var pr = panel.getBoundingClientRect(), rr = row.getBoundingClientRect();
+  var to = Math.max(0, panel.scrollTop + (rr.top - pr.top) - Math.max(0, (panel.clientHeight - rr.height) / 2));
+  try { panel.scrollTo({ top: to, behavior: 'smooth' }); } catch (e) { panel.scrollTop = to; }
+  row.classList.add('gc-flash');
+  var until = Date.now() + 1800, mo = null;
+  if (window.MutationObserver) {
+    mo = new MutationObserver(function () {
+      if (Date.now() > until) return;
+      var r = _pctxRowIn(panelId, c);
+      if (r && !r.classList.contains('gc-flash')) r.classList.add('gc-flash');
+    });
+    mo.observe(panel, { childList: true, subtree: true });
   }
   setTimeout(function () {
-    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    row.classList.add('gc-flash');
-    setTimeout(function () { row.classList.remove('gc-flash'); }, 1800);
-  }, 60);
+    if (mo) mo.disconnect();
+    var r = _pctxRowIn(panelId, c);
+    if (r) r.classList.remove('gc-flash');
+  }, 1850);
 }
