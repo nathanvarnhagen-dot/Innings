@@ -105,26 +105,51 @@
 .sp-chip.sp-reset{opacity:1;color:#A89FE8;border-style:dashed}
 .sp-chip:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
 
-/* ═══ SLIM SCORE BAR (v6.5.0) — on the cheat sheet the game header scrolls
-   away with the page (it's laid over the top of the scroller and moved with
-   it), and once the big scoreboard scrolls off, a slim frosted bar with the
-   score slides down in its place. Not on the desktop two-column layout. ═══ */
-#screen-game.gsh-on #game-hd{position:absolute;left:0;right:0;top:0;z-index:20;will-change:transform}
+/* ═══ GAME HEADER — broadcast style (v7.13.0). The header stays pinned on
+   the cheat sheet: the ribbon + scoreboard fade up under it, then the title
+   row swaps for a TV-style scorebug (js/games/score-bar.js). Tapping the
+   bug pulls the scoreboard back down from under the header. The tab bar is
+   condensed caps with a sliding underline; the tab-switch code still sets
+   inline styles, so these rules use !important and the lit tab gets .on. ═══ */
+#game-hd{position:relative;background:#08051A!important;border-bottom:1px solid rgba(255,255,255,.08)!important}
+#game-detail-title{font-family:'Barlow Condensed',sans-serif;font-size:22px!important;font-weight:700!important;letter-spacing:.04em;text-transform:uppercase}
+#game-hd>div:first-child{transition:opacity .28s ease,transform .32s cubic-bezier(.2,.8,.2,1)}
+#game-hd.gsh-c>div:first-child{opacity:0;transform:translateY(-10px);pointer-events:none}
+#game-tabs{gap:22px!important;padding:0 16px!important;border-top:1px solid rgba(255,255,255,.06)}
+#game-tabs>button{position:relative;height:46px;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;font-family:'Barlow Condensed',sans-serif!important;font-size:16.5px!important;font-weight:600!important;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45)!important;flex-shrink:0!important;white-space:nowrap!important;transition:color .2s}
+#game-tabs>button::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px 3px 0 0;background:#A89FE8;transform:scaleX(0);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+#game-tabs>button.on{color:#fff!important}
+#game-tabs>button.on::after{transform:scaleX(1)}
+#game-tabs>button:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+#screen-game.gsh-on #game-hd{position:absolute;left:0;right:0;top:0;z-index:20}
 #screen-game.gsh-on #game-sheet-panel{padding-top:calc(var(--gsh-h, 120px) + 14px)!important}
-.gsb{position:absolute;left:0;right:0;top:0;z-index:22;padding-top:env(safe-area-inset-top,0px);background:rgba(26,22,64,.88);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid rgba(168,159,232,.18);box-shadow:0 10px 24px rgba(0,0,0,.35);transform:translateY(-100%);opacity:0;pointer-events:none;will-change:transform,opacity}
-.gsb.on{pointer-events:auto}
-.gsb-in{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;height:54px;padding:0 14px}
-.gsb-t{display:flex;align-items:center;gap:8px;min-width:0}
-.gsb-t.r{justify-content:flex-end}
-.gsb-lg{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0}
-.gsb-t b{font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:#fff}
-.gsb-mid{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:#F5F3FF;white-space:nowrap}
-.gsb-mid .tri{color:#A89FE8;font-size:10px}
-.gsb-mid .sub{color:#9C95D0;font-weight:700}
-.gsb-od{display:flex;gap:3px}.gsb-od i{width:6px;height:6px;border-radius:50%;border:1.3px solid #9C95D0}.gsb-od i.on{background:#F08A7E;border-color:#F08A7E}
-.gsb-back{width:28px;height:28px;border-radius:50%;background:rgba(13,8,32,.6);border:0;display:flex;align-items:center;justify-content:center;color:#C7C0E8;flex-shrink:0;cursor:pointer;margin-right:2px}
-.gsb-back:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
-@media (prefers-reduced-motion: reduce){.gsb{transition:none}}
+.gsb{position:absolute;left:16px;right:16px;top:0;height:44px;z-index:2;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .3s ease,transform .36s cubic-bezier(.2,.8,.2,1)}
+.gsb.on{opacity:1;transform:none;pointer-events:auto}
+.gsb-in{display:flex;align-items:center;gap:10px;height:44px}
+.gsb-back{width:34px;height:34px;border-radius:50%;background:var(--bg);border:.5px solid var(--rule);display:flex;align-items:center;justify-content:center;color:var(--mid);flex-shrink:0;cursor:pointer;padding:0}
+.gsb-bug{flex:1;min-width:0;height:44px;display:flex;align-items:stretch;border:0;padding:0;background:#141033;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.1);cursor:pointer;font-family:'Barlow Condensed',sans-serif;color:#fff}
+.gsb-tb{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 10px;width:82px;flex-shrink:0;position:relative}
+.gsb-tb .a{font-size:15px;font-weight:700;letter-spacing:.08em}
+.gsb-tb b{font-size:29px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gsb-tb::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--gsb-ac,#A89FE8)}
+.gsb-sit{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-around;gap:6px;padding:0 8px 0 10px;font-size:16px;font-weight:600;white-space:nowrap}
+.gsb-inn{display:flex;flex-direction:column;align-items:center;line-height:1;font-size:21px;font-weight:700}
+.gsb-inn small{font-size:10px;font-weight:600;letter-spacing:.12em;color:#E8C766}
+.gsb-od{display:flex;gap:3px}.gsb-od i{width:7px;height:7px;border-radius:50%;border:1.3px solid rgba(255,255,255,.5)}.gsb-od i.on{background:#F08A7E;border-color:#F08A7E}
+.gsb-ct{color:#C7C0E8}
+.gsb-word{font-size:16px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.gsb-word .sub{color:#9C95D0}
+.gsb-chev{color:#C7C0E8;flex-shrink:0;transition:transform .3s ease}
+#screen-game.gsbd-on .gsb-chev{transform:rotate(180deg)}
+.gsb-back:focus-visible,.gsb-bug:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.gsbd-scrim{position:absolute;left:0;right:0;bottom:0;top:var(--gsh-h,120px);z-index:18;border:0;padding:0;background:rgba(6,4,18,.62);opacity:0;pointer-events:none;transition:opacity .25s ease}
+.gsbd{position:absolute;left:0;right:0;top:var(--gsh-h,120px);z-index:19;max-height:calc(100% - var(--gsh-h, 120px));overflow-y:auto;padding:12px 16px 4px;background:#08051A;border-radius:0 0 26px 26px;box-shadow:0 24px 48px rgba(0,0,0,.55);transform:translateY(calc(-100% - var(--gsh-h, 120px)));visibility:hidden;transition:transform .42s cubic-bezier(.2,.85,.25,1),visibility 0s linear .42s}
+#screen-game.gsbd-on .gsbd{transform:none;visibility:visible;transition:transform .42s cubic-bezier(.2,.85,.25,1),visibility 0s}
+#screen-game.gsbd-on .gsbd-scrim{opacity:1;pointer-events:auto}
+.gsbd-att{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#C7C0E8;margin-bottom:12px}
+.gsbd-grab{display:block;margin:0 auto 6px;width:60px;height:24px;border:0;background:transparent;cursor:pointer;position:relative}
+.gsbd-grab::after{content:'';position:absolute;left:12px;right:12px;top:9px;height:5px;border-radius:3px;background:rgba(255,255,255,.3)}
+@media (prefers-reduced-motion: reduce){.gsb,.gsbd,.gsbd-scrim,#game-hd>div:first-child,#game-tabs>button::after{transition:none}}
 
 /* ═══ ABS CHALLENGES (v6.3.0) ═══ */
 .abs-line{display:flex;align-items:center;gap:8px;margin:-2px 0 4px 30px;font-size:12px;color:#B9B3E6;min-width:0}
