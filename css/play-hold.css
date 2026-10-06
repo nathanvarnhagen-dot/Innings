@@ -1,0 +1,43 @@
+/* ══ THE RESULT CARD HOLDS (v7.19.0) — js/games/pa-takeover.js ══ */
+.pah{position:absolute;inset:0;z-index:7;overflow:hidden;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;clip-path:inset(0 100% 0 0);animation:pahIn .55s cubic-bezier(.22,1,.36,1) var(--t0) forwards}
+.pah.held{clip-path:none;animation:none}
+.pah .bg{position:absolute;inset:0;background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 42%,var(--tdark) 100%)}
+.pah-lite .bg{background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 58%,var(--tdark) 100%)}
+.pah .st{position:absolute;top:0;bottom:0;right:4%;width:16px;background:var(--t2);transform:skewX(-18deg);opacity:.16}
+.pah .st.b{right:calc(4% + 24px);width:5px;opacity:.1}
+.pah .sk{position:absolute;top:-20%;bottom:-20%;width:40%;left:-45%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-18deg);animation:fbxSk .75s ease-out calc(var(--t0) + .25s) both}
+.pah .ct{position:absolute;inset:0;padding:12px 12px 8px;display:flex;flex-direction:column;gap:8px}
+.pah .top{display:flex;gap:10px;flex-shrink:0}
+.pah .wd{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.pah .sm{font-size:10.5px;font-weight:900;letter-spacing:.3em;color:var(--t2);opacity:.92;animation:pahSlide .4s ease calc(var(--t0) + .32s) both}
+.pah .big{font-size:27px;font-weight:900;font-style:italic;letter-spacing:-.01em;line-height:1.04;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.35);animation:pahSlide .45s ease calc(var(--t0) + .4s) both}
+.pah .big.long{font-size:22px}
+.pah .who{margin-top:2px;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .48s) both}
+.pah .sub{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .54s) both}
+.pah .bdg{align-self:flex-start;max-width:100%;margin-top:4px;padding:2px 7px;border-radius:7px;background:rgba(242,217,138,.22);color:#F7E2A0;font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .6s) both}
+.pah .mini{width:112px;flex-shrink:0;align-self:flex-start;padding:4px;border-radius:10px;background:rgba(5,3,14,.28);animation:pahRise .45s ease calc(var(--t0) + .55s) both}
+.pah .mini svg{display:block;width:100%;height:auto}
+.pah .mini.zn{width:88px}
+.pah .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-height:0;overflow:hidden}
+.pah .tile{min-width:0;display:flex;flex-direction:column;padding:6px 8px 7px;border-radius:11px;background:rgba(5,3,14,.3);animation:pahRise .4s ease both}
+.pah .tile:nth-child(1){animation-delay:calc(var(--t0) + .7s)}.pah .tile:nth-child(2){animation-delay:calc(var(--t0) + .76s)}.pah .tile:nth-child(3){animation-delay:calc(var(--t0) + .82s)}
+.pah .tile:nth-child(4){animation-delay:calc(var(--t0) + .88s)}.pah .tile:nth-child(5){animation-delay:calc(var(--t0) + .94s)}.pah .tile:nth-child(6){animation-delay:calc(var(--t0) + 1s)}
+.pah .tl{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pah .tv{margin-top:3px;font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pah .tv small{margin-left:2px;font-size:11px;font-weight:600;color:rgba(255,255,255,.78)}
+.pah .tv.tx{font-family:inherit;font-size:12.5px;font-weight:800;line-height:1.15;white-space:normal}
+.pah .tv .wt{color:rgba(255,255,255,.45)}
+.pah .tp{position:relative;display:block;height:3px;margin-top:5px;border-radius:2px;background:rgba(255,255,255,.18)}
+.pah .tp i{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.pah .ft{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;animation:pahRise .4s ease calc(var(--t0) + 1.05s) both}
+.pah .nx{min-width:0;display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pah .nx i{flex-shrink:0;width:7px;height:7px;border-radius:50%;background:#7BE3A6;box-shadow:0 0 8px #7BE3A6;animation:pahBlink 1.6s ease-in-out infinite}
+.pah .rp{flex-shrink:0;pointer-events:auto;height:30px;padding:0 11px;border:0;border-radius:15px;background:rgba(5,3,14,.32);color:#fff;font-family:inherit;font-size:12px;font-weight:700;line-height:1;display:flex;align-items:center;gap:5px;cursor:pointer}
+.pah .rp:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* the defense view swaps the square for the alignment; the card steps aside */
+.gst.def #gh-pa-slot .pah{display:none}
+@keyframes pahIn{to{clip-path:inset(0 0 0 0)}}
+@keyframes pahSlide{from{opacity:0;transform:translateX(-12px)}}
+@keyframes pahRise{from{opacity:0;transform:translateY(8px)}}
+@keyframes pahBlink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pah{clip-path:none}.pah,.pah *{animation:none!important}}

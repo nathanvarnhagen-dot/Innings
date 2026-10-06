@@ -81,7 +81,7 @@ function _paFill() {
     // One full run, then hand the square back and catch up on any
     // refresh that waited (see the render hook below).
     window._paEndT = setTimeout(function () {
-      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { sl.innerHTML = ''; var lb = document.getElementById('gh-pa-label'); if (lb) _paSoftClear(lb); var st2 = document.getElementById('gh-pa-stats'); if (st2) { var s1 = window._pa; if (s1 && s1.labelOut && s1._statsHtml && s1.play) { var g1 = window._activeBrowseGame; window._bbKeep = { lp: s1.play, since: s1.startAt, pk: g1 ? String(g1.gamePk) : '' }; } var k2 = (typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; if (k2) st2.innerHTML = k2; else _paSoftClear(st2); } }
+      var sl = document.getElementById('gh-pa-slot'); if (sl && !window._pa.keep) { var s9 = window._pa; sl.innerHTML = (typeof _patHoldOn === 'function' && _patHoldOn(s9.play, s9.box, s9)) ? _patHeldHtml(s9.play, s9.box) : ''; /* v7.19.0: the result card holds */ var lb = document.getElementById('gh-pa-label'); if (lb) _paSoftClear(lb); var st2 = document.getElementById('gh-pa-stats'); if (st2) { var s1 = window._pa; if (s1 && s1.labelOut && s1._statsHtml && s1.play) { var g1 = window._activeBrowseGame; window._bbKeep = { lp: s1.play, since: s1.startAt, pk: g1 ? String(g1.gamePk) : '' }; } var k2 = (typeof _bbKeptStripHtml === 'function') ? _bbKeptStripHtml() : ''; if (k2) st2.innerHTML = k2; else _paSoftClear(st2); } }
       if (window._paDeferred) { window._paDeferred = false; renderGameCheatSheet(); }
     }, Math.max(0, ((window._pa.total || PA.END) + .6) * 1000 - (Date.now() - window._pa.startAt)));
   }
@@ -460,7 +460,10 @@ function _paActScenesHtml(lp, s, box, GAP) {
 
 function _paOverlayHtml() {
   var s = window._pa, lp = s.play, box = s.box;
-  if (!lp || !box || !s.startAt) return '';
+  if (!lp || !box) return '';
+  // v7.19.0: between batters the last play's result card holds (pa-takeover.js)
+  var hold = typeof _patHoldOn === 'function' && _patHoldOn(lp, box, s);
+  if (!s.startAt) return hold ? _patHeldHtml(lp, box) : '';
   if (typeof _paIsAction === 'function' && _paIsAction(lp)) return _paActionHtml(lp, s, box);
   var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
   var E = (Date.now() - s.startAt) / 1000;
@@ -478,7 +481,7 @@ function _paOverlayHtml() {
   var END = (showField ? PA.END : 9) + OFF;
   s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
-  else if (E > END + 0.6) return '';
+  else if (E > END + 0.6) return hold ? _patHeldHtml(lp, box) : '';
   if (s.quick) { OFF = 0; E = E + PA.SW + .6; } // reel: straight to the field
   var Es = E - OFF; // clock for everything after the pitches
   var land = _paLanding(lp);
@@ -505,7 +508,7 @@ function _paOverlayHtml() {
   var pv = _strikeZoneSectionHtml(seq, 'rgba(255,255,255,.1)', 'rgba(255,255,255,.65)', '#fff', true).svg;
   if (typeof _bbZoneGlow === 'function') pv = _bbZoneGlow(pv, seq);
   pv = pv.replace(/<\/svg>$/, groups + '</svg>');
-  var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : anim('paOut', .5, END, 'ease')) + '">';
+  var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep || hold ? '' : anim('paOut', .5, END, 'ease')) + '">';
   out += '<div style="position:absolute;inset:0;' + (showField ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
     (showField ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">' + (walkish ? ({ hit_by_pitch: 'Hit by pitch', intent_walk: 'Intentional walk', catcher_interf: 'Interference' }[lp.eventType] || 'Ball four') : 'In play') + '</div>' : '') + '</div>';
   if (s.seq && typeof _paActScenesHtml === 'function') out += _paActScenesHtml(lp, s, box, GAP);

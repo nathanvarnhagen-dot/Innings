@@ -109,6 +109,8 @@ function _bbPaTakeoverHtml(lp, box, s, Es, showField, tT) {
   // plus a beat to read the result title, before the takeover comes in
   var at = showField ? Math.max((s._t1 != null ? s._t1 : PA.T0 + 1.8) + .2, s._fieldEnd != null ? s._fieldEnd + .7 : 0) : ((tT != null ? tT : 1.4) + .3);
   s._patAt = at; // the panel's rows come in after the takeover
+  // v7.19.0: on the live square the takeover holds as the result card
+  if (s === window._pa && _patHoldOn(lp, box, s)) return _patHoldCardHtml(lp, box, _paSec(at, Es));
   var cls = 'fbx-to pa-to pat' + (tier.full ? '' : ' pat-lite') + (spray ? ' pat-f' : '');
   return '<div class="' + cls + '" style="--t0:' + _paSec(at, Es) + ';--t1:' + bg + ';--t2:' + t2 + ';--tdark:' + _fbxDark(bg, .5) + ';animation-duration:' + tier.dur + 's">' +
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
@@ -483,3 +485,154 @@ function _patSheetShow(id, abi, btn) {
     if (t) box.insertAdjacentHTML('afterbegin', t);
   };
 })();
+
+// ══ THE RESULT CARD HOLDS (v7.19.0) ═════════════════════════════════════
+// On the live at-bat square the takeover no longer passes through: it
+// sweeps in after the play and stays — result, team, batter, the score,
+// a small copy of the field (or the at-bat's pitches for a strikeout or
+// walk) and the numbers that were on the field (exit velo, launch,
+// distance, xBA, parks, bat speed / the strikeout pitch) — until the next
+// at-bat's first pitch. Savant numbers fill in as they arrive (20-60 s).
+// Opening a live game between batters shows the last play's card too.
+// The replay under a tapped play, the reel and the player sheet's "Today"
+// card keep the old pass-through takeover.
+
+function _patNextStarted(lp, box) {
+  var ps = box && box.pitchSequence;
+  if (!ps || ps.atBatIndex == null || lp.atBatIndex == null) return false;
+  if (Number(ps.atBatIndex) <= Number(lp.atBatIndex)) return false;
+  return !!((ps.pitches && ps.pitches.length) || (ps.actions && ps.actions.length));
+}
+function _patLiveNow(box) {
+  var m = typeof _ghModelFromMlbBox === 'function' ? _ghModelFromMlbBox(box) : null;
+  return !!(m && m.phase === 'live');
+}
+// Only the live square (not replays, the reel or a sheet), only a finished
+// plate appearance, and only until the next one starts
+function _patHoldOn(lp, box, s) {
+  if (!lp || !box || !s || !s.labelOut || s.quick || s.keep || s.seq) return false;
+  if (typeof _paIsAction === 'function' && _paIsAction(lp)) return false;
+  if (lp.atBatIndex == null || !_patTier(lp)) return false;
+  if (!s.startAt && !_patLiveNow(box)) return false;
+  // between halves the square is the inning-break card (score, due up)
+  var sit = box.situation || {};
+  if (sit.inningState === 'Middle' || sit.inningState === 'End') return false;
+  return !_patNextStarted(lp, box);
+}
+function _patHoldInfo(lp, box) {
+  var tier = _patTier(lp);
+  if (!tier) return null;
+  var team = _patTeam(lp, box, tier.team === 'pit' ? 'pit' : 'bat');
+  var neutral = tier.team === 'neutral';
+  var bg = neutral ? '#3D3580' : team.c.bg;
+  var t2 = neutral ? '#CFC7FF' : ((team.c.accent && Math.abs(_gxLum(team.c.accent) - _gxLum(team.c.bg)) > .25) ? team.c.accent : '#FFFFFF');
+  var title = typeof _paTitle === 'function' ? _paTitle(lp) : String(lp.event || '').toUpperCase();
+  var bat = _patLast(lp.batter), who = bat, t = lp.eventType || '';
+  if (tier.kind === 'hr') { var rbi = lp.rbi || 1; who += ' · ' + (rbi >= 4 ? 'Grand slam' : rbi === 1 ? 'Solo shot' : rbi + '-run shot'); }
+  else if (tier.kind === 'hit') who += lp.rbi ? ' · ' + lp.rbi + ' RBI' : '';
+  else if (tier.kind === 'k') { var lpk = _patLastPitch(lp), looking = lpk && /called/i.test(lpk.call || ''); who = (lp.pitcher ? _patLast(lp.pitcher) + ' gets ' : '') + bat + (looking ? ' looking' : ' swinging'); }
+  else if (tier.kind === 'walk') { var n = (lp.pitches || []).length; who += n ? ' · ' + n + '-pitch walk' : ''; }
+  else if (tier.kind === 'out') { var f = (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; }
+  var big = tier.full ? String(_teamShortName(team.name || '') || team.abbr || '').toUpperCase() : bat.toUpperCase();
+  // under the batter: where it went and the score after it
+  var sub = [];
+  var land = typeof _paLanding === 'function' ? _paLanding(lp) : null;
+  if (land && lp.hit && typeof _paDir === 'function') sub.push('To ' + _paDir(land.ang));
+  else if ((tier.kind === 'k' || tier.kind === 'walk') && (lp.pitches || []).length && tier.kind !== 'walk') sub.push((lp.pitches || []).length + '-pitch at-bat');
+  var aA = box.awayAbbr || _ghAbbrFallback(box.away || ''), hA = box.homeAbbr || _ghAbbrFallback(box.home || '');
+  var sc = typeof _ghScoreChip === 'function' ? _ghScoreChip(lp, aA, hA) : '';
+  if (sc) sub.push(sc);
+  return { tier: tier, bg: bg, t2: t2, title: title, big: big, who: who, sub: sub.join(' · ') };
+}
+// The numbers: for a ball in play, what was on the field; otherwise the
+// panel's rows for the pitch that ended it
+function _patHoldTiles(lp, box, tier) {
+  var g = window._activeBrowseGame, pk = (box && box.gamePk != null) ? box.gamePk : (g ? g.gamePk : null);
+  var sp = (typeof _savPlay === 'function' && pk != null) ? (_savPlay(pk, lp.atBatIndex) || {}) : {};
+  var out = [];
+  var T = function (l, v, u, p, wait, tx) { out.push({ l: l, v: v, u: u || '', p: p, wait: !!wait, tx: !!tx }); };
+  var h = lp.hit || {};
+  if (lp.hit && (tier.kind === 'hr' || tier.kind === 'hit' || tier.kind === 'out')) {
+    var ev = h.speed != null ? h.speed : sp.ev, la = h.angle != null ? h.angle : sp.la, dist = h.distance != null ? h.distance : sp.dist;
+    var bs = (sp.swings && sp.swings.length) ? sp.swings[sp.swings.length - 1].batSpeed : null;
+    if (ev != null) T('Exit velo', Number(ev).toFixed(1), 'mph', _patPct(ev, _PAT_LG.ev));
+    if (la != null) T('Launch', la + '°');
+    if (dist != null) T('Distance', dist, 'ft');
+    T('xBA', sp.xba != null ? sp.xba.toFixed(3).replace(/^0/, '') : null, '', null, sp.xba == null);
+    if (tier.kind === 'hr') T('Gone in', sp.parks != null ? sp.parks : null, '/30 parks', null, sp.parks == null);
+    else if (sp.parks != null && sp.parks >= 1) T('HR in', sp.parks, '/30 parks');
+    if (out.length < 6) T('Bat speed', bs != null ? bs.toFixed(1) : null, 'mph', _patPct(bs, _PAT_LG.bat), bs == null);
+    var p = _patLastPitch(lp), mph = p ? (p.mph != null ? p.mph : p.speed) : null;
+    if (out.length < 6 && tier.kind === 'hr' && mph != null) T('Pitch he hit', Number(mph).toFixed(0) + ' ' + _patPitchWord(p), '', null, false, true);
+  } else {
+    (_patRows(lp, box).rows || []).forEach(function (r) {
+      if (r.v == null && !r.txt) { if (r.sav) T(r.l, null, r.u, null, true); return; }
+      if (r.txt) T(r.l, r.txt, '', null, false, true);
+      else T(r.l, r.v, r.u, r.p);
+    });
+    if (tier.kind === 'k') {
+      var lpk = _patLastPitch(lp), loc = _patLoc(lp, lpk);
+      if (loc && out.length < 6) T('Where', loc.charAt(0).toUpperCase() + loc.slice(1), '', null, false, true);
+      if ((lp.pitches || []).length && out.length < 6) T('Pitches', lp.pitches.length);
+    }
+  }
+  return out.slice(0, 6);
+}
+// The at-bat's pitches in a small zone, the last one ringed in gold
+function _patMiniZoneSvg(lp) {
+  var ps = (lp.pitches || []).filter(function (p) { return p && p.px != null && p.pz != null; });
+  if (!ps.length) return '';
+  var top = lp.zoneTop || 3.5, bot = lp.zoneBottom || 1.5;
+  var X = function (px) { return 50 + px / 1.7 * 42; }, Y = function (pz) { return 104 - (pz - .6) / 4 * 92; };
+  var h = '<svg viewBox="0 0 100 110" aria-hidden="true"><rect x="' + X(-.83).toFixed(1) + '" y="' + Y(top).toFixed(1) + '" width="' + (X(.83) - X(-.83)).toFixed(1) + '" height="' + (Y(bot) - Y(top)).toFixed(1) + '" rx="2" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.75)" stroke-width="1.4"/>';
+  ps.forEach(function (p, i) {
+    var x = X(Math.max(-1.6, Math.min(1.6, p.px))).toFixed(1), y = Y(Math.max(.7, Math.min(4.4, p.pz))).toFixed(1), last = i === ps.length - 1;
+    if (last) h += '<circle cx="' + x + '" cy="' + y + '" r="8.6" fill="none" stroke="#F2D98A" stroke-width="2"/>';
+    h += '<circle cx="' + x + '" cy="' + y + '" r="6" fill="' + (typeof _pitchCallColor === 'function' ? _pitchCallColor(p.call) : '#A89FE8') + '" stroke="rgba(5,3,14,.6)" stroke-width="1"/>' +
+      '<text x="' + x + '" y="' + (Number(y) + 2.4).toFixed(1) + '" text-anchor="middle" font-size="6.8" font-weight="800" fill="#fff" font-family="-apple-system,sans-serif">' + (p.num != null ? p.num : i + 1) + '</text>';
+  });
+  return h + '</svg>';
+}
+function _patNextUp(lp, box) {
+  var s = box.situation || {};
+  if (s.inningState === 'Middle' || s.inningState === 'End' || s.outs === 3) {
+    var due = (s.dueUp || []).map(function (x) { return _patLast(x); }).filter(Boolean);
+    if (due.length) return 'Due up: ' + due.join(', ');
+  }
+  var mb = box.matchup && box.matchup.batter;
+  if (mb && mb.name && _patLast(mb.name) !== _patLast(lp.batter || '')) return 'Up next: ' + mb.name;
+  return 'Here until the next at-bat';
+}
+function _patHoldCardHtml(lp, box, t0) {
+  var o = _patHoldInfo(lp, box);
+  if (!o) return '';
+  var tier = o.tier, info = _patRows(lp, box);
+  var tiles = _patHoldTiles(lp, box, tier);
+  var spray = lp.hit && typeof _paLanding === 'function' && _paLanding(lp);
+  var mini = spray ? _patSpraySvg(lp, o.t2) : _patMiniZoneSvg(lp);
+  var tileHtml = tiles.map(function (x) {
+    var v = x.wait ? '<span class="wt">—</span>' : _escapeHtml(String(x.v)) + (x.u ? '<small>' + _escapeHtml(x.u) + '</small>' : '');
+    var bar = (!x.wait && x.p != null) ? '<span class="tp"><i style="width:' + x.p + '%;background:' + (typeof _savPctColor === 'function' ? _savPctColor(x.p) : '#A89FE8') + '"></i></span>' : '';
+    return '<div class="tile"><span class="tl">' + _escapeHtml(x.l) + '</span><span class="tv' + (x.tx ? ' tx' : '') + '">' + v + '</span>' + bar + '</div>';
+  }).join('');
+  return '<div class="pah' + (tier.full ? '' : ' pah-lite') + (t0 === null ? ' held' : '') + '" style="--t0:' + (t0 === null ? '-60s' : t0) + ';--t1:' + o.bg + ';--t2:' + o.t2 + ';--tdark:' + _fbxDark(o.bg, .5) + '" role="status" aria-label="' + _escapeHtml(o.title + '. ' + o.who + (o.sub ? '. ' + o.sub : '')) + '">' +
+    '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
+    '<div class="ct"><div class="top"><div class="wd"><span class="sm">' + _escapeHtml(o.title) + '</span>' +
+      '<span class="big' + (o.big.length > 11 ? ' long' : '') + '">' + _escapeHtml(o.big) + '</span>' +
+      '<span class="who">' + _escapeHtml(o.who) + '</span>' + (o.sub ? '<span class="sub">' + _escapeHtml(o.sub) + '</span>' : '') +
+      (info.badge ? '<span class="bdg">' + _escapeHtml(info.badge) + '</span>' : '') + '</div>' +
+      (mini ? '<div class="mini' + (spray ? '' : ' zn') + '">' + mini + '</div>' : '') + '</div>' +
+    (tileHtml ? '<div class="tiles">' + tileHtml + '</div>' : '') +
+    '<div class="ft"><span class="nx"><i></i>' + _escapeHtml(_patNextUp(lp, box)) + '</span>' +
+      '<button type="button" class="rp" onclick="patReplayLive()" aria-label="Replay the play"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Replay</button></div>' +
+    '</div></div>';
+}
+// After the play's run: the same card, already in place (no entrance)
+function _patHeldHtml(lp, box) { return _patHoldCardHtml(lp, box, null); }
+// Replay button: run the play again in the square, then the card holds again
+function patReplayLive() {
+  var s = window._pa;
+  if (!s || !s.play) return;
+  s.startAt = Date.now(); s.seq = false; s.keep = false;
+  if (typeof _paFill === 'function') _paFill();
+}
