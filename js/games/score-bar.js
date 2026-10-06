@@ -106,6 +106,8 @@ function _gshHeroEls(panel) {
 }
 function _gshFade(panel, p) {
   _gshHeroEls(panel).forEach(function (el) {
+    if (window._gshGone && !el._gshHiding) { el.style.display = 'none'; return; }
+    if (el._gshHiding) return;
     if (p <= 0) { el.style.opacity = ''; el.style.transform = ''; el.style.filter = ''; return; }
     el.style.opacity = (1 - p * 0.9).toFixed(3);
     el.style.transform = 'translateY(' + Math.round(p * 70) + 'px) scale(' + (1 - p * 0.06).toFixed(4) + ')';
@@ -120,19 +122,75 @@ function _gshUpdate() {
   if (!scr || !hd || !panel || !bar || !scr.classList.contains('gsh-on')) return;
   hd.style.transform = '';
   var y = panel.scrollTop, els = _gshHeroEls(panel), p = 0;
-  if (els.length) {
+  // v7.13.1: a few seconds after the game opens the scoreboard tucks away
+  // for good (until the next open); only the bug's arrow brings it back
+  if (els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 4000);
+  if (els.length && !window._gshGone) {
     var top0 = els[0].offsetTop, hero = els[els.length - 1];
     var span = Math.max(1, hero.offsetTop + hero.offsetHeight - top0);
     p = Math.max(0, Math.min(1, y / span));
   }
   _gshFade(panel, reduceMotion() ? 0 : p);
-  var collapsed = p >= 0.85;
+  var collapsed = !!window._gshGone || p >= 0.85;
   if (collapsed && !bar.innerHTML) bar.innerHTML = _gshBarHtml();
   bar.classList.toggle('on', collapsed);
   hd.classList.toggle('gsh-c', collapsed);
   if (!collapsed && window._gshDropOn) gshCloseDrop();
   function reduceMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 }
+// Fades, blurs and folds the ribbon + scoreboard up, then takes them out of
+// the page, keeping whatever the reader is looking at in place
+function _gshAutoHide() {
+  window._gshTimer = null;
+  if (window._gshGone) return;
+  window._gshGone = true;
+  var scr = document.getElementById('screen-game'), panel = document.getElementById('game-sheet-panel');
+  if (!panel) return;
+  var els = _gshHeroEls(panel);
+  if (!els.length) return;
+  var on = scr && scr.classList.contains('gsh-on') && panel.style.display !== 'none';
+  var top0 = els[0].offsetTop, last = els[els.length - 1];
+  var span = last.offsetTop + last.offsetHeight + (parseFloat(getComputedStyle(last).marginBottom) || 0) - top0;
+  var instant = !on || panel.scrollTop > span * 0.5 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if (instant) {
+    els.forEach(function (el) { el.style.display = 'none'; });
+    if (panel.scrollTop > 0) panel.scrollTop = Math.max(0, panel.scrollTop - span);
+    _gshUpdate();
+    return;
+  }
+  els.forEach(function (el) {
+    el._gshHiding = true;
+    var h = el.offsetHeight;
+    el.style.overflow = 'hidden';
+    el.style.maxHeight = h + 'px';
+    el.style.transformOrigin = '50% 0';
+    void el.offsetHeight;
+    el.style.transition = 'max-height .55s cubic-bezier(.4,0,.2,1),margin .55s cubic-bezier(.4,0,.2,1),padding .55s cubic-bezier(.4,0,.2,1),opacity .4s ease,transform .55s cubic-bezier(.4,0,.2,1),filter .45s ease';
+    el.style.maxHeight = '0px'; el.style.marginTop = '0px'; el.style.marginBottom = '0px'; el.style.paddingTop = '0px'; el.style.paddingBottom = '0px';
+    el.style.opacity = '0'; el.style.transform = 'translateY(-28px) scale(.96)'; el.style.filter = 'blur(6px)';
+  });
+  _gshUpdate();
+  setTimeout(function () {
+    els.forEach(function (el) {
+      el._gshHiding = false;
+      ['transition', 'maxHeight', 'overflow', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom'].forEach(function (k) { el.style[k] = ''; });
+      el.style.display = 'none';
+    });
+    _gshUpdate();
+  }, 600);
+}
+// Every open of a game shows the scoreboard again for a few seconds
+(function () {
+  if (typeof _showGameScreen !== 'function') return;
+  var orig = _showGameScreen;
+  _showGameScreen = function () {
+    clearTimeout(window._gshTimer); window._gshTimer = null; window._gshGone = false;
+    var panel = document.getElementById('game-sheet-panel');
+    if (panel) _gshHeroEls(panel).forEach(function (el) { el._gshHiding = false; ['display', 'opacity', 'transform', 'filter', 'transition', 'maxHeight', 'overflow', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom'].forEach(function (k) { el.style[k] = ''; }); });
+    var bar = document.getElementById('game-sb'); if (bar) bar.innerHTML = '';
+    return orig.apply(this, arguments);
+  };
+})();
 function _gshRefresh() {
   var bar = document.getElementById('game-sb');
   if (bar) bar.innerHTML = _gshBarHtml();
@@ -152,7 +210,7 @@ function _gshFillDrop() {
     c.removeAttribute('id');
     c.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
     c.classList.remove('gh-anim');
-    c.style.opacity = ''; c.style.transform = ''; c.style.filter = '';
+    ['display', 'opacity', 'transform', 'filter', 'transition', 'maxHeight', 'overflow', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom'].forEach(function (k) { c.style[k] = ''; });
     slot.appendChild(c);
   });
 }
@@ -182,8 +240,12 @@ function _gdTabsSync() {
   var row = document.getElementById('game-tabs');
   if (!row) return;
   Array.prototype.forEach.call(row.children, function (b) {
-    var bg = b.style.background || b.style.backgroundColor || '';
-    var on = !!bg && bg.indexOf('transparent') < 0;
+    // v7.13.1: Safari reports the off state as rgba(0, 0, 0, 0), not
+    // "transparent" — read the alpha instead of the word
+    var bg = (b.style.backgroundColor || '').replace(/\s/g, '');
+    var m = bg.match(/^rgba?\(([^)]*)\)$/), on = false;
+    if (m) { var parts = m[1].split(','); on = parts.length < 4 || parseFloat(parts[3]) > 0; }
+    else on = !!bg && bg !== 'transparent' && bg !== 'initial' && bg !== 'none';
     if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
   });
 }
