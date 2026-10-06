@@ -122,27 +122,41 @@ function _gshUpdate() {
   if (!scr || !hd || !panel || !bar || !scr.classList.contains('gsh-on')) return;
   hd.style.transform = '';
   var y = panel.scrollTop, els = _gshHeroEls(panel), p = 0;
+  // v7.15.1: all of this is for live games only. Before the first pitch and
+  // after the final the scoreboard just scrolls with the page, and if a game
+  // ends while it's tucked away it comes back.
+  var live = _gshLive();
+  if (!live) _gshUntuck(panel);
   // v7.13.1: a few seconds after the game opens the scoreboard tucks away
   // for good (until the next open); only the bug's arrow brings it back
-  if (els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 4000);
-  if (els.length && !window._gshGone) {
+  if (live && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 4000);
+  if (live && els.length && !window._gshGone) {
     var top0 = els[0].offsetTop, hero = els[els.length - 1];
     var span = Math.max(1, hero.offsetTop + hero.offsetHeight - top0);
     p = Math.max(0, Math.min(1, y / span));
   }
   _gshFade(panel, reduceMotion() ? 0 : p);
-  var collapsed = !!window._gshGone || p >= 0.85;
+  var collapsed = live && (!!window._gshGone || p >= 0.85);
   if (collapsed && !bar.innerHTML) bar.innerHTML = _gshBarHtml();
+  if (collapsed && !bar.innerHTML) collapsed = false; // never swap the title row for an empty bug
   bar.classList.toggle('on', collapsed);
   hd.classList.toggle('gsh-c', collapsed);
   if (!collapsed && window._gshDropOn) gshCloseDrop();
   function reduceMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 }
+function _gshLive() { var o = _gshModel(); return !!(o && o.m && o.m.phase === 'live'); }
+// Brings a tucked-away scoreboard back (the game is no longer live)
+function _gshUntuck(panel) {
+  if (window._gshTimer) { clearTimeout(window._gshTimer); window._gshTimer = null; }
+  if (!window._gshGone) return;
+  window._gshGone = false;
+  if (panel) _gshHeroEls(panel).forEach(function (el) { el._gshHiding = false; ['display', 'opacity', 'transform', 'filter', 'transition', 'maxHeight', 'overflow', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom'].forEach(function (k) { el.style[k] = ''; }); });
+}
 // Fades, blurs and folds the ribbon + scoreboard up, then takes them out of
 // the page, keeping whatever the reader is looking at in place
 function _gshAutoHide() {
   window._gshTimer = null;
-  if (window._gshGone) return;
+  if (window._gshGone || !_gshLive()) return;
   window._gshGone = true;
   var scr = document.getElementById('screen-game'), panel = document.getElementById('game-sheet-panel');
   if (!panel) return;
@@ -174,7 +188,7 @@ function _gshAutoHide() {
     els.forEach(function (el) {
       el._gshHiding = false;
       ['transition', 'maxHeight', 'overflow', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom'].forEach(function (k) { el.style[k] = ''; });
-      el.style.display = 'none';
+      if (window._gshGone) el.style.display = 'none';
     });
     _gshUpdate();
   }, 600);
