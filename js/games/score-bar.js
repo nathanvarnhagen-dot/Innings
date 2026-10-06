@@ -144,7 +144,7 @@ function _gshUpdate() {
   if (!live) _gshUntuck(panel);
   // v7.13.1: a few seconds after the game opens the scoreboard tucks away
   // for good (until the next open); only the bug's arrow brings it back
-  if (live && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 4000);
+  if (live && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000); // v7.17.3: was 4s
   if (live && els.length && !window._gshGone) {
     var top0 = els[0].offsetTop, hero = els[els.length - 1];
     var span = Math.max(1, hero.offsetTop + hero.offsetHeight - top0);
