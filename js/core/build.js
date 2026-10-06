@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.17.0-iphone-tapback';
+window.INNINGS_BUILD = 'v7.17.1-score-every-tab';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

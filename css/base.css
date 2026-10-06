@@ -18,6 +18,10 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .app{width:100%;height:100%;max-width:430px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;transform:translateZ(0)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.22s ease;background:var(--bg)}
 .screen.active{opacity:1;pointer-events:all}
+/* v7.17.1: nothing inside a screen you've left can catch a tap — a child
+   with pointer-events:auto (the live score bug, sheets, banners) used to
+   stay tappable, invisibly, over whatever screen came next */
+.screen:not(.active) *{pointer-events:none!important}
 
 /* LOGIN SPLASH — plays every time someone lands in the app after auth */
 #login-splash{position:absolute;inset:0;z-index:9999;background:var(--indigo-deep);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.35s ease}

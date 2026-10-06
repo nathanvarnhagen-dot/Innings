@@ -69,7 +69,7 @@ function _gshSetup() {
 }
 function _gshMeasure() {
   var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd');
-  if (scr && hd && scr.classList.contains('gsh-on')) scr.style.setProperty('--gsh-h', hd.offsetHeight + 'px');
+  if (scr && hd && (scr.classList.contains('gsh-on') || scr.classList.contains('gsh-tab'))) scr.style.setProperty('--gsh-h', (hd.offsetTop + hd.offsetHeight) + 'px');
   var panel = document.getElementById('game-sheet-panel');
   if (panel) panel._ptrOffset = (scr && scr.classList.contains('gsh-on') && hd) ? hd.offsetHeight : 0;
   // the bug sits exactly over the header's title row
@@ -79,12 +79,17 @@ function _gshMeasure() {
     bar.style.top = (row.offsetTop + inner / 2 - 22) + 'px';
   }
 }
-// On for the cheat sheet (phone and iPad), off for the other tabs and desktop
+// The cheat sheet (phone and iPad) pins the header and folds the scoreboard
+// into the bug as you scroll. v7.17.1: every other tab (Plays, Box, Chat,
+// Watch & listen) shows the bug in the title row for the whole live game.
+// Off on desktop.
 function _gshApply() {
   var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel');
   if (!scr || !hd || !panel) return;
-  var want = !_gshDesk() && panel.style.display !== 'none';
+  var desk = _gshDesk(), sheet = panel.style.display !== 'none';
+  var want = !desk && sheet;
   scr.classList.toggle('gsh-on', want);
+  scr.classList.toggle('gsh-tab', !desk && !sheet);
   if (!want) {
     hd.style.transform = '';
     hd.classList.remove('gsh-c');
@@ -119,7 +124,17 @@ function _gshFade(panel, p) {
 // under, the title row swaps for the bug
 function _gshUpdate() {
   var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd'), panel = document.getElementById('game-sheet-panel'), bar = document.getElementById('game-sb');
-  if (!scr || !hd || !panel || !bar || !scr.classList.contains('gsh-on')) return;
+  if (!scr || !hd || !panel || !bar) return;
+  if (scr.classList.contains('gsh-tab') && !scr.classList.contains('gsh-on')) {
+    var lv = _gshLive();
+    if (lv && !bar.innerHTML) bar.innerHTML = _gshBarHtml();
+    if (lv && !bar.innerHTML) lv = false;
+    bar.classList.toggle('on', lv);
+    hd.classList.toggle('gsh-c', lv);
+    if (!lv && window._gshDropOn) gshCloseDrop();
+    return;
+  }
+  if (!scr.classList.contains('gsh-on')) return;
   hd.style.transform = '';
   var y = panel.scrollTop, els = _gshHeroEls(panel), p = 0;
   // v7.15.1: all of this is for live games only. Before the first pitch and
