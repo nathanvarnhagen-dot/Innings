@@ -1000,8 +1000,9 @@ function _ghLiveDetailHtml(box) {
       // and the Statcast strip under it.
       if (stageOn) {
         svg = _bbZoneGlow(svg, seq); if (typeof _absZoneMarks === 'function') svg = _absZoneMarks(svg, seq.pitches);
-        out += '<div id="gh-stage" class="gst' + (window._gstDef ? ' def' : '') + '"><div class="gst-sq">' + svg + '<div id="gh-pa-slot"></div>' + (typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') +
-          _gstDefenseHtml(box) + '<div id="gh-pa-label" class="pa-lab gst-lab"></div>' + _gstRailHtml(s, seq, box) + '</div>' + _gstL3Html(mp, mb, box) + '</div>';
+        // v7.15.0: the count rides a mini rail across the top; the play field sits whole underneath it
+        out += '<div id="gh-stage" class="gst' + (window._gstDef ? ' def' : '') + '"><div class="gst-sq">' + _gstRailHtml(s, seq, box) + '<div class="gst-pf">' + svg + '<div id="gh-pa-slot"></div>' + (typeof _absNoticeHtml === 'function' ? _absNoticeHtml(seq, box, s) : '') +
+          _gstDefenseHtml(box) + '<div id="gh-pa-label" class="pa-lab gst-lab"></div>' + (typeof _gstAbsHtml === 'function' ? _gstAbsHtml(box) : '') + '</div></div>' + _gstL3Html(mp, mb, box) + '</div>';
         out += '<div id="gh-pa-stats" class="pa-sc"></div>';
         if (typeof _patLivePanelHtml === 'function') out += '<div id="gh-pa-panel">' + _patLivePanelHtml(box) + '</div>';
         out += _gstStripHtml(seq, box, s) + (typeof _savVeloNoteHtml === 'function' ? _savVeloNoteHtml(seq) : '') + _gstSavantHtml(mp, mb, box);

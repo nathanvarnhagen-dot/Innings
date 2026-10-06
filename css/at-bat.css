@@ -138,3 +138,35 @@ button.gst-pc+button.gst-pc{border-left:.5px solid rgba(255,255,255,.07)}
 .gst-dtag{top:auto;bottom:10px;height:26px;padding:0 9px;font-size:11.5px;letter-spacing:.08em}
 .gh-card-head .gst-tg,.gst.def~* .gst-tg{position:static;margin:-4px 0}
 .gh-card-head .gst-tg button{height:26px}
+
+/* ═══ v7.15.0 · MINI RAIL — the count across the top of the square (js/games/at-bat-stage.js) ═══ */
+.gst-sq{padding-top:8px}
+.gst-pf{position:relative}
+.gst-pf>svg,.gst-sq>svg{width:100%;height:272px}
+.gst-lab{max-width:calc(100% - 20px)}
+.gst-mr{position:relative;z-index:7;display:flex;align-items:center;gap:12px;height:42px;margin:0 8px;padding:0 10px;border-radius:13px;background:linear-gradient(180deg,#312A5C 0%,#1C1739 56%,#130F29 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.24),inset 0 -1px 0 rgba(0,0,0,.6),0 8px 20px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.12)}
+.gst-mg{display:flex;align-items:center;gap:6px}
+.gst-ml{font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:600;color:rgba(233,226,207,.62)}
+.gst-pips{display:flex;flex-direction:column-reverse;gap:3px}
+.gst-pip{display:block;width:5px;height:5px;border-radius:50%;background:#1E1938;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12);transition:background .5s ease,box-shadow .5s ease}
+.gst-mg.b .gst-pip.on{background:radial-gradient(circle at 35% 30%,#fff,#7CF29C 55%,#2FA45A);box-shadow:0 0 4px #7CF29C,0 0 10px rgba(124,242,156,.65)}
+.gst-mg.s .gst-pip.on{background:radial-gradient(circle at 35% 30%,#fff,#FF6A58 55%,#B4271A);box-shadow:0 0 4px #FF6A58,0 0 10px rgba(255,106,88,.65)}
+.gst-mg.o .gst-pip.on{background:radial-gradient(circle at 35% 30%,#fff,#F2C869 55%,#B98A1E);box-shadow:0 0 4px #F2C869,0 0 10px rgba(242,200,105,.65)}
+.gst-mw{position:relative;display:block;width:20px;height:28px;overflow:hidden;border-radius:5px;background:#05030F;box-shadow:inset 0 2px 4px rgba(0,0,0,.9),0 0 0 .5px rgba(255,255,255,.09)}
+.gst-mw::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,3,15,.88) 0%,rgba(5,3,15,0) 32%,rgba(5,3,15,0) 68%,rgba(5,3,15,.88) 100%);pointer-events:none}
+.gst-ms{display:block;transition:transform .6s cubic-bezier(.3,1.45,.45,1)}
+.gst-ms i{display:flex;align-items:center;justify-content:center;height:28px;font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#F3EFE6}
+.gst-mg.b .gst-ms i{color:#C9FFDA}.gst-mg.s .gst-ms i{color:#FFD2CB}.gst-mg.o .gst-ms i{color:#FFE9B0}
+.gst-mv{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0}
+.gst-mv0{font-size:11px;color:#9C95D0;white-space:nowrap}
+.gst-dv{width:1px;height:24px;background:rgba(255,255,255,.1);flex-shrink:0}
+.gst-mws{display:flex;gap:2px;flex-shrink:0}
+.gst-mw.v{width:17px}
+.gst-mw.v .gst-ms i{color:#FFD58A;text-shadow:0 0 10px rgba(242,200,105,.45)}
+.gst-mm{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.gst-mm span{font-size:9.5px;color:#C7C0E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62px}
+.gst-lamp{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:16px;padding:0 5px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.gst-absc{position:absolute;right:10px;bottom:8px;z-index:5;font-size:10.5px;color:#9C95D0;pointer-events:none}
+.gst-absc b{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#fff;letter-spacing:.04em;margin-left:2px}
+.gst.def .gst-absc{opacity:0}
+@media (prefers-reduced-motion: reduce){.gst-ms,.gst-pip{transition:none}}

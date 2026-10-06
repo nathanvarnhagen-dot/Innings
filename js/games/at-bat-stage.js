@@ -29,30 +29,67 @@ function _gstPitchName(p) { return (typeof _PAT_NM !== 'undefined' && p && p.cod
 function _gstShortCall(c) { return String(c || '').replace(/^Called Strike$/i, 'Called strike').replace(/^Swinging Strike.*$/i, 'Whiff').replace(/^In play.*$/i, 'In play').replace(/^Foul Tip$/i, 'Foul tip'); }
 function _gstOrd(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 
-// ── right rail: count, last pitch, ABS left
+// ── v7.15.0: the mini rail across the top of the square. B / S / O each
+// get a stack of bulbs and a rolling number wheel; the last pitch's speed
+// rolls on amber wheels at the right end with its call and velo percentile.
+// Every render draws the wheels at the PREVIOUS value and the bulbs as they
+// were, then _gstRailRoll() moves them to the new one, so a change rolls
+// and lights up instead of snapping.
+window._gstLastVelo = window._gstLastVelo || {};
+var _GST_WH = 28; // wheel window height
+function _gstWheel(cls, from, to, max) {
+  var d = ''; for (var i = 0; i <= max; i++) d += '<i>' + i + '</i>';
+  return '<span class="gst-mw' + (cls ? ' ' + cls : '') + '"><span class="gst-ms" style="transform:translateY(' + (-from * _GST_WH) + 'px)"' + (from !== to ? ' data-to="' + (-to * _GST_WH) + '"' : '') + '>' + d + '</span></span>';
+}
+function _gstPips(n, was, slots) {
+  var h = '';
+  for (var i = 0; i < slots; i++) { var on = i < n, w = was == null ? on : i < was; h += '<i class="gst-pip' + (w ? ' on' : '') + '"' + (w !== on ? ' data-on="' + (on ? 1 : 0) + '"' : '') + '></i>'; }
+  return '<span class="gst-pips">' + h + '</span>';
+}
 function _gstRailHtml(s, seq, box) {
-  var b = s.balls != null ? s.balls : 0, k = s.strikes != null ? s.strikes : 0, o = s.outs != null ? Math.min(3, s.outs) : 0;
+  var b = s.balls != null ? Math.min(3, s.balls) : 0, k = s.strikes != null ? Math.min(2, s.strikes) : 0, o = s.outs != null ? Math.min(3, s.outs) : 0;
   var g = window._activeBrowseGame, pk = g ? String(g.gamePk) : '';
   var last = window._gstLastCount[pk] || null;
   window._gstLastCount[pk] = { b: b, k: k, o: o };
-  var row = function (cls, lab, n, slots, changed) {
-    var d = ''; for (var i = 0; i < slots; i++) d += '<i class="' + (i < n ? 'on' : '') + '"></i>';
-    return '<div class="gst-cr ' + cls + '"><span class="gst-cl">' + lab + '</span><span class="gst-cd">' + d + '</span><b class="' + (changed ? 'hit' : '') + '">' + n + '</b></div>';
+  var grp = function (cls, lab, n, was, slots, max) {
+    return '<span class="gst-mg ' + cls + '"><span class="gst-ml">' + lab + '</span>' + _gstPips(n, was, slots) + _gstWheel('', was == null ? n : was, n, max) + '</span>';
   };
-  var h = '<div class="gst-rail" id="gh-rail"><div class="gst-rs" role="group" aria-label="Count: ' + b + ' balls, ' + k + ' strikes, ' + o + (o === 1 ? ' out' : ' outs') + '">' +
-    row('b', 'B', b, 3, last && last.b !== b) + row('s', 'S', k, 2, last && last.k !== k) + row('o', 'O', o, 2, last && last.o !== o) + '</div>';
+  var h = '<div class="gst-mr" role="group" aria-label="Count: ' + b + ' balls, ' + k + ' strikes, ' + o + (o === 1 ? ' out' : ' outs') + '">' +
+    grp('b', 'B', b, last && last.b, 3, 3) + grp('s', 'S', k, last && last.k, 2, 2) + grp('o', 'O', o, last && last.o, 2, 3);
   var ps = (seq && seq.pitches) || [], lp = ps.length ? ps[ps.length - 1] : null;
-  if (lp && (lp.speed != null || lp.mph != null)) {
-    var mph = lp.mph != null ? lp.mph : lp.speed, pc = _gstPct(lp);
-    h += '<div class="gst-rs"><span class="gst-k">Last pitch</span><b class="gst-mph">' + _escapeHtml(String(Math.round(Number(mph)))) + '<small>MPH</small></b>' +
-      '<span class="gst-lt">' + _escapeHtml(_gstPitchName(lp)) + (lp.call ? ' · <span style="color:' + _pitchCallColor(lp.call) + ';filter:brightness(1.25);font-weight:700">' + _escapeHtml(_gstShortCall(lp.call)) + '</span>' : '') + '</span>' +
-      (pc != null ? '<span class="gst-pp" style="background:' + (typeof _savPctColor === 'function' ? _savPctColor(pc) : '#A89FE8') + '">' + _gstOrd(pc) + ' velo</span>' : '') + '</div>';
+  var mph = lp ? (lp.mph != null ? lp.mph : lp.speed) : null;
+  if (mph != null && !isNaN(Number(mph))) {
+    var v = String(Math.round(Number(mph))), pv = window._gstLastVelo[pk];
+    window._gstLastVelo[pk] = v;
+    if (!pv || pv.length !== v.length) pv = v;
+    var wheels = '';
+    for (var i = 0; i < v.length; i++) wheels += _gstWheel('v', Number(pv.charAt(i)), Number(v.charAt(i)), 9);
+    var pc = _gstPct(lp), col = pc != null && typeof _savPctColor === 'function' ? _savPctColor(pc) : null;
+    h += '<span class="gst-mv" aria-label="Last pitch ' + _escapeHtml(v) + ' miles an hour"><span class="gst-dv"></span><span class="gst-mws">' + wheels + '</span>' +
+      '<span class="gst-mm"><span>' + _escapeHtml(_gstPitchName(lp)) + '</span>' + (lp.call ? '<span style="color:' + _pitchCallColor(lp.call) + ';filter:brightness(1.25);font-weight:700">' + _escapeHtml(_gstShortCall(lp.call)) + '</span>' : '') + '</span>' +
+      (col ? '<span class="gst-lamp" style="background:' + col + ';box-shadow:0 0 10px ' + col + '" title="Velo percentile for that pitch type">' + pc + '</span>' : '') + '</span>';
+  } else {
+    h += '<span class="gst-mv gst-mv0"><span class="gst-dv"></span>First pitch coming</span>';
   }
-  var c = box && box.absChallenges;
-  if (c && c.away && c.home && c.away.remaining != null && c.home.remaining != null) {
-    h += '<div class="gst-rs"><span class="gst-k">ABS left</span><b class="gst-abs">' + _escapeHtml(_absAbbr(box, 'away')) + ' ' + c.away.remaining + ' · ' + _escapeHtml(_absAbbr(box, 'home')) + ' ' + c.home.remaining + '</b></div>';
-  }
+  clearTimeout(window._gstRollT);
+  window._gstRollT = setTimeout(_gstRailRoll, 30);
   return h + '</div>';
+}
+function _gstRailRoll() {
+  var st = document.getElementById('gh-stage');
+  if (!st) return;
+  var wheels = st.querySelectorAll('.gst-ms[data-to]'), pips = st.querySelectorAll('.gst-pip[data-on]');
+  if (!wheels.length && !pips.length) return;
+  void st.offsetHeight; // the starting position has to be laid out before it moves
+  requestAnimationFrame(function () {
+    wheels.forEach(function (w) { w.style.transform = 'translateY(' + w.getAttribute('data-to') + 'px)'; w.removeAttribute('data-to'); });
+    pips.forEach(function (p) { p.classList.toggle('on', p.getAttribute('data-on') === '1'); p.removeAttribute('data-on'); });
+  });
+}
+function _gstAbsHtml(box) {
+  var c = box && box.absChallenges;
+  if (!(c && c.away && c.home && c.away.remaining != null && c.home.remaining != null)) return '';
+  return '<div class="gst-absc">ABS left <b>' + _escapeHtml(_absAbbr(box, 'away')) + ' ' + c.away.remaining + ' · ' + _escapeHtml(_absAbbr(box, 'home')) + ' ' + c.home.remaining + '</b></div>';
 }
 
 // ── bottom bar: pitcher | batter, season line + today / vs him
