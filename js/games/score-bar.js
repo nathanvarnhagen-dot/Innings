@@ -110,6 +110,14 @@ function _gshDeskBug() {
   scr.classList.toggle('gsh-dk', on);
   if (on) { if (!bar.innerHTML) bar.innerHTML = _gshBarHtml(); bar.classList.add('on'); }
   else if (desk) { bar.classList.remove('on'); if (window._gshDropOn) gshCloseDrop(); }
+  // v7.23.0: like the phone, the series ribbon and scoreboard tuck away a
+  // couple of seconds in (the bug up top has the score; its arrow brings them back)
+  var panel = document.getElementById('game-sheet-panel');
+  if (desk && panel) {
+    if (!on) _gshUntuck(panel);
+    else if (_gshHeroEls(panel).length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000);
+    else if (window._gshGone) _gshHeroEls(panel).forEach(function (el) { if (!el._gshHiding) el.style.display = 'none'; }); // a re-render brought them back
+  }
 }
 // The top of the cheat sheet: the postseason ribbon (when there is one)
 // down to the bottom of the scoreboard
@@ -188,7 +196,7 @@ function _gshAutoHide() {
   if (!panel) return;
   var els = _gshHeroEls(panel);
   if (!els.length) return;
-  var on = scr && scr.classList.contains('gsh-on') && panel.style.display !== 'none';
+  var on = scr && (scr.classList.contains('gsh-on') || scr.classList.contains('gsh-dk')) && panel.style.display !== 'none';
   var top0 = els[0].offsetTop, last = els[els.length - 1];
   var span = last.offsetTop + last.offsetHeight + (parseFloat(getComputedStyle(last).marginBottom) || 0) - top0;
   var instant = !on || panel.scrollTop > span * 0.5 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
