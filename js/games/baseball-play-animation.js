@@ -231,6 +231,29 @@ function _paKCount(lp, box) {
   var ab = side === 'home' ? (box.homeAbbr || _ghAbbrFallback(box.home)) : (box.awayAbbr || _ghAbbrFallback(box.away));
   return { mine: mine, team: team, reliever: String(starter) !== String(lp.pitcherId), abbr: ab };
 }
+// v7.21.1: the play the way a scorer writes it in the book — F7, L6, P4,
+// F2F (foul), 6-3, 3U (unassisted), 6-4-3 DP, L6 DP, FC 6-4, SF8, SAC 1-3, E6
+function _paScoreMark(lp) {
+  if (!lp) return '';
+  var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '', d = String(lp.description || '');
+  var f = (lp.fielders || []).map(String).filter(function (x) { return /^[1-9]$/.test(x); });
+  var air = /fly_ball|line_drive|popup/.test(tr) || (!tr && /\b(flies|lines|pops)\b/i.test(d));
+  var pre = (/popup/.test(tr) || (!tr && /\bpops\b/i.test(d))) ? 'P' : (/line_drive/.test(tr) || (!tr && /\blines\b/i.test(d))) ? 'L' : 'F';
+  var chain = f.join('-');
+  if (t === 'field_error') return 'E' + (lp.errorPos || f[f.length - 1] || '');
+  if (/^sac_fly/.test(t)) return 'SF' + (f[0] || '') + (/double_play/.test(t) ? ' DP' : '');
+  if (/^sac_bunt/.test(t)) return 'SAC' + (chain ? ' ' + chain : '') + (/double_play/.test(t) ? ' DP' : '');
+  if (/^(fielders_choice|fielders_choice_out|force_out)$/.test(t)) return 'FC' + (chain ? ' ' + chain : '');
+  if (/double_play$/.test(t) || t === 'triple_play') {
+    var tag = t === 'triple_play' ? ' TP' : ' DP';
+    return (air && f.length ? pre + f[0] : chain) + tag;
+  }
+  if (t === 'field_out') {
+    if (air) return f.length ? pre + f[0] + (/foul territory/i.test(d) ? 'F' : '') : '';
+    return f.length === 1 ? f[0] + 'U' : chain;
+  }
+  return '';
+}
 function _paNote2(lp, box, land) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
   var f = lp.fielders || [];
@@ -255,10 +278,7 @@ function _paNote2(lp, box, land) {
       if (r.out && r.outBase) bits.push((r.batter ? 'Batter' : 'Runner') + ' out at ' + _paBaseLabel(r.outBase) + (f.length > 1 ? ' (' + f.join('-') + ')' : ''));
     });
   }
-  else if (t === 'field_out') {
-    var pre = tr === 'fly_ball' ? 'F' : tr === 'line_drive' ? 'L' : tr === 'popup' ? 'P' : '';
-    if (f.length) bits.push(pre && f.length === 1 ? pre + f[0] : f.join('-'));
-  } else if (t === 'field_error') { if (lp.errorPos) bits.push('E' + lp.errorPos); }
+  else if (t !== 'strikeout' && t !== 'strikeout_double_play' && _paScoreMark(lp)) bits.push(_paScoreMark(lp)); // v7.21.1: scorebook marks
   else if (f.length > 1) bits.push(f.join('-'));
   if (scoreNote) bits.push(scoreNote);
   if (outsNote) bits.push(outsNote);

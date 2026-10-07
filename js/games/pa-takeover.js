@@ -103,7 +103,7 @@ function _bbPaTakeoverHtml(lp, box, s, Es, showField, tT) {
   else if (tier.kind === 'hit') { var ld = typeof _paLanding === 'function' ? _paLanding(lp) : null; who += (lp.rbi ? ' · ' + lp.rbi + ' RBI' : '') + (ld && typeof _paDir === 'function' ? ' · to ' + _paDir(ld.ang) : ''); }
   else if (tier.kind === 'k') { var lpk = _patLastPitch(lp), looking = lpk && /called/i.test(lpk.call || ''); who = (lp.pitcher ? _patLast(lp.pitcher) + ' gets ' : '') + bat + (looking ? ' looking' : ' swinging'); }
   else if (tier.kind === 'walk') { var n = (lp.pitches || []).length; who += n ? ' · ' + n + '-pitch walk' : ''; }
-  else if (tier.kind === 'out') { var f = (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; }
+  else if (tier.kind === 'out') { var f = typeof _paScoreMark === 'function' ? _paScoreMark(lp) : (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; } // v7.21.1: as a scorer writes it
   var spray = (showField && lp.hit) ? _patSpraySvg(lp, t2) : '';
   // v7.11.2: wait for the whole play (throws, double plays, runners) to finish,
   // plus a beat to read the result title, before the takeover comes in
@@ -455,7 +455,7 @@ function _patTodayPlays(id) {
 function _patShort(a) {
   var t = a.eventType || '';
   return { single: '1B', double: '2B', triple: '3B', home_run: 'HR', walk: 'BB', intent_walk: 'IBB', hit_by_pitch: 'HBP', strikeout: 'K', strikeout_double_play: 'K' }[t] ||
-    ((a.fielders || []).length ? a.fielders.join('-') : (typeof _paTitle === 'function' ? _paTitle(a) : t));
+    ((typeof _paScoreMark === 'function' && _paScoreMark(a)) || ((a.fielders || []).length ? a.fielders.join('-') : (typeof _paTitle === 'function' ? _paTitle(a) : t)));
 }
 function _patTodayHtml(id) {
   var plays = _patTodayPlays(id);
@@ -539,7 +539,7 @@ function _patHoldInfo(lp, box) {
   else if (tier.kind === 'hit') who += lp.rbi ? ' · ' + lp.rbi + ' RBI' : '';
   else if (tier.kind === 'k') { var lpk = _patLastPitch(lp), looking = lpk && /called/i.test(lpk.call || ''); who = (lp.pitcher ? _patLast(lp.pitcher) + ' gets ' : '') + bat + (looking ? ' looking' : ' swinging'); }
   else if (tier.kind === 'walk') { var n = (lp.pitches || []).length; who += n ? ' · ' + n + '-pitch walk' : ''; }
-  else if (tier.kind === 'out') { var f = (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; }
+  else if (tier.kind === 'out') { var f = typeof _paScoreMark === 'function' ? _paScoreMark(lp) : (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; } // v7.21.1: as a scorer writes it
   // v7.20.0: the team on top in small type, the play under it in big type
   // (outs go to the fielding team, like strikeouts go to the pitcher's;
   // a sac fly or bunt is the batting team's)
