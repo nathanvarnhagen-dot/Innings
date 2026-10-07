@@ -170,6 +170,32 @@ var _GST_DPOS = { P: [250, 290], C: [250, 372], '1B': [312, 262], '2B': [288, 22
 var _GST_VB = [24, 66, 452, 344]; // the cropped field, same aspect as the square
 // v7.14.2: each name sits right behind its fielder — straight out from
 // home plate (the pitcher's toward second, the catcher's toward the backstop)
+// ── Gold Gloves (v7.30.0): a gold glove next to a fielder's name on the defense
+// view for every one he has won — with the number when it's more than one.
+window._gstGG = window._gstGG || {};
+function _gstGgHtml(id) {
+  var n = window._gstGG[String(id)];
+  if (!n) return '';
+  return '<span class="gst-gg" title="' + n + ' Gold Glove' + (n > 1 ? 's' : '') + '" aria-label="' + n + ' Gold Glove' + (n > 1 ? 's' : '') + '"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M7 21v-4.5L4.5 12l1.6-1.1L8 12V5.5a1.3 1.3 0 0 1 2.6 0V10h.4V4a1.3 1.3 0 0 1 2.6 0v6h.4V4.8a1.3 1.3 0 0 1 2.6 0V11h.4V7.5a1.3 1.3 0 0 1 2.6 0V15c0 3-2 6-5.5 6z" fill="#E8C766" stroke="#8a6a12" stroke-width=".8" stroke-linejoin="round"/></svg>' + (n > 1 ? '<b>' + n + '</b>' : '') + '</span>';
+}
+function _gstGgLoad(ids) {
+  var need = (ids || []).filter(function (x) { return x && window._gstGG[String(x)] === undefined; }).map(String);
+  if (!need.length || window._gstGgBusy) return;
+  window._gstGgBusy = true;
+  fetch('/api/mlb?mode=goldgloves&ids=' + need.join(','))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var g = (d && d.gold) || {};
+      need.forEach(function (id) { window._gstGG[id] = g[id] || 0; });
+      document.querySelectorAll('.gst-fl[data-id]').forEach(function (b) {
+        if (b.querySelector('.gst-gg')) return;
+        var h = _gstGgHtml(b.getAttribute('data-id'));
+        if (h) b.insertAdjacentHTML('beforeend', h);
+      });
+    })
+    .catch(function () { /* no gloves shown; try again next refresh */ })
+    .then(function () { window._gstGgBusy = false; });
+}
 var _GST_BEHIND = 27;
 function _gstDefenseHtml(box) {
   var d = box && box.matchup && box.matchup.defense;
@@ -187,8 +213,9 @@ function _gstDefenseHtml(box) {
     var bx = xy[0] + vx / len * _GST_BEHIND, by = xy[1] + vy / len * (pos === 'C' ? 22 : _GST_BEHIND);
     if (pos === 'SS') bx -= 16; if (pos === '2B') bx += 16; // middle infielders' names lean apart
     var lx = (bx - _GST_VB[0]) / _GST_VB[2] * 100, ly = (by - _GST_VB[1]) / _GST_VB[3] * 100;
-    labels += '<button type="button" class="gst-fl" style="left:' + lx.toFixed(1) + '%;top:' + ly.toFixed(1) + '%" data-name="' + _escapeHtml(pl.name || '') + '" data-id="' + _escapeHtml(String(pl.id)) + '" data-league="mlb" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id,this.dataset.league)"><small>' + pos + '</small>' + _escapeHtml(_ghLastName(pl.name || '').replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/i, '')) + '</button>';
+    labels += '<button type="button" class="gst-fl" style="left:' + lx.toFixed(1) + '%;top:' + ly.toFixed(1) + '%" data-name="' + _escapeHtml(pl.name || '') + '" data-id="' + _escapeHtml(String(pl.id)) + '" data-league="mlb" onclick="openPlayerLinkSheet(this.dataset.name,this.dataset.id,this.dataset.league)"><small>' + pos + '</small>' + _escapeHtml(_ghLastName(pl.name || '').replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/i, '')) + _gstGgHtml(pl.id) + '</button>';
   });
+  _gstGgLoad(Object.keys(_GST_DPOS).map(function (k) { return d[k] && d[k].id; }));
   return '<div class="gst-def" id="gh-def" aria-label="' + _escapeHtml(abbr) + ' defense"><svg viewBox="' + _GST_VB.join(' ') + '" preserveAspectRatio="none" aria-hidden="true">' + _gstFieldSvgInner() + dots + '</svg>' + labels + '</div>';
 }
 function _gstFieldSvgInner() {

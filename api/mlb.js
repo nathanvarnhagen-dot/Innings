@@ -206,6 +206,30 @@ module.exports = async function handler(req, res) {
 
     // Team page (v5.65.0): header info, active roster and the whole
     // season's schedule (regular season + postseason) for one team.
+    // GET /api/mlb?mode=goldgloves&ids=1,2,3  (v7.30.0)
+    // How many Gold Gloves each player has won ({ "605141": 2, ... }; players
+    // with none are left out). Awards rarely change, so this is cached a day.
+    if (mode === 'goldgloves') {
+      const ids = String(req.query.ids || '').split(',').map(function (x) { return x.trim(); }).filter(function (x) { return /^\d+$/.test(x); }).slice(0, 12);
+      const out = {};
+      await Promise.all(ids.map(async function (id) {
+        try {
+          const r = await fetch('https://statsapi.mlb.com/api/v1/people/' + id + '/awards');
+          const d = await r.json();
+          const seen = {};
+          (d.awards || []).forEach(function (a) {
+            const nm = String((a && a.name) || ''), aid = String((a && a.id) || '');
+            if ((/gold\s*glove/i.test(nm) && !/platinum/i.test(nm)) || /^(AL|NL)GG$/.test(aid)) seen[(a.season || '') + ':' + aid + nm] = 1;
+          });
+          const n = Object.keys(seen).length;
+          if (n) out[id] = n;
+        } catch (e) { /* leave this player out */ }
+      }));
+      res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json({ gold: out });
+      return;
+    }
+
     if (mode === 'team') {
       const teamId = Number(req.query.teamId);
       if (!teamId) { res.status(400).json({ error: 'Missing teamId' }); return; }
