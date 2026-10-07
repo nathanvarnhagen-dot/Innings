@@ -167,9 +167,32 @@ function _gdlPaintAll() {
   if (window._gshDropOn) _gdlRow();
 }
 
+// v7.28.2: MLB's count arrives a beat before the pitch that made it. The count
+// shown is worked out from the pitches on hand, so the two land together.
+function _gdlCountFrom(ps, s) {
+  var b = 0, k = 0, n = 0;
+  (ps || []).forEach(function (p) {
+    var c = String(p && p.call || '').toLowerCase();
+    if (!c) return;
+    n++;
+    if (c.indexOf('in play') !== -1 || c.indexOf('hit by pitch') !== -1) return;
+    if (c.indexOf('ball') !== -1 && c.indexOf('foul') === -1) b++;
+    else if (c.indexOf('foul') !== -1 && c.indexOf('tip') === -1 && c.indexOf('bunt') === -1) { if (k < 2) k++; }
+    else k++;
+  });
+  if (!n) return { balls: s.balls || 0, strikes: s.strikes || 0 };
+  return { balls: Math.min(3, b), strikes: Math.min(2, k) };
+}
+function _gdlSitSynced(box) {
+  var s = (box && box.situation) || {}, seq = box && box.pitchSequence;
+  if (!seq || s.inningState === 'Middle' || s.inningState === 'End') return s;
+  var c = _gdlCountFrom(seq.pitches, s);
+  return Object.assign({}, s, { balls: c.balls, strikes: c.strikes });
+}
+
 // ── the live count, in the dropdown (v7.27.1)
 function _gdlLiveInner() {
-  var b = window._lastLiveBox, s = (b && b.situation) || {}, seq = b && b.pitchSequence, ps = (seq && seq.pitches) || [], p = ps.length ? ps[ps.length - 1] : null;
+  var b = window._lastLiveBox, s = _gdlSitSynced(b), seq = b && b.pitchSequence, ps = (seq && seq.pitches) || [], p = ps.length ? ps[ps.length - 1] : null;
   var E = _escapeHtml, now = Date.now(), g = window._gdl;
   var n = function (k, v, c) { return '<span class="gdl-ct"><i>' + k + '</i><b style="color:' + c + '">' + (v != null ? v : 0) + '</b></span>'; };
   var brk = s.inningState === 'Middle' || s.inningState === 'End';
@@ -419,6 +442,11 @@ function _gdlCalTry() {
   }
   var panel = document.getElementById('game-sheet-panel');
   if (panel) panel._ptrWords = function () { return _gdlOn() && _gdlLive() ? { pull: 'Pull to catch up', release: 'Let go to see it now', busy: 'Catching up…' } : null; };
+  // the count rail over the square, and the score bug: the same synced count
+  if (typeof _gstRailHtml === 'function') {
+    var prevRail = _gstRailHtml;
+    _gstRailHtml = function (s, seq, box) { return prevRail.call(this, _gdlSitSynced(box || { situation: s, pitchSequence: seq }), seq, box); };
+  }
   // the tag under the score bug
   if (typeof _gshBarHtml === 'function') {
     var prevBar = _gshBarHtml;
