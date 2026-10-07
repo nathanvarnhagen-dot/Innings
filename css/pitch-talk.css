@@ -7,20 +7,28 @@
 .pt-rx.hit{animation:ptHit .42s cubic-bezier(.3,1.6,.5,1)}
 .pt-rx:focus-visible,.pt-cm:focus-visible,.pt-zd:focus-visible,.rp-i:focus-visible{outline:2px solid #F2D98A;outline-offset:2px}
 .pt-cm{margin-left:auto;flex-shrink:0;height:38px;padding:0 13px;border:0;border-radius:19px;background:var(--t2,#A89FE8);color:var(--t1,#17122F);font-family:inherit;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
-/* on the result card */
-.pah .ft.pt-ft{gap:6px}
-.pah .pt-rx,.pah .pt-cm,.pah .rp-i{pointer-events:auto}
+/* on the result card (v7.24.0: no footer — double-tap the card) */
+.pah .rp-i{pointer-events:auto}
+.pah.pah-pt{pointer-events:auto;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.pah .smr{display:flex;align-items:center;gap:8px;min-width:0;min-height:14px}
+.pah .smr .sm{flex-shrink:0}
+.pt-sum{position:relative;flex-shrink:0;height:22px;margin:-4px 0;padding:0 8px 0 6px;border:0;border-radius:11px;background:rgba(5,3,14,.45);box-shadow:0 0 0 1px rgba(255,255,255,.16);color:#fff;font-family:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer;animation:pahSlide .4s ease calc(var(--t0) + .36s) both;-webkit-tap-highlight-color:transparent}
+.pt-sum::before{content:'';position:absolute;left:-4px;right:-4px;top:-11px;bottom:-11px}
+.pt-sum:empty{display:none}
+.pt-sum.pop{animation:ptHit .42s cubic-bezier(.3,1.6,.5,1)}
+.pt-se{font-size:13px;line-height:1;letter-spacing:-1px}
+.pt-sum b{font-size:11.5px;font-weight:800;line-height:1}
+.pt-sum svg{display:block;flex-shrink:0}
+.pt-dv{width:1px;height:11px;margin:0 2px;background:rgba(255,255,255,.28)}
+.pt-sum:focus-visible{outline:2px solid #F2D98A;outline-offset:2px}
+.pt-hint{min-width:0;font-size:10.5px;font-weight:700;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .4s ease calc(var(--t0) + .36s) both}
+.pt-sum:not(:empty)~.pt-hint{display:none}
+.pt-kb{position:absolute;left:10px;bottom:10px;z-index:3;height:36px;padding:0 13px;border:0;border-radius:18px;background:#F2D98A;color:#17122F;font-family:inherit;font-size:12.5px;font-weight:800;opacity:0;pointer-events:none}
+.pt-kb:focus-visible{opacity:1;pointer-events:auto;outline:2px solid #fff;outline-offset:2px}
 .pah .mini{position:relative}
 .pah .rp-i{position:absolute;right:-8px;bottom:-8px;width:40px;height:40px;padding:0;border:0;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pah .top>.rp-i{position:static;margin:-6px -6px 0 0}
 .pah .rp-i span{width:28px;height:28px;border-radius:50%;background:rgba(5,3,14,.62);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
-.pah.pah-talk .ct{gap:6px}
-.pah.pah-talk .tiles{gap:5px}
-.pah.pah-talk .tile{padding:5px 8px 6px}
-.pah.pah-talk .tp{margin-top:4px}
-.pah .pt-ft .pt-rx,.pah .pt-ft .pt-cm{height:36px}
-.pah .pt-ft .pt-rx{min-width:38px;padding:0 8px;font-size:17px}
-.pah .pt-ft{animation:pahRise .4s ease calc(var(--t0) + 1.05s) both}
 /* the pitches: tappable dots over the zone, and counts */
 .pt-zone{position:absolute;inset:0;z-index:4;pointer-events:none}
 #gh-pa-slot:not(:empty)~.pt-zone,.gst.def .pt-zone{display:none}
@@ -92,4 +100,4 @@
 
 @keyframes ptHit{0%{transform:scale(1)}40%{transform:scale(1.32)}100%{transform:scale(1)}}
 @keyframes ptTm{from{transform:scaleX(1)}to{transform:scaleX(0)}}
-@media (prefers-reduced-motion:reduce){.pt-card,.pt-scrim,.pt-qb,.pt-rx{transition:none}.pt-rx.hit,.pt-qb-tm{animation:none}}
+@media (prefers-reduced-motion:reduce){.pt-card,.pt-scrim,.pt-qb,.pt-rx{transition:none}.pt-rx.hit,.pt-qb-tm,.pt-sum.pop{animation:none}}

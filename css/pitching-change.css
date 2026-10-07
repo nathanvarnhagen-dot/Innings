@@ -1,0 +1,42 @@
+/* ══ PITCHING CHANGE (v7.24.0) — js/games/pitching-change.js ══ */
+.pcx{position:absolute;inset:0;z-index:7;overflow:hidden;display:flex;flex-direction:column;padding:10px 12px 11px;color:#fff;background:radial-gradient(120% 90% at 50% 40%,#231C4D 0%,#130E2C 72%);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;animation:pcxIn .35s ease var(--t0) both}
+.gst.def #gh-pa-slot .pcx{display:none}
+.pcx-hd{display:flex;align-items:center;gap:8px;min-height:28px;animation:pcxRise .35s ease calc(var(--t0) + .1s) both}
+.pcx-ey{flex-shrink:0;font-size:10.5px;font-weight:900;letter-spacing:.3em;color:#F2D98A}
+.pcx-sit{margin-left:auto;min-width:0;font-size:11.5px;font-weight:700;color:#B9B3E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcx-rp{flex-shrink:0;width:40px;height:40px;margin:-6px -8px -6px -6px;padding:0;border:0;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
+.pcx-rp span{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);box-shadow:0 0 0 1px rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.pcx-rp:focus-visible{outline:2px solid #F2D98A;outline-offset:-4px;border-radius:50%}
+.pcx-row{position:relative;display:flex;align-items:center;gap:11px;min-width:0;padding:9px 11px;border-radius:14px}
+.pcx-o{margin-top:8px;background:#1D1840;border:1px solid rgba(255,255,255,.1);animation:pcxRise .4s ease calc(var(--t0) + .2s) both,pcxDim .5s ease calc(var(--t0) + 1.1s) forwards}
+.pcx-i{background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 60%,var(--tdark) 100%);border:1px solid var(--t2a);animation:pcxUp .5s cubic-bezier(.22,1,.36,1) calc(var(--t0) + 1.75s) both,pcxGlow 2.4s ease-in-out calc(var(--t0) + 2.4s) infinite}
+.pcx-av{width:38px;height:38px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700}
+.pcx-o .pcx-av{background:#2A2257;color:#CFC7FF}
+.pcx-i .pcx-av{background:var(--t2);color:var(--t1)}
+.pcx-w{flex:1;min-width:0;padding-right:34px}
+.pcx-nm{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcx-nm small{margin-left:6px;font-size:13.5px;color:var(--t2)}
+.pcx-l1{margin-top:3px;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcx-l2{margin-top:1px;font-size:11.5px;color:#B9B3E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcx-i .pcx-l2{color:rgba(255,255,255,.84)}
+.pcx-tag{position:absolute;right:9px;top:9px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;letter-spacing:.18em}
+.pcx-o .pcx-tag{background:rgba(229,72,77,.2);color:#FF8A8E;animation:pcxStamp .35s cubic-bezier(.3,1.6,.5,1) calc(var(--t0) + 1.05s) both}
+.pcx-i .pcx-tag{background:rgba(123,227,166,.2);color:#8EF0B6;animation:pcxStamp .35s cubic-bezier(.3,1.6,.5,1) calc(var(--t0) + 2.05s) both}
+.pcx-ar{display:block;flex-shrink:0;margin:1px 0 1px 19px}
+.pcx-ar path{stroke-dasharray:24;stroke-dashoffset:24;animation:pcxDraw .45s ease calc(var(--t0) + 1.3s) forwards}
+.pcx-ar .hd{stroke-dasharray:none;stroke-dashoffset:0;opacity:0;animation:pcxShow .2s ease calc(var(--t0) + 1.65s) forwards}
+.pcx-ch{display:flex;flex-wrap:wrap;gap:6px;max-height:34px;margin-top:auto;padding-top:8px;overflow:hidden}
+.pcx-ch span{padding:4px 9px;border-radius:9px;background:rgba(255,255,255,.07);font-size:11.5px;font-weight:700;color:#D9D4FA;white-space:nowrap;animation:pcxRise .4s ease both}
+.pcx-ch span.hi{background:var(--t2s);color:#fff}
+.pcx-ch span:nth-child(1){animation-delay:calc(var(--t0) + 2.35s)}
+.pcx-ch span:nth-child(2){animation-delay:calc(var(--t0) + 2.45s)}
+.pcx-ch span:nth-child(3){animation-delay:calc(var(--t0) + 2.55s)}
+@keyframes pcxIn{from{opacity:0}}
+@keyframes pcxRise{from{opacity:0;transform:translateY(8px)}}
+@keyframes pcxUp{from{opacity:0;transform:translateY(22px) scale(.97)}}
+@keyframes pcxDim{to{opacity:.55;filter:saturate(.4)}}
+@keyframes pcxStamp{from{opacity:0;transform:scale(1.8) rotate(-8deg)}}
+@keyframes pcxDraw{to{stroke-dashoffset:0}}
+@keyframes pcxShow{to{opacity:1}}
+@keyframes pcxGlow{50%{box-shadow:0 0 0 1px var(--t2a),0 0 22px var(--t2g)}}
+@media (prefers-reduced-motion:reduce){.pcx,.pcx *{animation:none!important}.pcx-o{opacity:.55;filter:saturate(.4)}.pcx-ar path{stroke-dashoffset:0}.pcx-ar .hd{opacity:1}}

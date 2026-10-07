@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.23.0-pitch-talk';
+window.INNINGS_BUILD = 'v7.24.0-pitching-change';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

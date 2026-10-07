@@ -4,8 +4,10 @@
 //   everyone's said about it, and a box to add yours. Comments go to the
 //   game chat with the pitch attached; a pitch people talked about carries
 //   a small count.
-// · When an at-bat ends, the result card's footer is reactions plus
-//   Comment. On any other tab a quick bar slides up with the same.
+// · When an at-bat ends, double-tap the result card (v7.24.0): it lifts,
+//   iPhone style, with the reactions above it and Comment / Replay below.
+//   What people did shows as a small pill next to the team on the card.
+//   On any other tab a quick bar slides up with reactions and Comment.
 // · Reactions use the same store as reacting to a play in the Plays tab
 //   (gamePlayReactions, one per person), so the two always agree. An
 //   at-bat is <gamePk>_<atBatIndex>; a pitch is that plus _p<num>.
@@ -89,24 +91,29 @@ function _ptPaintReacts(key) {
     var set = el.getAttribute('data-ptset') === 'pitch' ? PT_PITCH_RX : PT_AB_RX;
     el.innerHTML = _ptRailInner(key, set);
   });
+  _ptPaintSums(key);
 }
-// tap a reaction: one per person; the same one again takes it back
-function ptReact(btn) {
-  var rail = btn && btn.closest('[data-ptkey]');
-  if (!rail) return;
-  var key = rail.getAttribute('data-ptkey'), e = btn.getAttribute('data-e'), me = _ptUser();
-  if (!me || !window.db || typeof firebase === 'undefined') { if (typeof ib_toast === 'function') ib_toast('Sign in to react'); return; }
+// set or take back a reaction: one per person; the same one again takes it back
+function _ptSetReact(key, e, tag, text) {
+  var me = _ptUser();
+  if (!me || !window.db || typeof firebase === 'undefined') { if (typeof ib_toast === 'function') ib_toast('Sign in to react'); return null; }
   var cur = Object.assign({}, window._ptReacts[key] || {}), off = cur[me.uid] === e;
   if (off) delete cur[me.uid]; else cur[me.uid] = e;
   window._ptReacts[key] = cur;
   _ptPaintReacts(key);
-  if (!off) { btn = rail.querySelector('[data-e="' + e + '"]'); if (btn) { btn.classList.remove('hit'); void btn.offsetWidth; btn.classList.add('hit'); } }
   var upd = {}; upd[me.uid] = off ? firebase.firestore.FieldValue.delete() : e;
   window.db.collection('gamePlayReactions').doc(key).set({ reactions: upd }, { merge: true }).then(function () {
     if (off || typeof _gcPostPlayReaction !== 'function') return;
-    var tag = rail.getAttribute('data-pttag') || '', text = rail.getAttribute('data-pttext') || '';
-    _gcPostPlayReaction({ tag: tag, text: text, playId: key }, e);
+    _gcPostPlayReaction({ tag: tag || '', text: text || '', playId: key }, e);
   }).catch(function (err) { console.error('[pitch talk] react', err); if (typeof ib_toast === 'function') ib_toast('Could not react — try again'); });
+  return !off;
+}
+function ptReact(btn) {
+  var rail = btn && btn.closest('[data-ptkey]');
+  if (!rail) return;
+  var key = rail.getAttribute('data-ptkey'), e = btn.getAttribute('data-e');
+  var added = _ptSetReact(key, e, rail.getAttribute('data-pttag') || '', rail.getAttribute('data-pttext') || '');
+  if (added) { btn = rail.querySelector('[data-e="' + e + '"]'); if (btn) { btn.classList.remove('hit'); void btn.offsetWidth; btn.classList.add('hit'); } }
 }
 function _ptRailHtml(key, kind, tag, text) {
   return '<span class="pt-rail" data-ptkey="' + _escapeHtml(key) + '" data-ptset="' + kind + '" data-pttag="' + _escapeHtml(tag || '') + '" data-pttext="' + _escapeHtml(text || '') + '">' + _ptRailInner(key, kind === 'pitch' ? PT_PITCH_RX : PT_AB_RX) + '</span>';
@@ -116,13 +123,173 @@ function _ptRailHtml(key, kind, tag, text) {
 function _ptPitchComments(key) { return _ptMsgs().filter(function (m) { return m && m.replyTo && m.replyTo.pitch && m.replyTo.pitch.key === key; }); }
 function _ptAbComments(key) { return _ptMsgs().filter(function (m) { return m && m.replyTo && !m.replyTo.pitch && m.replyTo.play && m.replyTo.play.playId === key; }); }
 
-// ── the result card's footer (pa-takeover.js calls this)
-function _ptCardFooterHtml(lp, box) {
+// ── the result card (pa-takeover.js calls _ptCardBits) — v7.24.0: no
+// footer. Double-tap the card; the pill shows what's been said and done.
+var PT_BUBBLE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+function _ptSumData(key) {
+  var map = window._ptReacts[key] || {}, n = {}, tot = 0;
+  Object.keys(map).forEach(function (u) { n[map[u]] = (n[map[u]] || 0) + 1; tot++; });
+  return { top: Object.keys(n).sort(function (a, b) { return n[b] - n[a]; }).slice(0, 3), tot: tot, c: _ptAbComments(key).length };
+}
+function _ptSumInner(key) {
+  var d = _ptSumData(key), h = '';
+  if (d.tot) h += '<span class="pt-se">' + d.top.join('') + '</span><b>' + d.tot + '</b>';
+  if (d.c) h += (d.tot ? '<i class="pt-dv"></i>' : '') + PT_BUBBLE + '<b>' + d.c + '</b>';
+  return h;
+}
+function _ptSumLabel(key) {
+  var d = _ptSumData(key);
+  return [d.tot ? d.tot + (d.tot === 1 ? ' reaction' : ' reactions') : '', d.c ? d.c + (d.c === 1 ? ' comment' : ' comments') : ''].filter(Boolean).join(', ') + ' — open';
+}
+function _ptPaintSums(key) {
+  document.querySelectorAll('[data-ptsum]').forEach(function (el) {
+    var k = el.getAttribute('data-ptsum');
+    if (key && k !== key) return;
+    var h = _ptSumInner(k);
+    if (el.innerHTML === h) return;
+    var grew = h.length > el.innerHTML.length;
+    el.innerHTML = h;
+    el.setAttribute('aria-label', _ptSumLabel(k));
+    if (grew) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  });
+}
+function _ptHintOn() { try { return !localStorage.getItem('innings_pt_dt'); } catch (e) { return false; } }
+function _ptCardBits(lp, box) {
   var ab = _ptAbInfo(box, lp);
-  if (!ab) return '';
-  var n = _ptAbComments(ab.key).length;
-  return '<div class="ft pt-ft">' + _ptRailHtml(ab.key, 'ab', ab.tag, ab.text) +
-    '<button type="button" class="pt-cm" onclick="event.stopPropagation();ptOpenAb(\'' + _escapeHtml(ab.abi) + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Comment' + (n ? ' · ' + n : '') + '</button></div>';
+  if (!ab) return null;
+  var A = _escapeHtml(ab.abi);
+  return {
+    attrs: ' data-ptab="' + A + '" onclick="_ptCardTap(this,event)"',
+    sum: '<button type="button" class="pt-sum" data-ptsum="' + _escapeHtml(ab.key) + '" aria-label="' + _escapeHtml(_ptSumLabel(ab.key)) + '" onclick="event.stopPropagation();ptOpenAb(\'' + A + '\')">' + _ptSumInner(ab.key) + '</button>' +
+      (_ptHintOn() ? '<span class="pt-hint" aria-hidden="true">Double-tap to react</span>' : ''),
+    kb: '<button type="button" class="pt-kb" onclick="event.stopPropagation();_ptSpotFrom(this)">React or comment</button>'
+  };
+}
+// two taps within 400ms, like a message in the chat (a double-click on a laptop)
+function _ptCardTap(card, ev) {
+  if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+  var k = card.getAttribute('data-ptab'), now = Date.now(), L = window._ptLastTap;
+  if (L && L.k === k && now - L.t < 400) { window._ptLastTap = null; _ptSpot(card); }
+  else window._ptLastTap = { k: k, t: now };
+}
+function _ptSpotFrom(btn) { var c = btn && btn.closest('.pah'); if (c) _ptSpot(c, true); }
+
+// The card lifts out of a blur, the reactions spring out above it and a
+// menu (Comment, Replay) opens below — the chat's double-tap, for an at-bat.
+var PT_MI = {
+  comment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  replay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+function _ptSpot(card, viaKey) {
+  var abi = card.getAttribute('data-ptab'), box = _ptBox(), ab = _ptAtBat(box, abi);
+  var info = ab && ab.play ? _ptAbInfo(box, ab.play) : null;
+  if (!info) return;
+  try { localStorage.setItem('innings_pt_dt', '1'); } catch (e) {}
+  document.querySelectorAll('.pah .pt-hint').forEach(function (h) { h.remove(); });
+  var r = card.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+  if (typeof window._msSnapshot !== 'function' || !r.width || r.bottom < 0 || r.top > vh) { ptOpenAb(abi); return; }
+  _ptSpotKill();
+  var ms = document.createElement('div');
+  ms.id = 'pt-spot';
+  ms.className = 'ms pt-ms';
+  ms.setAttribute('role', 'dialog');
+  ms.setAttribute('aria-modal', 'true');
+  ms.setAttribute('aria-label', 'React or comment on ' + (_ptLastName(info.batter) ? _ptLastName(info.batter) + '’s at-bat' : 'this at-bat'));
+  var veil = document.createElement('div');
+  veil.className = 'ms-veil';
+  ms.appendChild(veil);
+  var lift = window._msSnapshot(card);
+  lift.classList.add('ms-lift');
+  var L = lift.style;
+  L.position = 'absolute'; L.left = r.left + 'px'; L.top = r.top + 'px'; L.width = r.width + 'px'; L.height = r.height + 'px';
+  L.margin = '0'; L.inset = 'auto'; L.right = 'auto'; L.bottom = 'auto'; L.left = r.left + 'px'; L.top = r.top + 'px';
+  L.borderRadius = '16px'; L.overflow = 'hidden'; L.clipPath = 'none'; L.boxSizing = 'border-box'; L.pointerEvents = 'none'; L.visibility = 'visible';
+  L.transition = 'transform .5s cubic-bezier(.32,1.35,.5,1)'; L.transformOrigin = '50% 50%';
+  ms.appendChild(lift);
+  var me = _ptUser(), mine = me ? (window._ptReacts[info.key] || {})[me.uid] : null;
+  var tb = document.createElement('div');
+  tb.className = 'ms-tb';
+  tb.setAttribute('role', 'group');
+  tb.setAttribute('aria-label', 'React');
+  tb.innerHTML = PT_AB_RX.map(function (e, i) {
+    return '<button type="button" data-e="' + e + '" class="' + (mine === e ? 'on' : '') + '" aria-pressed="' + (mine === e) + '" style="--d:' + (0.04 + i * 0.03).toFixed(2) + 's" aria-label="' + (PT_RX_LABEL[e] || e) + '">' + e + '</button>';
+  }).join('');
+  ms.appendChild(tb);
+  var n = _ptAbComments(info.key).length;
+  var menu = document.createElement('div');
+  menu.className = 'ms-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = '<button type="button" role="menuitem" class="ms-mi" data-k="comment"><span>' + (n ? 'Comment · ' + n : 'Comment') + '</span>' + PT_MI.comment + '</button>' +
+    '<button type="button" role="menuitem" class="ms-mi" data-k="replay"><span>Replay</span>' + PT_MI.replay + '</button>';
+  ms.appendChild(menu);
+  document.body.appendChild(ms);
+
+  // tapback above, menu below, the card nudged so all three fit
+  var GAP = 10, TOP = 54, BOTTOM = vh - 20, EDGE = 10;
+  var tbH = tb.offsetHeight + 8, tbW = tb.offsetWidth, mH = menu.offsetHeight, mW = menu.offsetWidth, shift = 0;
+  var tbTop = r.top - GAP - tbH;
+  if (tbTop < TOP) shift = TOP - tbTop;
+  var mTop = r.bottom + GAP + shift;
+  if (mTop + mH > BOTTOM) shift -= Math.min(mTop + mH - BOTTOM, Math.max(0, r.top + shift - TOP - tbH - GAP));
+  tbTop = r.top + shift - GAP - tbH;
+  mTop = Math.min(r.bottom + shift + GAP, BOTTOM - mH);
+  var tbLeft = Math.max(EDGE, Math.min(vw - EDGE - tbW, r.left + 14));
+  var mLeft = Math.max(EDGE, Math.min(vw - EDGE - mW, r.right - mW - 6));
+  tb.style.left = tbLeft + 'px'; tb.style.top = tbTop + 'px';
+  menu.style.left = mLeft + 'px'; menu.style.top = mTop + 'px';
+  var tailX = Math.max(18, Math.min(tbW - 18, r.left + 40 - tbLeft));
+  tb.style.setProperty('--tail', tailX + 'px');
+  tb.style.transformOrigin = tailX + 'px 100%';
+  menu.style.transformOrigin = (r.right - mLeft - 20) + 'px 0';
+  ms._src = card;
+  card.style.visibility = 'hidden';
+  void ms.offsetWidth;
+  ms.classList.add('on');
+  L.transform = 'translateY(' + shift + 'px) scale(1.025)';
+  if (typeof window._msHaptic === 'function') window._msHaptic();
+  _ptWatch(info.key);
+
+  veil.addEventListener('click', _ptSpotClose);
+  ms.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  tb.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-e]');
+    if (!b || ms._closing) return;
+    b.classList.add('hit');
+    if (typeof window._msHaptic === 'function') window._msHaptic();
+    setTimeout(function () { _ptSetReact(info.key, b.getAttribute('data-e'), info.tag, info.text); _ptSpotClose(); }, 150);
+  });
+  menu.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-k]');
+    if (!b || ms._closing) return;
+    var k = b.getAttribute('data-k');
+    _ptSpotClose();
+    if (k === 'comment') ptOpenAb(abi);
+    else if (k === 'replay' && typeof patReplayLive === 'function') patReplayLive();
+  });
+  ms._key = function (e) { if (e.key === 'Escape') _ptSpotClose(); };
+  document.addEventListener('keydown', ms._key);
+  if (viaKey) { var f = tb.querySelector('button'); if (f) setTimeout(function () { try { f.focus(); } catch (e) {} }, 60); }
+}
+function _ptSpotClose() {
+  var ms = document.getElementById('pt-spot');
+  if (!ms || ms._closing) return;
+  ms._closing = true;
+  ms.classList.remove('on');
+  ms.classList.add('off');
+  var lift = ms.querySelector('.ms-lift');
+  if (lift) { lift.style.transition = 'transform .3s cubic-bezier(.3,.7,.4,1)'; lift.style.transform = 'none'; }
+  if (ms._key) document.removeEventListener('keydown', ms._key);
+  setTimeout(function () { _ptSpotDone(ms); }, 300);
+}
+function _ptSpotDone(ms) {
+  if (ms._src && ms._src.style) ms._src.style.visibility = '';
+  if (ms.parentNode) ms.parentNode.removeChild(ms);
+}
+function _ptSpotKill() {
+  var ms = document.getElementById('pt-spot');
+  if (!ms) return;
+  if (ms._key) document.removeEventListener('keydown', ms._key);
+  _ptSpotDone(ms);
 }
 
 // ── the sheet: one pitch, or one at-bat
@@ -220,7 +387,7 @@ function ptSend() {
 // keep listening only to what's on screen: the card's at-bat and the open sheet
 function _ptSyncWatch() {
   var keys = [];
-  document.querySelectorAll('[data-ptkey]').forEach(function (el) { keys.push(el.getAttribute('data-ptkey')); });
+  document.querySelectorAll('[data-ptkey],[data-ptsum]').forEach(function (el) { keys.push(el.getAttribute('data-ptkey') || el.getAttribute('data-ptsum')); });
   if (window._ptOpen) keys.push(window._ptOpen.info.key);
   _ptWant(keys);
 }
@@ -345,11 +512,7 @@ function _ptQbClose() {
       try {
         _ptDecorate();
         if (window._ptOpen) { var th = document.getElementById('pt-thread'); if (th) { var O = window._ptOpen; th.innerHTML = _ptThreadHtml(O.kind === 'pitch' ? _ptPitchComments(O.info.key) : _ptAbComments(O.info.key)); th.scrollTop = th.scrollHeight; } }
-        document.querySelectorAll('.pah .pt-cm').forEach(function (b) {
-          var rail = b.parentNode && b.parentNode.querySelector('[data-ptkey]'); if (!rail) return;
-          var n = _ptAbComments(rail.getAttribute('data-ptkey')).length;
-          b.lastChild.textContent = 'Comment' + (n ? ' · ' + n : '');
-        });
+        _ptPaintSums(); // the card's pill: comment counts
       } catch (e) { console.error('[pitch talk]', e); }
       return r;
     };

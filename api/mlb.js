@@ -355,6 +355,8 @@ function summarize(data, gamePk, wantAllPlays) {
         if (ix > 0) {
           var prev = (bt.players || {})['ID' + list[ix - 1]];
           matchup.pitcher.replaced = prev && prev.person ? _lastNameOf(prev.person.fullName) : null;
+          matchup.pitcher.replacedId = list[ix - 1] != null ? list[ix - 1] : null; // v7.24.0: the pitching-change card
+          matchup.pitcher.nth = ix + 1;
         }
         var me = (bt.players || {})['ID' + pId];
         var gp = me && me.stats && me.stats.pitching;
@@ -652,6 +654,7 @@ function _extractTeamBoxScore(teamData) {
       bb: s.baseOnBalls != null ? s.baseOnBalls : 0,
       so: s.strikeOuts != null ? s.strikeOuts : 0,
       np: s.numberOfPitches != null ? s.numberOfPitches : (s.pitchesThrown != null ? s.pitchesThrown : null), // v7.14.1
+      strikes: s.strikes != null ? s.strikes : null, // v7.24.0
       hr: s.homeRuns != null ? s.homeRuns : 0
     };
   }).filter(Boolean);

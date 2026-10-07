@@ -21,6 +21,10 @@
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>'
   };
 
+  // v7.24.0: the at-bat card's double-tap (js/games/pitch-talk.js) lifts the card the same way
+  window._msSnapshot = function (src) { return _msSnapshot(src); };
+  window._msHaptic = function () { return _msHaptic(); };
+
   // Remember which element was double-tapped — the tap helpers get it as
   // their first argument, openReactionSheet doesn't.
   window._msgSpotAnchor = null;
