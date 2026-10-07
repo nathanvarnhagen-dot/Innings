@@ -85,7 +85,7 @@ function _paFill() {
     if (card) {
       var t0 = parseFloat((card.style.getPropertyValue('--t0') || '0').replace('s', '')) || 0;
       if (t0 <= 0) pf.classList.add('pah-on');
-      else window._pahOnT = setTimeout(function () { var c2 = document.querySelector('#gh-pa-slot .pah'); if (c2 && c2.parentNode && c2.parentNode.parentNode) c2.parentNode.parentNode.classList.add('pah-on'); }, t0 * 1000);
+      else window._pahOnT = setTimeout(function () { if (pf.isConnected && pf.querySelector('#gh-pa-slot .pah')) pf.classList.add('pah-on'); }, t0 * 1000); // v7.19.2: mid-run the card sits inside .pa, a level deeper than when held
     }
   }
   clearTimeout(window._paEndT);
