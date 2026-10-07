@@ -1,0 +1,95 @@
+/* ══ TALK ABOUT EVERY PITCH, AND EVERY AT-BAT (v7.23.0) — js/games/pitch-talk.js ══ */
+/* reaction chips + Comment (card footer, quick bar, sheet) */
+.pt-rail{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.pt-rx{height:38px;min-width:40px;padding:0 9px;border-radius:19px;border:1px solid rgba(255,255,255,.18);background:rgba(5,3,14,.32);color:#fff;font-family:inherit;font-size:18px;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background-color .15s ease;-webkit-tap-highlight-color:transparent}
+.pt-rx b{font-size:12.5px;font-weight:800}
+.pt-rx.on{background:var(--t2,#FFC425);border-color:var(--t2,#FFC425);color:var(--t1,#2F241D)}
+.pt-rx.hit{animation:ptHit .42s cubic-bezier(.3,1.6,.5,1)}
+.pt-rx:focus-visible,.pt-cm:focus-visible,.pt-zd:focus-visible,.rp-i:focus-visible{outline:2px solid #F2D98A;outline-offset:2px}
+.pt-cm{margin-left:auto;flex-shrink:0;height:38px;padding:0 13px;border:0;border-radius:19px;background:var(--t2,#A89FE8);color:var(--t1,#17122F);font-family:inherit;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+/* on the result card */
+.pah .ft.pt-ft{gap:6px}
+.pah .pt-rx,.pah .pt-cm,.pah .rp-i{pointer-events:auto}
+.pah .mini{position:relative}
+.pah .rp-i{position:absolute;right:-8px;bottom:-8px;width:40px;height:40px;padding:0;border:0;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pah .top>.rp-i{position:static;margin:-6px -6px 0 0}
+.pah .rp-i span{width:28px;height:28px;border-radius:50%;background:rgba(5,3,14,.62);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+.pah.pah-talk .ct{gap:6px}
+.pah.pah-talk .tiles{gap:5px}
+.pah.pah-talk .tile{padding:5px 8px 6px}
+.pah.pah-talk .tp{margin-top:4px}
+.pah .pt-ft .pt-rx,.pah .pt-ft .pt-cm{height:36px}
+.pah .pt-ft .pt-rx{min-width:38px;padding:0 8px;font-size:17px}
+.pah .pt-ft{animation:pahRise .4s ease calc(var(--t0) + 1.05s) both}
+/* the pitches: tappable dots over the zone, and counts */
+.pt-zone{position:absolute;inset:0;z-index:4;pointer-events:none}
+#gh-pa-slot:not(:empty)~.pt-zone,.gst.def .pt-zone{display:none}
+.pt-zd{position:absolute;width:36px;height:36px;margin:-18px 0 0 -18px;padding:0;border:0;border-radius:50%;background:transparent;pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+@media (hover:hover){.pt-zd:hover{box-shadow:0 0 0 2px rgba(242,217,138,.65)}}
+.pt-n{position:absolute;right:-1px;top:-1px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#7A6AF0;color:#fff;font-style:normal;font-size:10px;font-weight:800;line-height:16px;text-align:center;box-shadow:0 0 0 2px #120E2B;pointer-events:none}
+.pap-pt{position:relative}
+.pap-pt .pt-n{right:-3px;top:-5px}
+
+/* the sheet */
+.pt-sh{display:none;position:fixed;inset:0;z-index:9000}
+.pt-scrim{position:absolute;inset:0;border:0;padding:0;background:rgba(6,4,18,.52);opacity:0;transition:opacity .25s ease;cursor:pointer}
+.pt-sh.on .pt-scrim{opacity:1}
+.pt-card{position:absolute;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:#1A1440;color:#F4F2FF;box-shadow:0 -20px 50px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;transform:translateY(102%);transition:transform .38s cubic-bezier(.2,.9,.25,1)}
+.pt-sh.on .pt-card{transform:none}
+.pt-grab{width:40px;height:5px;margin:0 auto 12px;border-radius:3px;background:rgba(255,255,255,.28)}
+.pt-hd{display:flex;align-items:center;gap:12px}
+.pt-hd-ab{align-items:flex-start;padding:12px 8px 12px 14px;border-radius:16px;background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 55%,#0b0716 100%)}
+.pt-dot{width:34px;height:34px;flex-shrink:0;border-radius:50%;color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #F2D98A}
+.pt-hw{flex:1;min-width:0}
+.pt-t{font-size:16px;font-weight:700}
+.pt-l{margin-top:2px;font-size:13.5px;color:#D7D2F2;line-height:1.3}
+.pt-sm{font-size:10.5px;font-weight:900;letter-spacing:.28em;color:var(--t2,#CFC7FF)}
+.pt-big{margin-top:2px;font-size:22px;font-weight:900;font-style:italic;line-height:1.05}
+.pt-x{width:44px;height:44px;flex-shrink:0;border:0;border-radius:50%;background:rgba(255,255,255,.07);color:#CFC7FF;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.pt-rxrow{margin:16px 0 4px}
+.pt-rxrow .pt-rail{display:flex;justify-content:space-between;width:100%}
+.pt-rxrow .pt-rx{height:46px;min-width:52px;font-size:22px;border-radius:23px}
+.pt-rxrow .pt-rx.on{--t2:#7A6AF0;color:#fff}
+.pt-th{display:flex;flex-direction:column;gap:8px;max-height:34vh;overflow-y:auto;margin-top:12px}
+.pt-none{padding:4px 2px;font-size:13px;color:#A49DD0}
+.pt-c{display:flex;align-items:flex-end;gap:8px;max-width:88%}
+.pt-c.me{align-self:flex-end;flex-direction:row-reverse}
+.pt-av{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#E9E5FF;color:#2A2160;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pt-c.me .pt-av{background:#6B5BE8;color:#fff}
+.pt-b{padding:8px 12px;border-radius:16px 16px 16px 6px;background:#2A2257;font-size:14.5px;line-height:1.35;word-break:break-word}
+.pt-b b{display:block;font-size:12px;color:#C9C1FF}
+.pt-c.me .pt-b{border-radius:16px 16px 6px 16px;background:#6B5BE8}
+.pt-c.me .pt-b b{color:rgba(255,255,255,.8)}
+.pt-in{display:flex;gap:8px;margin-top:12px}
+.pt-lab{flex:1;min-width:0}
+.pt-in input{width:100%;height:44px;padding:0 16px;border-radius:22px;border:1px solid rgba(168,159,232,.32);background:#0F0A26;color:#F4F2FF;font-family:inherit;font-size:16px;outline:none}
+.pt-in input:focus{border-color:#A89FE8}
+.pt-go{width:44px;height:44px;flex-shrink:0;border:0;border-radius:50%;background:#7A6AF0;color:#fff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.pt-note{margin-top:8px;font-size:12px;color:#A49DD0}
+.pt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* the quick bar (an at-bat ended while you're on another tab) */
+.pt-qb{position:absolute;left:12px;right:12px;z-index:40;border-radius:20px;overflow:hidden;color:#fff;background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 55%,#0b0716 100%);box-shadow:0 18px 44px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);transform:translateY(150%);transition:transform .45s cubic-bezier(.2,.9,.25,1);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif}
+.pt-qb.on{transform:none}
+.pt-qb-in{padding:12px 12px 14px 14px}
+.pt-qb-top{display:flex;align-items:flex-start;gap:10px}
+.pt-qb .pt-big{font-size:20px}
+.pt-qb .pt-l{color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-qb .pt-x{margin:-8px -8px 0 0;background:transparent;color:rgba(255,255,255,.8)}
+.pt-qb-act{display:flex;align-items:center;gap:6px;margin-top:10px}
+.pt-qb-tm{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--t2);transform-origin:0 50%;animation:ptTm 10s linear forwards}
+.pt-qb.held .pt-qb-tm{display:none}
+
+/* in the chat: a pitch comment carries the pitch, an at-bat comment its card */
+.gc-ptq{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;text-align:left}
+.gc-ptz{width:40px;height:46px;flex-shrink:0;border-radius:8px;background:rgba(168,159,232,.1);display:flex;align-items:center;justify-content:center}
+.gc-ptz svg{display:block}
+.gc-ptw{min-width:0;flex:1;display:flex;flex-direction:column}
+.gc-cardq{display:flex!important;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0!important;border-radius:12px!important;padding:8px 10px!important;color:#fff!important;background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 55%,#0b0716 100%)!important;box-shadow:0 0 0 1px rgba(255,255,255,.16)}
+.gc-cq-sm{font-size:9.5px;font-weight:900;letter-spacing:.26em;color:var(--t2)}
+.gc-cq-big{font-size:17px;font-weight:900;font-style:italic;line-height:1.1}
+.gc-cq-l{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.88)}
+
+@keyframes ptHit{0%{transform:scale(1)}40%{transform:scale(1.32)}100%{transform:scale(1)}}
+@keyframes ptTm{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.pt-card,.pt-scrim,.pt-qb,.pt-rx{transition:none}.pt-rx.hit,.pt-qb-tm{animation:none}}

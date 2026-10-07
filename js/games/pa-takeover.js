@@ -572,7 +572,7 @@ function _patHoldTiles(lp, box, tier) {
     if (la != null) T('Launch', la + '°');
     if (dist != null) T('Distance', dist, 'ft');
     T('xBA', sp.xba != null ? sp.xba.toFixed(3).replace(/^0/, '') : null, '', null, sp.xba == null);
-    if (tier.kind === 'hr') { var pk1 = typeof _hrParks === 'function' ? _hrParks(lp, box, sp) : (sp.parks != null ? { n: sp.parks } : null); T('Gone in', pk1 ? _hrParksText(pk1) : null, '/30 parks', null, !pk1); } // v7.21.2: always a number
+    if (tier.kind === 'hr') { var pk1 = typeof _hrParks === 'function' ? _hrParks(lp, box, sp) : (sp.parks != null ? { n: sp.parks } : null); T('Gone in parks', pk1 ? _hrParksText(pk1) : null, '/30', null, !pk1); } // fits a phone-width tile // v7.21.2: always a number
     else if (sp.parks != null && sp.parks >= 1) T('HR in', sp.parks, '/30 parks');
     if (out.length < 6) T('Bat speed', bs != null ? bs.toFixed(1) : null, 'mph', _patPct(bs, _PAT_LG.bat), bs == null);
     var p = _patLastPitch(lp), mph = p ? (p.mph != null ? p.mph : p.speed) : null;
@@ -637,16 +637,22 @@ function _patHoldCardHtml(lp, box, t0) {
     var bar = (!x.wait && x.p != null) ? '<span class="tp"><i style="width:' + x.p + '%;background:' + (typeof _savPctColor === 'function' ? _savPctColor(x.p) : '#A89FE8') + '"></i></span>' : '';
     return '<div class="tile"><span class="tl">' + _escapeHtml(x.l) + '</span><span class="tv' + (x.tx ? ' tx' : '') + '">' + v + '</span>' + bar + '</div>';
   }).join('');
-  return '<div class="pah' + (tier.full ? '' : ' pah-lite') + (t0 === null ? ' held' : '') + '" style="--t0:' + (t0 === null ? '-60s' : t0) + ';--t1:' + o.bg + ';--t2:' + o.t2 + ';--tdark:' + _fbxDark(o.bg, .5) + '" role="status" aria-label="' + _escapeHtml(o.title + '. ' + o.who + (o.sub ? '. ' + o.sub : '')) + '">' +
+  // v7.23.0: the footer is for reacting and commenting (js/games/pitch-talk.js);
+  // who's up moves to the line under the result, Replay to the field drawing
+  var talk = typeof _ptCardFooterHtml === 'function' ? _ptCardFooterHtml(lp, box) : '';
+  var nxt = _patNextUp(lp, box), sub = o.sub;
+  if (talk && /^(Up next|Due up):/.test(nxt)) sub = (sub ? sub + ' \u00B7 ' : '') + nxt.replace(/^Up next: (.+)$/, function (m, n) { return 'Up next: ' + _patLast(n); });
+  var rpi = '<button type="button" class="rp-i" onclick="event.stopPropagation();patReplayLive()" aria-label="Replay the play"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span></button>';
+  return '<div class="pah' + (tier.full ? '' : ' pah-lite') + (talk ? ' pah-talk' : '') + (t0 === null ? ' held' : '') + '" style="--t0:' + (t0 === null ? '-60s' : t0) + ';--t1:' + o.bg + ';--t2:' + o.t2 + ';--tdark:' + _fbxDark(o.bg, .5) + '" role="status" aria-label="' + _escapeHtml(o.title + '. ' + o.who + (o.sub ? '. ' + o.sub : '')) + '">' +
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
     '<div class="ct"><div class="top"><div class="wd">' + (o.top ? '<span class="sm">' + _escapeHtml(o.top) + '</span>' : '') +
       '<span class="big' + (o.big.length > 13 ? ' xl' : o.big.length > 9 ? ' long' : '') + '">' + _escapeHtml(o.big) + '</span>' +
-      (o.who ? '<span class="who">' + _escapeHtml(o.who) + '</span>' : '') + (o.sub ? '<span class="sub">' + _escapeHtml(o.sub) + '</span>' : '') +
+      (o.who ? '<span class="who">' + _escapeHtml(o.who) + '</span>' : '') + (sub ? '<span class="sub">' + _escapeHtml(sub) + '</span>' : '') +
       (info.badge ? '<span class="bdg">' + _escapeHtml(info.badge) + '</span>' : '') + '</div>' +
-      (mini ? '<div class="mini' + (spray ? '' : ' zn') + '">' + mini + '</div>' : '') + '</div>' +
-    (tileHtml ? '<div class="tiles">' + tileHtml + '</div>' : '') +
-    '<div class="ft"><span class="nx"><i></i>' + _escapeHtml(_patNextUp(lp, box)) + '</span>' +
-      '<button type="button" class="rp" onclick="patReplayLive()" aria-label="Replay the play"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Replay</button></div>' +
+      (mini ? '<div class="mini' + (spray ? '' : ' zn') + '">' + mini + (talk ? rpi : '') + '</div>' : (talk ? rpi : '')) + '</div>' +
+    (tileHtml ? '<div class="tiles">' + tileHtml + '</div>' : '') + (talk ||
+    '<div class="ft"><span class="nx"><i></i>' + _escapeHtml(nxt) + '</span>' +
+      '<button type="button" class="rp" onclick="patReplayLive()" aria-label="Replay the play"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Replay</button></div>') +
     '</div></div>';
 }
 // v7.21.0: the K that slams into the square on a strikeout — backwards when

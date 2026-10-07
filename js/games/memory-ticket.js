@@ -174,6 +174,13 @@ function _gcFindPlay(text, playId) {
 }
 function _gcPlayQuoteHtml(rt, mine) {
   var play = rt.play || { tag: rt.author, text: rt.text, playId: null };
+  // v7.23.0: a comment from the result card carries the card, small
+  if (play.card && play.card.title) {
+    var cd = play.card;
+    return '<button class="gc-pq gc-cardq' + (mine ? ' me' : '') + '" style="--t1:' + _escapeHtml(cd.t1 || '#3D3580') + ';--t2:' + _escapeHtml(cd.t2 || '#CFC7FF') + '" data-tag="' + _escapeHtml(play.tag || '') + '" data-text="' + _escapeHtml(play.text || '') + '" data-pid="' + _escapeHtml(play.playId || '') + '" onclick="event.stopPropagation();openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid)">' +
+      '<span class="gc-cq-sm">' + _escapeHtml([cd.team, play.tag].filter(Boolean).join(' \u00B7 ')) + '</span><span class="gc-cq-big">' + _escapeHtml(cd.title) + '</span>' +
+      '<span class="gc-cq-l">' + _escapeHtml([cd.who, cd.sub].filter(Boolean).join(' \u00B7 ')) + '</span></button>';
+  }
   var score = play.score ? ' · ' + play.score : '';
   var bd = mine ? 'rgba(255,255,255,0.45)' : 'rgba(168,159,232,.6)';
   return '<button class="gc-pq' + (mine ? ' me' : '') + '" data-tag="' + _escapeHtml(play.tag || '') + '" data-text="' + _escapeHtml(play.text || '') + '" data-pid="' + _escapeHtml(play.playId || '') + '" onclick="event.stopPropagation();openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid||null)" style="border-left-color:' + bd + '">' +
@@ -183,7 +190,7 @@ function _gcPlayQuoteHtml(rt, mine) {
 // Replies to a play are the only replies with no message id (plays
 // aren't messages) — older ones predate the saved play details but
 // still carry its tag (as author) and text.
-function _gcIsPlayReply(rt) { return !!(rt && !rt.stat && (rt.play || rt.msgId == null)); }
+function _gcIsPlayReply(rt) { return !!(rt && !rt.stat && !rt.pitch && (rt.play || rt.msgId == null)); }
 // v7.18.0: a stat quoted from a player card — tap it to open his card
 function _gcStatQuoteHtml(rt, mine) {
   var st = rt.stat || {};
@@ -206,7 +213,7 @@ function renderGameChat(msgs) {
         '<span class="gc-sys-e">' + _escapeHtml(c.emoji || '') + '</span><span><b>' + _escapeHtml(mine ? 'You' : (c.author || 'Someone')) + '</b> reacted to <b>' + _escapeHtml(c.play.tag || 'a play') + '</b> · ' + _escapeHtml(c.play.text || '') + '</span></button>';
     }
     var badges = _reactionBadgesHtml(c.reactions, true);
-    var quote = c.replyTo ? (c.replyTo.stat ? _gcStatQuoteHtml(c.replyTo, mine) : _gcIsPlayReply(c.replyTo) ? _gcPlayQuoteHtml(c.replyTo, mine) : _replyQuoteHtml(c.replyTo, mine)) : '';
+    var quote = c.replyTo ? (c.replyTo.pitch && typeof _gcPitchQuoteHtml === 'function' ? _gcPitchQuoteHtml(c.replyTo, mine) : c.replyTo.stat ? _gcStatQuoteHtml(c.replyTo, mine) : _gcIsPlayReply(c.replyTo) ? _gcPlayQuoteHtml(c.replyTo, mine) : _replyQuoteHtml(c.replyTo, mine)) : '';
     var photo = c.photo ? '<img class="gc-photo" src="' + c.photo + '" alt="Photo from ' + _escapeHtml(c.author || 'a friend') + '" data-src="' + (mine ? 'me' : 'them') + '" onclick="event.stopPropagation();openPhotoLightbox(this.src)">' : '';
     var lp = c.linkPreview && typeof _linkPreviewCardHtml === 'function' ? _linkPreviewCardHtml(c.linkPreview) : '';
     var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
