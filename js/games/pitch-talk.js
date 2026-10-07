@@ -330,6 +330,18 @@ function _ptThreadHtml(list) {
       '<div class="pt-b"><b>' + _escapeHtml(mine ? 'You' : (m.author || 'Someone')) + ' · ' + _escapeHtml(typeof _fmtTime === 'function' ? _fmtTime(m.ts) : '') + '</b>' + _escapeHtml(m.text || '') + '</div></div>';
   }).join('');
 }
+// the pitch itself, drawn in the sheet: strike zone, where it crossed, and the numbers
+function _ptSheetPitchHtml(I) {
+  var top = Number(I.zt) || 3.4, bot = Number(I.zb) || 1.6;
+  var X = function (px) { return 60 + px / 1.6 * 52; }, Y = function (pz) { return 128 - (pz - 1) / 3.4 * 120; };
+  var col = typeof _pitchCallColor === 'function' ? _pitchCallColor(I.call) : '#A89FE8';
+  var hasLoc = I.px != null && I.pz != null && isFinite(Number(I.px)) && isFinite(Number(I.pz));
+  var svg = '<svg width="120" height="136" viewBox="0 0 120 136" aria-hidden="true"><rect x="' + X(-.83).toFixed(1) + '" y="' + Y(top).toFixed(1) + '" width="' + (X(.83) - X(-.83)).toFixed(1) + '" height="' + (Y(bot) - Y(top)).toFixed(1) + '" rx="3" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>' +
+    (hasLoc ? '<circle cx="' + X(Math.max(-1.6, Math.min(1.6, Number(I.px)))).toFixed(1) + '" cy="' + Y(Math.max(1, Math.min(4.4, Number(I.pz)))).toFixed(1) + '" r="9" fill="' + col + '" stroke="#fff" stroke-width="2"/>' : '') + '</svg>';
+  var chips = [I.mph ? I.mph + ' mph' : '', I.type, I.call, I.where].filter(Boolean).map(function (t) { return '<span class="pt-chip">' + _escapeHtml(t) + '</span>'; }).join('');
+  return '<div class="pt-pitch"><div class="pt-pz">' + svg + '</div><div class="pt-pw"><div class="pt-pn">Pitch ' + _escapeHtml(I.num) + (I.of ? ' of ' + _escapeHtml(I.of) : '') + '</div><div class="pt-chips">' + chips + '</div>' +
+    (hasLoc ? '' : '<div class="pt-pl">Location not available</div>') + '</div></div>';
+}
 function _ptRenderSheet(opening) {
   var O = window._ptOpen;
   if (!O) return;
@@ -349,7 +361,7 @@ function _ptRenderSheet(opening) {
   var tagForLine = O.kind === 'pitch' ? ((I.tag ? I.tag + ' · ' : '') + 'Pitch ' + I.num) : I.tag;
   var textForLine = O.kind === 'pitch' ? (_ptLastName(I.batter) + ' · ' + I.line) : I.text;
   var ph = O.kind === 'pitch' ? 'Say something about pitch ' + I.num + '…' : 'Say something about ' + (_ptLastName(I.batter) ? _ptLastName(I.batter) + '’s at-bat' : 'this at-bat') + '…';
-  body.innerHTML = head +
+  body.innerHTML = head + (O.kind === 'pitch' ? _ptSheetPitchHtml(I) : '') +
     '<div class="pt-rxrow">' + _ptRailHtml(I.key, O.kind === 'pitch' ? 'pitch' : 'ab', tagForLine, textForLine) + '</div>' +
     '<div class="pt-th" id="pt-thread">' + _ptThreadHtml(list) + '</div>' +
     '<div class="pt-in"><label class="pt-lab"><span class="pt-sr">' + _escapeHtml(ph) + '</span><input id="pt-field" placeholder="' + _escapeHtml(ph) + '" maxlength="500" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ptSend();}"></label>' +
