@@ -415,7 +415,7 @@ function _ptZone() {
     if (p.px == null || p.pz == null) return '';
     var num = p.num != null ? p.num : i + 1, x = ox + _szX(p.px) * sc, y = oy + _szY(p.pz) * sc, n = _ptCountFor(sq.atBatIndex, num);
     var mph = p.mph != null ? p.mph : p.speed;
-    return '<button type="button" class="pt-zd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px" aria-label="Pitch ' + num + (mph != null ? ', ' + mph + ' mph' : '') + (p.type ? ' ' + _escapeHtml(p.type) : '') + ', ' + _escapeHtml(p.call || '') + '. React or comment" onclick="event.stopPropagation();ptOpenPitch(\'' + _escapeHtml(String(sq.atBatIndex)) + '\',\'' + _escapeHtml(String(num)) + '\')">' + (n ? '<i class="pt-n">' + n + '</i>' : '') + '</button>';
+    return '<button type="button" class="pt-zd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px" aria-label="Pitch ' + num + (mph != null ? ', ' + mph + ' mph' : '') + (p.type ? ' ' + _escapeHtml(p.type) : '') + ', ' + _escapeHtml(p.call || '') + '. Double-tap to react or comment" onclick="event.stopPropagation();_ptPitchTap(\'' + _escapeHtml(String(sq.atBatIndex)) + '\',\'' + _escapeHtml(String(num)) + '\')">' + (n ? '<i class="pt-n">' + n + '</i>' : '') + '</button>';
   }).join('');
   if (!old) { old = document.createElement('div'); old.className = 'pt-zone'; pf.appendChild(old); }
   if (old.innerHTML !== html) old.innerHTML = html;
@@ -460,6 +460,19 @@ function _ptQbClose() {
   setTimeout(function () { if (bar.parentNode) bar.remove(); _ptSyncWatch(); }, 350);
 }
 
+// two taps within 400ms, like a chat message
+function _ptDbl(abi, num) {
+  var k = abi + ':' + num, now = Date.now(), L = window._ptLastPitchTap;
+  if (L && L.k === k && now - L.t < 400) { window._ptLastPitchTap = null; return true; }
+  window._ptLastPitchTap = { k: k, t: now };
+  return false;
+}
+// a dot in the zone: one tap shows the pitch's numbers, a double-tap opens its sheet
+function _ptPitchTap(abi, num) {
+  if (typeof _patPick === 'function') _patPick(abi, num); // runs the double-tap check itself
+  else if (_ptDbl(abi, num)) ptOpenPitch(abi, num);
+}
+
 // ── hooks
 (function () {
   // pitch rows carry their at-bat so a tap knows which pitch it is
@@ -471,12 +484,12 @@ function _ptQbClose() {
       return abi != null ? h.replace(/<button type="button" class="pap-pt/g, '<button type="button" data-abi="' + _escapeHtml(String(abi)) + '" class="pap-pt') : h;
     };
   }
-  // tapping a pitch in the row still shows its numbers, and now opens its sheet
+  // v7.28.1: one tap on a pitch shows its numbers (as before); a double-tap opens its sheet
   if (typeof _patPick === 'function') {
     var prevPick = _patPick;
     _patPick = function (abi, num) {
       var r = prevPick.apply(this, arguments);
-      ptOpenPitch(abi, num);
+      if (_ptDbl(abi, num)) ptOpenPitch(abi, num);
       return r;
     };
   }
