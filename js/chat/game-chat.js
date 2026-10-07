@@ -29,6 +29,10 @@ function startGameChat(gamePk) {
 
 // renderGameChat moved to the v5.68.0 block (photos, link previews, play replies, reaction lines).
 
+// v7.27.0: every game chat message goes through here — js/chat/game-chat-rooms.js
+// sends it to your private chat once the database rules for those are in
+function _gcAdd(data) { return window.db.collection('gameChats').add(data); }
+
 function sendGameMessage() {
   if (!window._activeBrowseGame) return;
   var inp = document.getElementById('game-chat-field');
@@ -47,9 +51,9 @@ function sendGameMessage() {
   var sendPromise = url
     ? _fetchLinkPreview(url).then(function (lp) {
         if (lp && lp.url) msgData.linkPreview = lp;
-        return window.db.collection('gameChats').add(msgData);
+        return _gcAdd(msgData);
       })
-    : window.db.collection('gameChats').add(msgData);
+    : _gcAdd(msgData);
   sendPromise.then(function () {
     _notifyFriendsWatchingOfChatMessage(g, text);
   }).catch(function (err) {

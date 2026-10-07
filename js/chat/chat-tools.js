@@ -138,6 +138,9 @@ function _reactionSheetDelete() {
   else if (target.collection === 'birthdayChat') deleteBirthdayMessage(target.msgId);
   else if (target.collection === 'birthdayStopChat') deleteBdayStopMessage(target.msgId);
   else if (target.collection === 'gameChats') deleteGameChatMessage(target.msgId);
+  // v7.27.0: a message in a private game chat (gameChatRooms/<id>/messages)
+  else if (/^gameChatRooms\//.test(target.collection) && window.db) window.db.collection(target.collection).doc(target.msgId).delete()
+    .catch(function(err){ console.error('Delete game message error:', err); if (typeof ib_toast==='function') ib_toast('Could not delete — try again'); });
 }
 
 // ── EDIT MESSAGE — reuses the same {collection, msgId} the reaction sheet
@@ -212,6 +215,7 @@ function _reactionSheetReply() {
 }
 
 function _setReplyTarget(collection, msgId, author, text) {
+  if (/^gameChatRooms\//.test(collection)) collection = 'gameChats'; // v7.27.0: replies in a private game chat use the game chat's composer
   window._replyingTo = { collection: collection, msgId: msgId, author: author, text: text };
   _renderReplyPreview();
   var mapEntry = REPLY_PREVIEW_MAP[collection];

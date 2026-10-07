@@ -381,7 +381,7 @@ function ptSend() {
     replyTo = { author: I.tag || 'Play', text: I.text || '', play: play };
   }
   f.value = '';
-  window.db.collection('gameChats').add({ gamePk: g.gamePk, uid: me.uid, author: (window.userData && window.userData.name) || 'You', text: text, ts: Date.now(), replyTo: replyTo })
+  _gcAdd({ gamePk: g.gamePk, uid: me.uid, author: (window.userData && window.userData.name) || 'You', text: text, ts: Date.now(), replyTo: replyTo })
     .catch(function (err) { console.error('[pitch talk] send', err); if (typeof ib_toast === 'function') ib_toast('Couldn’t send — try again'); if (f && !f.value) f.value = text; });
 }
 // keep listening only to what's on screen: the card's at-bat and the open sheet

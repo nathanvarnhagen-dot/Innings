@@ -134,7 +134,7 @@ function sendGameChatPhoto(input) {
     _downscaleImage(e.target.result, 1200, function (small) {
       // Stay well under Firestore's 1MB document limit.
       var go = function (photo) {
-        window.db.collection('gameChats').add({ gamePk: g.gamePk, uid: user.uid, author: author, text: '', photo: photo, ts: Date.now() })
+        _gcAdd({ gamePk: g.gamePk, uid: user.uid, author: author, text: '', photo: photo, ts: Date.now() })
           .then(function () { if (typeof _notifyFriendsWatchingOfChatMessage === 'function') _notifyFriendsWatchingOfChatMessage(g, 'sent a photo'); })
           .catch(function (err) { console.error('[gameChats:photo] ' + (err && err.code), err); if (typeof ib_toast === 'function') ib_toast('Could not send photo — ' + ((err && err.code) || 'try again')); });
       };
@@ -222,7 +222,7 @@ function renderGameChat(msgs) {
     var textHtml = (c.text && !linkOnly) ? '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, !!mine) + '</div>' : '';
     var time = '<div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div>';
     var bubbleInner = quote + (mine ? '' : '<div class="b-who">' + _escapeHtml(c.author) + '</div>') + photo + textHtml + time;
-    var bubble = '<div class="bubble ' + (mine ? 'me' : 'them') + (photo ? ' gc-has-photo' : '') + '" onclick="_msgDoubleTap(this,\'gameChats\',\'' + c._id + '\',' + (mine ? 'true' : 'false') + ')" style="max-width:100%;cursor:pointer">' + bubbleInner + '</div>';
+    var bubble = '<div class="bubble ' + (mine ? 'me' : 'them') + (photo ? ' gc-has-photo' : '') + '" onclick="_msgDoubleTap(this,\'' + (c._col || 'gameChats') + '\',\'' + c._id + '\',' + (mine ? 'true' : 'false') + ')" style="max-width:100%;cursor:pointer">' + bubbleInner + '</div>';
     if (mine) {
       return '<div class="msg" style="justify-content:flex-end"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0;gap:4px">' + lp + bubble + badges + '</div></div>';
     }
@@ -239,7 +239,7 @@ function _gcPostPlayReaction(play, emoji) {
   var g = window._activeBrowseGame;
   var user = window.currentUser || (window.auth && window.auth.currentUser);
   if (!g || !user || !window.db || !play) return;
-  window.db.collection('gameChats').add({
+  _gcAdd({
     gamePk: g.gamePk, uid: user.uid, author: (window.userData && window.userData.name) || 'Someone',
     text: '', ts: Date.now(), system: true, systemType: 'play_reaction', emoji: emoji,
     play: { tag: play.tag || '', text: play.text || '', playId: play.playId || null }
