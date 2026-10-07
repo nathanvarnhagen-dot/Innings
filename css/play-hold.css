@@ -12,6 +12,9 @@
 .pah .sm{font-size:10.5px;font-weight:900;letter-spacing:.3em;color:var(--t2);opacity:.92;animation:pahSlide .4s ease calc(var(--t0) + .32s) both}
 .pah .big{font-size:27px;font-weight:900;font-style:italic;letter-spacing:-.01em;line-height:1.04;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.35);animation:pahSlide .45s ease calc(var(--t0) + .4s) both}
 .pah .big.long{font-size:22px}
+.pah .big.xl{font-size:19px;line-height:1.08;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* v7.20.0: replays — long play names (STRIKEOUT DOUBLE PLAY) wrap */
+.pat .bg2.xl{font-size:19px;line-height:1.08;white-space:normal}
 .pah .who{margin-top:2px;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .48s) both}
 .pah .sub{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .54s) both}
 .pah .bdg{align-self:flex-start;max-width:100%;margin-top:4px;padding:2px 7px;border-radius:7px;background:rgba(242,217,138,.22);color:#F7E2A0;font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:pahSlide .45s ease calc(var(--t0) + .6s) both}

@@ -115,8 +115,7 @@ function _bbPaTakeoverHtml(lp, box, s, Es, showField, tT) {
   return '<div class="' + cls + '" style="--t0:' + _paSec(at, Es) + ';--t1:' + bg + ';--t2:' + t2 + ';--tdark:' + _fbxDark(bg, .5) + ';animation-duration:' + tier.dur + 's">' +
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
     '<div class="ct">' + (tier.full && !spray ? '<span class="lg">' + _escapeHtml(team.abbr || '') + '</span>' : '') +
-    '<div class="wd"><span class="sm">' + _escapeHtml(title) + '</span>' +
-    (tier.full ? '<span class="bg2' + (nm.length > 10 ? ' long' : '') + '">' + _escapeHtml(nm) + '</span>' : '') +
+    '<div class="wd">' + (tier.full ? '<span class="sm">' + _escapeHtml(nm) + '</span><span class="bg2' + (title.length > 13 ? ' xl' : title.length > 10 ? ' long' : '') + '">' + _escapeHtml(title) + '</span>' : '<span class="sm">' + _escapeHtml(title) + '</span>') + // v7.20.0: team small on top, the play big
     '<span class="who">' + _escapeHtml(who) + '</span>' + (s.quick && tier.kind === 'hr' ? _patStx(lp) : '') + '<span class="ln"></span></div></div>' + spray + '</div>';
 }
 
@@ -533,9 +532,12 @@ function _patHoldInfo(lp, box) {
   else if (tier.kind === 'k') { var lpk = _patLastPitch(lp), looking = lpk && /called/i.test(lpk.call || ''); who = (lp.pitcher ? _patLast(lp.pitcher) + ' gets ' : '') + bat + (looking ? ' looking' : ' swinging'); }
   else if (tier.kind === 'walk') { var n = (lp.pitches || []).length; who += n ? ' · ' + n + '-pitch walk' : ''; }
   else if (tier.kind === 'out') { var f = (lp.fielders || []).join('-'); who += f ? ' · ' + f : ''; }
-  var big = tier.full ? String(_teamShortName(team.name || '') || team.abbr || '').toUpperCase() : bat.toUpperCase();
-  // lite cards already lead with the batter's name; don't say it twice
-  if (!tier.full) { var cut = who.indexOf(' · '); who = cut > -1 ? who.slice(cut + 3) : ''; }
+  // v7.20.0: the team on top in small type, the play under it in big type
+  // (outs go to the fielding team, like strikeouts go to the pitcher's;
+  // a sac fly or bunt is the batting team's)
+  var tm = (tier.kind === 'out' && !/^sac_/.test(t)) ? _patTeam(lp, box, 'pit') : team;
+  var top = String(_teamShortName(tm.name || '') || tm.abbr || '').toUpperCase();
+  var big = title;
   // under the batter: where it went and the score after it
   var sub = [];
   var land = typeof _paLanding === 'function' ? _paLanding(lp) : null;
@@ -544,7 +546,7 @@ function _patHoldInfo(lp, box) {
   var aA = box.awayAbbr || _ghAbbrFallback(box.away || ''), hA = box.homeAbbr || _ghAbbrFallback(box.home || '');
   var sc = typeof _ghScoreChip === 'function' ? _ghScoreChip(lp, aA, hA) : '';
   if (sc) sub.push(sc);
-  return { tier: tier, bg: bg, t2: t2, title: title, big: big, who: who, sub: sub.join(' · ') };
+  return { tier: tier, bg: bg, t2: t2, title: title, top: top, big: big, who: who, sub: sub.join(' · ') };
 }
 // The numbers: for a ball in play, what was on the field; otherwise the
 // panel's rows for the pitch that ended it
@@ -619,8 +621,8 @@ function _patHoldCardHtml(lp, box, t0) {
   }).join('');
   return '<div class="pah' + (tier.full ? '' : ' pah-lite') + (t0 === null ? ' held' : '') + '" style="--t0:' + (t0 === null ? '-60s' : t0) + ';--t1:' + o.bg + ';--t2:' + o.t2 + ';--tdark:' + _fbxDark(o.bg, .5) + '" role="status" aria-label="' + _escapeHtml(o.title + '. ' + o.who + (o.sub ? '. ' + o.sub : '')) + '">' +
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
-    '<div class="ct"><div class="top"><div class="wd"><span class="sm">' + _escapeHtml(o.title) + '</span>' +
-      '<span class="big' + (o.big.length > 11 ? ' long' : '') + '">' + _escapeHtml(o.big) + '</span>' +
+    '<div class="ct"><div class="top"><div class="wd">' + (o.top ? '<span class="sm">' + _escapeHtml(o.top) + '</span>' : '') +
+      '<span class="big' + (o.big.length > 13 ? ' xl' : o.big.length > 9 ? ' long' : '') + '">' + _escapeHtml(o.big) + '</span>' +
       (o.who ? '<span class="who">' + _escapeHtml(o.who) + '</span>' : '') + (o.sub ? '<span class="sub">' + _escapeHtml(o.sub) + '</span>' : '') +
       (info.badge ? '<span class="bdg">' + _escapeHtml(info.badge) + '</span>' : '') + '</div>' +
       (mini ? '<div class="mini' + (spray ? '' : ' zn') + '">' + mini + '</div>' : '') + '</div>' +
