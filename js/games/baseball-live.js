@@ -119,7 +119,9 @@ function _bbXbaRowHtml(lp, sp, since) {
     h = '<div class="ps-x"><div class="ps-xv">' + (stale ? '<b>\u2014</b>' : '<b class="ps-dots" role="img" aria-label="xBA loading"><i></i><i></i><i></i></b>') + '<span>xBA</span></div>' +
       '<span class="ps-xw">' + (stale ? 'Statcast hasn\u2019t posted xBA for this ball' : 'Waiting on Statcast') + '</span></div>';
   }
-  if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
+  var pkL = et === 'home_run' && typeof _hrParks === 'function' ? _hrParks(lp, (typeof _gcBox === 'function' && _gcBox()) || window._lastLiveBox, sp) : null; // v7.21.2
+  if (pkL) h += '<div class="ps-hr">Gone in ' + _hrParksText(pkL) + ' of 30 parks</div>';
+  else if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
     h += '<div class="ps-hr' + (et === 'home_run' ? '' : ' out') + '">' +
       (et === 'home_run' ? 'Gone in ' + sp.parks + ' of 30 parks' : 'Home run in ' + sp.parks + ' of 30 parks') + '</div>';
   }

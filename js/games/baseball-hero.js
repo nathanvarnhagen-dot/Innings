@@ -1074,7 +1074,9 @@ function _ghPbpStatcastHtml(box, pl) {
   var ev = hit.speed != null ? hit.speed : sp.ev;
   if (ev != null) bits.push('<span>' + Math.round(ev) + ' mph</span>');
   if (sp.xba != null) bits.push('<span>xBA ' + sp.xba.toFixed(3).replace(/^0/, '') + '</span>');
-  if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
+  var pkH = et === 'home_run' && typeof _hrParks === 'function' ? _hrParks(a, box, sp) : null; // v7.21.2: a home run always says how many parks
+  if (pkH) bits.push('<span class="hr">Gone in ' + _hrParksText(pkH) + '/30 parks</span>');
+  else if (sp.parks != null && sp.parks >= 1 && (et === 'home_run' || /fly_ball|line_drive|popup/.test(tr))) {
     bits.push('<span class="hr">' + (et === 'home_run' ? 'Gone in ' : 'HR in ') + sp.parks + '/30 parks</span>');
   }
   return bits.length ? '<div class="pbp-sc">' + bits.join('') + '</div>' : '';

@@ -152,7 +152,8 @@ function _patRows(lp, box) {
   };
   if (!tier) return { rows: rows, badge: '' };
   if (tier.kind === 'hr') {
-    R('Gone in', sp.parks, ' /30 parks', null, 1);
+    var pk0 = typeof _hrParks === 'function' ? _hrParks(lp, box, sp) : (sp.parks != null ? { n: sp.parks } : null); // v7.21.2: always a number
+    R('Gone in', pk0 ? _hrParksText(pk0) : null, ' /30 parks', null, !pk0);
     R('Exit velo', ev != null ? ev.toFixed(1) : null, ' mph', _patPct(ev, _PAT_LG.ev));
     R('Bat speed', bs != null ? bs.toFixed(1) : null, ' mph', _patPct(bs, _PAT_LG.bat), 1);
     R('Launch', la != null ? la + '°' : null);
@@ -571,7 +572,7 @@ function _patHoldTiles(lp, box, tier) {
     if (la != null) T('Launch', la + '°');
     if (dist != null) T('Distance', dist, 'ft');
     T('xBA', sp.xba != null ? sp.xba.toFixed(3).replace(/^0/, '') : null, '', null, sp.xba == null);
-    if (tier.kind === 'hr') T('Gone in', sp.parks != null ? sp.parks : null, '/30 parks', null, sp.parks == null);
+    if (tier.kind === 'hr') { var pk1 = typeof _hrParks === 'function' ? _hrParks(lp, box, sp) : (sp.parks != null ? { n: sp.parks } : null); T('Gone in', pk1 ? _hrParksText(pk1) : null, '/30 parks', null, !pk1); } // v7.21.2: always a number
     else if (sp.parks != null && sp.parks >= 1) T('HR in', sp.parks, '/30 parks');
     if (out.length < 6) T('Bat speed', bs != null ? bs.toFixed(1) : null, 'mph', _patPct(bs, _PAT_LG.bat), bs == null);
     var p = _patLastPitch(lp), mph = p ? (p.mph != null ? p.mph : p.speed) : null;
