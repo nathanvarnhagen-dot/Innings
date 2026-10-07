@@ -167,6 +167,29 @@ function _gdlPaintAll() {
   if (window._gshDropOn) _gdlRow();
 }
 
+// ── the live count, in the dropdown (v7.27.1)
+function _gdlLiveInner() {
+  var b = window._lastLiveBox, s = (b && b.situation) || {}, seq = b && b.pitchSequence, ps = (seq && seq.pitches) || [], p = ps.length ? ps[ps.length - 1] : null;
+  var n = function (k, v, c) { return '<span class="gdl-ct"><i>' + k + '</i><b style="color:' + c + '">' + (v != null ? v : 0) + '</b></span>'; };
+  var brk = s.inningState === 'Middle' || s.inningState === 'End';
+  var mph = p ? (p.mph != null ? p.mph : p.speed) : null;
+  var call = p && p.call ? (typeof _gstShortCall === 'function' ? _gstShortCall(p.call) : p.call) : '';
+  var what = brk ? 'Between innings' : p
+    ? 'Pitch ' + (p.num != null ? p.num : ps.length) + ' · ' + (mph != null ? Math.round(Number(mph)) + ' ' : '') + _escapeHtml(typeof _gstPitchName === 'function' ? _gstPitchName(p) : (p.type || '')) + (call ? ' · <em style="color:' + (typeof _pitchCallColor === 'function' ? _pitchCallColor(p.call) : '#CFC7FF') + '">' + _escapeHtml(call) + '</em>' : '')
+    : 'Waiting on the first pitch';
+  return '<span class="gdl-lvl"><i></i>' + (_gdlOn() ? _gdlSec() + 's behind' : 'Live') + '</span>' +
+    '<span class="gdl-cts" aria-label="' + (s.balls || 0) + ' balls, ' + (s.strikes || 0) + ' strikes, ' + (s.outs || 0) + ' outs">' + n('B', s.balls, '#7BE3A6') + n('S', s.strikes, '#FFFFFF') + n('O', s.outs, '#F2D98A') + '</span>' +
+    '<span class="gdl-lp">' + what + '</span>';
+}
+function _gdlPaintLive() {
+  var el = document.getElementById('gdl-live');
+  if (!el) return;
+  var h = _gdlLiveInner();
+  if (el.innerHTML === h) return;
+  el.innerHTML = h;
+  el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); // a beat when the count moves, to line up with the TV
+}
+
 // ── the row in the dropdown
 function _gdlTip() {
   var s = window._gatt && window._gatt.mode;
@@ -187,6 +210,9 @@ function _gdlRow() {
   };
   var h = '<div class="gdl-r1"><span class="gdl-lab">' + GDL_CLOCK + 'Delay</span><div class="gatt-opts gdl-opts" role="group" aria-label="Delay">' +
     opt(0, 'Off') + opt(5, '5s') + opt(15, '15s') + opt(30, '30s') + opt('custom', S.pick === 'custom' ? '<span id="gdl-chip">' + S.custom + 's</span>' : 'Custom') + '</div></div>';
+  // v7.27.1: the count as the app shows it, right here — the dropdown covers the square,
+  // and this is what you line up against your TV
+  if (live) h += '<div class="gdl-live" id="gdl-live">' + _gdlLiveInner() + '</div>';
   if (c) h += _gdlCalHtml(c);
   else if (S.pick === 'custom') {
     h += '<div class="gdl-box">' +
@@ -399,7 +425,7 @@ function _gdlCalTry() {
   // the LIVE tag on the scoreboard (and its copy in the dropdown)
   if (typeof renderGameCheatSheet === 'function') {
     var prevRender = renderGameCheatSheet;
-    renderGameCheatSheet = function () { var r = prevRender.apply(this, arguments); try { _gdlPaintChips(); } catch (e) {} return r; };
+    renderGameCheatSheet = function () { var r = prevRender.apply(this, arguments); try { _gdlPaintChips(); _gdlPaintLive(); } catch (e) {} return r; };
   }
   if (typeof _gshFillDrop === 'function') {
     var prevFill = _gshFillDrop;
