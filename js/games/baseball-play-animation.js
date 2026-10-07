@@ -27,6 +27,9 @@ function _paNote(box) {
   s.box = box;
   // v5.97.0: a steal / wild pitch / pickoff… logged since the last refresh
   var ps = box && box.pitchSequence, firstLoad = s.gamePk !== pk;
+  // v7.20.3: a different game — forget the last one's play, so a game that
+  // hasn't had a play yet doesn't show the previous game's result card
+  if (firstLoad) { s.play = null; s.startAt = 0; s.seq = false; s.keep = false; s._labelHtml = ''; s._statsHtml = ''; }
   var A = s.actSeen || (s.actSeen = {}), newest = null;
   ((ps && ps.actions) || []).forEach(function (a) {
     var k = pk + ':' + ps.atBatIndex + ':' + a.index;

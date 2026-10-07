@@ -512,6 +512,8 @@ function _patHoldOn(lp, box, s) {
   if (!lp || !box || !s || !s.labelOut || s.quick || s.keep || s.seq) return false;
   if (typeof _paIsAction === 'function' && _paIsAction(lp)) return false;
   if (lp.atBatIndex == null || !_patTier(lp)) return false;
+  // v7.20.3: only this game's own last play
+  if (!box.lastPlay || String(box.lastPlay.atBatIndex) !== String(lp.atBatIndex)) return false;
   if (!s.startAt && !_patLiveNow(box)) return false;
   // between halves the square is the inning-break card (score, due up)
   var sit = box.situation || {};
