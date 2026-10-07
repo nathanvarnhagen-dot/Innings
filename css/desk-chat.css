@@ -1,0 +1,62 @@
+/* ══ DESKTOP GAME CHAT (v7.22.0) — js/core/desk-chat.js ══
+   The chat is its own full-height column; the game header stays in the
+   game's column. Only on html.desk (a laptop/desktop window). */
+html.desk #screen-game{grid-template-columns:minmax(0,1fr) 420px!important;grid-template-rows:auto minmax(0,1fr) auto!important;background:#0A0618}
+html.desk #screen-game > div:first-child{grid-column:1!important;grid-row:1}
+html.desk #game-box-panel,html.desk #game-watch-panel{grid-column:1;grid-row:2 / 4;padding-left:max(28px,calc((100% - 820px) / 2))!important;padding-right:max(28px,calc((100% - 820px) / 2))!important}
+/* the scoreboard pull-down and its shade cover the game, not the chat */
+html.desk .gsbd,html.desk .gsbd-scrim{right:420px}
+/* the "also watching" row lives in the chat's header here */
+html.desk #game-watching-with-row,html.desk #game-chat-watchers{display:none!important}
+/* never let the header float over the page on a laptop */
+html.desk #screen-game.gsh-on #game-hd{position:relative!important}
+html.desk #screen-game.gsh-on #game-sheet-panel{padding-top:14px!important}
+
+/* the score bug: compact, beside the tabs' column edge, for the whole live game */
+html.desk #screen-game:not(.gsh-dk) #game-sb{display:none}
+html.desk #game-sb{left:24px;right:auto}
+html.desk .gsb-bug{flex:0 0 auto}
+html.desk .gsb-sit{flex:0 0 auto;justify-content:flex-start;gap:18px;padding:0 14px 0 18px}
+html.desk #screen-game.gsh-dk #game-hd>div:first-child>button:first-child,html.desk #screen-game.gsh-dk #game-detail-title{visibility:hidden}
+
+/* ── the column */
+#gdc-hd{display:none}
+html.desk #gdc-hd{grid-column:2;grid-row:1;display:flex;align-items:center;gap:12px;min-width:0;padding:14px 20px;background:#100B26;border-left:1px solid rgba(168,159,232,.14);border-bottom:1px solid rgba(168,159,232,.12);color:#F4F2FF}
+.gdc-l{flex:1;min-width:0}
+.gdc-t{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700}
+.gdc-live{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;background:rgba(123,227,166,.14);color:#8FE9B4;font-size:11px;font-weight:800;letter-spacing:.1em}
+.gdc-live[hidden]{display:none}
+.gdc-live i{width:6px;height:6px;border-radius:50%;background:#7BE3A6}
+.gdc-sub{margin-top:3px;font-size:13px;color:#B9B3E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gdc-faces{display:flex;flex-shrink:0}
+.gdc-f{width:32px;height:32px;border-radius:50%;background:#E9E5FF;color:#2A2160;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #100B26}
+.gdc-f+.gdc-f{margin-left:-8px}
+.gdc-f.me{background:#6B5BE8;color:#fff}
+html.desk #game-chat-panel{background:#100B26!important;padding:6px 18px 16px!important;gap:0!important;border-left:1px solid rgba(168,159,232,.14)}
+html.desk #game-chat-input-zone{background:#100B26!important;padding:12px 16px 16px!important;border-top:1px solid rgba(168,159,232,.12);border-left:1px solid rgba(168,159,232,.14)}
+/* short chats sit down by the box, the way a messages app does */
+html.desk .gc-beta{margin-top:auto;padding:8px 24px 6px!important;font-size:12px!important;line-height:1.45;color:#8F87BE!important}
+html.desk #game-chat-msgs{gap:0!important}
+
+/* ── messages: readable bubbles, grouped */
+html.desk #game-chat-msgs .msg{margin-top:12px;align-items:flex-end}
+html.desk #game-chat-msgs .msg.gc-mid,html.desk #game-chat-msgs .msg.gc-last{margin-top:3px}
+html.desk #game-chat-msgs .m-av{width:30px;height:30px;font-size:12px;background:#E9E5FF;color:#2A2160}
+html.desk #game-chat-msgs .msg.gc-first .m-av,html.desk #game-chat-msgs .msg.gc-mid .m-av{visibility:hidden}
+html.desk #game-chat-msgs .bubble{padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.4}
+html.desk #game-chat-msgs .bubble .b-txt{font-size:15px;line-height:1.4}
+html.desk #game-chat-msgs .bubble.them{background:#241C4A;color:#F4F2FF;border-bottom-left-radius:6px;border-top-left-radius:18px}
+html.desk #game-chat-msgs .bubble.me{background:#6B5BE8;color:#fff;border-bottom-right-radius:6px;border-top-right-radius:18px}
+html.desk #game-chat-msgs .gc-mid .bubble.them,html.desk #game-chat-msgs .gc-last .bubble.them{border-top-left-radius:6px}
+html.desk #game-chat-msgs .gc-mid .bubble.me,html.desk #game-chat-msgs .gc-last .bubble.me{border-top-right-radius:6px}
+html.desk #game-chat-msgs .b-who{font-size:12.5px;font-weight:700;color:#C9C1FF;margin-bottom:3px}
+html.desk #game-chat-msgs .gc-mid .b-who,html.desk #game-chat-msgs .gc-last .b-who{display:none}
+html.desk #game-chat-msgs .b-t{font-size:11.5px;color:#9C95D0;margin-top:4px}
+html.desk #game-chat-msgs .bubble.me .b-t{color:rgba(255,255,255,.72)}
+html.desk #game-chat-msgs .gc-first .b-t,html.desk #game-chat-msgs .gc-mid .b-t{display:none}
+html.desk #game-chat-msgs .gc-sys{margin:12px auto 2px}
+.gc-sep{display:none}
+html.desk .gc-sep{display:block;align-self:center;margin:16px 0 2px;font-size:12px;font-weight:600;color:#8F87BE}
+/* the box */
+html.desk #game-chat-field{height:44px;padding:0 16px;border-radius:22px;font-size:15px;background:#171034;border:1px solid rgba(168,159,232,.25)}
+html.desk #game-chat-input-zone .gc-add,html.desk #game-chat-input-zone .send-btn{width:44px;height:44px;flex-shrink:0}

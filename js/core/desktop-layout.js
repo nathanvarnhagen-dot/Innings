@@ -17,6 +17,9 @@ function _deskCheck() {
     var g = window._activeBrowseGame;
     if (on && g && typeof startGameChat === 'function') startGameChat(g.gamePk);
     if (!on && typeof gameDetailTab === 'function' && document.getElementById('screen-game')) gameDetailTab(window._gdLeftTab || 'sheet');
+    // v7.22.0: the score bar decides phone vs laptop on resize, before this
+    // check has run; going full screen left it in phone mode over the chat
+    if (typeof _gshApply === 'function') _gshApply();
     if (window._openMomentId && typeof _findMoment === 'function') { var mm = _findMoment(window._openMomentId); if (mm && typeof renderMemoryView === 'function') { try { renderMemoryView(mm); } catch (e) {} } }
   }
   return on;

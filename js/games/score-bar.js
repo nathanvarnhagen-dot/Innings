@@ -69,7 +69,7 @@ function _gshSetup() {
 }
 function _gshMeasure() {
   var scr = document.getElementById('screen-game'), hd = document.getElementById('game-hd');
-  if (scr && hd && (scr.classList.contains('gsh-on') || scr.classList.contains('gsh-tab'))) scr.style.setProperty('--gsh-h', (hd.offsetTop + hd.offsetHeight) + 'px');
+  if (scr && hd && (scr.classList.contains('gsh-on') || scr.classList.contains('gsh-tab') || scr.classList.contains('gsh-dk'))) scr.style.setProperty('--gsh-h', (hd.offsetTop + hd.offsetHeight) + 'px');
   var panel = document.getElementById('game-sheet-panel');
   if (panel) panel._ptrOffset = (scr && scr.classList.contains('gsh-on') && hd) ? hd.offsetHeight : 0;
   // the bug sits exactly over the header's title row
@@ -97,8 +97,19 @@ function _gshApply() {
     gshCloseDrop();
     _gshFade(panel, 0);
   }
+  _gshDeskBug();
   _gshMeasure();
   _gshUpdate();
+}
+// v7.22.0: on a laptop the bug sits in the game's header, compact, for the
+// whole live game (the scoreboard itself stays at the top of the sheet)
+function _gshDeskBug() {
+  var scr = document.getElementById('screen-game'), bar = document.getElementById('game-sb');
+  if (!scr || !bar) return;
+  var desk = _gshDesk(), on = desk && _gshLive();
+  scr.classList.toggle('gsh-dk', on);
+  if (on) { if (!bar.innerHTML) bar.innerHTML = _gshBarHtml(); bar.classList.add('on'); }
+  else if (desk) { bar.classList.remove('on'); if (window._gshDropOn) gshCloseDrop(); }
 }
 // The top of the cheat sheet: the postseason ribbon (when there is one)
 // down to the bottom of the scoreboard
@@ -223,6 +234,7 @@ function _gshAutoHide() {
 function _gshRefresh() {
   var bar = document.getElementById('game-sb');
   if (bar) bar.innerHTML = _gshBarHtml();
+  _gshDeskBug();
   _gshMeasure();
   _gshUpdate();
   if (window._gshDropOn) _gshFillDrop();
