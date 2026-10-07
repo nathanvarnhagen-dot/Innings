@@ -110,7 +110,13 @@ function _bbPaTakeoverHtml(lp, box, s, Es, showField, tT) {
   var at = showField ? Math.max((s._t1 != null ? s._t1 : PA.T0 + 1.8) + .2, s._fieldEnd != null ? s._fieldEnd + .7 : 0) : ((tT != null ? tT : 1.4) + .3);
   s._patAt = at; // the panel's rows come in after the takeover
   // v7.19.0: on the live square the takeover holds as the result card
-  if (s === window._pa && _patHoldOn(lp, box, s)) return _patHoldCardHtml(lp, box, _paSec(at, Es));
+  if (s === window._pa && _patHoldOn(lp, box, s)) {
+    // v7.21.0: a strikeout — the K slams into the square first, then the card
+    // sweeps in and the K drops into its "K today" count. The K says it all,
+    // so the play label above it stays out of the way.
+    if (tier.kind === 'k') { s._labelHtml = ''; s._patAt = at + 1.5; return _patHoldCardHtml(lp, box, _paSec(at + 1.5, Es)) + _patKSlamHtml(lp, box, _paSec(at, Es)); }
+    return _patHoldCardHtml(lp, box, _paSec(at, Es));
+  }
   var cls = 'fbx-to pa-to pat' + (tier.full ? '' : ' pat-lite') + (spray ? ' pat-f' : '');
   return '<div class="' + cls + '" style="--t0:' + _paSec(at, Es) + ';--t1:' + bg + ';--t2:' + t2 + ';--tdark:' + _fbxDark(bg, .5) + ';animation-duration:' + tier.dur + 's">' +
     '<div class="bg"></div>' + (tier.full ? '<div class="st b"></div><div class="st"></div>' : '') + '<div class="sk"></div>' +
@@ -574,7 +580,7 @@ function _patHoldTiles(lp, box, tier) {
     // v7.20.2: a strikeout leads with the pitcher's K count today
     if (tier.kind === 'k' && typeof _paKCount === 'function') {
       var kc = _paKCount(lp, box);
-      if (kc) T('K today', kc.mine);
+      if (kc) { T('K today', kc.mine); var kl = _patLastPitch(lp); out[out.length - 1].kic = (kl && /called/i.test(kl.call || '')) ? 'flip' : ''; }
     }
     (_patRows(lp, box).rows || []).forEach(function (r) {
       if (r.v == null && !r.txt) { if (r.sav) T(r.l, null, r.u, null, true); return; }
@@ -623,6 +629,10 @@ function _patHoldCardHtml(lp, box, t0) {
   var mini = spray ? _patSpraySvg(lp, o.t2) : _patMiniZoneSvg(lp);
   var tileHtml = tiles.map(function (x) {
     var v = x.wait ? '<span class="wt">—</span>' : _escapeHtml(String(x.v)) + (x.u ? '<small>' + _escapeHtml(x.u) + '</small>' : '');
+    if (x.kic != null) { // v7.21.0
+      if (t0 !== null && Number(x.v) > 0) v = '<span class="ktn"><b class="old">' + (Number(x.v) - 1) + '</b><b class="new">' + _escapeHtml(String(x.v)) + '</b></span>';
+      return '<div class="tile tk"><span class="tl">' + _escapeHtml(x.l) + '</span><span class="tv">' + v + '</span><span class="kic" aria-hidden="true"><span class="kg' + (x.kic ? ' flip' : '') + '">K</span></span></div>';
+    }
     var bar = (!x.wait && x.p != null) ? '<span class="tp"><i style="width:' + x.p + '%;background:' + (typeof _savPctColor === 'function' ? _savPctColor(x.p) : '#A89FE8') + '"></i></span>' : '';
     return '<div class="tile"><span class="tl">' + _escapeHtml(x.l) + '</span><span class="tv' + (x.tx ? ' tx' : '') + '">' + v + '</span>' + bar + '</div>';
   }).join('');
@@ -637,6 +647,22 @@ function _patHoldCardHtml(lp, box, t0) {
     '<div class="ft"><span class="nx"><i></i>' + _escapeHtml(_patNextUp(lp, box)) + '</span>' +
       '<button type="button" class="rp" onclick="patReplayLive()" aria-label="Replay the play"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Replay</button></div>' +
     '</div></div>';
+}
+// v7.21.0: the K that slams into the square on a strikeout — backwards when
+// he was caught looking — with the pitcher's count today under it. Two
+// layers: the dim and caption sit under the card, the K over it, so it can
+// fly into the card's "K today" tile (_paFill measures where that is).
+function _patKSlamHtml(lp, box, t0) {
+  var o = _patHoldInfo(lp, box);
+  if (!o) return '';
+  var lpk = _patLastPitch(lp), looking = !!(lpk && /called/i.test(lpk.call || ''));
+  var kc = typeof _paKCount === 'function' ? _paKCount(lp, box) : null;
+  var ord = function (n) { var t = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (t[(v - 20) % 10] || t[v] || t[0]); };
+  var line = kc && lp.pitcher ? _patLast(lp.pitcher) + '\u2019s ' + ord(kc.mine) + ' K today' : '';
+  var st = ' style="--t0:' + t0 + ';--kc:' + o.t2 + ';--kbg:' + o.bg + '"';
+  return '<div class="pak"' + st + ' aria-hidden="true"><div class="pak-dim"></div><i class="pak-ring"></i>' +
+      '<div class="pak-cap"><b>' + (looking ? 'LOOKING' : 'SWINGING') + '</b>' + (line ? '<span>' + _escapeHtml(line) + '</span>' : '') + '</div></div>' +
+    '<div class="pak-k"' + st + ' aria-hidden="true"><div class="kbig"><span class="kg' + (looking ? ' flip' : '') + '">K</span></div></div>';
 }
 // After the play's run: the same card, already in place (no entrance)
 function _patHeldHtml(lp, box) { return _patHoldCardHtml(lp, box, null); }

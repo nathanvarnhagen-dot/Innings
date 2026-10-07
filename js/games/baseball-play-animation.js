@@ -81,15 +81,22 @@ function _paFill() {
   slot.setAttribute('data-pa', s0.play && s0.startAt ? s0.play.atBatIndex + ':' + s0.startAt : '');
   // v7.19.1: when the result card sweeps in, the play label (top left) and
   // the ABS note (bottom right) fade so nothing sits on top of it
-  var pf = slot.parentNode, card = slot.querySelector('.pah');
+  var pf = slot.parentNode, card = slot.querySelector('.pak') || slot.querySelector('.pah'); // v7.21.0: a strikeout's K comes first
   clearTimeout(window._pahOnT);
   if (pf && pf.classList) {
     pf.classList.remove('pah-on');
     if (card) {
       var t0 = parseFloat((card.style.getPropertyValue('--t0') || '0').replace('s', '')) || 0;
       if (t0 <= 0) pf.classList.add('pah-on');
-      else window._pahOnT = setTimeout(function () { if (pf.isConnected && pf.querySelector('#gh-pa-slot .pah')) pf.classList.add('pah-on'); }, t0 * 1000); // v7.19.2: mid-run the card sits inside .pa, a level deeper than when held
+      else window._pahOnT = setTimeout(function () { if (pf.isConnected && pf.querySelector('#gh-pa-slot .pah, #gh-pa-slot .pak')) pf.classList.add('pah-on'); }, t0 * 1000); // v7.19.2: mid-run the card sits inside .pa, a level deeper than when held
     }
+  }
+  // v7.21.0: aim the strikeout's K at the card's "K today" tile
+  // (the tile, not the K in its corner: that one is still scaled to nothing)
+  var kb = slot.querySelector('.pak-k .kbig'), kt = slot.querySelector('.pah .tile.tk');
+  if (kb && kt) {
+    var ra = kb.getBoundingClientRect(), rb = kt.getBoundingClientRect();
+    if (ra.width && rb.width) { kb.style.setProperty('--kdx', Math.round(rb.right - 17 - ra.left - ra.width / 2) + 'px'); kb.style.setProperty('--kdy', Math.round(rb.top + 17 - 8 - ra.top - ra.height / 2) + 'px'); }
   }
   clearTimeout(window._paEndT);
   if (_paActive()) {

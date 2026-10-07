@@ -46,3 +46,31 @@
 @keyframes pahRise{from{opacity:0;transform:translateY(8px)}}
 @keyframes pahBlink{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.pah{clip-path:none}.pah,.pah *{animation:none!important}}
+/* ══ v7.21.0: STRIKEOUT — the K slams in, then drops into the count ══ */
+.pak{position:absolute;inset:0;z-index:6;pointer-events:none}
+.pak-dim{position:absolute;inset:0;background:rgba(8,5,20,.66);animation:pahFade .35s ease var(--t0) both}
+.pak-ring{position:absolute;left:50%;top:43%;width:170px;height:170px;margin:-85px 0 0 -85px;border-radius:50%;border:5px solid var(--kc);opacity:0;animation:pakRing .7s ease-out calc(var(--t0) + .4s) both}
+.pak-cap{position:absolute;left:0;right:0;top:73%;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0;animation:pakCap 1.3s ease calc(var(--t0) + .5s) both}
+.pak-cap b{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:.42em;padding-left:.42em;color:var(--kc)}
+.pak-cap span{font-size:13px;font-weight:700;color:#F3EEFF}
+.pak-k{position:absolute;inset:0;z-index:8;overflow:hidden;pointer-events:none;animation:pakShake .38s linear calc(var(--t0) + .4s)}
+.pak-k .kbig{position:absolute;left:50%;top:43%;font-family:'Barlow Condensed',sans-serif;font-size:220px;font-weight:700;line-height:.8;color:var(--kc);text-shadow:0 6px 0 var(--kbg),0 14px 38px rgba(0,0,0,.6);opacity:0;transform:translate(-50%,-50%);animation:pakSlam .46s cubic-bezier(.2,.9,.3,1.15) calc(var(--t0) + .06s) both,pakFly .5s cubic-bezier(.55,0,.35,1) calc(var(--t0) + 1.55s) forwards}
+.pak-k .kg,.pah .kg{display:inline-block}
+.pak-k .kg.flip,.pah .kg.flip{transform:scaleX(-1)}
+/* the K today tile: the K lands in its corner and the count ticks up */
+.pah .tiles .tile.tk{position:relative;animation-delay:calc(var(--t0) + .28s)}
+.pah .kic{position:absolute;right:6px;top:6px;width:22px;height:22px;border-radius:6px;background:var(--t2);color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;animation:pahPop .4s cubic-bezier(.3,1.6,.5,1) calc(var(--t0) + .5s) both}
+.pah .ktn{position:relative;display:inline-block;min-width:1.2ch;height:1em;overflow:hidden;vertical-align:top}
+.pah .ktn b{display:block;font-weight:inherit}
+.pah .ktn .old{animation:pahNumOut .3s ease calc(var(--t0) + .52s) forwards}
+.pah .ktn .new{position:absolute;left:0;top:0;transform:translateY(105%);animation:pahNumIn .36s cubic-bezier(.3,1.4,.5,1) calc(var(--t0) + .56s) forwards}
+@keyframes pahFade{from{opacity:0}}
+@keyframes pahPop{0%{transform:scale(0)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes pahNumOut{to{transform:translateY(-105%);opacity:0}}
+@keyframes pahNumIn{to{transform:none}}
+@keyframes pakSlam{0%{opacity:0;transform:translate(-50%,-50%) scale(3.4) rotate(-8deg);filter:blur(14px)}60%{opacity:1;transform:translate(-50%,-50%) scale(.9);filter:blur(0)}80%{transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:blur(0)}}
+@keyframes pakFly{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--kdx,-95px)),calc(-50% + var(--kdy,48px))) scale(.1)}}
+@keyframes pakRing{0%{opacity:.95;transform:scale(.35)}100%{opacity:0;transform:scale(2.3)}}
+@keyframes pakCap{0%{opacity:0;transform:translateY(10px)}22%,78%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes pakShake{0%,100%{transform:none}20%{transform:translate(-5px,3px)}40%{transform:translate(4px,-3px)}60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}}
+@media (prefers-reduced-motion:reduce){.pak,.pak-k{display:none}.pah .ktn .old{display:none}.pah .ktn .new{position:static;transform:none}}
