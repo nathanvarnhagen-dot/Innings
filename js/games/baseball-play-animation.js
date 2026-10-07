@@ -186,7 +186,17 @@ function _paTitle(lp) {
 // team's total. Counted from the game's plays up to this one when they're
 // all here (so a replay shows the count at the time), else the box score.
 function _paKCountText(lp, box) {
-  if (!lp || !box || !lp.pitcherId) return '';
+  var c = _paKCount(lp, box);
+  if (!c) return '';
+  var ord = function (n) { var t = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (t[(v - 20) % 10] || t[v] || t[0]); };
+  var txt = ord(c.mine) + ' K today';
+  if (c.reliever && c.team) txt += ' \u00b7 ' + c.abbr + ' ' + c.team + ' K';
+  return txt;
+}
+// v7.20.2: the numbers behind it — the pitcher's strikeouts today (this one
+// included) and, for a reliever, his team's
+function _paKCount(lp, box) {
+  if (!lp || !box || !lp.pitcherId) return null;
   var side = lp.half === 'top' ? 'home' : lp.half === 'bottom' ? 'away' : null;
   var isK = function (t) { return /^strikeout/.test(t || ''); };
   var mine = null, team = null, starter = null;
@@ -203,18 +213,13 @@ function _paKCountText(lp, box) {
   if (mine == null) {
     var d = side && box.boxScoreDetail && box.boxScoreDetail[side], list = (d && d.pitchers) || [];
     var ix = -1; list.forEach(function (x, i) { if (String(x.id) === String(lp.pitcherId)) ix = i; });
-    if (ix < 0) return '';
+    if (ix < 0) return null;
     mine = Number(list[ix].so) || 0; starter = list[0].id;
     team = list.reduce(function (a, x) { return a + (Number(x.so) || 0); }, 0);
   }
-  if (!mine) return '';
-  var ord = function (n) { var t = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (t[(v - 20) % 10] || t[v] || t[0]); };
-  var txt = ord(mine) + ' K today';
-  if (String(starter) !== String(lp.pitcherId) && team) {
-    var ab = side === 'home' ? (box.homeAbbr || _ghAbbrFallback(box.home)) : (box.awayAbbr || _ghAbbrFallback(box.away));
-    txt += ' \u00b7 ' + ab + ' ' + team + ' K';
-  }
-  return txt;
+  if (!mine) return null;
+  var ab = side === 'home' ? (box.homeAbbr || _ghAbbrFallback(box.home)) : (box.awayAbbr || _ghAbbrFallback(box.away));
+  return { mine: mine, team: team, reliever: String(starter) !== String(lp.pitcherId), abbr: ab };
 }
 function _paNote2(lp, box, land) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';

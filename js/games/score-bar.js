@@ -243,13 +243,28 @@ function _gshFillDrop() {
     slot.appendChild(c);
   });
 }
+function _gshReturnAtt() {
+  var att = document.getElementById('game-att-opts'), hd = document.getElementById('game-hd'), ph = document.getElementById('gsbd-att-ph');
+  if (!att) return;
+  if (ph && ph.parentNode) ph.parentNode.replaceChild(att, ph);
+  else if (hd && hd.firstElementChild && att.parentNode !== hd.firstElementChild) hd.firstElementChild.appendChild(att);
+}
 function gshToggleDrop() { if (window._gshDropOn) gshCloseDrop(); else gshOpenDrop(); }
 function gshOpenDrop() {
   var scr = document.getElementById('screen-game'), drop = document.getElementById('game-sb-drop'), att = document.getElementById('game-att-opts'), slot = document.getElementById('gsbd-att-slot');
   if (!scr || !drop) return;
   window._gshDropOn = true;
+  clearTimeout(window._gshAttT);
   _gshFillDrop();
-  if (att && slot) slot.appendChild(att); // the real control, so it keeps working
+  // the real control, so it keeps working. v7.20.2: a same-size stand-in
+  // holds its spot in the header, so the tabs don't shift when it moves
+  if (att && slot && att.parentNode !== slot) {
+    var ph = document.getElementById('gsbd-att-ph') || document.createElement('span');
+    ph.id = 'gsbd-att-ph'; ph.setAttribute('aria-hidden', 'true');
+    ph.style.cssText = 'display:inline-block;flex-shrink:0;visibility:hidden;width:' + att.offsetWidth + 'px;height:' + att.offsetHeight + 'px';
+    if (att.parentNode) att.parentNode.insertBefore(ph, att);
+    slot.appendChild(att);
+  }
   drop.setAttribute('aria-hidden', 'false');
   scr.classList.add('gsbd-on');
   var bug = document.querySelector('#game-sb .gsb-bug'); if (bug) bug.setAttribute('aria-expanded', 'true');
@@ -257,7 +272,10 @@ function gshOpenDrop() {
 function gshCloseDrop() {
   var scr = document.getElementById('screen-game'), drop = document.getElementById('game-sb-drop'), att = document.getElementById('game-att-opts'), hd = document.getElementById('game-hd');
   window._gshDropOn = false;
-  if (att && hd && hd.firstElementChild && att.parentNode !== hd.firstElementChild) hd.firstElementChild.appendChild(att);
+  // v7.20.2: the control rides up with the panel and goes home once it's out
+  // of sight (it used to jump out first, shifting everything as it closed)
+  clearTimeout(window._gshAttT);
+  window._gshAttT = setTimeout(function () { if (!window._gshDropOn) _gshReturnAtt(); }, 520);
   if (drop) drop.setAttribute('aria-hidden', 'true');
   if (scr) scr.classList.remove('gsbd-on');
   var bug = document.querySelector('#game-sb .gsb-bug'); if (bug) bug.setAttribute('aria-expanded', 'false');

@@ -569,6 +569,11 @@ function _patHoldTiles(lp, box, tier) {
     var p = _patLastPitch(lp), mph = p ? (p.mph != null ? p.mph : p.speed) : null;
     if (out.length < 6 && tier.kind === 'hr' && mph != null) T('Pitch he hit', Number(mph).toFixed(0) + ' ' + _patPitchWord(p), '', null, false, true);
   } else {
+    // v7.20.2: a strikeout leads with the pitcher's K count today
+    if (tier.kind === 'k' && typeof _paKCount === 'function') {
+      var kc = _paKCount(lp, box);
+      if (kc) T('K today', kc.mine);
+    }
     (_patRows(lp, box).rows || []).forEach(function (r) {
       if (r.v == null && !r.txt) { if (r.sav) T(r.l, null, r.u, null, true); return; }
       if (r.txt) T(r.l, r.txt, '', null, false, true);
