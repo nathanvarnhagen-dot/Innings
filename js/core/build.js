@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.24.0-pitching-change';
+window.INNINGS_BUILD = 'v7.25.0-delay';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

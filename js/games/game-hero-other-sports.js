@@ -919,25 +919,29 @@ function _refreshBoxScoreLegacy(gamePk) {
     .then(function (r) { return r.json(); })
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
-      // MLB boxes also carry abstractGameState (gameState) — trusted over the
-      // detailed status text, which has in-between values like "Game Over".
-      var gs = box && box.gameState;
-      var concluded = !!box && !box.error && (gs === 'Final' || _isGameConcluded(box.status));
-      var live = !!box && !box.error && !concluded && (gs === 'Live' || (gs !== 'Preview' && _isGameStatusLive(box.status)));
-      if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
-      window._lastLiveBox = box; // cached so toggling the box score detail section can rebuild without a re-fetch
-      if (sport === 'mlb' && window._gdPregame) window._gdPregame.heroBox = box; // game-state hero reads this on the next render
-      var html = _boxScoreCardHtml(box, true, true, _gameScreenBoxOpts(box));
-      if (html) {
-        window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
-        renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
-      }
-      // MLB's final summary now lives in the hero card, so the full-screen
-      // recap overlay only plays for the other sports.
-      if (concluded && sport !== 'mlb') maybePlayGameRecap(box, sport, gamePk);
-      return live;
+      return _applyBoxScoreResult(gamePk, sport, box);
     })
     .catch(function (err) { console.error('Load box score error:', err); return false; });
+}
+// v7.25.0: split out so a delayed box (js/games/game-delay.js) is put on screen the same way
+function _applyBoxScoreResult(gamePk, sport, box) {
+  // MLB boxes also carry abstractGameState (gameState) — trusted over the
+  // detailed status text, which has in-between values like "Game Over".
+  var gs = box && box.gameState;
+  var concluded = !!box && !box.error && (gs === 'Final' || _isGameConcluded(box.status));
+  var live = !!box && !box.error && !concluded && (gs === 'Live' || (gs !== 'Preview' && _isGameStatusLive(box.status)));
+  if (!live && !concluded) return false; // not started yet — cheat sheet alone is correct, nothing to prepend
+  window._lastLiveBox = box; // cached so toggling the box score detail section can rebuild without a re-fetch
+  if (sport === 'mlb' && window._gdPregame) window._gdPregame.heroBox = box; // game-state hero reads this on the next render
+  var html = _boxScoreCardHtml(box, true, true, _gameScreenBoxOpts(box));
+  if (html) {
+    window._gdPregame.boxScoreHtml = html + '<div style="height:14px"></div>';
+    renderGameCheatSheet(); // no-op if the cheat sheet itself hasn't loaded yet — it'll pick this up when it does
+  }
+  // MLB's final summary now lives in the hero card, so the full-screen
+  // recap overlay only plays for the other sports.
+  if (concluded && sport !== 'mlb') maybePlayGameRecap(box, sport, gamePk);
+  return live;
 }
 
 // Polls only while a game is actually live AND its screen is the one
@@ -951,6 +955,7 @@ window._gameLiveRefreshTimer = null;
 // between pitches.
 function _gameLiveRefreshMs() {
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
+  if (sport === 'mlb' && typeof _gdlFast === 'function' && _gdlFast()) return 3000; // v7.25.0: a delay (or matching your TV) wants finer steps
   return (sport === 'nfl' || sport === 'cfb') ? 8000 : 6000; // v5.85.0: MLB every 6s (was 15s)
 }
 function _startGameLiveRefresh(gamePk) {

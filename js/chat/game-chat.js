@@ -4,6 +4,7 @@
 // plain (no reactions/replies/link-previews) to match.
 window._gameChatStarted = {};
 window._gameChatMsgs = {}; // v7.20.1: each game's messages, kept so the Chat tab can count the ones you haven't seen
+window._gameChatRaw = {}; // v7.25.0: everything, including messages a delay is holding back
 function startGameChat(gamePk) {
   var key = String(gamePk);
   if (window._gameChatStarted[key]) return;
@@ -13,6 +14,9 @@ function startGameChat(gamePk) {
     var msgs = [];
     snap.forEach(function (doc) { msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
     msgs.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    // v7.25.0: with a delay on, friends' newest messages wait until you've seen the play (js/games/game-delay.js)
+    window._gameChatRaw[key] = msgs;
+    if (typeof _gdlChatFilter === 'function') msgs = _gdlChatFilter(key, msgs);
     window._gameChatMsgs[key] = msgs;
     if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
     renderGameChat(msgs);

@@ -1,0 +1,66 @@
+/* ══ DELAY (v7.25.0) — js/games/game-delay.js ══ */
+.gdl{margin:-2px 0 12px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;color:#F4F2FF}
+.gdl:empty{display:none}
+.gdl-r1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gdl-lab{display:flex;align-items:center;gap:6px;font-size:13px;color:#C7C0E8}
+.gdl-lab svg{display:block;flex-shrink:0}
+.gdl-opts .gdl-opt{padding:6px 10px}
+/* custom: the dial and Match my TV */
+.gdl-box{margin-top:10px;padding:10px;border-radius:18px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.16);animation:gdlIn .28s ease both}
+.gdl-dial{display:flex;align-items:center;gap:10px}
+.gdl-stp{width:44px;height:44px;flex-shrink:0;padding:0;border-radius:50%;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#E9E5FF;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.gdl-stp svg{display:block}
+.gdl-mid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.gdl-val{font-family:'Barlow Condensed',sans-serif;line-height:1}
+.gdl-val b{font-size:30px;font-weight:700}
+.gdl-val small{margin-left:3px;font-size:15px;font-weight:600;color:#B9B3E6}
+.gdl-rl{width:100%;display:flex}
+.gdl-rng{flex:1;min-width:0;height:28px;margin:0;accent-color:#A89FE8;cursor:pointer}
+.gdl-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gdl-mt{width:100%;height:46px;margin-top:10px;border:0;border-radius:14px;background:#F2D98A;color:#1A1640;font-family:inherit;font-size:14.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.gdl-mt svg{display:block}
+.gdl-mt:disabled{opacity:.45;cursor:default}
+.gdl-note{margin-top:8px;font-size:12.5px;line-height:1.4;color:#A9A2D6;text-align:center}
+/* the tip, the chat switch, catch up */
+.gdl-tip{display:flex;gap:10px;margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(242,217,138,.08);border:1px solid rgba(242,217,138,.2);font-size:13px;line-height:1.4;color:#EDE7CF}
+.gdl-tip svg{display:block;flex-shrink:0;margin-top:1px;color:#F2D98A;width:17px;height:17px}
+.gdl-hold{display:flex;align-items:center;gap:12px;margin-top:10px;padding:2px 2px}
+.gdl-hw{flex:1;min-width:0}
+.gdl-ht{font-size:14px;font-weight:600}
+.gdl-hs{margin-top:1px;font-size:12.5px;color:#A9A2D6}
+.gdl-sw{position:relative;width:46px;height:28px;flex-shrink:0;padding:0;border:0;border-radius:14px;background:rgba(255,255,255,.16);cursor:pointer;transition:background-color .2s ease}
+.gdl-sw::before{content:'';position:absolute;inset:-8px -2px}
+.gdl-sw i{position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s ease}
+.gdl-sw.on{background:#7A6AF0}
+.gdl-sw.on i{transform:translateX(18px)}
+.gdl-cu{width:100%;height:44px;margin-top:10px;border:1px solid rgba(168,159,232,.3);border-radius:14px;background:rgba(168,159,232,.12);color:#E9E5FF;font-family:inherit;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.gdl-cu svg{display:block}
+/* Match my TV, step by step */
+.gdl-cal{margin-top:10px;padding:16px 14px 12px;border-radius:18px;background:rgba(242,217,138,.07);border:1px solid rgba(242,217,138,.22);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:gdlIn .28s ease both}
+.gdl-ct{font-size:16px;font-weight:700}
+.gdl-cs{font-size:13.5px;line-height:1.4;color:#D9D4FA;max-width:300px}
+.gdl-now{position:relative;width:128px;height:128px;margin:14px 0 12px;border:0;border-radius:50%;background:#F2D98A;color:#1A1640;font-family:inherit;font-size:26px;font-weight:900;letter-spacing:.04em;box-shadow:0 0 0 8px rgba(242,217,138,.16);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.gdl-now::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(242,217,138,.5);animation:gdlRing 1.6s ease-out infinite;pointer-events:none}
+.gdl-now:active{transform:scale(.95)}
+.gdl-of{font-size:12.5px;font-weight:700;color:#C9C1FF}
+.gdl-x{height:40px;padding:0 14px;border:0;border-radius:20px;background:transparent;color:#B9B3E6;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.gdl-spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(168,159,232,.3);border-top-color:#A89FE8;animation:gdlSpin .8s linear infinite}
+.gdl-cal.gdl-ok{background:rgba(123,227,166,.07);border-color:rgba(123,227,166,.25);gap:2px}
+.gdl-cal.gdl-bad{background:rgba(255,138,142,.07);border-color:rgba(255,138,142,.25)}
+.gdl-big{font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:700;line-height:1.05}
+.gdl-cn{margin-top:10px;max-width:300px;font-size:13px;line-height:1.4;color:#A9A2D6}
+.gdl-cn b{color:#fff}
+.gdl-done{width:100%;height:46px;margin-top:12px;border:0;border-radius:14px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer}
+.gdl-stp:focus-visible,.gdl-mt:focus-visible,.gdl-sw:focus-visible,.gdl-cu:focus-visible,.gdl-now:focus-visible,.gdl-x:focus-visible,.gdl-done:focus-visible,.gdl-rng:focus-visible{outline:2px solid #F2D98A;outline-offset:2px}
+/* the scoreboard's LIVE tag, while behind */
+.gh-chip.live.gdl{background:rgba(168,159,232,.18);color:#D9D4FA}
+.gh-dot.gdl-dot{background:#A89FE8;animation:ghPulseLav 1.6s ease-in-out infinite}
+/* a tag hanging off the score bug */
+.gsb-dl{position:absolute;right:10px;top:35px;z-index:3;display:flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:10px;background:#2A2257;box-shadow:0 0 0 1px rgba(168,159,232,.45),0 4px 10px rgba(0,0,0,.4);color:#E2DCFF;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap;pointer-events:none}
+.gsb-dl svg{display:block;width:10px;height:10px}
+.gsb-dl.lv{background:#3A1420;box-shadow:0 0 0 1px rgba(255,122,107,.5),0 4px 10px rgba(0,0,0,.4);color:#FFC2BA}
+.gsb-dl.lv i{width:6px;height:6px;border-radius:50%;background:#FF7A6B}
+@keyframes gdlIn{from{opacity:0;transform:translateY(-6px)}}
+@keyframes gdlRing{from{transform:scale(1);opacity:1}to{transform:scale(1.35);opacity:0}}
+@keyframes gdlSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.gdl-box,.gdl-cal{animation:none}.gdl-now::after{animation:none;opacity:0}.gdl-spin{animation-duration:2.4s}.gdl-sw,.gdl-sw i{transition:none}}

@@ -158,7 +158,7 @@ function loadNotifications() {
       else if (n.type === 'game_chat_message') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted in the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'on_this_day') label = '<b>' + (n.yearsAgo > 1 ? n.yearsAgo + ' years' : 'One year') + ' ago today</b> — look back at it';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
-      var subLabel = n.momentName || n.groupName || n.messagePreview || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
+      var subLabel = (typeof _gdlHideNotif === 'function' && _gdlHideNotif(n)) ? 'Held by your delay' : n.momentName || n.groupName || n.messagePreview || (n.type === 'feedback_post' && n.category ? (n.category.charAt(0).toUpperCase() + n.category.slice(1)) : '');
       var acceptBtn = n.type === 'friend_request'
         ? '<div onclick="notifAcceptFriend(event,\'' + n._id + '\')" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:800;color:#0D0820;background:#D4A24C;padding:6px 14px;border-radius:10px;cursor:pointer">Accept friend request</div>'
         : '';

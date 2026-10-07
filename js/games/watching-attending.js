@@ -419,6 +419,8 @@ function _ptrAttach(panel, onRefresh) {
   screen.appendChild(ind);
   var txt = ind.querySelector('.ptr-txt'), spin = ind.querySelector('.ptr-spin');
   var startY = null, pull = 0, busy = false, TRIGGER = 64;
+  // v7.25.0: a panel can word it differently (a delayed game: "Pull to catch up")
+  var W = function (k) { var w = typeof panel._ptrWords === 'function' ? panel._ptrWords() : null; return (w && w[k]) || { pull: 'Pull to refresh', release: 'Release to refresh', busy: 'Refreshing…' }[k]; };
   var show = function (y, label) {
     ind.style.top = (panel.offsetTop + 6 + (panel._ptrOffset || 0)) + 'px';
     ind.style.opacity = String(Math.min(1, y / 30));
@@ -442,7 +444,7 @@ function _ptrAttach(panel, onRefresh) {
     pull = Math.min(dy * 0.5, 96);
     ind.classList.add('pulling');
     spin.style.transform = 'rotate(' + Math.round(pull * 4) + 'deg)';
-    show(Math.min(pull, 64), pull >= TRIGGER ? 'Release to refresh' : 'Pull to refresh');
+    show(Math.min(pull, 64), pull >= TRIGGER ? W('release') : W('pull'));
   }, { passive: true });
   var end = function () {
     if (startY == null) return;
@@ -452,7 +454,7 @@ function _ptrAttach(panel, onRefresh) {
     ind.classList.remove('pulling');
     ind.classList.add('busy');
     spin.style.transform = '';
-    show(40, 'Refreshing…');
+    show(40, W('busy'));
     var t0 = Date.now();
     var done = function () {
       setTimeout(function () { busy = false; hide(); }, Math.max(0, 450 - (Date.now() - t0)));
