@@ -170,25 +170,55 @@ function _gdlPaintAll() {
 // ── the live count, in the dropdown (v7.27.1)
 function _gdlLiveInner() {
   var b = window._lastLiveBox, s = (b && b.situation) || {}, seq = b && b.pitchSequence, ps = (seq && seq.pitches) || [], p = ps.length ? ps[ps.length - 1] : null;
+  var E = _escapeHtml, now = Date.now(), g = window._gdl;
   var n = function (k, v, c) { return '<span class="gdl-ct"><i>' + k + '</i><b style="color:' + c + '">' + (v != null ? v : 0) + '</b></span>'; };
   var brk = s.inningState === 'Middle' || s.inningState === 'End';
-  var mph = p ? (p.mph != null ? p.mph : p.speed) : null;
-  var call = p && p.call ? (typeof _gstShortCall === 'function' ? _gstShortCall(p.call) : p.call) : '';
-  var what = brk ? 'Between innings' : p
-    ? 'Pitch ' + (p.num != null ? p.num : ps.length) + ' · ' + (mph != null ? Math.round(Number(mph)) + ' ' : '') + _escapeHtml(typeof _gstPitchName === 'function' ? _gstPitchName(p) : (p.type || '')) + (call ? ' · <em style="color:' + (typeof _pitchCallColor === 'function' ? _pitchCallColor(p.call) : '#CFC7FF') + '">' + _escapeHtml(call) + '</em>' : '')
-    : 'Waiting on the first pitch';
-  return '<span class="gdl-lvl"><i></i>' + (_gdlOn() ? _gdlSec() + 's behind' : 'Live') + '</span>' +
-    '<span class="gdl-cts" aria-label="' + (s.balls || 0) + ' balls, ' + (s.strikes || 0) + ' strikes, ' + (s.outs || 0) + ' outs">' + n('B', s.balls, '#7BE3A6') + n('S', s.strikes, '#FFFFFF') + n('O', s.outs, '#F2D98A') + '</span>' +
-    '<span class="gdl-lp">' + what + '</span>';
+  var col = function (x) { return typeof _pitchCallColor === 'function' ? _pitchCallColor(x.call) : '#A89FE8'; };
+  var name = function (x) { return typeof _gstPitchName === 'function' ? _gstPitchName(x) : (x.type || ''); };
+  var callOf = function (x) { return x.call ? (typeof _gstShortCall === 'function' ? _gstShortCall(x.call) : x.call) : ''; };
+  var mphOf = function (x) { var m = x.mph != null ? x.mph : x.speed; return m != null && !isNaN(Number(m)) ? Math.round(Number(m)) : null; };
+  // the zone: every pitch of the at-bat, the newest flying in
+  var top = (seq && seq.zoneTop) || 3.4, bot = (seq && seq.zoneBottom) || 1.6;
+  var X = function (px) { return 70 + Math.max(-1.6, Math.min(1.6, px)) / 1.6 * 48; }, Y = function (pz) { return 150 - (Math.max(.7, Math.min(4.4, pz)) - .6) / 4 * 128; };
+  var zone = '<div class="gdl-zn"><i class="gdl-zr" style="left:' + X(-.83).toFixed(0) + 'px;top:' + Y(top).toFixed(0) + 'px;width:' + (X(.83) - X(-.83)).toFixed(0) + 'px;height:' + (Y(bot) - Y(top)).toFixed(0) + 'px"></i>';
+  var lastKey = seq ? seq.atBatIndex + ':' + ps.length : '';
+  var fresh = lastKey && lastKey !== g.liveKey; // a new pitch since the last paint: it flies in
+  if (fresh) { g.liveKey = lastKey; g.liveAt = now; }
+  ps.forEach(function (x, i) {
+    if (x.px == null || x.pz == null) return;
+    var last = i === ps.length - 1, num = x.num != null ? x.num : i + 1;
+    zone += '<span class="' + (last ? 'gdl-ball' : 'gdl-dot') + '" style="--x:' + X(x.px).toFixed(0) + 'px;--y:' + Y(x.pz).toFixed(0) + 'px;left:' + X(x.px).toFixed(0) + 'px;top:' + Y(x.pz).toFixed(0) + 'px;background:' + col(x) + '">' + num + '</span>';
+  });
+  if (!p) zone += '<span class="gdl-zw">' + (brk ? 'Between innings' : 'Waiting on the first pitch') + '</span>';
+  zone += '</div>';
+  var info = p ? '<div class="gdl-pi"><div class="gdl-pk">PITCH ' + (p.num != null ? p.num : ps.length) + ' · JUST NOW</div>' +
+    (mphOf(p) != null ? '<div class="gdl-pm">' + mphOf(p) + '<small>mph</small></div>' : '') + '<div class="gdl-pt">' + E(name(p)) + '</div>' +
+    (callOf(p) ? '<div class="gdl-pc" style="color:' + col(p) + '">' + E(callOf(p)) + '</div>' : '') + '</div>' : '';
+  var tip = '<div class="gdl-pq">' + (_gdlOn() ? 'Does the TV show it <b>just after</b> this? Then it’s set right. Before? Add seconds.' : 'With no delay, the app is ahead of your TV. Pick one and watch this.') + '</div>';
+  // the last few, with how long ago they reached the app
+  var arr = g.arr || {}, log = '';
+  ps.slice(0, -1).slice(-3).reverse().forEach(function (x, i) {
+    var num = x.num != null ? x.num : ps.indexOf(x) + 1, at = seq ? arr[seq.atBatIndex + ':' + num] : null;
+    var ago = at > 0 ? Math.max(0, Math.round((now - at) / 1000)) + 's ago' : '';
+    log += '<div class="gdl-lr"><i style="background:' + col(x) + '">' + num + '</i><span>' + (mphOf(x) != null ? mphOf(x) + ' ' : '') + E(name(x)) + (callOf(x) ? ' · ' + E(callOf(x)) : '') + '</span><em>' + ago + '</em></div>';
+  });
+  return '<div class="gdl-lh"><span class="gdl-lvl"><i></i>The app · ' + (_gdlOn() ? _gdlSec() + 's behind' : 'live') + '</span>' +
+    '<span class="gdl-cts" aria-label="' + (s.balls || 0) + ' balls, ' + (s.strikes || 0) + ' strikes, ' + (s.outs || 0) + ' outs">' + n('B', s.balls, '#7BE3A6') + n('S', s.strikes, '#FFFFFF') + n('O', s.outs, '#F2D98A') + '</span></div>' +
+    '<div class="gdl-lb">' + zone + '<div class="gdl-lr2">' + info + tip + '</div></div>' + (log ? '<div class="gdl-log">' + log + '</div>' : '');
 }
 function _gdlPaintLive() {
   var el = document.getElementById('gdl-live');
   if (!el) return;
   var h = _gdlLiveInner();
   if (el.innerHTML === h) return;
+  var key = window._gdl.liveKey, was = el.getAttribute('data-k');
   el.innerHTML = h;
-  el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); // a beat when the count moves, to line up with the TV
+  el.setAttribute('data-k', key || '');
+  if (key !== was) { el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); } // a beat when a pitch lands, to line up with the TV
+  else el.querySelectorAll('.gdl-ball').forEach(function (b) { b.style.animation = 'none'; }); // only the "ago" numbers changed: don't fly again
 }
+// the "ago" numbers keep counting while the panel's open
+setInterval(function () { if (window._gshDropOn) try { _gdlPaintLive(); } catch (e) {} }, 1000);
 
 // ── the row in the dropdown
 function _gdlTip() {

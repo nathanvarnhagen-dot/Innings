@@ -5,18 +5,40 @@
 .gdl-lab{display:flex;align-items:center;gap:6px;font-size:13px;color:#C7C0E8}
 .gdl-lab svg{display:block;flex-shrink:0}
 .gdl-opts .gdl-opt{padding:6px 10px}
-/* v7.27.1: the count as the app shows it, so you can line it up with the TV */
-.gdl-live{display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 12px;border-radius:14px;background:#0E0A22;border:1px solid rgba(168,159,232,.16);font-size:12.5px;color:#D9D4FA;min-height:46px}
-.gdl-live.tick{animation:gdlTick .7s ease}
+/* v7.28.0: the app's view of the at-bat, pitch to pitch, so you can line it up with the TV */
+.gdl-live{display:block;margin-top:10px;padding:10px 12px 12px;border-radius:16px;background:#0E0A22;border:1px solid rgba(168,159,232,.16);font-size:12.5px;color:#D9D4FA}
+.gdl-live.tick .gdl-ct b{animation:gdlTick .6s ease}
+.gdl-lh{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .gdl-lvl{display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A89FE8}
 .gdl-lvl i{width:7px;height:7px;border-radius:50%;background:#FF7A6B;animation:ghPulseLive 1.2s ease-in-out infinite}
 .gdl-cts{display:flex;gap:8px;flex-shrink:0}
 .gdl-ct{display:flex;align-items:center;gap:3px;font-family:'Barlow Condensed',sans-serif;font-weight:700}
 .gdl-ct i{font-style:normal;font-size:11px;color:#9C95D0}
 .gdl-ct b{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:26px;border-radius:6px;background:#05030E;font-size:19px}
-.gdl-lp{min-width:0;flex:1 1 auto;margin-left:auto;text-align:right;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.gdl-lp em{font-style:normal;font-weight:700;filter:brightness(1.2)}
-@keyframes gdlTick{0%{box-shadow:0 0 0 0 rgba(242,217,138,.0)}25%{box-shadow:0 0 0 2px rgba(242,217,138,.75);background:#1D1640}100%{box-shadow:0 0 0 0 rgba(242,217,138,0)}}
+.gdl-lb{display:flex;gap:12px;margin-top:10px}
+.gdl-zn{position:relative;width:140px;height:150px;flex-shrink:0;border-radius:14px;overflow:hidden;background:radial-gradient(120% 90% at 50% 40%,rgba(61,53,128,.45),rgba(10,7,24,.6) 75%)}
+.gdl-zr{position:absolute;border:1.5px solid rgba(207,199,255,.75);border-radius:3px;background:rgba(255,255,255,.04)}
+.gdl-dot,.gdl-ball{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+.gdl-dot{width:16px;height:16px;margin:-8px 0 0 -8px;font-size:9px;opacity:.4}
+.gdl-ball{width:24px;height:24px;margin:-12px 0 0 -12px;font-size:11.5px;font-weight:900;box-shadow:0 0 0 3px #F2D98A;animation:gdlFly .5s cubic-bezier(.35,.1,.25,1) both,gdlLand .5s ease .5s}
+.gdl-zw{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11px;color:#A9A2D6}
+.gdl-lr2{flex:1;min-width:0;display:flex;flex-direction:column}
+.gdl-pi{animation:gdlInfo .3s ease .3s both}
+.gdl-pk{font-size:10px;font-weight:900;letter-spacing:.2em;color:#9C95D0}
+.gdl-pm{margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1}
+.gdl-pm small{margin-left:3px;font-size:13px;font-weight:600;color:#B9B3E6}
+.gdl-pt{font-size:14px;font-weight:700}
+.gdl-pc{font-size:13px;font-weight:700;filter:brightness(1.2)}
+.gdl-pq{margin-top:auto;padding:8px 10px;border-radius:10px;background:rgba(242,217,138,.08);border:1px solid rgba(242,217,138,.2);font-size:12px;line-height:1.35;color:#EDE7CF}
+.gdl-log{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.gdl-lr{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#D9D4FA}
+.gdl-lr i{width:18px;height:18px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:9.5px;font-weight:800;color:#fff}
+.gdl-lr span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gdl-lr em{margin-left:auto;font-style:normal;font-size:11.5px;color:#9C95D0;white-space:nowrap}
+@keyframes gdlTick{30%{box-shadow:0 0 0 2px #F2D98A}}
+@keyframes gdlFly{from{left:70px;top:14px;transform:scale(.25);opacity:.5}to{left:var(--x);top:var(--y);transform:scale(1);opacity:1}}
+@keyframes gdlLand{0%{box-shadow:0 0 0 3px #F2D98A,0 0 0 3px rgba(242,217,138,.6)}100%{box-shadow:0 0 0 3px #F2D98A,0 0 0 14px rgba(242,217,138,0)}}
+@keyframes gdlInfo{from{opacity:0;transform:translateX(6px)}}
 /* custom: the dial and Match my TV */
 .gdl-box{margin-top:10px;padding:10px;border-radius:18px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.16);animation:gdlIn .28s ease both}
 .gdl-dial{display:flex;align-items:center;gap:10px}
@@ -75,4 +97,4 @@
 @keyframes gdlIn{from{opacity:0;transform:translateY(-6px)}}
 @keyframes gdlRing{from{transform:scale(1);opacity:1}to{transform:scale(1.35);opacity:0}}
 @keyframes gdlSpin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.gdl-box,.gdl-cal,.gdl-live.tick,.gdl-lvl i{animation:none}.gdl-now::after{animation:none;opacity:0}.gdl-spin{animation-duration:2.4s}.gdl-sw,.gdl-sw i{transition:none}}
+@media (prefers-reduced-motion:reduce){.gdl-box,.gdl-cal,.gdl-live.tick .gdl-ct b,.gdl-lvl i,.gdl-ball,.gdl-pi{animation:none}.gdl-now::after{animation:none;opacity:0}.gdl-spin{animation-duration:2.4s}.gdl-sw,.gdl-sw i{transition:none}}
