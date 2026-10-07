@@ -31,10 +31,13 @@
     var people = (W && g && String(W.gamePk) === String(g.gamePk)) ? (W.people || []) : [];
     var names = people.map(function (p) { return p.first; });
     var sub = document.getElementById('gdc-sub'), faces = document.getElementById('gdc-faces'), live = document.getElementById('gdc-live');
-    if (sub) sub.textContent = names.length ? (typeof _watchingWithLabel === 'function' ? _watchingWithLabel(names) : names.join(', ') + ' also watching') : 'Anyone with the link can join';
+    // v7.26.0: chats are private — the line says who's in yours (js/chat/game-chat-rooms.js)
+    var roomLine = typeof _gcrSubLine === 'function' ? _gcrSubLine() : '', roomFaces = typeof _gcrFaces === 'function' ? _gcrFaces() : null;
+    if (sub) sub.textContent = roomLine || (names.length ? (typeof _watchingWithLabel === 'function' ? _watchingWithLabel(names) : names.join(', ') + ' also watching') : 'Only people you let in can see it');
     if (faces) {
       var me = (window.userData && window.userData.name) || 'You';
-      faces.innerHTML = people.slice(0, 3).map(function (p) { return '<span class="gdc-f">' + _escapeHtml(initials(p.name)) + '</span>'; }).join('') + '<span class="gdc-f me">' + _escapeHtml(initials(me)) + '</span>';
+      var who = roomFaces ? roomFaces.map(function (n) { return { name: n }; }) : people;
+      faces.innerHTML = who.slice(0, 3).map(function (p) { return '<span class="gdc-f">' + _escapeHtml(initials(p.name)) + '</span>'; }).join('') + '<span class="gdc-f me">' + _escapeHtml(initials(me)) + '</span>';
     }
     if (live) live.hidden = !(typeof _gshLive === 'function' && _gshLive());
   }

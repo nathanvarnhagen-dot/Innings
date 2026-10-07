@@ -208,6 +208,8 @@ function renderGameChat(msgs) {
   var myUid = (window.currentUser && window.currentUser.uid) || (window.auth && window.auth.currentUser && window.auth.currentUser.uid);
   box.innerHTML = msgs.map(function (c) {
     var mine = c.uid && c.uid === myUid;
+    // v7.26.0: who came into the chat (js/chat/game-chat-rooms.js)
+    if (c.systemType === 'room') return c._line ? '<div class="gc-room' + (c._ask ? ' ask' : '') + '">' + _escapeHtml(c._line) + '</div>' : '';
     if (c.systemType === 'play_reaction' && c.play) {
       return '<button class="gc-sys" data-tag="' + _escapeHtml(c.play.tag || '') + '" data-text="' + _escapeHtml(c.play.text || '') + '" data-pid="' + _escapeHtml(c.play.playId || '') + '" onclick="openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid||null)">' +
         '<span class="gc-sys-e">' + _escapeHtml(c.emoji || '') + '</span><span><b>' + _escapeHtml(mine ? 'You' : (c.author || 'Someone')) + '</b> reacted to <b>' + _escapeHtml(c.play.tag || 'a play') + '</b> · ' + _escapeHtml(c.play.text || '') + '</span></button>';
