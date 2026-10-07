@@ -3,16 +3,18 @@
 // on purpose, per the "just for the beta" call on this one. Deliberately
 // plain (no reactions/replies/link-previews) to match.
 window._gameChatStarted = {};
+window._gameChatMsgs = {}; // v7.20.1: each game's messages, kept so the Chat tab can count the ones you haven't seen
 function startGameChat(gamePk) {
   var key = String(gamePk);
   if (window._gameChatStarted[key]) return;
   if (!window.db) return;
   window._gameChatStarted[key] = true;
   window.db.collection('gameChats').where('gamePk', '==', gamePk).limit(300).onSnapshot(function (snap) {
-    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
     var msgs = [];
     snap.forEach(function (doc) { msgs.push(Object.assign({ _id: doc.id }, doc.data())); });
     msgs.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    window._gameChatMsgs[key] = msgs;
+    if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
     renderGameChat(msgs);
   }, function (err) {
     console.error('Game chat error:', err);
