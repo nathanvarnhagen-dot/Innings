@@ -115,6 +115,7 @@ function _gshDeskBug() {
   var panel = document.getElementById('game-sheet-panel');
   if (desk && panel) {
     if (!on) _gshUntuck(panel);
+    else if (_gshStays()) _gshUntuck(panel); // v7.31.0: only baseball tucks it away
     else if (_gshHeroEls(panel).length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000);
     else if (window._gshGone) _gshHeroEls(panel).forEach(function (el) { if (!el._gshHiding) el.style.display = 'none'; }); // a re-render brought them back
   }
@@ -163,7 +164,12 @@ function _gshUpdate() {
   if (!live) _gshUntuck(panel);
   // v7.13.1: a few seconds after the game opens the scoreboard tucks away
   // for good (until the next open); only the bug's arrow brings it back
-  if (live && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000); // v7.17.3: was 4s
+  // v7.31.0: baseball only — its at-bat box is the thing to watch. Every
+  // other sport keeps the scoreboard down; it still folds into the bug as
+  // you scroll past it, and the bug's arrow pulls it back.
+  var stays = _gshStays();
+  if (live && stays) _gshUntuck(panel);
+  if (live && !stays && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000); // v7.17.3: was 4s
   if (live && els.length && !window._gshGone) {
     var top0 = els[0].offsetTop, hero = els[els.length - 1];
     var span = Math.max(1, hero.offsetTop + hero.offsetHeight - top0);
@@ -179,6 +185,9 @@ function _gshUpdate() {
   function reduceMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 }
 function _gshLive() { var o = _gshModel(); return !!(o && o.m && o.m.phase === 'live'); }
+// v7.31.0: football, basketball, hockey and soccer keep the scoreboard on the
+// page for the whole live game (no auto-tuck). Baseball still tucks it away.
+function _gshStays() { var o = _gshModel(); return !!(o && o.kind !== 'mlb'); }
 // Brings a tucked-away scoreboard back (the game is no longer live)
 function _gshUntuck(panel) {
   if (window._gshTimer) { clearTimeout(window._gshTimer); window._gshTimer = null; }
@@ -190,7 +199,7 @@ function _gshUntuck(panel) {
 // the page, keeping whatever the reader is looking at in place
 function _gshAutoHide() {
   window._gshTimer = null;
-  if (window._gshGone || !_gshLive()) return;
+  if (window._gshGone || !_gshLive() || _gshStays()) return;
   window._gshGone = true;
   var scr = document.getElementById('screen-game'), panel = document.getElementById('game-sheet-panel');
   if (!panel) return;
