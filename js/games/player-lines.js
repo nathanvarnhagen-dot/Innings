@@ -50,6 +50,44 @@ function _plsLinesFill(id) {
   el.innerHTML = _plsLinesHtml(id);
 }
 
+// ── v7.32.0: age · height · which season in the league this is for him,
+// right under the name, for every sport (/api/espn?mode=bio — MLB and NHL
+// players come from their own leagues' feeds, everyone else from ESPN).
+// College players get their class (Junior…) in place of the season, and no
+// age: ESPN doesn't carry one for them. Only what came back is shown, and
+// nothing at all when the player couldn't be matched by name.
+window._sav.bio = window._sav.bio || {};
+var PLS_BIO_TTL = 6 * 3600e3;
+var PLS_BIO_LG = { mlb: 'MLB', nhl: 'NHL', nfl: 'NFL', cfb: 'CFB', nba: 'NBA', wnba: 'WNBA', mls: 'MLS', nwsl: 'NWSL' };
+function _plsBioKey(name, id, league) { return league + ':' + (id || '') + ':' + String(name || '').toLowerCase(); }
+function _plsBioHtml(name, id, league) {
+  if (!PLS_BIO_LG[league] || (!id && !name) || typeof _savGet !== 'function') return '';
+  var key = _plsBioKey(name, id, league);
+  var again = function () {
+    // a lookup that failed is asked again in a couple of minutes, not in six hours
+    var f = window._sav.bio[key];
+    if (f && f.failed) f.at = Date.now() - PLS_BIO_TTL + 120000;
+    if (window._plsBioCur === key) _plsBioFill(name, id, league);
+  };
+  var d = _savGet('bio', key, '/api/espn?mode=bio&league=' + encodeURIComponent(league) + (id ? '&id=' + encodeURIComponent(id) : '') + '&name=' + encodeURIComponent(name || ''), PLS_BIO_TTL, again);
+  var e = window._sav.bio[key];
+  if (!d) return (e && e.failed) ? '' : '<div class="plb plb-wait" aria-hidden="true"><span><i class="pll-dot"></i></span><span><i class="pll-dot"></i></span><span><i class="pll-dot"></i></span></div>';
+  var cells = [];
+  if (d.age != null) cells.push(['Age', String(d.age)]);
+  if (d.height) cells.push(['Height', String(d.height)]);
+  if (d.seasons != null && Number(d.seasons) > 0) cells.push([PLS_BIO_LG[league] + ' season', typeof _ordinalSuffix === 'function' ? _ordinalSuffix(Number(d.seasons)) : String(d.seasons)]);
+  else if (d.cls) cells.push(['Class', String(d.cls).replace(/^redshirt\s+/i, 'RS ')]); // "Redshirt Sophomore" doesn't fit the tile
+  if (!cells.length) return '';
+  return '<div class="plb">' + cells.map(function (c) { return '<span><small>' + _escapeHtml(c[0]) + '</small><b>' + _escapeHtml(c[1]) + '</b></span>'; }).join('') + '</div>';
+}
+function _plsBioFill(name, id, league) {
+  var el = document.getElementById('player-bio');
+  if (!el) return;
+  window._plsBioCur = _plsBioKey(name, id, league);
+  var h = _plsBioHtml(name, id, league);
+  if (el.innerHTML !== h) el.innerHTML = h;
+}
+
 // ── the tapped name flies into the sheet's title
 function _plsFlip(src, name) {
   var nameEl = document.getElementById('player-link-name');
@@ -99,6 +137,7 @@ function _plsFlip(src, name) {
     var r = orig.apply(this, arguments);
     var lines = document.getElementById('player-lines');
     if (lines) { if (league === 'mlb' && id) _plsLinesFill(id); else lines.innerHTML = ''; }
+    try { _plsBioFill(name, id, league); } catch (e) { console.error('[player bio]', e); }
     window._plsSrc = src; window._plsSrcId = id != null ? String(id) : null;
     try { _plsFlip(src, name); } catch (e) { console.error('[player sheet]', e); }
     return r;

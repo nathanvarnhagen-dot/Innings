@@ -2,6 +2,7 @@
 //                               GET /api/espn?league=...&mode=boxscore&eventId=<id>
 //                               GET /api/espn?mode=search&q=<name>[&debug=1]
 //                               GET /api/espn?league=nfl&mode=player&id=<athleteId>[&debug=1]
+//                               GET /api/espn?mode=bio&league=<mlb|nhl|nfl|cfb|nba|wnba|mls|nwsl>&id=<player id>&name=<name>
 // One shared file for five leagues, since they all run on the exact same
 // underlying source: ESPN's hidden scoreboard API. This is NOT an official,
 // documented, or supported API — it's the same undocumented endpoint every
@@ -40,6 +41,8 @@ module.exports = async function handler(req, res) {
   const mode = req.query.mode;
   // Cross-sport player search needs no league (v5.67.0).
   if (mode === 'search') { await _playerSearch(req, res); return; }
+  // Age, height and seasons in the league for any sport's player (v7.32.0).
+  if (mode === 'bio') { try { await _playerBio(req, res); } catch (e) { res.status(200).json({ error: 'Bio lookup failed' }); } return; }
   const path = LEAGUE_PATHS[league];
   if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
   try {
@@ -1544,6 +1547,135 @@ function _searchItemToPlayer(it) {
   var pos = (it.position && (it.position.abbreviation || it.position.displayName)) || null;
   return { id: id != null ? String(id) : null, name: name, pos: pos, team: team, league: league };
 }
+// ── PLAYER BIO (v7.32.0) ─────────────────────────────────────────────────
+// The line at the top of the player sheet, for every sport: age, height and
+// which season in the league this is for him.
+//   · MLB ids → MLB's own people feed (age, height) + his year-by-year
+//     lines (how many MLB seasons he has played in, this one included).
+//   · NHL ids → the NHL's player feed (birth date, height in inches, the
+//     NHL seasons in his season totals).
+//   · Everyone else → ESPN's athlete feed (age, displayHeight,
+//     displayExperience: "10th Season", or the class for college —
+//     "Junior"). Soccer has no experience field; the seasons ESPN lists him
+//     in that league are counted instead.
+// The app hands over whatever id it has, and that isn't always the
+// league's own (search results and NHL team pages carry ESPN ids), so every
+// answer is checked against the player's name; when it's somebody else the
+// ESPN feed for that league is tried, and with no id at all the player is
+// looked up by exact name. Nothing is returned rather than the wrong man.
+// Field names confirmed against live responses on 2026-10-11.
+var _BIO_PATHS = { mlb: 'baseball/mlb', nhl: 'hockey/nhl', nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
+function _bioNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\b(jr|sr|ii|iii|iv)\b/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// Same player? Exact once accents, punctuation and Jr./III are gone — or the
+// same last name and first initial ("T. Skubal" / "Tarik Skubal").
+function _bioSameName(a, b) {
+  var x = _bioNorm(a), y = _bioNorm(b);
+  if (!x || !y) return true; // nothing to check against
+  if (x === y) return true;
+  return x.split(' ').pop() === y.split(' ').pop() && x.charAt(0) === y.charAt(0);
+}
+function _bioHeight(s) { var m = String(s || '').match(/(\d+)\s*'\s*(\d+)?/); return m ? m[1] + "'" + (m[2] || '0') + '"' : null; }
+function _bioInches(n) { n = Math.round(Number(n)); return n > 0 ? Math.floor(n / 12) + "'" + (n % 12) + '"' : null; }
+function _bioAge(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  var now = new Date(), age = now.getUTCFullYear() - Number(m[1]);
+  if (now.getUTCMonth() + 1 < Number(m[2]) || (now.getUTCMonth() + 1 === Number(m[2]) && now.getUTCDate() < Number(m[3]))) age--;
+  return age > 0 && age < 80 ? age : null;
+}
+async function _bioMlb(id) {
+  var parts = await Promise.all([
+    _tpGetJson('https://statsapi.mlb.com/api/v1/people/' + id),
+    _tpGetJson('https://statsapi.mlb.com/api/v1/people/' + id + '/stats?stats=yearByYear&group=hitting,pitching,fielding&sportId=1')
+  ]);
+  var p = parts[0] && parts[0].people && parts[0].people[0];
+  if (!p || !p.fullName) return null;
+  var seen = {};
+  ((parts[1] && parts[1].stats) || []).forEach(function (g) {
+    (g.splits || []).forEach(function (sp) { if (sp && sp.season && (!sp.sport || sp.sport.id === 1)) seen[sp.season] = 1; });
+  });
+  var n = Object.keys(seen).length;
+  // the year-by-year feed didn't answer: seasons since his debut instead
+  if (!n && !parts[1] && p.mlbDebutDate) { var dy = parseInt(String(p.mlbDebutDate).slice(0, 4), 10); if (dy) n = Math.max(1, new Date().getUTCFullYear() - dy + 1); }
+  return { name: p.fullName, age: p.currentAge != null ? Number(p.currentAge) : _bioAge(p.birthDate), height: _bioHeight(p.height), seasons: n || null, cls: null, src: 'mlb' };
+}
+async function _bioNhl(id) {
+  var d = await _tpGetJson('https://api-web.nhle.com/v1/player/' + id + '/landing');
+  if (!d || !d.lastName) return null;
+  var txt = function (x) { return x && typeof x === 'object' ? (x.default || '') : (x || ''); };
+  var seen = {};
+  (d.seasonTotals || []).forEach(function (st) { if (st && st.leagueAbbrev === 'NHL' && (st.gameTypeId === 2 || st.gameTypeId === 3) && st.season) seen[st.season] = 1; });
+  var n = Object.keys(seen).length;
+  return { name: (txt(d.firstName) + ' ' + txt(d.lastName)).trim(), age: _bioAge(d.birthDate), height: _bioInches(d.heightInInches), seasons: n || null, cls: null, src: 'nhl' };
+}
+async function _bioEspn(league, id) {
+  var path = _BIO_PATHS[league];
+  if (!path) return null;
+  var soccer = path.indexOf('soccer/') === 0;
+  var parts = await Promise.all([
+    _tpGetJson('https://site.web.api.espn.com/apis/common/v3/sports/' + path + '/athletes/' + id),
+    soccer ? _tpGetJson('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + path.split('/')[1] + '/athletes/' + id + '/seasons?lang=en&region=us') : null
+  ]);
+  var a = parts[0] && (parts[0].athlete || parts[0]);
+  if (!a || !(a.displayName || a.fullName)) return null;
+  var dx = String(a.displayExperience || (a.experience && a.experience.displayValue) || '').trim();
+  var m = dx.match(/(\d+)/), seasons = null, cls = null;
+  if (m) seasons = Number(m[1]);
+  else if (/rookie/i.test(dx)) seasons = 1;
+  else if (league === 'cfb' && dx) cls = dx; // college: his class ("Junior", "Redshirt Sophomore")
+  else if (a.experience && a.experience.years != null && isFinite(Number(a.experience.years))) seasons = Number(a.experience.years) + 1;
+  if (seasons == null && !cls && soccer && parts[1]) {
+    var c = Number(parts[1].count) || (parts[1].items || []).length;
+    if (c > 0) seasons = c;
+  }
+  var age = a.age != null && isFinite(Number(a.age)) ? Number(a.age) : null;
+  return { name: a.displayName || a.fullName, age: age, height: _bioHeight(a.displayHeight), seasons: seasons, cls: cls, src: 'espn' };
+}
+async function _playerBio(req, res) {
+  const league = String(req.query.league || '').toLowerCase();
+  const id = String(req.query.id || '').replace(/[^0-9]/g, '');
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  if (!_BIO_PATHS[league]) { res.status(400).json({ error: 'Unknown league' }); return; }
+  if (!id && !name) { res.status(400).json({ error: 'Missing id or name' }); return; }
+  const good = function (b) { return !!b && _bioSameName(b.name, name) && (b.age != null || !!b.height || b.seasons != null || !!b.cls); };
+  const tried = [];
+  let out = null;
+  if (id) {
+    if (league === 'mlb' || league === 'nhl') {
+      const own = league === 'mlb' ? await _bioMlb(id) : await _bioNhl(id);
+      tried.push({ src: league, name: own && own.name });
+      if (good(own)) out = own;
+    }
+    if (!out) {
+      const es = await _bioEspn(league, id);
+      tried.push({ src: 'espn', name: es && es.name });
+      if (good(es)) out = es;
+    }
+  }
+  // No id (or it was somebody else's): the one player in this league with exactly this name
+  if (!out && name) {
+    const v3 = await _tpGetJson('https://site.web.api.espn.com/apis/common/v3/search?region=us&lang=en&query=' + encodeURIComponent(name) + '&limit=25&mode=prefix&type=player');
+    const want = _bioNorm(name);
+    const hits = ((v3 && Array.isArray(v3.items)) ? v3.items : []).map(_searchItemToPlayer).filter(function (p) { return p && p.id && p.league === league && _bioNorm(p.name) === want; });
+    tried.push({ src: 'search', hits: hits.length });
+    if (hits.length === 1 && hits[0].id !== id) {
+      const byName = await _bioEspn(league, hits[0].id);
+      if (good(byName)) out = byName;
+    }
+  }
+  if (!out) {
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate');
+    res.status(200).json(req.query.debug ? { error: 'No bio', tried: tried } : { error: 'No bio' });
+    return;
+  }
+  const result = { league: league, name: out.name, age: out.age, height: out.height, seasons: out.seasons, cls: out.cls, src: out.src };
+  if (req.query.debug) result.tried = tried;
+  res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+  res.status(200).json(result);
+}
+
 async function _playerSearch(req, res) {
   const q = String(req.query.q || '').trim();
   if (q.length < 2) { res.status(200).json({ players: [] }); return; }
