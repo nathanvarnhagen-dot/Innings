@@ -983,6 +983,9 @@ function loadGameCheatSheet(gamePk) {
   window._bsDetailState = { expanded: false, side: 'away' }; // fresh collapsed state each new game — don't carry an expanded table over from the last one
   window._lastLiveBox = null;
   el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading…</div>';
+  // v7.31.1: on iPhone a page that fills in after it opens could come up
+  // unable to scroll — nudge it once the real content is in (navigation.js)
+  if (typeof _nudgeWhenReady === 'function') _nudgeWhenReady(el);
   _stopGameLiveRefresh();
   _refreshBoxScore(gamePk).then(function (isLive) {
     if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return;
@@ -1002,6 +1005,7 @@ function loadGameCheatSheet(gamePk) {
 function _loadPregameSheet(gamePk, sport) {
   var el = document.getElementById('game-sheet-panel');
   if (!el) return;
+  if (typeof _nudgeWhenReady === 'function') _nudgeWhenReady(el); // v7.31.1: same, for a pull-to-refresh before the game (it goes back through "Loading lineups…")
 
   if (sport !== 'mlb') {
     var _note = function (txt) {

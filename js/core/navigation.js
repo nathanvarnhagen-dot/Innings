@@ -50,9 +50,63 @@ function _nudgeScrollers(screenEl){
         var st = s.scrollTop;
         s.scrollTop = st + 1;
         s.scrollTop = st;
+        // v7.31.1: nothing to scroll yet (a game's cheat sheet still says
+        // "Loading…" at this point) means the nudge above did nothing —
+        // do it again once the content has landed
+        if (!_canScroll(s)) _nudgeWhenReady(s);
       });
     });
   });
+}
+// v7.31.1: the nudge only works on something that can already scroll. A
+// panel whose content arrives a moment after the screen opens (the game
+// cheat sheet: "Loading…" first, the real page a second later) was skipped,
+// so on iPhone it could open stuck — taps worked, dragging did nothing —
+// until something else re-laid the page out (tapping Going to watch did,
+// because the header grows). _nudgeWhenReady watches such a panel and
+// nudges it the moment it has something to scroll, and once more after the
+// screen's fade-in is over.
+function _canScroll(s){ return !!s && s.scrollHeight - s.clientHeight > 1; }
+function _kickScroller(s){
+  if (!s || !s.isConnected) return;
+  var st = s.scrollTop;
+  s.scrollTop = st + 1;
+  s.scrollTop = st;
+  // …and make the page a pixel longer for a frame, then put it back: a
+  // change in the content's size is what got a stuck panel going again
+  if (s._kickBusy) return;
+  s._kickBusy = true;
+  var had = s.style.getPropertyValue('padding-bottom'), pri = s.style.getPropertyPriority('padding-bottom');
+  var pb = parseFloat(getComputedStyle(s).paddingBottom) || 0;
+  s.style.setProperty('padding-bottom', (pb + 1) + 'px', 'important');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      if (had) s.style.setProperty('padding-bottom', had, pri); else s.style.removeProperty('padding-bottom');
+      s._kickBusy = false;
+    });
+  });
+}
+function _nudgeWhenReady(s){
+  if (!s || !window.MutationObserver) return;
+  var stop = function(){
+    if (s._nudgeMO) { s._nudgeMO.disconnect(); s._nudgeMO = null; }
+    clearTimeout(s._nudgeT);
+  };
+  stop();
+  var raf = 0;
+  var check = function(){
+    raf = 0;
+    if (!s._nudgeMO || !_canScroll(s)) return; // still loading
+    stop();
+    _kickScroller(s);
+    var st = s.scrollTop;
+    // once more when the fade-in is done — unless it has been scrolled
+    // since, which means it's working
+    setTimeout(function(){ if (s.isConnected && s.scrollTop === st) _kickScroller(s); }, 400);
+  };
+  s._nudgeMO = new MutationObserver(function(){ if (!raf) raf = requestAnimationFrame(check); });
+  s._nudgeMO.observe(s, { childList: true, subtree: true });
+  s._nudgeT = setTimeout(stop, 30000);
 }
 
 // Tapped feed banner (OSL / Feedback): whole card presses down, icon pops

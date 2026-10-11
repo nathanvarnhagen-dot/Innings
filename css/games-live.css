@@ -10,7 +10,7 @@
 .ps-ban .go{margin-left:auto;font-size:12px;font-weight:800;color:var(--rc);white-space:nowrap}
 .ps-shine{position:absolute;top:-30%;bottom:-30%;width:30%;left:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:psShine 4.5s ease-in-out infinite;pointer-events:none}
 @keyframes psShine{0%,60%{left:-40%}100%{left:130%}}
-.ps-rib{position:relative;overflow:hidden;border-radius:18px;padding:13px 15px;margin-bottom:12px;border:1px solid var(--rcb);background:linear-gradient(120deg,var(--rc2),#15103A 72%)}
+.ps-rib{position:relative;overflow:hidden;border-radius:18px;padding:13px 15px;margin-bottom:12px;border:1px solid var(--rcb);background:linear-gradient(120deg,var(--rc2),#15103A 72%);color:#fff} /* v7.31.1: the series name was black on the dark card */
 .ps-rib .k{font-size:10px;font-weight:900;letter-spacing:.3em;color:var(--rc)}
 .ps-rib .t{font-size:20px;font-weight:900;font-style:italic;margin-top:1px}
 .ps-rib .s{font-size:13px;font-weight:700;color:#F5F3FF;margin-top:2px}

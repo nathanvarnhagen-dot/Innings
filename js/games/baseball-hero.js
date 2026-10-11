@@ -331,7 +331,7 @@ function _ghPreHtml(m, st, animating) {
     var tap = _tmTapAttrs('mlb', s.id, s.name);
     return '<div class="gh-team ' + cls + (tap ? ' tm-tap' : '') + '"' + tap + ' style="' + _ghDelay(delay) + '">' + _ghBadge(s, 50) +
       '<div style="font-size:12.5px;font-weight:700;margin-top:4px;max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(s.short) + '</div>' +
-      '<div class="gh-num" style="font-size:28px;line-height:1">' + rec + '</div>' +
+      '<div class="gh-num" style="font-size:28px;line-height:1;white-space:nowrap">' + rec + '</div>' +
       (place ? '<div style="font-size:10.5px;color:#B9B3E6">' + _escapeHtml(place) + '</div>' : '') + (tap ? '<div class="tm-hint">Team page ›</div>' : '') + '</div>';
   };
   h += '<div class="gh-stage">' +
