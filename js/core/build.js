@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.33.0-football-lines-and-downs';
+window.INNINGS_BUILD = 'v7.33.1-ball-after-a-punt';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

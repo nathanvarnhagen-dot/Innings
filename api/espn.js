@@ -1046,8 +1046,20 @@ function _fbSituation(data, comp, away, home) {
       var tid = pend.pt.team && pend.pt.team.id != null ? String(pend.pt.team.id) : null;
       if (tid === String(home.id)) possSide = 'h';
       else if (tid === String(away.id)) possSide = 'a';
-      else if (pend.play && possSide && /punt|kickoff|intercept|turnover on downs|missed field goal|blocked/i.test(String(((pend.play.type && pend.play.type.text) || '')))) possSide = possSide === 'h' ? 'a' : 'h';
     } else ddText = null;
+  }
+  // After a punt, a pick or a missed kick ESPN keeps the old drive — and its
+  // team — as the current one until the next snap, while the down already
+  // reads the other team's 1st & 10 (seen live: "1st & 10 at SEA 9" with
+  // San Francisco still shown holding the ball and the first-down line at
+  // the goal line). The ball belongs to the other side there.
+  var driveSide = drive && drive.team ? (String(drive.team.id) === String(home.id) ? 'h' : (String(drive.team.id) === String(away.id) ? 'a' : (drive.team.abbreviation === home.abbr ? 'h' : (drive.team.abbreviation === away.abbr ? 'a' : null)))) : null;
+  if (driveSide && possSide === driveSide && _fbDown(down) === 1) {
+    var dps = (drive && drive.plays) || [], li = dps.length - 1;
+    while (li >= 0 && _fbIsStop(dps[li])) li--;
+    var lr = li >= 0 ? dps[li] : null;
+    var lrType = lr ? String((lr.type && lr.type.text) || '') : '';
+    if (lr && /punt|field goal missed|missed field goal|blocked field goal|intercept|fumble recovery \(opponent\)/i.test(lrType) && !/muff/i.test(String(lr.text || ''))) possSide = driveSide === 'h' ? 'a' : 'h';
   }
   if (down == null && !posText && !next) return null;
   // Absolute ball spot, 0 = home goal line (left), 100 = away goal line (right)
