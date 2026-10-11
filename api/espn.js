@@ -3,6 +3,7 @@
 //                               GET /api/espn?mode=search&q=<name>[&debug=1]
 //                               GET /api/espn?league=nfl&mode=player&id=<athleteId>[&debug=1]
 //                               GET /api/espn?mode=bio&league=<mlb|nhl|nfl|cfb|nba|wnba|mls|nwsl>&id=<player id>&name=<name>
+//                               GET /api/espn?mode=pstats&league=<nfl|cfb>&id=<athleteId>[&name=<name>]
 // One shared file for five leagues, since they all run on the exact same
 // underlying source: ESPN's hidden scoreboard API. This is NOT an official,
 // documented, or supported API — it's the same undocumented endpoint every
@@ -43,6 +44,8 @@ module.exports = async function handler(req, res) {
   if (mode === 'search') { await _playerSearch(req, res); return; }
   // Age, height and seasons in the league for any sport's player (v7.32.0).
   if (mode === 'bio') { try { await _playerBio(req, res); } catch (e) { res.status(200).json({ error: 'Bio lookup failed' }); } return; }
+  // A football player's stat lines for the player card (v7.33.0).
+  if (mode === 'pstats') { try { await _playerStats(req, res); } catch (e) { res.status(200).json({ error: 'Stats lookup failed' }); } return; }
   const path = LEAGUE_PATHS[league];
   if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
   try {
@@ -982,6 +985,42 @@ function _fbHead(p) {
   if (/safety/i.test(t)) return 'Safety';
   return (p.type && p.type.text) || 'Score';
 }
+// v7.33.0: the down & distance stays up through a timeout. While the clock
+// is stopped ESPN's situation often has no down at all (down 0 or -1, no
+// texts), and the screen went blank until the next snap. When that happens
+// the answer is read off the plays instead: a timeout's own start/end if it
+// carries a down, otherwise where the last real play left the ball (a punt's
+// or a kickoff's end is the other team's 1st & 10). After a score there is
+// no down to show — `next` says what's coming (Kickoff, Extra point).
+function _fbIsStop(p) {
+  var t = String(((p && p.type && p.type.text) || '') + ' ' + ((p && p.text) || ''));
+  return /timeout|two[- ]minute warning/i.test(t);
+}
+function _fbCleanDD(t) { t = String(t || '').trim(); return (!t || /^&/.test(t)) ? null : t; } // ESPN's "& Goal" for a timeout isn't a down
+function _fbPendingSpot(drive) {
+  var plays = (drive && drive.plays) || [];
+  var ok = function (pt) { return !!(pt && _fbDown(pt.down) != null && pt.possessionText); };
+  for (var i = plays.length - 1; i >= 0; i--) {
+    var p = plays[i] || {}, e = p.end || p.start;
+    if (_fbIsStop(p)) {
+      if (ok(e)) return { pt: e, play: p };
+      if (i === 0) {
+        // a new drive that opens with a timeout: 1st & 10 where the drive starts
+        var ds = drive.start && (drive.start.text || drive.start.possessionText);
+        if (ds && /^([A-Z]{1,4}\s+\d{1,2}|50)$/.test(String(ds))) return { pt: { down: 1, distance: 10, possessionText: String(ds) }, play: null };
+      }
+      continue;
+    }
+    var txt = String(((p.type && p.type.text) || '') + ' ' + (p.text || ''));
+    if (p.scoringPlay) {
+      if (/safety/i.test(txt)) return { next: 'Free kick' };
+      if (/touchdown/i.test(txt) && !/extra point|two-point|2-point|conversion|\(kick|kick\)|pat\b/i.test(txt)) return { next: 'Extra point' };
+      return { next: 'Kickoff' };
+    }
+    return ok(p.end) ? { pt: p.end, play: p } : {};
+  }
+  return {};
+}
 function _fbSituation(data, comp, away, home) {
   var sit = (comp && comp.situation) || data.situation || null;
   var drive = data.drives && data.drives.current;
@@ -990,11 +1029,27 @@ function _fbSituation(data, comp, away, home) {
   var down = sit && sit.down != null ? sit.down : start.down;
   var dist = sit && sit.distance != null ? sit.distance : start.distance;
   var posText = (sit && sit.possessionText) || start.possessionText || null;
-  var ddText = (sit && (sit.downDistanceText || sit.shortDownDistanceText)) || start.downDistanceText || null;
+  var ddText = _fbCleanDD((sit && (sit.downDistanceText || sit.shortDownDistanceText)) || start.downDistanceText);
   var possId = sit && sit.possession ? String(sit.possession) : (drive && drive.team ? String(drive.team.id) : null);
   var possSide = possId ? (possId === String(home.id) ? 'h' : (possId === String(away.id) ? 'a' : null)) : null;
   if (!possSide && drive && drive.team && drive.team.abbreviation) possSide = drive.team.abbreviation === home.abbr ? 'h' : 'a';
-  if (down == null && !posText) return null;
+  var held = false, next = null;
+  if (_fbDown(down) == null && drive) {
+    var pend = _fbPendingSpot(drive);
+    if (pend.next) { next = pend.next; ddText = null; }
+    else if (pend.pt) {
+      down = pend.pt.down; dist = pend.pt.distance; posText = pend.pt.possessionText;
+      ddText = _fbCleanDD(pend.pt.downDistanceText || pend.pt.shortDownDistanceText) || _fbDownText(down, dist);
+      if (ddText && !/\sat\s/i.test(ddText) && posText) ddText += ' at ' + posText; // same shape as ESPN's own "3rd & 5 at SEA 25"
+      held = true;
+      // whose ball it is there: the spot says so when it can (after a punt it's the other team's)
+      var tid = pend.pt.team && pend.pt.team.id != null ? String(pend.pt.team.id) : null;
+      if (tid === String(home.id)) possSide = 'h';
+      else if (tid === String(away.id)) possSide = 'a';
+      else if (pend.play && possSide && /punt|kickoff|intercept|turnover on downs|missed field goal|blocked/i.test(String(((pend.play.type && pend.play.type.text) || '')))) possSide = possSide === 'h' ? 'a' : 'h';
+    } else ddText = null;
+  }
+  if (down == null && !posText && !next) return null;
   // Absolute ball spot, 0 = home goal line (left), 100 = away goal line (right)
   var spot = null;
   var pm = posText && String(posText).match(/^([A-Z]{1,4})\s+(\d{1,2})$/);
@@ -1018,6 +1073,8 @@ function _fbSituation(data, comp, away, home) {
   return {
     drivePlays: drivePlays,
     downText: ddText || _fbDownText(down, dist) || '',
+    held: held,
+    next: next,
     posText: posText,
     possSide: possSide,
     spot: spot,
@@ -1077,7 +1134,7 @@ function _fbDrive(data, sport) {
   if (!drive) return null;
   var plays = (drive.plays || []).slice(-4).reverse().map(function (p) {
     var st = p.start || {};
-    return { id: p.id != null ? String(p.id) : null, tag: st.shortDownDistanceText || st.downDistanceText || _gcPeriodTag(sport, p.period && p.period.number), text: p.text || '', scoring: !!p.scoringPlay };
+    return { id: p.id != null ? String(p.id) : null, tag: _fbCleanDD(st.shortDownDistanceText || st.downDistanceText) || _gcPeriodTag(sport, p.period && p.period.number), text: p.text || '', scoring: !!p.scoringPlay };
   }).filter(function (p) { return p.text; });
   return { team: drive.team ? (drive.team.abbreviation || drive.team.shortDisplayName) : null, summary: drive.description || null, plays: plays };
 }
@@ -1633,6 +1690,12 @@ async function _bioEspn(league, id) {
   var age = a.age != null && isFinite(Number(a.age)) ? Number(a.age) : null;
   return { name: a.displayName || a.fullName, age: age, height: _bioHeight(a.displayHeight), seasons: seasons, cls: cls, src: 'espn' };
 }
+// ESPN ids of the players in one league with exactly this name
+async function _bioIdsByName(league, name) {
+  const v3 = await _tpGetJson('https://site.web.api.espn.com/apis/common/v3/search?region=us&lang=en&query=' + encodeURIComponent(name) + '&limit=25&mode=prefix&type=player');
+  const want = _bioNorm(name);
+  return ((v3 && Array.isArray(v3.items)) ? v3.items : []).map(_searchItemToPlayer).filter(function (p) { return p && p.id && p.league === league && _bioNorm(p.name) === want; }).map(function (p) { return p.id; });
+}
 async function _playerBio(req, res) {
   const league = String(req.query.league || '').toLowerCase();
   const id = String(req.query.id || '').replace(/[^0-9]/g, '');
@@ -1656,12 +1719,10 @@ async function _playerBio(req, res) {
   }
   // No id (or it was somebody else's): the one player in this league with exactly this name
   if (!out && name) {
-    const v3 = await _tpGetJson('https://site.web.api.espn.com/apis/common/v3/search?region=us&lang=en&query=' + encodeURIComponent(name) + '&limit=25&mode=prefix&type=player');
-    const want = _bioNorm(name);
-    const hits = ((v3 && Array.isArray(v3.items)) ? v3.items : []).map(_searchItemToPlayer).filter(function (p) { return p && p.id && p.league === league && _bioNorm(p.name) === want; });
+    const hits = await _bioIdsByName(league, name);
     tried.push({ src: 'search', hits: hits.length });
-    if (hits.length === 1 && hits[0].id !== id) {
-      const byName = await _bioEspn(league, hits[0].id);
+    if (hits.length === 1 && hits[0] !== id) {
+      const byName = await _bioEspn(league, hits[0]);
       if (good(byName)) out = byName;
     }
   }
@@ -1673,6 +1734,185 @@ async function _playerBio(req, res) {
   const result = { league: league, name: out.name, age: out.age, height: out.height, seasons: out.seasons, cls: out.cls, src: out.src };
   if (req.query.debug) result.tried = tried;
   res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate');
+  res.status(200).json(result);
+}
+
+// ── FOOTBALL STAT LINES FOR THE PLAYER CARD (v7.33.0) ────────────────────
+// What baseball's card has, for NFL and college football: this season, last
+// season and his career on one small table, then every game this season.
+// Two ESPN feeds, both confirmed against live responses on 2026-10-11:
+//   …/athletes/{id}/stats    categories[] { name, names[], totals[],
+//                            statistics[] { season.year, teamSlug, position,
+//                            stats[] } } — one row per season (two when he
+//                            changed teams mid-season), values as display
+//                            strings ("3,928", "67.5", "33-38", "-")
+//   …/athletes/{id}/gamelog?season=YYYY
+//                            names[] (flat, in column order), events{ id: {
+//                            week, atVs, gameDate, score, gameResult,
+//                            opponent.abbreviation } }, seasonTypes[] {
+//                            displayName, categories[] { events[] { eventId,
+//                            stats[] } } }
+// Five columns per position; each list holds spares, and the first five the
+// feed actually carries are used (college has no targets, so receivers get
+// their long instead).
+var _PS_COLS = {
+  qb: [['YDS', 'passing', 'passingYards'], ['TD', 'passing', 'passingTouchdowns'], ['INT', 'passing', 'interceptions'], ['CMP%', 'passing', 'completionPct'], ['RTG', 'passing', 'QBRating'], ['AVG', 'passing', 'yardsPerPassAttempt']],
+  rb: [['CAR', 'rushing', 'rushingAttempts'], ['YDS', 'rushing', 'rushingYards'], ['AVG', 'rushing', 'yardsPerRushAttempt'], ['TD', 'rushing', 'rushingTouchdowns'], ['REC', 'receiving', 'receptions'], ['LNG', 'rushing', 'longRushing']],
+  rec: [['REC', 'receiving', 'receptions'], ['TGT', 'receiving', 'receivingTargets'], ['YDS', 'receiving', 'receivingYards'], ['AVG', 'receiving', 'yardsPerReception'], ['TD', 'receiving', 'receivingTouchdowns'], ['LNG', 'receiving', 'longReception']],
+  def: [['TKL', 'defensive', 'totalTackles'], ['SACK', 'defensive', 'sacks'], ['INT', 'defensive', 'interceptions'], ['FF', 'defensive', 'fumblesForced'], ['PD', 'defensive', 'passesDefended'], ['SOLO', 'defensive', 'soloTackles']],
+  k: [['FG', 'kicking', 'fieldGoalsMade-fieldGoalAttempts'], ['FG%', 'kicking', 'fieldGoalPct'], ['LNG', 'kicking', 'longFieldGoalMade'], ['XP', 'kicking', 'extraPointsMade-extraPointAttempts'], ['PTS', 'kicking', 'totalKickingPoints']],
+  p: [['PUNTS', 'punting', 'punts'], ['AVG', 'punting', 'grossAvgPuntYards'], ['NET', 'punting', 'netAvgPuntYards'], ['IN20', 'punting', 'puntsInside20'], ['LNG', 'punting', 'longPunt'], ['TB', 'punting', 'touchbacks']]
+};
+function _psHas(v) { return v != null && v !== '' && v !== '-' && v !== '--'; }
+function _psShow(v) { return _psHas(v) ? String(v).trim() : '—'; }
+function _psFmt(n, dec) {
+  if (n == null || !isFinite(n)) return '—';
+  if (dec) return n.toFixed(dec);
+  return Math.abs(n) >= 1000 ? Math.round(n).toLocaleString('en-US') : String(Math.round(n));
+}
+// One value out of a row of display strings. "a-b" names the feed doesn't
+// carry as one stat (extra points, in the season feed) are put together
+// from their two halves.
+function _psCell(names, row, name) {
+  if (!names || !row) return null;
+  var i = names.indexOf(name);
+  if (i !== -1) return row[i];
+  var parts = name.split('-');
+  if (parts.length === 2) {
+    var a = names.indexOf(parts[0]), b = names.indexOf(parts[1]);
+    if (a !== -1 && b !== -1 && _psHas(row[a]) && _psHas(row[b])) return row[a] + '-' + row[b];
+  }
+  return null;
+}
+function _psCarries(names, name) {
+  if (!names) return false;
+  if (names.indexOf(name) !== -1) return true;
+  var parts = name.split('-');
+  return parts.length === 2 && names.indexOf(parts[0]) !== -1 && names.indexOf(parts[1]) !== -1;
+}
+// A season split between two teams comes as two rows. Counts add up, longs
+// take the bigger, and the rates are worked out again from the counts
+// (passer rating by the NFL's formula; anything else that can't be rebuilt
+// shows a dash rather than a wrong number).
+function _psMerge(names, rows, name, league) {
+  if (rows.length === 1) return _psCell(names, rows[0], name);
+  var sum = function (n) { var t = 0, any = false; rows.forEach(function (r) { var v = _plNum(_psCell(names, r, n)); if (v != null) { t += v; any = true; } }); return any ? t : null; };
+  var pair = function (n) { var a = 0, b = 0, any = false; rows.forEach(function (r) { var m = String(_psCell(names, r, n) || '').match(/^(\d+)-(\d+)$/); if (m) { a += Number(m[1]); b += Number(m[2]); any = true; } }); return any ? [a, b] : null; };
+  var ratio = function (x, y, mult, dec) { var a = sum(x), b = sum(y); return a != null && b ? _psFmt(a / b * (mult || 1), dec == null ? 1 : dec) : null; };
+  if (/^[A-Za-z0-9_]+-[A-Za-z0-9_]+$/.test(name)) { var pr = pair(name); return pr ? pr[0] + '-' + pr[1] : null; }
+  if (name === 'completionPct') return ratio('completions', 'passingAttempts', 100);
+  if (name === 'yardsPerPassAttempt') return ratio('passingYards', 'passingAttempts');
+  if (name === 'yardsPerRushAttempt') return ratio('rushingYards', 'rushingAttempts');
+  if (name === 'yardsPerReception') return ratio('receivingYards', 'receptions');
+  if (name === 'grossAvgPuntYards') return ratio('puntYards', 'punts');
+  if (name === 'fieldGoalPct') { var fg = pair('fieldGoalsMade-fieldGoalAttempts'); return fg && fg[1] ? _psFmt(fg[0] / fg[1] * 100, 1) : null; }
+  if (name === 'QBRating') {
+    var att = sum('passingAttempts'), cmp = sum('completions'), yds = sum('passingYards'), td = sum('passingTouchdowns'), it = sum('interceptions');
+    if (league !== 'nfl' || !att || cmp == null || yds == null || td == null || it == null) return null;
+    var cl = function (x) { return Math.max(0, Math.min(2.375, x)); };
+    return _psFmt((cl((cmp / att - .3) * 5) + cl((yds / att - 3) * .25) + cl(td / att * 20) + cl(2.375 - it / att * 25)) / 6 * 100, 1);
+  }
+  if (/^long/i.test(name)) { var mx = null; rows.forEach(function (r) { var v = _plNum(_psCell(names, r, name)); if (v != null && (mx == null || v > mx)) mx = v; }); return mx == null ? null : _psFmt(mx); }
+  if (/pct|avg|rating|qbr|per/i.test(name)) return null;
+  var t = sum(name);
+  if (t == null) return null;
+  return t % 1 ? _psFmt(t, 1) : _psFmt(t);
+}
+// No listed position (college "ATH"), or one with no table of its own:
+// go by what he has actually done.
+function _psGuessGroup(F) {
+  var tot = function (cat, name) { var n = F.names[cat], t = F.totals[cat]; return (n && t && _plNum(_psCell(n, t, name))) || 0; };
+  var fg = String((F.names.kicking && F.totals.kicking && _psCell(F.names.kicking, F.totals.kicking, 'fieldGoalsMade-fieldGoalAttempts')) || '').match(/-(\d+)$/);
+  var c = [['qb', tot('passing', 'passingAttempts')], ['rb', tot('rushing', 'rushingAttempts')], ['rec', tot('receiving', 'receptions') * 1.5], ['def', tot('defensive', 'totalTackles')], ['p', tot('punting', 'punts') * 3], ['k', (fg ? Number(fg[1]) : 0) * 3]];
+  c.sort(function (x, y) { return y[1] - x[1]; });
+  return c[0][1] > 0 ? c[0][0] : null;
+}
+async function _playerStats(req, res) {
+  const league = String(req.query.league || '').toLowerCase();
+  if (league !== 'nfl' && league !== 'cfb') { res.status(400).json({ error: 'Stat lines are built for nfl and cfb' }); return; }
+  let id = String(req.query.id || '').replace(/[^0-9]/g, '');
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  if (!id && name) { const hits = await _bioIdsByName(league, name); if (hits.length === 1) id = hits[0]; }
+  if (!id) { res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate'); res.status(200).json({ error: 'No player' }); return; }
+  const base = 'https://site.web.api.espn.com/apis/common/v3/sports/' + LEAGUE_PATHS[league] + '/athletes/' + id;
+  const cur = _plSeasonYear();
+  const parts = await Promise.all([_tpGetJson(base + '/stats'), _tpGetJson(base + '/gamelog?season=' + cur)]);
+  const raw = parts[0], gl = parts[1];
+  if (!raw || !Array.isArray(raw.categories)) { res.status(200).json({ error: 'No stats from ESPN' }); return; }
+
+  // Season feed, kept as display strings: F.years[2025].passing = [row, row?]
+  const F = { names: {}, totals: {}, years: {}, pos: null, posYear: 0 };
+  const teamBySlug = {};
+  Object.keys(raw.teams || {}).forEach(function (k) { const t = raw.teams[k] || {}; teamBySlug[k] = { abbr: t.abbreviation || null, name: t.displayName || t.name || null }; });
+  raw.categories.forEach(function (cat) {
+    if (!cat || !cat.name || !Array.isArray(cat.names)) return;
+    F.names[cat.name] = cat.names;
+    F.totals[cat.name] = cat.totals || [];
+    (cat.statistics || []).forEach(function (row) {
+      const yr = row && row.season && Number(row.season.year);
+      if (!yr) return;
+      const Y = F.years[yr] || (F.years[yr] = { cats: {}, slugs: [] });
+      (Y.cats[cat.name] || (Y.cats[cat.name] = [])).push(row.stats || []);
+      if (row.teamSlug && Y.slugs.indexOf(row.teamSlug) === -1) Y.slugs.push(row.teamSlug);
+      if (row.position && yr >= F.posYear) { F.pos = row.position; F.posYear = yr; }
+    });
+  });
+  let group = _plGroup(F.pos);
+  if (group === 'other') group = _psGuessGroup(F); // linemen and long snappers stay without a table
+  const years = Object.keys(F.years).map(Number).sort(function (a, b) { return b - a; });
+  const latest = years.length ? F.years[years[0]] : null;
+  const slug = latest && latest.slugs[latest.slugs.length - 1];
+  const team = slug && teamBySlug[slug] ? teamBySlug[slug].name : null;
+  const cols = group && _PS_COLS[group] ? _PS_COLS[group].filter(function (c) { return _psCarries(F.names[c[1]], c[2]); }).slice(0, 5) : [];
+  if (cols.length < 3 || !years.length) {
+    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
+    res.status(200).json({ league: league, id: id, pos: F.pos, team: team, none: true });
+    return;
+  }
+  const mainCat = cols[0][1];
+  const seasonRow = function (yr) {
+    const Y = F.years[yr];
+    if (!Y) return null;
+    const g = Y.cats[mainCat] ? _psMerge(F.names[mainCat], Y.cats[mainCat], 'gamesPlayed', league) : null;
+    return {
+      year: yr,
+      g: _psHas(g) ? String(g) : null,
+      team: Y.slugs.map(function (sl) { return (teamBySlug[sl] && teamBySlug[sl].abbr) || null; }).filter(Boolean).join('/') || null,
+      v: cols.map(function (c) { return _psShow(Y.cats[c[1]] ? _psMerge(F.names[c[1]], Y.cats[c[1]], c[2], league) : null); })
+    };
+  };
+  const prevYear = years.filter(function (y) { return y < cur; })[0];
+  const cg = _psCell(F.names[mainCat], F.totals[mainCat], 'gamesPlayed');
+  const career = { g: _psHas(cg) ? String(cg) : null, seasons: years.length, v: cols.map(function (c) { return _psShow(_psCell(F.names[c[1]], F.totals[c[1]], c[2])); }) };
+
+  // Every game this season, newest first (playoff and bowl games included)
+  const log = [];
+  if (gl && Array.isArray(gl.names) && Array.isArray(gl.seasonTypes)) {
+    const ev = gl.events || {};
+    gl.seasonTypes.forEach(function (st) {
+      const post = /post/i.test(String(st && st.displayName || ''));
+      ((st && st.categories) || []).forEach(function (cat) {
+        ((cat && cat.events) || []).forEach(function (e) {
+          const info = ev[e.eventId] || {};
+          log.push({
+            wk: post ? null : (info.week != null ? info.week : null),
+            post: post,
+            date: info.gameDate || null,
+            at: info.atVs || null,
+            opp: (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || null,
+            res: info.gameResult || null,
+            score: info.score || null,
+            v: cols.map(function (c) { return _psShow(_psCell(gl.names, e.stats || [], c[2])); })
+          });
+        });
+      });
+    });
+    log.sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+  }
+  const result = { league: league, id: id, pos: F.pos, group: group, team: team, cols: cols.map(function (c) { return c[0]; }), cur: cur, season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log };
+  if (req.query.debug) result.debug = { cats: Object.keys(F.names), years: years, logFeed: gl ? { names: gl.names, types: (gl.seasonTypes || []).map(function (st) { return st.displayName; }), events: Object.keys(gl.events || {}).length } : null };
+  // in season the lines move every week (and during games); otherwise they sit
+  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
   res.status(200).json(result);
 }
 

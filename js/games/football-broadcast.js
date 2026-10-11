@@ -26,7 +26,10 @@ function _fbbPossHtml(m) {
 // Down & distance in the middle, the football on the side with the ball,
 // where the ball is on the other side
 function _fbbDownHtml(m) {
-  var s = m.situation; if (!s || !s.downText) return '';
+  var s = m.situation;
+  // v7.33.0: after a score there's no down — say what's coming instead of leaving the row out
+  if (s && !s.downText && s.next) return '<div class="fbb-down"><span class="side"></span><span class="dd">' + _escapeHtml(s.next + ' next') + '</span><span class="side r"></span></div>';
+  if (!s || !s.downText) return '';
   var parts = String(s.downText).split(/\s+at\s+/i);
   var dd = parts[0], spot = parts[1] || '';
   var left = s.possSide === 'a', right = s.possSide === 'h';

@@ -102,12 +102,22 @@
 .pls-src{opacity:.25;transition:opacity .2s}
 /* v7.32.0: age · height · season in the league, under the name (every sport) */
 .plb{display:flex;justify-content:center;gap:8px;margin:8px 0 12px}
-.plb>span{flex:1;min-width:0;max-width:132px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:7px 6px;border-radius:12px;background:rgba(255,255,255,.05);animation:plsRow .3s ease-out both}
+.plb>span{flex:1;min-width:0;max-width:170px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:7px 6px;border-radius:12px;background:rgba(255,255,255,.05);animation:plsRow .3s ease-out both}
 .plb small{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#9C95D0;white-space:nowrap}
 .plb b{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;line-height:1;color:#fff;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .plb-wait>span{animation:none;background:rgba(255,255,255,.03)}
 @media (prefers-reduced-motion: reduce){.plb>span{animation:none}}
 .pll{margin:0 0 12px}
+/* v7.33.0: football's stat lines (seasons + game by game) reuse the baseball table */
+.plf[style*="--plf-n"] .pll-r{grid-template-columns:minmax(0,1.6fr) repeat(var(--plf-n),minmax(0,1fr))}
+.plf .pll-r b{white-space:nowrap}
+.plf.tight .pll-r:not(.pll-h) b{font-size:14.5px;letter-spacing:-.02em}
+.plf .pll-r.car{background:rgba(168,159,232,.1)}
+.plf .pll-r>span small i{font-style:normal;font-weight:700}
+.plf .pll-r>span small i.w{color:#9be8ac}
+.plf .pll-r>span small i.l{color:#FFB3AA}
+.plf-sub{margin:16px 0 4px;padding:0 10px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#C7C0E8}
+.plf-none{padding:8px 10px 2px;font-size:12.5px;color:#9C95D0}
 .pll-meta{text-align:center;font-size:12px;color:#9C95D0;margin-bottom:10px;min-height:16px}
 .pll-r{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(5,minmax(0,1fr));align-items:center;min-height:36px;padding:0 10px;border-radius:10px;animation:plsRow .3s ease-out both}
 .pll-r+.pll-r{margin-top:2px}

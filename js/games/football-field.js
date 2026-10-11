@@ -211,7 +211,12 @@ function _fbxFieldHtml(m, v, fx, brk) {
   } else {
     var sp = _fbxStoppage(m);
     if (sp && !tdLive) {
-      over += '<div class="fbx-nt' + (sp.scan ? ' rev' : '') + '" style="--t0:' + (fx.playAt ? -(now - fx.playAt) : -60000) + 'ms;--acc:' + sp.acc + '"><span class="t">' + _escapeHtml(sp.title) + '</span>' + (sp.sub ? '<span class="s">' + _escapeHtml(sp.sub) + '</span>' : '') + '</div>';
+      // v7.33.0: the down & distance stays on the field through a stoppage (the
+      // server holds it); when there is no down — right after a score — the
+      // notice says what's next
+      var nx = m.situation && !m.situation.downText && m.situation.next ? m.situation.next + ' next' : '';
+      var sub2 = [sp.sub, nx].filter(Boolean).join(' \u00b7 ');
+      over += '<div class="fbx-nt' + (sp.scan ? ' rev' : '') + '" style="--t0:' + (fx.playAt ? -(now - fx.playAt) : -60000) + 'ms;--acc:' + sp.acc + '"><span class="t">' + _escapeHtml(sp.title) + '</span>' + (sub2 ? '<span class="s">' + _escapeHtml(sub2) + '</span>' : '') + '</div>';
     }
   }
   if (tdLive) {
