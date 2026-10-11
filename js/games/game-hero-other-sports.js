@@ -770,7 +770,13 @@ function _gxDetailHtml(m) {
         out += _gxCard('Current drive', [m.drive.team, m.drive.summary].filter(Boolean).join(' · '), driveRows, .4);
       }
       out += _gxAllDrivesHtml(m);
-      if (m.leaders && m.leaders.length) out += _gxCard('Leaders', '', _gxLeaderCompareHtml(m, m.leaders.map(function (l) { return { label: l.label, a: l.a && Object.assign({}, l.a, { value: null }), h: l.h && Object.assign({}, l.h, { value: null }) }; }), .5), .5);
+      // v7.34.0: quarterbacks, three small tiles and an Offense / Defense / Team
+      // card (js/games/football-glance.js); the Leaders card it replaces still
+      // shows when that data isn't there
+      var glance = '';
+      if (typeof _fbgHtml === 'function') { try { glance = _fbgHtml(m); } catch (e) { console.error('[football glance]', e); glance = ''; } }
+      if (glance) out += glance;
+      else if (m.leaders && m.leaders.length) out += _gxCard('Leaders', '', _gxLeaderCompareHtml(m, m.leaders.map(function (l) { return { label: l.label, a: l.a && Object.assign({}, l.a, { value: null }), h: l.h && Object.assign({}, l.h, { value: null }) }; }), .5), .5);
     } else if (m.sport === 'basketball') {
       if (m.leaders && m.leaders.length) out += _gxCard('Leaders', '', _gxLeaderCompareHtml(m, m.leaders, .5) + (m.teamStats.length ? '<div style="margin-top:10px">' + _gxStatBarsHtml(m, m.teamStats, .6) + '</div>' : ''), .4);
       out += _gxFeedHtml(m);

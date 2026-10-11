@@ -1,0 +1,88 @@
+/* ═══ FOOTBALL AT A GLANCE (v7.34.0) — js/games/football-glance.js ═══
+   The bottom of the live football cheat sheet: a Quarterbacks card, three
+   small tiles, and one card that switches between Offense, Defense and Team. */
+.fbg{display:flex;flex-direction:column;gap:10px}
+.fbg .tap{cursor:pointer}
+.fbg .tap:focus-visible{outline:2px solid #A89FE8;outline-offset:2px;border-radius:8px}
+.fbg-chip{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:6px;font-size:10.5px;font-weight:800;letter-spacing:.06em;flex-shrink:0}
+
+/* quarterbacks */
+.gh-card.fbg-qb{padding:14px 16px}
+.fbg-qb .gh-card-head{margin-bottom:10px}
+.fbg-qb .gh-eyebrow,.fbg-mt .k,.fbg-bar .lb,.fbg-dr.h,.fbg-tr .n span{font-family:'Barlow Condensed',sans-serif;font-weight:600;color:#B3ACE0}
+.fbg-qb .gh-eyebrow{font-size:13px;letter-spacing:.2em}
+.fbg-qbg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fbg-qbc{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fbg-qbn{display:flex;align-items:center;gap:7px;min-width:0}
+.fbg-qbn .nm{min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:3px}
+.fbg-qbn .nm.none{font-weight:600;color:#B9B3E6;text-decoration:none}
+.fbg-big,.fbg-mt .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;line-height:1;color:#fff}
+.fbg-big{font-size:34px}
+.fbg-big small,.fbg-mt .v small{font-size:12px;font-weight:600;letter-spacing:.14em;color:#B3ACE0;margin-left:5px}
+.fbg-sub{font-size:12px;color:#B9B3E6;min-height:15px}
+.fbg-track{height:6px;border-radius:3px;background:rgba(255,255,255,.07);display:flex}
+.fbg-track i{display:block;border-radius:3px}
+.fbg-pills{display:flex;gap:6px}
+.fbg-pills span{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.08);color:#C7C0E8}
+.fbg-pills span.td{background:rgba(242,200,105,.18);color:#F2C869}
+.fbg-pills span.int{background:rgba(255,122,107,.18);color:#FFB3AA}
+
+/* the three small tiles */
+.fbg-mini{display:flex;gap:8px}
+.fbg-mt{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:16px;background:rgba(61,53,128,.24);border:1px solid rgba(168,159,232,.2);color:#fff}
+.fbg-mt .k{font-size:12px;letter-spacing:.12em;white-space:nowrap}
+.fbg-mt .v{font-size:30px}
+.fbg-mt .w{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbg-mt .r{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.fbg-mt .r b{font-size:11px;font-weight:800;letter-spacing:.06em}
+.fbg-mt .r em,.fbg-bar em,.fbg-tr .n em{font-style:normal;font-family:'Barlow Condensed',sans-serif;font-weight:700;line-height:1;color:#B9B3E6;font-variant-numeric:tabular-nums}
+.fbg-mt .r em{font-size:22px}
+.fbg-mt .r em.lead,.fbg-bar em.lead,.fbg-tr .n em.lead{color:#fff}
+
+/* the card with the switch */
+.gh-card.fbg-card{padding:12px 14px 8px}
+.fbg-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;margin-bottom:6px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08)}
+.fbg-seg button{height:44px;margin:0;padding:0;border:0;border-radius:11px;background:transparent;color:#C7C0E8;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.fbg-seg button[aria-pressed="true"]{background:#A89FE8;color:#1A1640}
+.fbg-seg button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.fbg-p{display:none}
+.fbg-card[data-tab="offense"] .fbg-p[data-p="offense"],.fbg-card[data-tab="defense"] .fbg-p[data-p="defense"],.fbg-card[data-tab="team"] .fbg-p[data-p="team"]{display:block}
+
+/* Offense: two players head to head */
+.fbg-duel{display:flex;flex-direction:column;gap:4px;padding:6px 0 10px}
+.fbg-duel+.fbg-duel{border-top:1px solid rgba(255,255,255,.07)}
+.fbg-duel .who{display:flex;justify-content:space-between;gap:12px}
+.fbg-duel .p{display:flex;flex-direction:column;gap:2px;padding:6px 0;min-width:0}
+.fbg-duel .p.r{align-items:flex-end;text-align:right}
+.fbg-duel .p b{max-width:100%;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbg-duel .p.tap b{text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:3px}
+.fbg-duel .p span{font-size:12px;color:#B9B3E6}
+.fbg-bar{display:flex;align-items:center;gap:8px}
+.fbg-bar em{width:36px;flex-shrink:0;font-size:26px}
+.fbg-bar em:last-child{text-align:right}
+.fbg-bar .trk{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.07);display:flex}
+.fbg-bar .trk.l{justify-content:flex-end}
+.fbg-bar .trk i,.fbg-tr .b i{display:block;opacity:.45}
+.fbg-bar .trk i{border-radius:4px}
+.fbg-bar .trk i.lead,.fbg-tr .b i.lead{opacity:1}
+.fbg-bar .lb{width:62px;flex-shrink:0;text-align:center;font-size:12px;letter-spacing:.14em;white-space:nowrap}
+
+/* Defense: top tacklers */
+.fbg-dt{display:flex;flex-direction:column;padding-top:4px}
+.fbg-dt+.fbg-dt{margin-top:10px}
+.fbg-dr{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,40px);align-items:center;min-height:44px;border-top:1px solid rgba(255,255,255,.07);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;text-align:center;color:#fff;font-variant-numeric:tabular-nums}
+.fbg-dr>span:first-child{text-align:left;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:3px}
+.fbg-dr.h{min-height:26px;border-top:0;font-size:12px;letter-spacing:.14em}
+.fbg-dr.h>span:first-child{text-decoration:none;overflow:visible}
+.fbg-dr .z{color:#8C86B8}
+
+/* Team: the two sides head to head */
+.fbg-th{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.fbg-tr{display:flex;flex-direction:column;gap:5px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
+.fbg-tr .n{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.fbg-tr .n em{font-size:23px}
+.fbg-tr .n span{font-size:12px;letter-spacing:.14em;white-space:nowrap}
+.fbg-tr .b{display:flex;gap:4px}
+.fbg-tr .b div{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.07);display:flex}
+.fbg-tr .b div:first-child{justify-content:flex-end}
+.fbg-tr .b i{border-radius:3px}

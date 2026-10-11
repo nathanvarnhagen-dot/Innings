@@ -1150,6 +1150,65 @@ function _fbDrive(data, sport) {
   }).filter(function (p) { return p.text; });
   return { team: drive.team ? (drive.team.abbreviation || drive.team.shortDisplayName) : null, summary: drive.description || null, plays: plays };
 }
+// ── FOOTBALL AT A GLANCE (v7.34.0) ───────────────────────────────────────
+// What the cards at the bottom of the live cheat sheet need and the trimmed
+// box score can't give (it keeps eight rows and five columns a section):
+// each side's quarterback, rushing yards, sacks, longest run or catch, top
+// three tacklers and kicker — read off ESPN's full player box score, by
+// column label (C/ATT, YDS, LONG, TOT, SACKS, TFL, PD, FG, XP, PTS; seen
+// live 2026-10-11). Anything missing is left null and the card skips it.
+function _fbGlance(data, away, home) {
+  var out = { a: null, h: null };
+  ((data.boxscore && data.boxscore.players) || []).forEach(function (tp) {
+    var tid = tp.team && String(tp.team.id);
+    var side = tid === String(home.id) ? 'h' : (tid === String(away.id) ? 'a' : null);
+    if (!side) return;
+    var cat = function (name) { return (tp.statistics || []).filter(function (x) { return x.name === name; })[0] || null; };
+    var at = function (st, label) { return st ? (st.labels || []).indexOf(label) : -1; };
+    var cell = function (st, row, label) { var i = at(st, label); return i === -1 || !row ? null : (row.stats || [])[i]; };
+    var num = function (v) { var n = _num(v); return n == null || !isFinite(n) ? null : n; };
+    var who = function (row) { var p = _gcPlayer(row && row.athlete); return { name: p.name, id: p.id }; };
+    var S = { qb: null, rush: null, sacks: null, long: null, def: [], kick: null };
+    var pass = cat('passing'), rush = cat('rushing'), rec = cat('receiving'), def = cat('defensive'), kick = cat('kicking');
+    if (pass && (pass.athletes || []).length) {
+      // the passer with the most attempts (a trick-play throw isn't the quarterback)
+      var best = null;
+      pass.athletes.forEach(function (r) {
+        var ca = String(cell(pass, r, 'C/ATT') || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+        var att = ca ? Number(ca[2]) : 0;
+        if (!best || att > best.att) best = { r: r, cmp: ca ? Number(ca[1]) : null, att: ca ? att : null };
+      });
+      if (best) S.qb = Object.assign(who(best.r), { cmp: best.cmp, att: best.att, yds: num(cell(pass, best.r, 'YDS')), avg: cell(pass, best.r, 'AVG') || null, td: num(cell(pass, best.r, 'TD')), int: num(cell(pass, best.r, 'INT')) });
+    }
+    if (rush) {
+      var ti = at(rush, 'YDS');
+      var tot = ti !== -1 && rush.totals ? num(rush.totals[ti]) : null;
+      if (tot == null && (rush.athletes || []).length) { tot = 0; rush.athletes.forEach(function (r) { tot += num(cell(rush, r, 'YDS')) || 0; }); }
+      S.rush = tot;
+    }
+    [[rush, 'run'], [rec, 'catch']].forEach(function (pair) {
+      var st = pair[0];
+      ((st && st.athletes) || []).forEach(function (r) {
+        var lg = num(cell(st, r, 'LONG'));
+        if (lg != null && lg > 0 && (!S.long || lg > S.long.yds)) S.long = Object.assign(who(r), { yds: lg, kind: pair[1] });
+      });
+    });
+    if (def && (def.athletes || []).length) {
+      var sk = 0, any = false;
+      def.athletes.forEach(function (r) { var v = num(cell(def, r, 'SACKS')); if (v != null) { sk += v; any = true; } });
+      if (any) S.sacks = Math.round(sk * 10) / 10;
+      S.def = def.athletes.map(function (r) {
+        return Object.assign(who(r), { tkl: num(cell(def, r, 'TOT')), solo: num(cell(def, r, 'SOLO')), sack: num(cell(def, r, 'SACKS')), tfl: num(cell(def, r, 'TFL')), pd: num(cell(def, r, 'PD')) });
+      }).filter(function (d) { return d.name && d.tkl != null; }).sort(function (x, y) { return y.tkl - x.tkl || (y.sack || 0) - (x.sack || 0); }).slice(0, 3);
+    }
+    if (kick && (kick.athletes || []).length) {
+      var k = kick.athletes[0];
+      S.kick = Object.assign(who(k), { fg: cell(kick, k, 'FG') || null, long: num(cell(kick, k, 'LONG')), xp: cell(kick, k, 'XP') || null, pts: num(cell(kick, k, 'PTS')) });
+    }
+    out[side] = S;
+  });
+  return (out.a || out.h) ? out : null;
+}
 function _fbBox(data) {
   var groups = [['passing', 'Passing'], ['rushing', 'Rushing'], ['receiving', 'Receiving'], ['defensive', 'Defense'], ['kicking', 'Kicking']];
   var out = {};
@@ -1389,6 +1448,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
       model.possession = _fbPossession(data, away, home); // v7.2.1
       if (wantAllPlays) model.allDrives = _fbAllDrives(data, home.id);
       boxById = _fbBox(data);
+      try { model.glance = _fbGlance(data, away, home); } catch (e) { model.glance = null; } // v7.34.0
     } else if (sport === 'basketball') {
       var bb = _bbAnalyze(data, away, home);
       model.highlights = bb.moments;
