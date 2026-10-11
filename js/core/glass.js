@@ -53,6 +53,18 @@ function _glColors(sport, abbr, color, alt) {
   } catch (e) {}
   return { bg: '#3D3580', fg: '#FFFFFF', accent: '#A89FE8' };
 }
+// v7.35.0: a team's abbreviation and colors, filled in from the app's color
+// table for every team (js/core/team-colors.js) whenever the game's own feed
+// doesn't carry them → { abbr, bg, fg, accent, ring }
+function _glTeam(sport, name, abbr, color, alt) {
+  try { if (typeof _teamLook === 'function') return _teamLook(sport, name, abbr, color, alt); } catch (e) {}
+  var ab = abbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(name) : String(name || '').slice(0, 3).toUpperCase());
+  var c = _glColors(sport, ab, color, alt);
+  return { abbr: ab, bg: c.bg, fg: c.fg, accent: c.accent, ring: null };
+}
+function _glBadgeStyle(t) {
+  return 'background:' + t.bg + ';color:' + t.fg + (t.ring ? ';box-shadow:inset 0 0 0 2px ' + t.ring + ',0 8px 20px rgba(0,0,0,.3)' : '');
+}
 function _glIsLive(sport, g) {
   if (!g) return false;
   if (g.state) return g.state === 'in';
@@ -343,9 +355,8 @@ function _glRenderHero() {
   if (!r) { el.style.display = 'none'; el.innerHTML = ''; _glAmbient(null); _glGamesCta(); return; }
   var box = r.box || {}, sport = (r.g && r.g.sport) || 'mlb';
   var away = box.away || (r.g && r.g.away) || 'Away', homeN = box.home || (r.g && r.g.home) || 'Home';
-  var aAb = box.awayAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(away) : away.slice(0, 3).toUpperCase());
-  var hAb = box.homeAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(homeN) : homeN.slice(0, 3).toUpperCase());
-  var ca = _glColors(sport, aAb, box.awayColor, box.awayAlt), ch = _glColors(sport, hAb, box.homeColor, box.homeAlt);
+  var ca = _glTeam(sport, away, box.awayAbbr, box.awayColor, box.awayAlt), ch = _glTeam(sport, homeN, box.homeAbbr, box.homeColor, box.homeAlt); // v7.35.0
+  var aAb = ca.abbr, hAb = ch.abbr;
   var live = r.state === 'live';
   var hasScore = live && box.awayScore != null && box.homeScore != null;
   var aLead = hasScore && Number(box.awayScore) > Number(box.homeScore), hLead = hasScore && Number(box.homeScore) > Number(box.awayScore);
@@ -360,9 +371,9 @@ function _glRenderHero() {
   el.innerHTML = '<button class="gl-g gl-hero" onclick="openLiveFeedGame(0)" aria-label="' + _glEsc(away + ' at ' + homeN) + '">' +
     '<div class="gl-lh"><span class="gl-lab">' + (live ? '<span class="gl-ldot"></span>Live' : 'Up next') + '</span><span class="gl-lab">' + _glEsc(_glLeagueName(sport)) + '</span></div>' +
     '<div class="gl-board">' +
-      '<div class="gl-team"><span class="gl-d" style="background:' + ca.bg + ';color:' + ca.fg + '">' + _glEsc(aAb) + '</span><span>' + _glEsc(_glShort(away)) + '</span></div>' +
+      '<div class="gl-team"><span class="gl-d" style="' + _glBadgeStyle(ca) + '">' + _glEsc(aAb) + '</span><span>' + _glEsc(_glShort(away)) + '</span></div>' +
       '<div class="gl-score">' + mid + '<div class="gl-inn">' + sit + '</div></div>' +
-      '<div class="gl-team"><span class="gl-d" style="background:' + ch.bg + ';color:' + ch.fg + '">' + _glEsc(hAb) + '</span><span>' + _glEsc(_glShort(homeN)) + '</span></div>' +
+      '<div class="gl-team"><span class="gl-d" style="' + _glBadgeStyle(ch) + '">' + _glEsc(hAb) + '</span><span>' + _glEsc(_glShort(homeN)) + '</span></div>' +
     '</div>' +
     '<div class="gl-lf">' + (avs ? '<div class="gl-avs">' + avs + '</div>' : '') + '<p>' + _glEsc(label) + '</p><span class="gl-join">' + (live ? 'Join' : 'Open') + '</span></div>' +
     '</button>' +
@@ -493,8 +504,8 @@ function _glRenderLive() {
     }).join('');
   var body = rows.map(function (r, i) {
     var g = r.x.g, sp = r.x.sport, ph = r.ph;
-    var aAb = g.awayAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(g.away) : ''), hAb = g.homeAbbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(g.home) : '');
-    var ca = _glColors(sp, aAb, g.awayColor, g.awayAlt), ch = _glColors(sp, hAb, g.homeColor, g.homeAlt);
+    var ca = _glTeam(sp, g.away, g.awayAbbr, g.awayColor, g.awayAlt), ch = _glTeam(sp, g.home, g.homeAbbr, g.homeColor, g.homeAlt); // v7.35.0
+    var aAb = ca.abbr, hAb = ch.abbr;
     var as = g.awayScore, hs = g.homeScore, scored = ph !== 'pre' && as != null && hs != null;
     var aLo = scored && Number(as) < Number(hs), hLo = scored && Number(hs) < Number(as);
     var friend = r.fw.names.length || r.fw.mine;
@@ -573,7 +584,7 @@ function _glRenderTonight() {
   if (!p) { el.style.display = 'none'; el.innerHTML = ''; _glPairTiles(); return; }
   var g = p.g, home = g.home === p.team, opp = home ? g.away : g.home;
   var abbr = home ? g.homeAbbr : g.awayAbbr;
-  var col = _glColors(p.sport, abbr || (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(p.team) : ''), home ? g.homeColor : g.awayColor, home ? g.homeAlt : g.awayAlt);
+  var col = _glTeam(p.sport, p.team, abbr, home ? g.homeColor : g.awayColor, home ? g.homeAlt : g.awayAlt); // v7.35.0
   var when;
   if (p.live) when = '<span class="gl-ldot"></span>Live now';
   else {

@@ -205,7 +205,9 @@ module.exports = async function handler(req, res) {
           const name = tm.displayName || tm.name;
           if (!name || seenIds[tm.id || name]) return;
           seenIds[tm.id || name] = 1;
-          out.push({ id: tm.id, name: name });
+          // v7.35.0: abbreviation and colors too — the app keeps these as its
+          // color table for every team in the league (js/core/team-colors.js)
+          out.push({ id: tm.id, name: name, abbr: tm.abbreviation || null, color: tm.color || null, alt: tm.alternateColor || null });
         };
         const walk = function (g) { (g.teams || []).forEach(take); (g.groups || g.children || []).forEach(walk); };
         lg.forEach(walk);
@@ -354,6 +356,18 @@ function summarizeSummary(data, eventId, league) {
     venue: basic.venue,
     date: comp.date || null,
     status: basic.status,
+    // v7.35.0: who the teams are, in their colors — this box score is what
+    // Home's top card and the watch list draw from, and without these every
+    // team showed as a purple circle with a made-up abbreviation ("49E")
+    state: basic.state || null,
+    statusDetail: basic.statusDetail || null,
+    startTime: comp.date || null, // a game on your list that hasn't started can show as "Up next", as baseball's do
+    awayAbbr: basic.awayAbbr || null,
+    homeAbbr: basic.homeAbbr || null,
+    awayColor: basic.awayColor || null,
+    homeColor: basic.homeColor || null,
+    awayAlt: basic.awayAlt || null,
+    homeAlt: basic.homeAlt || null,
     winningPitcher: null,
     losingPitcher: null,
     savePitcher: null,

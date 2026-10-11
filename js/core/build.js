@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.34.0-football-glance';
+window.INNINGS_BUILD = 'v7.35.0-team-colors';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
