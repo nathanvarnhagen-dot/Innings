@@ -177,7 +177,11 @@ module.exports = async function handler(req, res) {
       const st = (data && data.gameData && data.gameData.status && data.gameData.status.abstractGameState) || '';
       res.setHeader('Cache-Control', st === 'Live' ? 's-maxage=3, stale-while-revalidate=5' : st === 'Final' ? 's-maxage=300, stale-while-revalidate' : 's-maxage=30, stale-while-revalidate');
       const out = summarize(data, gamePk, req.query.plays === 'all');
-      try { await _seasonLinesForMatchup(out, data); } catch (e) { /* keep the box score even if this lookup fails */ }
+      // v7.36.0: the game screen (plays=all) also gets who is still available
+      // on each side during a live game — bench, bullpen, spare starters
+      const jobs = [_seasonLinesForMatchup(out, data).catch(function () { /* keep the box score even if this lookup fails */ })];
+      if (req.query.plays === 'all' && st === 'Live') jobs.push(_reserves(out, data).catch(function (e) { console.error('[reserves]', e); }));
+      await Promise.all(jobs);
       res.status(200).json(out);
       return;
     }
@@ -833,6 +837,121 @@ async function _regSeason(ids, season) {
     if (_RS_CACHE.size > 800) _RS_CACHE.delete(_RS_CACHE.keys().next().value);
   }
   return out;
+}
+// ── v7.36.0: who is still available ─────────────────────────────────
+// MLB's box score lists, per team, the position players who have not come
+// into the game (bench) and the pitchers who have not pitched (bullpen —
+// which also holds the rotation's other starters). Each gets his regular-
+// season line; pitchers also get their last outing (date + pitch count,
+// postseason included) so you can tell who threw yesterday. A pitcher is
+// filed under "starters" when most of his recent outings were starts.
+// → out.reserves = { away: { bench, bullpen, starters }, home: {...} }
+const _PL_CACHE = global.__inningsPitchLog || (global.__inningsPitchLog = new Map());
+async function _pitchLog(ids, season) {
+  ids = ids.filter(Boolean).map(String);
+  const out = {}, need = [];
+  ids.forEach(id => { const e = _PL_CACHE.get(id + ':' + season); if (e && Date.now() < e.exp) out[id] = e.v; else need.push(id); });
+  if (need.length) {
+    const url = 'https://statsapi.mlb.com/api/v1/people?personIds=' + need.join(',') +
+      '&hydrate=stats(group=[pitching],type=[gameLog],season=' + season + ',gameType=[R,F,D,L,W])' +
+      '&fields=people,id,stats,splits,date,stat,numberOfPitches,gamesStarted';
+    const r = await fetch(url);
+    const d = await r.json();
+    const seen = {};
+    (d.people || []).forEach(p => {
+      var apps = [];
+      (p.stats || []).forEach(b => (b.splits || []).forEach(sp => {
+        if (!sp || !sp.date) return;
+        var stt = sp.stat || {};
+        apps.push({ d: sp.date, np: stt.numberOfPitches != null ? stt.numberOfPitches : null, gs: stt.gamesStarted ? 1 : 0 });
+      }));
+      apps.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+      seen[String(p.id)] = apps.slice(-4);
+    });
+    // a pitcher with no outings yet this year still counts as looked up
+    need.forEach(id => { const v = seen[id] || []; out[id] = v; _PL_CACHE.set(id + ':' + season, { v: v, exp: Date.now() + 600000 }); });
+    while (_PL_CACHE.size > 800) _PL_CACHE.delete(_PL_CACHE.keys().next().value);
+  }
+  return out;
+}
+function _reserveIds(teamData) {
+  var players = (teamData && teamData.players) || {};
+  var pitched = {};
+  ((teamData && teamData.pitchers) || []).forEach(function (id) { pitched[id] = 1; });
+  var base = function (id) {
+    var p = players['ID' + id];
+    if (!p || !p.person || pitched[id]) return null;
+    return { p: p, row: { id: id, name: p.person.fullName, num: p.jerseyNumber || null } };
+  };
+  var bench = ((teamData && teamData.bench) || []).map(base).filter(function (x) { return x && x.p.battingOrder == null; });
+  var pen = ((teamData && teamData.bullpen) || []).map(base).filter(Boolean);
+  return { bench: bench, pen: pen };
+}
+function _daysBetween(a, b) { // whole days from date a to date b (YYYY-MM-DD)
+  var x = Date.parse(a + 'T12:00:00Z'), y = Date.parse(b + 'T12:00:00Z');
+  return isNaN(x) || isNaN(y) ? null : Math.round((y - x) / 864e5);
+}
+async function _reserves(out, data) {
+  var teams = data.liveData && data.liveData.boxscore && data.liveData.boxscore.teams;
+  if (!teams) return;
+  var game = (data.gameData && data.gameData.game) || {};
+  var season = parseInt(game.season, 10) || new Date().getFullYear();
+  var today = (data.gameData && data.gameData.datetime && data.gameData.datetime.officialDate) || null;
+  var sides = { away: _reserveIds(teams.away), home: _reserveIds(teams.home) };
+  var all = [], arms = [];
+  ['away', 'home'].forEach(function (k) {
+    sides[k].bench.forEach(function (x) { all.push(x.row.id); });
+    sides[k].pen.forEach(function (x) { all.push(x.row.id); arms.push(x.row.id); });
+  });
+  if (!all.length) return;
+  // Season lines and last outings are cached for ten minutes. A slow first
+  // lookup must not hold up a live box score: it gets 3 seconds, and if it
+  // still isn't back this answer goes out without the list (the next poll,
+  // seconds later, has it) rather than with starters guessed into the
+  // bullpen. A lookup that fails outright still sends the names.
+  var reg = {}, log = {}, back = false;
+  var looked = Promise.all([
+    _regSeason(all, season).then(function (m) { reg = m; }).catch(function () {}),
+    _pitchLog(arms, season).then(function (m) { log = m; }).catch(function () {})
+  ]).then(function () { back = true; });
+  await Promise.race([looked, new Promise(function (ok) { setTimeout(ok, 3000); })]);
+  if (!back) return;
+  var res = {};
+  ['away', 'home'].forEach(function (k) {
+    var bench = sides[k].bench.map(function (x) {
+      var r = x.row, s = reg[String(r.id)], h = s && s.hitting;
+      r.pos = (x.p.position && x.p.position.abbreviation) || (s && s.pos) || null;
+      r.bats = (s && s.bats) || null;
+      if (h) { r.avg = h.avg; r.hr = h.hr; r.ops = h.ops; r.pa = h.pa; }
+      return r;
+    });
+    var bullpen = [], starters = [];
+    sides[k].pen.forEach(function (x) {
+      var r = x.row, s = reg[String(r.id)], pt = s && s.pitching, apps = log[String(r.id)] || [];
+      r.hand = (s && s.hand) || null;
+      if (pt) { r.era = pt.era; r.ip = pt.ip; r.g = pt.g; r.gs = pt.gs; r.sv = pt.sv; }
+      var last = apps[apps.length - 1];
+      if (last) {
+        var days = today ? _daysBetween(last.d, today) : null;
+        // an outing dated today is this very game's doubleheader partner; anything "later" is bad data
+        if (days == null || days >= 0) r.last = { date: last.d, np: last.np, days: days };
+      }
+      // starter or reliever: his recent outings decide; then the season; then the box score's own totals
+      var sp = null;
+      if (apps.length) {
+        var st = apps.reduce(function (a, o) { return a + o.gs; }, 0);
+        sp = st * 2 > apps.length ? true : st * 2 < apps.length ? false : !!last.gs;
+      } else if (pt && pt.g) {
+        sp = (pt.gs || 0) >= 3 && pt.gs * 2 >= pt.g;
+      } else {
+        var bs = x.p.seasonStats && x.p.seasonStats.pitching;
+        sp = !!(bs && bs.gamesPlayed && (bs.gamesStarted || 0) * 2 > bs.gamesPlayed);
+      }
+      (sp ? starters : bullpen).push(r);
+    });
+    res[k] = { bench: bench, bullpen: bullpen, starters: starters };
+  });
+  out.reserves = res;
 }
 async function _seasonLinesForMatchup(out, data) {
   var m = out && out.matchup;

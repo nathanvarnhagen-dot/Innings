@@ -238,6 +238,57 @@ function _wlRender() {
 }
 
 // ── box tab ──────────────────────────────────────────────────────────────
+// v7.36.0: under the box score of a live baseball game — who the team being
+// shown still has: bench, bullpen, and (last) the other starters. Season
+// numbers are regular season; "Last pitched" counts back from this game.
+function _wlLastOut(l) {
+  if (!l) return { t: '\u2013', hot: false };
+  var d = l.days, t;
+  if (d == null) { var m = String(l.date || '').split('-'); t = m.length === 3 ? Number(m[1]) + '/' + Number(m[2]) : '\u2013'; }
+  else t = d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d + ' days ago';
+  var recent = d != null && d <= 2 && l.np != null;
+  return { t: t, np: recent ? l.np : null, hot: d != null && d <= 1 };
+}
+function _wlReservesHtml(b) {
+  if (!b || b.gameState !== 'Live') return '';
+  // one answer can arrive without the list (its lookup was slow) — keep showing the last one for this game
+  var keep = window._wlRsvKeep;
+  if (b.reserves) window._wlRsvKeep = { pk: b.gamePk, v: b.reserves };
+  var both = b.reserves || (keep && keep.pk != null && keep.pk == b.gamePk ? keep.v : null);
+  var res = both && both[window._bsDetailState.side];
+  if (!res) return '';
+  var esc = _escapeHtml, dash = '\u2013';
+  var v = function (x) { return x == null || x === '' ? dash : esc(String(x)); };
+  var who = function (p, tag) {
+    return '<span class="n">' + _clickablePlayerNameHtml({ name: p.name, id: p.id }, 'mlb') + (tag ? ' <small>' + esc(tag) + '</small>' : '') + '</span>';
+  };
+  var head = function (title, count) { return '<div class="rsv-h"><b>' + title + '</b><em>' + count + '</em></div>'; };
+  var arms = function (list) {
+    return '<div class="rsv-r hd arm"><span class="n">Pitcher</span><i>ERA</i><i>IP</i><i class="w">Last pitched</i></div>' +
+      list.map(function (p) {
+        var lo = _wlLastOut(p.last);
+        return '<div class="rsv-r arm">' + who(p, p.hand === 'L' ? 'LHP' : p.hand === 'R' ? 'RHP' : '') +
+          '<i>' + v(p.era) + '</i><i>' + v(p.ip) + '</i>' +
+          '<i class="w' + (lo.hot ? ' hot' : '') + '">' + esc(lo.t) + (lo.np != null ? '<small>' + lo.np + ' pitches</small>' : '') + '</i></div>';
+      }).join('');
+  };
+  var bench = res.bench || [], pen = res.bullpen || [], sp = res.starters || [];
+  var side = window._bsDetailState.side, team = side === 'away' ? b.away : b.home;
+  var h = '<div class="gh-card rsv"><div class="rsv-top"><span class="gh-eyebrow">Still available</span><span class="rsv-team">' + esc(team || '') + '</span></div>';
+  h += head('Bench', bench.length ? bench.length + ' left' : 'empty');
+  if (bench.length) {
+    h += '<div class="rsv-r hd"><span class="n">Player</span><i>AVG</i><i>HR</i><i>OPS</i></div>' +
+      bench.map(function (p) {
+        var bats = p.bats === 'S' ? 'switch' : p.bats ? 'bats ' + p.bats : '';
+        return '<div class="rsv-r">' + who(p, [p.pos, bats].filter(Boolean).join(' \u00B7 ')) +
+          '<i>' + v(p.avg) + '</i><i>' + v(p.hr) + '</i><i>' + v(p.ops) + '</i></div>';
+      }).join('');
+  } else h += '<div class="rsv-none">Everyone has been used.</div>';
+  h += head('Bullpen', pen.length ? pen.length + (pen.length === 1 ? ' arm left' : ' arms left') : 'empty');
+  h += pen.length ? arms(pen) : '<div class="rsv-none">No relievers left.</div>';
+  if (sp.length) h += head('Starters available', String(sp.length)) + arms(sp);
+  return h + '<div class="rsv-foot">Season numbers are regular season.</div></div>';
+}
 function _wlBoxRender() {
   var el = document.getElementById('game-box-panel');
   if (!el || el.style.display === 'none') return;
@@ -252,7 +303,7 @@ function _wlBoxRender() {
     window._bsDetailState.expanded = true;
     html = _boxScoreDetailSectionHtml(b.boxScoreDetail, b.away, b.home, 'rgba(255,255,255,.08)', 'rgba(255,255,255,0.65)', '#fff', true);
     window._bsDetailState.expanded = keep2;
-    if (html) html = '<div class="gbx-nohead"><div class="gh-card">' + html + '</div></div>';
+    if (html) html = '<div class="gbx-nohead"><div class="gh-card">' + html + '</div></div>' + _wlReservesHtml(b);
   } else if (window._lastLiveBox && typeof _boxScoreCardHtml === 'function') {
     html = _boxScoreCardHtml(window._lastLiveBox, true, false); // other sports when the gamecast isn't available
   }

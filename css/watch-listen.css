@@ -43,3 +43,22 @@
 .wl-btns .wl-go{min-width:0;padding:8px 11px}
 .wl-btns .wl-go-main{background:rgba(168,159,232,.26);color:#fff}
 .wl-cta2:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+
+/* v7.36.0 — Box tab, live baseball: bench, bullpen and spare starters still available */
+.gh-card.rsv{padding:14px 16px 12px}
+.rsv-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rsv-team{min-width:0;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsv-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:14px;padding-bottom:4px}
+.rsv-h b{font-size:12.5px;font-weight:800;letter-spacing:.02em;color:#fff}
+.rsv-h em{font-style:normal;font-size:11px;font-weight:700;color:#D9D4FA}
+.rsv-r{display:flex;align-items:center;gap:6px;min-height:34px;padding:4px 0;border-top:.5px solid rgba(255,255,255,.08);font-size:12px;color:#fff;font-variant-numeric:tabular-nums}
+.rsv-r .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsv-r .n small{font-size:9.5px;color:rgba(255,255,255,.65)}
+.rsv-r i{width:38px;flex-shrink:0;font-style:normal;text-align:right}
+.rsv-r i.w{width:76px;display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.rsv-r i.w small{font-size:9.5px;color:rgba(255,255,255,.65)}
+.rsv-r i.w.hot,.rsv-r i.w.hot small{color:#F2C869}
+.rsv-r.hd{min-height:0;padding:2px 0;border-top:0;font-size:9px;font-weight:700;color:rgba(255,255,255,.65)}
+.rsv-r.hd i.w{display:block}
+.rsv-none{padding:8px 0;border-top:.5px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.65)}
+.rsv-foot{margin-top:10px;font-size:10px;color:rgba(255,255,255,.65)}
