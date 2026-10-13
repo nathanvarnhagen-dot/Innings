@@ -70,7 +70,8 @@ module.exports = async function handler(req, res) {
       const today = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
       const out = await _mlbPhase(today);
       // an answer keeps for ten minutes; a failed lookup is asked again soon
-      res.setHeader('Cache-Control', out.label ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=30');
+      // (v7.41.0: with series scores in the answer it keeps for two minutes)
+      res.setHeader('Cache-Control', out.series ? 's-maxage=120, stale-while-revalidate=120' : out.label ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=30');
       res.status(200).json(out);
       return;
     }
@@ -2066,10 +2067,78 @@ async function _mlbPhase(today) {
   // October: which round
   var pj = await get('https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=' + year + '&gameType=F,D,L,W&hydrate=team,seriesStatus');
   var cur = _mlbCurrentRound(pj);
-  if (cur) return { phase: 'post', label: _mlbRoundLabel(cur.type, cur.leagues), round: cur.type };
+  if (cur) {
+    var out = { phase: 'post', label: _mlbRoundLabel(cur.type, cur.leagues), round: cur.type };
+    // v7.41.0: the round's series, for the Games page's playoff card
+    try { var list = _mlbSeriesList(pj, cur.type); if (list.length) out.series = list; } catch (e) {}
+    return out;
+  }
   // nothing left to play (or the bracket isn't posted yet, right after the regular season)
   if (pj && (pj.dates || []).length) return { phase: 'off', label: 'Offseason' };
   return postEnd && today <= postEnd ? { phase: 'post', label: 'Postseason' } : { phase: 'off', label: 'Offseason' };
+}
+
+// ── THE ROUND'S SERIES (v7.41.0) ──────────────────────────────────────────
+// Every series of the round being played, for the Games page's playoff card:
+// who's in it, how many each has won (counted from the finished games), and
+// the game to open — the one in progress or next up, else the last one
+// played. `pair` + `to` say which two series meet next (the two NLDS → the
+// NLCS; the two LCS → the World Series); `final` marks the World Series.
+// A series whose teams aren't set yet is left out.
+function _mlbSeriesList(data, type) {
+  var by = {}, seen = {};
+  (data && data.dates || []).forEach(function (d) {
+    (d.games || []).forEach(function (g) {
+      if (g.gameType !== type || g.gamePk == null) return;
+      var aT = (g.teams && g.teams.away && g.teams.away.team) || {}, hT = (g.teams && g.teams.home && g.teams.home.team) || {};
+      if (!aT.id || !hT.id || !aT.abbreviation || !hT.abbreviation) return;
+      var ids = [aT.id, hT.id].sort(function (a, b) { return a - b; });
+      var key = ids.join('-');
+      var s = by[key] || (by[key] = { teams: {}, games: [], league: null, over: false, best: null });
+      [aT, hT].forEach(function (t) { if (!s.teams[t.id]) s.teams[t.id] = { id: t.id, abbr: t.abbreviation, name: t.name || null, short: t.teamName || t.clubName || null, wins: 0 }; });
+      var lgId = (aT.league && aT.league.id) || (hT.league && hT.league.id) || null;
+      if (!s.league && type !== 'W') s.league = lgId === 103 ? 'AL' : lgId === 104 ? 'NL' : null;
+      if (g.gamesInSeries) s.best = g.gamesInSeries;
+      if (g.seriesStatus && g.seriesStatus.isOver) s.over = true;
+      var st = g.status || {};
+      var row = {
+        id: g.gamePk, n: g.seriesGameNumber != null ? g.seriesGameNumber : null, t: g.gameDate || null, day: g.officialDate || d.date || null,
+        abs: st.abstractGameState || '', off: /postponed|cancel|suspended/i.test(st.detailedState || ''),
+        away: aT.name || null, home: hT.name || null, awayId: aT.id, homeId: hT.id,
+        as: g.teams.away.score != null ? g.teams.away.score : null, hs: g.teams.home.score != null ? g.teams.home.score : null
+      };
+      // a game moved to another day is listed twice: keep the later listing
+      var k2 = key + ':' + g.gamePk;
+      if (seen[k2] != null) s.games[seen[k2]] = row; else { seen[k2] = s.games.length; s.games.push(row); }
+    });
+  });
+  var bestBy = { F: 3, D: 5, L: 7, W: 7 };
+  var tail = type === 'D' ? 'DS' : 'CS';
+  var list = Object.keys(by).map(function (key) {
+    var s = by[key];
+    s.games.sort(function (a, b) { return ((a.n || 0) - (b.n || 0)) || (Date.parse(a.t) - Date.parse(b.t)); });
+    var played = s.games.filter(function (x) { return x.abs === 'Final' && !x.off && x.as != null && x.hs != null && x.as !== x.hs; });
+    played.forEach(function (x) { var w = x.as > x.hs ? x.awayId : x.homeId; if (s.teams[w]) s.teams[w].wins++; });
+    var best = s.best || bestBy[type] || 7, need = Math.ceil(best / 2);
+    var teams = Object.keys(s.teams).map(function (k) { return s.teams[k]; }).sort(function (a, b) { return (b.wins - a.wins) || (a.id - b.id); });
+    var over = s.over || teams[0].wins >= need;
+    var next = over ? null : (s.games.filter(function (x) { return x.abs === 'Live' && !x.off; })[0] || s.games.filter(function (x) { return x.abs !== 'Final' && !x.off; })[0] || null);
+    var last = played[played.length - 1] || null;
+    var g = next || last || s.games[0];
+    var name = type === 'W' ? 'World Series' : type === 'F' ? ((s.league ? s.league + ' ' : '') + 'WC') : ((s.league || '') + tail);
+    var out = {
+      name: name, best: best, over: over, league: s.league,
+      a: teams[0], b: teams[1],
+      g: g ? { id: g.id, n: g.n, t: g.t, day: g.day, state: g.abs === 'Live' ? 'in' : g.abs === 'Final' ? 'post' : 'pre', away: g.away, home: g.home } : null
+    };
+    if (type === 'W') out.final = true;
+    else if (type === 'L') { out.pair = 'ws'; out.to = 'World Series'; out.toFinal = true; }
+    else if (type === 'D' && s.league) { out.pair = s.league; out.to = s.league + 'CS'; }
+    return out;
+  }).filter(function (s) { return s.a && s.b; });
+  // National League first, the way the round is named ("NLCS & ALCS")
+  list.sort(function (x, y) { return (x.league === 'NL' ? 0 : 1) - (y.league === 'NL' ? 0 : 1); });
+  return list;
 }
 
 // v7.38.0: a schedule row's runners and names, from the hydrated linescore.

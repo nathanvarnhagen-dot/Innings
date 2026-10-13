@@ -631,6 +631,8 @@ var GAMES_SPORTS = [
 //     reads (js/games/multi-view.js), refreshed every 30s while this screen
 //     is up
 var GS_PHASE_KEY = 'innings_league_phase_v1', GS_PHASE_TTL = 10 * 60e3, GS_PHASE_KEEP = 24 * 3600e3;
+// v7.41.0: with a league in the playoffs the answer carries series scores, so it's asked for again after two minutes
+var GS_PHASE_TTL_POST = 2 * 60e3;
 window._gsPhase = window._gsPhase || { at: 0, by: null, loading: false };
 function _gsPhaseState() {
   var P = window._gsPhase;
@@ -643,21 +645,29 @@ function _gsPhaseState() {
   } catch (e) {}
   return P;
 }
+function _gsPhaseTtl(P) {
+  return Object.keys(P.by).some(function (k) { return P.by[k] && P.by[k].series; }) ? GS_PHASE_TTL_POST : GS_PHASE_TTL;
+}
 function _gsPhaseLoad() {
   var P = _gsPhaseState();
-  if (P.loading || !window.fetch || (P.at && Date.now() - P.at < GS_PHASE_TTL)) return;
+  if (P.loading || !window.fetch || (P.at && Date.now() - P.at < _gsPhaseTtl(P))) return;
   P.loading = true;
   var json = function (url) { return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
-  Promise.all([json('/api/mlb?mode=phase&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases&v=2')]).then(function (r) {
+  var entry = function (x) {
+    var o = { phase: x.phase || '', label: String(x.label) };
+    if (Array.isArray(x.series) && x.series.length) o.series = x.series;
+    return o;
+  };
+  Promise.all([json('/api/mlb?mode=phase&v=2&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases&v=3')]).then(function (r) {
     var got = 0;
-    if (r[0] && r[0].label) { P.by.mlb = { phase: r[0].phase || '', label: String(r[0].label) }; got++; }
+    if (r[0] && r[0].label) { P.by.mlb = entry(r[0]); got++; }
     var lg = (r[1] && r[1].leagues) || {};
-    Object.keys(lg).forEach(function (k) { if (lg[k] && lg[k].label) { P.by[k] = { phase: lg[k].phase || '', label: String(lg[k].label) }; got++; } });
+    Object.keys(lg).forEach(function (k) { if (lg[k] && lg[k].label) { P.by[k] = entry(lg[k]); got++; } });
     P.loading = false;
     if (got) {
-      // every league answered: good for ten minutes. Some missing: ask again in one
+      // every league answered: good for ten minutes (two, with series scores). Some missing: ask again in one
       var want = GAMES_SPORTS.filter(function (s) { return s.live; }).length;
-      P.at = got >= want ? Date.now() : Date.now() - GS_PHASE_TTL + 60e3;
+      P.at = got >= want ? Date.now() : Date.now() - _gsPhaseTtl(P) + 60e3;
       try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
     }
     _gsPhasePaint();
@@ -665,6 +675,7 @@ function _gsPhaseLoad() {
 }
 function _gsPhasePaint() {
   var P = _gsPhaseState();
+  _gsDraw();
   GAMES_SPORTS.forEach(function (s) {
     var el = document.getElementById('gsp-ph-' + s.key);
     if (!el || !s.live) return;
@@ -672,10 +683,14 @@ function _gsPhasePaint() {
     el.textContent = p ? p.label : '';
     el.className = 'ph ' + (p ? (/^(pre|reg|post|off)$/.test(p.phase) ? p.phase : 'reg') : 'none');
   });
+  gamesPickerLiveSync();
+  if (typeof multiPickSync === 'function') multiPickSync();
 }
 // How many games are on in each league right now
 function gamesPickerLiveSync() {
   if (!document.getElementById('games-sport-grid') || typeof _mvAll !== 'function') return;
+  // a series game going live (or ending) changes its tile's line
+  if (_gsDraw()) { _gsPhasePaint(); return; }
   var counts = {};
   _mvAll().forEach(function (x) { if (_mvIsLive(x.sport, x.g)) counts[x.sport] = (counts[x.sport] || 0) + 1; });
   GAMES_SPORTS.forEach(function (s) {
@@ -687,11 +702,169 @@ function gamesPickerLiveSync() {
     if (n) el.setAttribute('aria-label', n + (n === 1 ? ' game live' : ' games live')); else el.removeAttribute('aria-label');
   });
 }
-function renderGamesSportGrid() {
+
+// ── A LEAGUE IN THE PLAYOFFS (v7.41.0) ──
+// A league whose round has series to show gets a gold card above the grid
+// instead of a tile: each series is a tile of its own (two badges, the series
+// score between them, "NLCS · G3 WED"), and tapping one opens that game.
+//   · two series that meet next (the two LCS, the two semifinals) sit either
+//     side of a cup — or a ring, when what they lead to isn't the title round —
+//     with gold lines running into it
+//   · the title series has the two teams themselves either side of the cup
+//   · anything else (a first round, a wild-card round) is a plain two-across
+//     grid of tiles, four at most, soonest game first
+// The series come with the season line (/api/mlb?mode=phase, /api/espn?mode=phases).
+// A league that's in the playoffs but has no series to show keeps its tile.
+var GS_CUP = '<svg width="28" height="28" viewBox="0 0 46 46" aria-hidden="true"><path d="M15 8h16v8a8 8 0 0 1-16 0z" fill="rgba(242,200,105,.25)" stroke="#F2C869" stroke-width="2.6"/><path d="M15 11h-5a5 5 0 0 0 5 7M31 11h5a5 5 0 0 1-5 7" fill="none" stroke="#F2C869" stroke-width="2.6"/><path d="M23 24v7M17 38h12l-2-7h-8z" fill="rgba(242,200,105,.25)" stroke="#F2C869" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+function _gsSeriesOk(x) {
+  return !!(x && typeof x === 'object' && x.a && x.b && (x.a.abbr || x.a.name) && (x.b.abbr || x.b.name));
+}
+function _gsSeriesOf(key) {
+  var p = _gsPhaseState().by[key];
+  if (!p || p.phase !== 'post' || !Array.isArray(p.series)) return [];
+  return p.series.filter(_gsSeriesOk);
+}
+function _gsLook(sport, t) {
+  var L = null;
+  try { if (typeof _teamLook === 'function') L = _teamLook(sport, t.name || '', t.abbr || null, t.color || null, t.alt || null); } catch (e) {}
+  if (!L) L = { abbr: t.abbr || String(t.name || '').slice(0, 3).toUpperCase(), bg: '#3D3580', fg: '#FFFFFF', ring: null };
+  return L;
+}
+function _gsBadge(sport, t) {
+  var L = _gsLook(sport, t), ab = String(L.abbr || '').toUpperCase().slice(0, 4);
+  return '<span class="gpo-bd' + (ab.length > 3 ? ' sm' : '') + '" style="background:' + L.bg + ';color:' + L.fg + (L.ring ? ';box-shadow:inset 0 0 0 1.5px ' + L.ring : '') + '">' + _escapeHtml(ab) + '</span>';
+}
+function _gsNum(v) { var n = Number(v); return isFinite(n) && v != null && v !== '' ? n : null; }
+// what sits between the badges: the series score, a single game's score, or "vs"
+function _gsMid(x) {
+  var a, b;
+  if (x.single) { a = _gsNum(x.a.score); b = _gsNum(x.b.score); if (a == null || b == null) return '<span class="gpo-sc vs">vs</span>'; }
+  else { a = _gsNum(x.a.wins) || 0; b = _gsNum(x.b.wins) || 0; }
+  return '<span class="gpo-sc">' + a + '<i>–</i><b' + (b < a ? ' class="dn"' : '') + '>' + b + '</b></span>';
+}
+function _gsGameLive(sport, g) {
+  if (!g || g.id == null) return false;
+  var live = null;
+  if (typeof _mvAll === 'function') _mvAll().forEach(function (x) { if (x.sport === sport && String(x.g.gamePk) === String(g.id)) live = _mvIsLive(x.sport, x.g); });
+  return live == null ? g.state === 'in' : live;
+}
+// "TODAY", "WED", "OCT 23" — nothing for a day that's gone by
+function _gsDayWord(g) {
+  var day = g && /^\d{4}-\d{2}-\d{2}$/.test(g.day || '') ? g.day : null;
+  if (!day && g && g.t) {
+    var d = new Date(g.t);
+    if (isFinite(d.getTime())) day = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  if (!day) return '';
+  var noon = function (s) { return new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)), 12).getTime(); };
+  var diff = Math.round((noon(day) - noon(_todayLocal())) / 864e5);
+  if (diff < 0) return '';
+  if (diff === 0) return 'TODAY';
+  var dt = new Date(noon(day));
+  if (diff < 7) return ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dt.getDay()];
+  return ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dt.getMonth()] + ' ' + dt.getDate();
+}
+// the tile's bottom line → { when, cls, say }
+function _gsWhen(sport, x) {
+  var g = x.g || null, gt = !x.single && g && g.n ? 'G' + g.n : '';
+  if (x.over) return { when: 'FINAL', cls: '', say: 'Series over' };
+  if (!g) return { when: '', cls: '', say: '' };
+  if (_gsGameLive(sport, g)) return { when: (gt ? gt + ' ' : '') + 'LIVE', cls: ' lv', say: (gt ? 'Game ' + g.n + ' ' : '') + 'live now' };
+  if (g.state === 'post') return { when: '', cls: '', say: '' };
+  var day = _gsDayWord(g);
+  var spoken = day === 'TODAY' ? 'today' : day.charAt(0) + day.slice(1).toLowerCase();
+  return { when: (gt + ' ' + day).trim(), cls: day === 'TODAY' ? ' td' : '', say: ((gt ? 'Game ' + g.n + ' ' : '') + spoken).trim() };
+}
+function _gsCapHtml(sport, x) {
+  var w = _gsWhen(sport, x), nm = String(x.name || '').toUpperCase();
+  return '<span class="gpo-cp"><b>' + _escapeHtml(nm) + '</b>' + (w.when ? '<span class="w' + w.cls + '">' + (nm ? ' · ' : '') + _escapeHtml(w.when) + '</span>' : '') + '</span>';
+}
+function _gsSay(sport, x) {
+  var a = x.a.name || x.a.abbr, b = x.b.name || x.b.abbr, w = _gsWhen(sport, x), line;
+  if (x.single) line = a + ' against ' + b;
+  else {
+    var aw = _gsNum(x.a.wins) || 0, bw = _gsNum(x.b.wins) || 0;
+    line = aw === bw ? a + ' and ' + b + ', series tied ' + aw + ' to ' + bw : a + (x.over ? ' beat ' : ' lead ') + b + ' ' + aw + ' to ' + bw;
+  }
+  return (x.name ? x.name + ': ' : '') + line + (w.say ? '. ' + w.say : '');
+}
+function _gsTileHtml(sport, x, i, cls) {
+  return '<button class="gpo-t' + (cls || '') + '" onclick="gsSeriesOpen(\'' + sport + '\',' + i + ')" aria-label="' + _escapeHtml(_gsSay(sport, x)) + '">' +
+    '<span class="gpo-m">' + _gsBadge(sport, x.a) + _gsMid(x) + _gsBadge(sport, x.b) + '</span>' + _gsCapHtml(sport, x) + '</button>';
+}
+// the title series: the two teams themselves stand either side of the cup
+function _gsFinalHtml(sport, x, i) {
+  var side = function (t) { return '<span class="gpo-fs">' + _gsBadge(sport, t) + '<span class="n">' + _escapeHtml(String(t.short || t.abbr || '').toUpperCase()) + '</span></span>'; };
+  var a = x.single ? _gsNum(x.a.score) : (_gsNum(x.a.wins) || 0), b = x.single ? _gsNum(x.b.score) : (_gsNum(x.b.wins) || 0);
+  var num = function (v, dim) { return v == null ? '' : '<span class="gpo-fn' + (dim ? ' dn' : '') + '">' + v + '</span>'; };
+  return '<button class="gpo-t gpo-fin" onclick="gsSeriesOpen(\'' + sport + '\',' + i + ')" aria-label="' + _escapeHtml(_gsSay(sport, x)) + '">' +
+    '<span class="gpo-fr">' + side(x.a) + num(a, a != null && b != null && a < b) + '<span class="gpo-ln" aria-hidden="true"></span><span class="gpo-cup" aria-hidden="true">' + GS_CUP + '</span><span class="gpo-ln" aria-hidden="true"></span>' + num(b, a != null && b != null && b < a) + side(x.b) + '</span>' +
+    _gsCapHtml(sport, x) + '</button>';
+}
+function _gsCardHtml(s, list) {
+  var P = _gsPhaseState(), p = P.by[s.key] || {};
+  var idx = list.map(function (x, i) { return { x: x, i: i }; });
+  var body = '';
+  var fin = idx.filter(function (e) { return e.x.final; });
+  if (fin.length === 1 && idx.length === 1) body = _gsFinalHtml(s.key, fin[0].x, fin[0].i);
+  else {
+    // pairs first, in the order they came; the rest in a grid
+    var used = {}, rest = [];
+    idx.forEach(function (e) {
+      if (used[e.i]) return;
+      var mates = e.x.pair ? idx.filter(function (o) { return o.x.pair === e.x.pair; }) : [];
+      if (mates.length !== 2) { rest.push(e); return; }
+      mates.forEach(function (m) { used[m.i] = true; });
+      var to = String(e.x.to || '');
+      body += '<div class="gpo-pr">' + _gsTileHtml(s.key, mates[0].x, mates[0].i) +
+        '<span class="gpo-mid" aria-hidden="true"><span class="gpo-ln"></span><span class="gpo-cup' + (e.x.toFinal ? '' : ' ring') + '">' + (e.x.toFinal ? GS_CUP : '') +
+        (to ? '<span class="gpo-to">' + _escapeHtml(to.toUpperCase()) + '</span>' : '') + '</span><span class="gpo-ln"></span></span>' +
+        _gsTileHtml(s.key, mates[1].x, mates[1].i) + '</div>';
+    });
+    if (rest.length) {
+      // live first, then the soonest game; four at most
+      var rank = function (e) { var g = e.x.g || {}; return _gsGameLive(s.key, g) ? 0 : e.x.over ? 9e15 : (Date.parse(g.t) || 8e15); };
+      rest.sort(function (a, b) { return (rank(a) - rank(b)) || (a.i - b.i); });
+      var show = rest.slice(0, 4), more = rest.length - show.length;
+      body += '<div class="gpo-gr' + (show.length === 1 ? ' one' : '') + '">' + show.map(function (e) { return _gsTileHtml(s.key, e.x, e.i, ' wide'); }).join('') + '</div>' +
+        (more > 0 ? '<button class="gpo-more" onclick="pickGamesSport(\'' + s.key + '\')">+' + more + ' more series</button>' : '');
+    }
+  }
+  return '<div class="gpo">' +
+    '<button class="gpo-hd" onclick="pickGamesSport(\'' + s.key + '\')">' +
+      '<span class="em" aria-hidden="true">' + s.emoji + '</span><span class="nm">' + _escapeHtml(s.name) + '</span>' +
+      '<span class="rd">' + _escapeHtml(p.label || 'Playoffs') + '</span>' +
+      '<span class="gsp-lv" id="gsp-lv-' + s.key + '" style="display:none"></span>' +
+      '<span class="go">All games ›</span>' +
+    '</button>' + body + '</div>';
+}
+// Tapping a series opens its game: the one on now or next up, else the last one played
+function gsSeriesOpen(sport, i) {
+  var x = _gsSeriesOf(sport)[i], g = x && x.g;
+  if (!g || g.id == null || typeof openGameScreen !== 'function') { pickGamesSport(sport); return; }
+  var s = GAMES_SPORTS.filter(function (o) { return o.key === sport; })[0];
+  if (!s) return;
+  window._gamesSport = sport;
+  if (typeof _refreshPlayoffBtnVisibility === 'function') _refreshPlayoffBtnVisibility();
+  var day = /^\d{4}-\d{2}-\d{2}$/.test(g.day || '') ? g.day : null;
+  if (!day && g.t) { var d = new Date(g.t); if (isFinite(d.getTime())) day = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  openGameScreen(g.id, g.away || null, g.home || null, sport, day || _todayLocal());
+}
+// Draws the playoff cards and the league grid. Says whether anything changed
+// (so the season lines and live counts are put back only when it did).
+function _gsDraw() {
   var grid = document.getElementById('games-sport-grid');
-  if (!grid) return;
+  if (!grid) return false;
+  var cards = document.getElementById('games-playoff-cards');
+  var inCard = {}, cardHtml = '';
+  if (cards) GAMES_SPORTS.forEach(function (s) {
+    if (!s.live) return;
+    var list = _gsSeriesOf(s.key);
+    if (!list.length) return;
+    try { cardHtml += _gsCardHtml(s, list); inCard[s.key] = true; } catch (e) { console.error('[playoff card] ' + s.key + ':', e); }
+  });
   // v7.38.0: Multi view sits first, left of MLB (js/games/multi-view.js)
-  grid.innerHTML = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.map(function (s) {
+  var gridHtml = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.filter(function (s) { return !inCard[s.key]; }).map(function (s) {
     return '<button class="gsp' + (s.live ? '' : ' soon') + '" onclick="pickGamesSport(\'' + s.key + '\')">' +
       '<span class="em" aria-hidden="true">' + s.emoji + '</span>' +
       '<span class="nm">' + _escapeHtml(s.name) + '</span>' +
@@ -699,10 +872,19 @@ function renderGamesSportGrid() {
       '<span class="gsp-lv" id="gsp-lv-' + s.key + '" style="display:none"></span>' +
     '</button>';
   }).join('');
+  var sig = cardHtml + '\u0001' + gridHtml;
+  if (grid._gsSig === sig && grid.firstChild) return false;
+  grid._gsSig = sig;
+  if (cards) { cards.innerHTML = cardHtml; cards.style.display = cardHtml ? '' : 'none'; }
+  grid.innerHTML = gridHtml;
+  return true;
+}
+function renderGamesSportGrid() {
+  var grid = document.getElementById('games-sport-grid');
+  if (!grid) return;
+  grid._gsSig = null;
   _gsPhasePaint();
   _gsPhaseLoad();
-  gamesPickerLiveSync();
-  if (typeof multiPickSync === 'function') multiPickSync();
   if (!window._gsLiveTimer) {
     window._gsLiveTimer = setInterval(function () {
       var scr = document.getElementById('screen-games-picker');

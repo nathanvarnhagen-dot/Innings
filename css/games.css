@@ -263,3 +263,54 @@
 .gsp-lv{position:absolute;top:14px;right:12px;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;line-height:13px;padding:3px 8px;border-radius:20px;background:rgba(124,242,156,.18);color:#9be8ac;white-space:nowrap}
 .gsp-lv i{width:6px;height:6px;border-radius:50%;background:#7CF29C}
 .gsp:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+/* ── a league in the playoffs: the gold card above the grid (v7.41.0) ── */
+#games-playoff-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.gpo{background:rgba(242,200,105,.08);border:1.5px solid rgba(242,200,105,.8);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.gpo-hd{display:flex;align-items:center;gap:8px;min-height:28px;width:100%;box-sizing:border-box;padding:0 2px;border:0;background:none;color:#fff;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gpo-hd .em{font-size:22px;line-height:1}
+.gpo-hd .nm{font-size:14.5px;font-weight:700;white-space:nowrap}
+.gpo-hd .rd{min-width:0;font-size:10.5px;font-weight:800;line-height:13px;padding:3px 8px;border-radius:20px;background:#F2C869;color:#2A1A00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpo-hd .gsp-lv{position:static;flex-shrink:0}
+.gpo-hd .go{margin-left:auto;flex-shrink:0;font-size:12.5px;font-weight:700;color:#F2C869;white-space:nowrap}
+.gpo-t{box-sizing:border-box;min-width:0;font-family:'Barlow Condensed',sans-serif;color:#fff;background:rgba(13,8,32,.6);border:0;border-radius:14px;padding:12px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
+.gpo-m{display:flex;align-items:center;gap:5px}
+.gpo-bd{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;letter-spacing:.03em;line-height:1}
+.gpo-bd.sm{font-size:9.5px;letter-spacing:0}
+.gpo-sc{font-size:26px;font-weight:700;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gpo-sc i{font-style:normal;color:rgba(245,243,255,.5);padding:0 2px}
+.gpo-sc b{font-weight:700}
+.gpo-sc .dn,.gpo-fn.dn{color:rgba(245,243,255,.6)}
+.gpo-sc.vs{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,243,255,.6);padding:0 6px}
+.gpo-cp{max-width:100%;font-size:12.5px;font-weight:700;letter-spacing:.08em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpo-cp b{font-weight:700;color:#F2C869}
+.gpo-cp .w{color:#C7C0E8}
+.gpo-cp .w.td{color:#F2C869}
+.gpo-cp .w.lv{color:#9be8ac}
+/* two series that meet next, either side of the cup */
+.gpo-pr{display:flex;align-items:center}
+.gpo-pr .gpo-t{flex:0 0 122px}
+.gpo-mid{flex:1;min-width:0;display:flex;align-items:center}
+.gpo-ln{flex:1;min-width:4px;height:2px;border-radius:1px;background:#F2C869}
+.gpo-cup{position:relative;flex-shrink:0;width:38px;height:38px;border-radius:50%;background:rgba(242,200,105,.16);display:flex;align-items:center;justify-content:center}
+.gpo-cup.ring{width:16px;height:16px;background:none;box-shadow:inset 0 0 0 2px #F2C869}
+.gpo-to{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;line-height:1.1;color:#F2C869;white-space:nowrap}
+/* the title series: the teams themselves either side of the cup */
+.gpo-fin{width:100%;padding:12px 12px 10px}
+.gpo-fr{width:100%;display:flex;align-items:center;gap:6px}
+.gpo-fs{width:70px;min-width:0;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.gpo-fs .gpo-bd{width:34px;height:34px;font-size:12.5px}
+.gpo-fs .gpo-bd.sm{font-size:10.5px}
+.gpo-fs .n{max-width:100%;font-size:12.5px;font-weight:700;letter-spacing:.06em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpo-fn{flex-shrink:0;font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+/* any other round: series two across */
+.gpo-gr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.gpo-gr.one{grid-template-columns:minmax(0,1fr)}
+.gpo-t.wide{padding:12px 8px 10px}
+.gpo-t.wide .gpo-m{gap:8px}
+.gpo-t.wide .gpo-bd{width:38px;height:38px;font-size:13px}
+.gpo-t.wide .gpo-bd.sm{font-size:11px}
+.gpo-t.wide .gpo-sc{font-size:30px}
+.gpo-more{align-self:center;border:0;background:none;padding:2px 8px;font-family:inherit;font-size:12.5px;font-weight:700;color:#F2C869;cursor:pointer}
+.gpo-hd:focus-visible,.gpo-t:focus-visible,.gpo-more:focus-visible{outline:2px solid #F2C869;outline-offset:2px}
+@media(max-width:374px){.gpo-to{white-space:normal;width:min-content;text-align:center}}
+@media(max-width:340px){.gpo-pr .gpo-t{flex-basis:112px}.gpo-bd{width:28px;height:28px}.gpo-sc{font-size:23px}.gpo-cup{width:30px;height:30px}.gpo-cup svg{width:22px;height:22px}.gpo-to{font-size:11px;letter-spacing:.04em}}

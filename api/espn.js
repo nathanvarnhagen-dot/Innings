@@ -2514,7 +2514,7 @@ function _phKind(text) {
   if (/off[- ]?season/.test(t)) return 'off';
   if (/pre[- ]?season|exhibition/.test(t)) return 'pre';
   if (/regular/.test(t)) return 'reg';
-  if (/post[- ]?season|play[- ]?off|play[- ]?in|final|championship|round|bowl/.test(t)) return 'post';
+  if (/post[- ]?season|play[- ]?off|play[- ]?in|final|championship|round|bowl|mls[- ]cup/.test(t)) return 'post';
   return null;
 }
 // "West Semifinals - Game 3" → "Semifinals"; "East Finals - Game 1" →
@@ -2526,6 +2526,7 @@ function _phRound(headline) {
   var conf = confRe.test(t);
   t = t.replace(confRe, '').replace(/^(?:nba|wnba|nhl|mls|nwsl)\s+/i, '').replace(/^(?:(?:audi\s+)?mls cup|stanley cup|nwsl)\s+playoffs\s*[-–:·]?\s*/i, '').trim();
   if (conf && /^finals?$/i.test(t)) return 'Conference finals';
+  if (/^cup$/i.test(t)) return 'MLS Cup';
   return t.length > 28 ? '' : t;
 }
 function _phFromSlug(slug) {
@@ -2617,8 +2618,145 @@ async function _phDaily(league, base, now, why) {
     // soccer names the stage in the season type itself ("Conference Semifinals")
     if (!round && typeName && !/^(post-?season|playoffs?)$/i.test(typeName)) round = _phRound(typeName);
     label = round || label;
+    // v7.41.0: the round's series, for the Games page's playoff card
+    try {
+      var list = await _phSeries(league, base, sb, lg, now, label, why);
+      if (list && list.length) return { phase: kind, label: label, series: list };
+    } catch (e) { if (why) why.push(league + ' series: ' + String(e && e.message || e)); }
   }
   return { phase: kind, label: label };
+}
+
+// ── THE ROUND'S SERIES (v7.41.0) ─────────────────────────────────────────
+// Every series (or single game) of the playoff round being played, for the
+// Games page's playoff card: the two teams, how many each has won, and the
+// game to open — the one in progress or next up, else the last one played.
+//   · the league's scoreboard for its next game day, plus the game days
+//     around today from the season calendar (up to four more), so a series
+//     that's off today is still found
+//   · a game's note names the round and the conference ("East Semifinals -
+//     Game 3"); its `series` block carries the wins
+//   · `pair` + `to` say which two series meet next (the two East semifinals →
+//     the East finals; the two semifinals of a league without conferences →
+//     the finals); `final` marks the title series
+// A matchup whose teams aren't set yet is left out.
+var PH_TITLE = { nba: 'NBA Finals', wnba: 'WNBA Finals', nhl: 'Stanley Cup', mls: 'MLS Cup', nwsl: 'Championship' };
+function _phConf(head) {
+  var m = /^\s*(east|west)(?:ern)?\b/i.exec(String(head || ''));
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : null;
+}
+function _phIsTitle(head) {
+  var h = String(head || '');
+  return !_phConf(h) && /final|cup|championship/i.test(h) && !/semi|quarter|conference|round|play-?in/i.test(h);
+}
+function _phShortRound(round) {
+  var r = String(round || '');
+  if (/conference finals?/i.test(r)) return 'CONF FINALS';
+  if (/semi/i.test(r)) return 'SEMIS';
+  if (/quarter/i.test(r)) return 'QUARTERS';
+  if (/(first|1st) round|round (one|1)\b/i.test(r)) return 'ROUND 1';
+  if (/(second|2nd) round|round (two|2)\b/i.test(r)) return 'ROUND 2';
+  if (/play-?in/i.test(r)) return 'PLAY-IN';
+  return r.toUpperCase().slice(0, 18);
+}
+function _phGames(sb) {
+  return ((sb && sb.events) || []).map(function (e) {
+    var p = competitorsOf(e), st = (e.status && e.status.type) || {};
+    var note = (p.comp.notes || []).filter(function (n) { return n && n.headline; })[0];
+    var head = note ? String(note.headline) : '', slug = (e.season && e.season.slug) || '';
+    var team = function (c) {
+      var t = (c && c.team) || {};
+      return { id: t.id != null ? String(t.id) : '', abbr: t.abbreviation || null, name: t.displayName || null, short: t.shortDisplayName || t.name || null,
+        color: t.color || null, alt: t.alternateColor || null, score: c && c.score != null && c.score !== '' && isFinite(Number(c.score)) ? Number(c.score) : null };
+    };
+    var gm = /\bGame\s*(\d+)/i.exec(head);
+    return { id: String(e.id), t: Date.parse(e.date), iso: e.date || null, state: st.state || '', head: head, slug: slug, conf: _phConf(head),
+      round: _phRound(head) || _phFromSlug(slug), n: gm ? Number(gm[1]) : null, ser: p.comp.series || null, away: team(p.away), home: team(p.home) };
+  }).filter(function (e) { return isFinite(e.t); });
+}
+function _phTeamSet(x) { return !!(x && x.abbr && !/^TBD$/i.test(x.abbr) && Number(x.id) > 0); }
+async function _phSeries(league, base, sb, lg, now, label, why) {
+  var t = now.getTime();
+  var games = _phGames(sb);
+  var set = games.filter(function (g) { return _phTeamSet(g.away) && _phTeamSet(g.home); });
+  // the title series is the only one there is: no need to look around
+  var titleOnly = set.length > 0 && set.every(function (g) { return _phIsTitle(g.head); });
+  if (!titleOnly) {
+    var today = new Date(t - 7 * 3600e3).toISOString().slice(0, 10);
+    var plus = function (n) { return new Date(Date.parse(today + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10); };
+    var shown = sb && sb.day && sb.day.date ? String(sb.day.date).slice(0, 10) : null;
+    var lo = plus(-3), hi = plus(8);
+    var days = (Array.isArray(lg.calendar) ? lg.calendar : []).filter(function (d) { return typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d); })
+      .map(function (d) { return d.slice(0, 10); }).filter(function (d, i, a) { return d >= lo && d <= hi && d !== shown && a.indexOf(d) === i; });
+    var far = function (d) { return Math.abs(Date.parse(d + 'T12:00:00Z') - Date.parse(today + 'T12:00:00Z')); };
+    days.sort(function (a, b) { return far(a) - far(b); });
+    var more = await Promise.all(days.slice(0, 4).map(function (d) { return _phGet(base + '?dates=' + d.replace(/-/g, ''), 0, why); }));
+    var have = {};
+    games.forEach(function (g) { have[g.id] = true; });
+    more.forEach(function (day) { _phGames(day).forEach(function (g) { if (!have[g.id]) { have[g.id] = true; games.push(g); } }); });
+  }
+  // group into matchups
+  var by = {};
+  games.forEach(function (g) {
+    if (!_phTeamSet(g.away) || !_phTeamSet(g.home)) return;
+    if (_phKind(g.slug) !== 'post' && !(g.ser && /playoff/i.test(g.ser.type || ''))) return;
+    var key = [Number(g.away.id), Number(g.home.id)].sort(function (a, b) { return a - b; }).join('-');
+    (by[key] || (by[key] = [])).push(g);
+  });
+  var list = Object.keys(by).map(function (key) {
+    var gs = by[key].sort(function (a, b) { return a.t - b.t; });
+    var live = gs.filter(function (g) { return g.state === 'in'; })[0] || null;
+    var pre = gs.filter(function (g) { return g.state === 'pre'; })[0] || null;
+    var posts = gs.filter(function (g) { return g.state === 'post'; });
+    var last = posts[posts.length - 1] || null;
+    var ref = live || pre || last || gs[0];
+    var ser = ref.ser && !/^season$/i.test(ref.ser.type || '') && Number(ref.ser.totalCompetitions) > 1 ? ref.ser : null;
+    var wins = {};
+    ((ser && ser.competitors) || []).forEach(function (c) { if (c && c.id != null) wins[String(c.id)] = Number(c.wins) || 0; });
+    var total = ser ? Number(ser.totalCompetitions) : 1;
+    var mk = function (x) { return { id: x.id, abbr: x.abbr, name: x.name, short: x.short, color: x.color, alt: x.alt, wins: wins[x.id] || 0 }; };
+    var A = mk(ref.away), B = mk(ref.home);
+    var over, g;
+    if (ser) {
+      over = !!ser.completed || Math.max(A.wins, B.wins) >= Math.ceil(total / 2);
+      g = (over ? null : (live || pre)) || last || ref;
+      // the leader on the left; level: a fixed order, so the tile doesn't flip from game to game
+      if (B.wins > A.wins || (B.wins === A.wins && Number(B.id) < Number(A.id))) { var sw = A; A = B; B = sw; }
+    } else {
+      // one game decides it: away on the left, the score once it's under way
+      over = !live && !pre && !!last;
+      g = live || pre || last || ref;
+      if (g.state !== 'pre') { A.score = g.away.score; B.score = g.home.score; }
+    }
+    return { round: ref.round, conf: ref.conf, head: ref.head, best: total, single: !ser, over: over, a: A, b: B,
+      g: { id: g.id, n: g.n, t: g.iso, state: g.state, away: g.away.name, home: g.home.name }, at: g.t };
+  });
+  if (!list.length) return [];
+  // the round being played: the one the tile is labelled with, else the round of the next game up
+  var want = list.filter(function (s) { return s.round === label; });
+  // (a round that's all finished isn't shown in its place: the next one's teams just aren't set yet)
+  if (!want.length) {
+    var up = list.filter(function (s) { return !s.over; }).sort(function (a, b) { return a.at - b.at; })[0];
+    if (!up) return [];
+    want = list.filter(function (s) { return s.round === up.round; });
+  }
+  var ord = function (s) { return s.conf === 'East' ? 0 : s.conf === 'West' ? 1 : 2; };
+  want.sort(function (a, b) { return (ord(a) - ord(b)) || (a.at - b.at); });
+  var buckets = {};
+  want.forEach(function (s) { var k = s.conf || ''; (buckets[k] || (buckets[k] = [])).push(s); });
+  return want.map(function (s) {
+    var out = { name: s.conf ? s.conf.toUpperCase() : _phShortRound(s.round), best: s.best, over: s.over, a: s.a, b: s.b, g: s.g };
+    if (s.single) out.single = true;
+    if (want.length === 1 && _phIsTitle(s.head)) { out.final = true; return out; }
+    var mates = buckets[s.conf || ''];
+    if (want.length === 2 && (/conference finals?/i.test(s.round) || (!s.conf && /semi/i.test(s.round)))) {
+      // the last two series: the winners play for the title
+      out.pair = 'all'; out.to = PH_TITLE[league] || 'Finals'; out.toFinal = true;
+    } else if (s.conf && mates.length === 2 && /semi|(second|2nd) round/i.test(s.round)) {
+      out.pair = s.conf; out.to = s.conf + (league === 'nhl' ? ' Final' : ' Finals');
+    }
+    return out;
+  });
 }
 async function _leaguePhases(req, res) {
   var now = new Date();
@@ -2635,7 +2773,9 @@ async function _leaguePhases(req, res) {
     } catch (e) { why.push(league + ': ' + String(e && e.message || e)); }
   }));
   // every league answered: keep it ten minutes; some missing: ask again soon
-  res.setHeader('Cache-Control', Object.keys(out).length === PHASE_LEAGUES.length ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=45');
+  // (v7.41.0: with series scores in the answer it keeps for two minutes)
+  var withSeries = Object.keys(out).some(function (k) { return out[k].series; });
+  res.setHeader('Cache-Control', Object.keys(out).length !== PHASE_LEAGUES.length ? 's-maxage=45' : withSeries ? 's-maxage=120, stale-while-revalidate=120' : 's-maxage=600, stale-while-revalidate=3600');
   // &debug=1 says why a league is missing
   res.status(200).json(req.query.debug ? { leagues: out, why: why } : { leagues: out });
 }
