@@ -2490,10 +2490,11 @@ async function _playerProfile(req, res, path, league) {
 //   · football: ESPN's scoreboard carries the season calendar (every week
 //     with its dates and name — "Week 6", "Wild Card", "Super Bowl"), so the
 //     label is whichever entry today falls in
-//   · everything else: the games around today (4 days back, 6 ahead) say it
-//     themselves — each carries its season type, and a playoff game's note
-//     names the round ("West Semifinals - Game 3"). The game that counts is
-//     one in progress, else the next one up, else the last one played.
+//   · everything else: the league's scoreboard carries the season's type,
+//     and a playoff game's note names the round ("West Semifinals - Game 3").
+//     The game that counts is one in progress, else the next one up, else
+//     the last one played; on a playoff off-day the nearest game day is
+//     looked up from the season calendar.
 // Any league that fails to load is simply left out; the app keeps what it had.
 var PHASE_LEAGUES = ['nfl', 'cfb', 'nba', 'wnba', 'nhl', 'mls', 'nwsl'];
 var PHASE_WORDS = { pre: 'Preseason', reg: 'Regular season', post: 'Playoffs', off: 'Offseason' };
@@ -2506,7 +2507,6 @@ async function _phGet(url, ms) {
     return await r.json();
   } catch (e) { return null; } finally { if (tm) clearTimeout(tm); }
 }
-function _phYmd(d) { return d.toISOString().slice(0, 10).replace(/-/g, ''); }
 // A season type's name or slug → 'pre' | 'reg' | 'post' | 'off' | null
 function _phKind(text) {
   var t = String(text || '').toLowerCase();
@@ -2563,40 +2563,73 @@ function _phFootball(league, sb, now) {
   }
   return { phase: kind, label: label };
 }
-function _phDaily(league, sb, now) {
-  var lg = (sb && sb.leagues && sb.leagues[0]) || {}, seas = lg.season || {}, t = now.getTime();
-  var evs = ((sb && sb.events) || []).map(function (e) {
+function _phEvents(sb) {
+  return ((sb && sb.events) || []).map(function (e) {
     var comp = (e.competitions && e.competitions[0]) || {};
     var st = (e.status && e.status.type) || {};
     var note = (comp.notes || []).filter(function (n) { return n && n.headline; })[0];
     return { t: Date.parse(e.date), state: st.state || '', slug: (e.season && e.season.slug) || '', head: note ? note.headline : '' };
   }).filter(function (e) { return isFinite(e.t); });
-  var live = evs.filter(function (e) { return e.state === 'in'; });
-  var next = evs.filter(function (e) { return e.state === 'pre' && e.t > t - 6 * 3600e3; }).sort(function (a, b) { return a.t - b.t; });
-  var last = evs.filter(function (e) { return e.state === 'post' || e.t <= t; }).sort(function (a, b) { return b.t - a.t; });
-  var ref = live[0] || next[0] || last[0] || null;
-  var upcoming = !!(live.length || next.length);
+}
+// The league's "now" scoreboard gives today's games, the season's type and
+// (calendar) every day of the season that has games. In the playoffs, when
+// today has no game naming the round, the nearest game day is looked up:
+// the next one within 8 days, else the last one within 3.
+async function _phDaily(league, base, now) {
+  var sb = await _phGet(base);
+  if (!sb) return null;
+  var lg = (sb.leagues && sb.leagues[0]) || {}, seas = lg.season || {}, t = now.getTime();
+  var evs = _phEvents(sb);
+  var pick = function (list) {
+    var live = list.filter(function (e) { return e.state === 'in'; });
+    var next = list.filter(function (e) { return e.state === 'pre'; }).sort(function (a, b) { return a.t - b.t; });
+    var last = list.filter(function (e) { return e.state === 'post'; }).sort(function (a, b) { return b.t - a.t; });
+    return live[0] || next[0] || last[0] || list[0] || null;
+  };
+  var ref = pick(evs);
   var kind = (ref && _phKind(ref.slug)) || _phKind(seas.type && seas.type.name);
   var s0 = Date.parse(seas.startDate), s1 = Date.parse(seas.endDate);
   if (!ref && ((s1 && t > s1) || (s0 && t < s0))) kind = 'off';
-  // playoffs with nothing in progress or ahead: over, unless the last game was only just played
-  if (kind === 'post' && !upcoming && !(ref && t - ref.t < 60 * 3600e3)) kind = 'off';
   if (!kind) return null;
   var label = PHASE_WORDS[kind];
-  if (kind === 'post' && ref) label = _phRound(ref.head) || _phFromSlug(ref.slug) || label;
+  if (kind === 'post') {
+    var typeName = String((seas.type && seas.type.name) || '');
+    var round = ref ? (_phRound(ref.head) || _phFromSlug(ref.slug)) : '';
+    var going = evs.some(function (e) { return e.state !== 'post'; });
+    if (!round || !going) {
+      // game days on the calendar, as YYYY-MM-DD (they're stamped at midnight Pacific)
+      var today = new Date(t - 7 * 3600e3).toISOString().slice(0, 10);
+      var days = (Array.isArray(lg.calendar) ? lg.calendar : []).filter(function (d) { return typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d); }).map(function (d) { return d.slice(0, 10); }).sort();
+      var plus = function (n) { return new Date(Date.parse(today + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10); };
+      var ahead = days.filter(function (d) { return d > today && d <= plus(8); })[0] || null;
+      var back = days.filter(function (d) { return d < today && d >= plus(-3); }).pop() || null;
+      // nothing on today, nothing ahead, nothing just played: the playoffs are over
+      if (!going && !ahead && !back && !evs.length) return { phase: 'off', label: PHASE_WORDS.off };
+      if (!round) {
+        var tries = [ahead, back].filter(Boolean);
+        for (var i = 0; i < tries.length && !round; i++) {
+          var day = await _phGet(base + '?dates=' + tries[i].replace(/-/g, ''));
+          var r2 = pick(_phEvents(day));
+          if (r2) round = _phRound(r2.head) || _phFromSlug(r2.slug);
+        }
+      }
+    }
+    // soccer names the stage in the season type itself ("Conference Semifinals")
+    if (!round && typeName && !/^(post-?season|playoffs?)$/i.test(typeName)) round = _phRound(typeName);
+    label = round || label;
+  }
   return { phase: kind, label: label };
 }
 async function _leaguePhases(req, res) {
   var now = new Date();
-  var from = new Date(now.getTime() - 4 * 864e5), to = new Date(now.getTime() + 6 * 864e5);
   var out = {};
   await Promise.all(PHASE_LEAGUES.map(async function (league) {
     var football = league === 'nfl' || league === 'cfb';
     var base = 'https://site.api.espn.com/apis/site/v2/sports/' + LEAGUE_PATHS[league] + '/scoreboard';
-    var sb = await _phGet(football ? base : base + '?dates=' + _phYmd(from) + '-' + _phYmd(to) + '&limit=300');
-    if (!sb) return;
     try {
-      var p = football ? _phFootball(league, sb, now) : _phDaily(league, sb, now);
+      var p = null;
+      if (football) { var sb = await _phGet(base); p = sb ? _phFootball(league, sb, now) : null; }
+      else p = await _phDaily(league, base, now);
       if (p && p.label) out[league] = p;
     } catch (e) {}
   }));
