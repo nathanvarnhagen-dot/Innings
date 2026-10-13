@@ -2498,14 +2498,14 @@ async function _playerProfile(req, res, path, league) {
 // Any league that fails to load is simply left out; the app keeps what it had.
 var PHASE_LEAGUES = ['nfl', 'cfb', 'nba', 'wnba', 'nhl', 'mls', 'nwsl'];
 var PHASE_WORDS = { pre: 'Preseason', reg: 'Regular season', post: 'Playoffs', off: 'Offseason' };
-async function _phGet(url, ms) {
+async function _phGet(url, ms, why) {
   var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 5000) : null;
+  var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 8000) : null;
   try {
     var r = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
-    if (!r.ok) return null;
+    if (!r.ok) { if (why) why.push('HTTP ' + r.status + ' ' + url.split('/sports/')[1]); return null; }
     return await r.json();
-  } catch (e) { return null; } finally { if (tm) clearTimeout(tm); }
+  } catch (e) { if (why) why.push(String(e && e.name || e) + ' ' + url.split('/sports/')[1]); return null; } finally { if (tm) clearTimeout(tm); }
 }
 // A season type's name or slug → 'pre' | 'reg' | 'post' | 'off' | null
 function _phKind(text) {
@@ -2575,8 +2575,8 @@ function _phEvents(sb) {
 // (calendar) every day of the season that has games. In the playoffs, when
 // today has no game naming the round, the nearest game day is looked up:
 // the next one within 8 days, else the last one within 3.
-async function _phDaily(league, base, now) {
-  var sb = await _phGet(base);
+async function _phDaily(league, base, now, why) {
+  var sb = await _phGet(base, 0, why);
   if (!sb) return null;
   var lg = (sb.leagues && sb.leagues[0]) || {}, seas = lg.season || {}, t = now.getTime();
   var evs = _phEvents(sb);
@@ -2622,18 +2622,20 @@ async function _phDaily(league, base, now) {
 }
 async function _leaguePhases(req, res) {
   var now = new Date();
-  var out = {};
+  var out = {}, why = [];
   await Promise.all(PHASE_LEAGUES.map(async function (league) {
     var football = league === 'nfl' || league === 'cfb';
     var base = 'https://site.api.espn.com/apis/site/v2/sports/' + LEAGUE_PATHS[league] + '/scoreboard';
     try {
       var p = null;
-      if (football) { var sb = await _phGet(base); p = sb ? _phFootball(league, sb, now) : null; }
-      else p = await _phDaily(league, base, now);
+      if (football) { var sb = await _phGet(base, 0, why); p = sb ? _phFootball(league, sb, now) : null; }
+      else p = await _phDaily(league, base, now, why);
       if (p && p.label) out[league] = p;
-    } catch (e) {}
+      else why.push(league + ': no answer');
+    } catch (e) { why.push(league + ': ' + String(e && e.message || e)); }
   }));
   // every league answered: keep it ten minutes; some missing: ask again soon
   res.setHeader('Cache-Control', Object.keys(out).length === PHASE_LEAGUES.length ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=45');
-  res.status(200).json({ leagues: out });
+  // &debug=1 says why a league is missing
+  res.status(200).json(req.query.debug ? { leagues: out, why: why } : { leagues: out });
 }
