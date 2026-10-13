@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.37.0-mention-invites';
+window.INNINGS_BUILD = 'v7.38.0-multi-view';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

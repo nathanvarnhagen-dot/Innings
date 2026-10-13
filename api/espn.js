@@ -270,8 +270,29 @@ function summarizeEvent(event) {
     // v7.16.1: playoff games lead Home — season type 3 is the postseason
     seasonType: (event.season && event.season.type) || null,
     headline: (parts.comp.notes && parts.comp.notes[0] && parts.comp.notes[0].headline) || null,
-    seriesSummary: (parts.comp.series && parts.comp.series.summary) || null
+    seriesSummary: (parts.comp.series && parts.comp.series.summary) || null,
+    // v7.38.0: where a live game stands (down & distance, the spot, the last
+    // play), for Multi view's tiles — null whenever ESPN doesn't send it
+    sit: _eventSit(parts)
   };
+}
+function _eventSit(parts) {
+  try {
+    var s = parts.comp && parts.comp.situation;
+    if (!s) return null;
+    var possId = s.possession != null ? String(s.possession) : null, poss = null;
+    [parts.away, parts.home].forEach(function (c) {
+      var t = c && c.team;
+      if (possId && t && (String(t.id) === possId || String(c.id) === possId)) poss = t.abbreviation || null;
+    });
+    var out = {
+      dd: s.shortDownDistanceText || null,
+      spot: s.possessionText || null,
+      poss: poss,
+      last: (s.lastPlay && s.lastPlay.text) || null
+    };
+    return (out.dd || out.spot || out.poss || out.last) ? out : null;
+  } catch (e) { return null; }
 }
 
 var SOCCER_LEAGUES = { mls: true, nwsl: true };

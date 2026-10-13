@@ -54,7 +54,9 @@ function _gshSetup() {
     hd.appendChild(bar);
     var scrim = document.createElement('button'); scrim.id = 'game-sb-scrim'; scrim.className = 'gsbd-scrim'; scrim.setAttribute('aria-label', 'Hide the scoreboard'); scrim.onclick = function () { gshCloseDrop(); };
     var drop = document.createElement('div'); drop.id = 'game-sb-drop'; drop.className = 'gsbd'; drop.setAttribute('aria-hidden', 'true');
-    drop.innerHTML = '<div class="gsbd-att"><span>You’re</span><span id="gsbd-att-slot" class="gsbd-att-slot"></span></div><div id="gsbd-hero" class="gsbd-hero"></div>' +
+    drop.innerHTML = '<div class="gsbd-att"><span>You’re</span><span id="gsbd-att-slot" class="gsbd-att-slot"></span></div>' +
+      (typeof multiDropRowHtml === 'function' ? multiDropRowHtml() : '') + // v7.38.0: into Multi view (js/games/multi-view.js)
+      '<div id="gsbd-hero" class="gsbd-hero"></div>' +
       '<button class="gsbd-grab" onclick="gshCloseDrop()" aria-label="Push the scoreboard back up"></button>';
     scr.appendChild(scrim); scr.appendChild(drop);
     panel.style.position = 'relative';
@@ -285,6 +287,7 @@ function gshOpenDrop() {
   window._gshDropOn = true;
   clearTimeout(window._gshAttT);
   _gshFillDrop();
+  if (typeof multiDropSync === 'function') multiDropSync(); // v7.38.0: how many other games are live
   // the real control, so it keeps working. v7.20.2: a same-size stand-in
   // holds its spot in the header, so the tabs don't shift when it moves
   if (att && slot && att.parentNode !== slot) {

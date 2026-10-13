@@ -43,6 +43,12 @@ module.exports = async function handler(req, res) {
             inningHalf: (g.linescore && g.linescore.inningHalf) || null,
             inningState: (g.linescore && g.linescore.inningState) || null,
             outs: g.linescore && g.linescore.outs != null ? g.linescore.outs : null,
+            // v7.38.0: the count, who's on base and who's up, for Multi view's live tiles
+            balls: g.linescore && g.linescore.balls != null ? g.linescore.balls : null,
+            strikes: g.linescore && g.linescore.strikes != null ? g.linescore.strikes : null,
+            bases: _schedBases(g.linescore),
+            batter: _schedPerson(g.linescore && g.linescore.offense && g.linescore.offense.batter),
+            pitcher: _schedPerson(g.linescore && g.linescore.defense && g.linescore.defense.pitcher),
             // v7.16.1: playoff games often go up before their time is set
             startTimeTBD: !!(g.status && g.status.startTimeTBD)
           }, _postseasonFields(g)));
@@ -1994,6 +2000,16 @@ function _ghostRunnerRule() { return !_gameType || _gameType === 'R' || _gameTyp
 // ── POSTSEASON (v6.8.0) ───────────────────────────────────────────────────
 // gameType F = Wild Card, D = Division Series, L = League Championship
 // Series, W = World Series. League from the teams (103 AL, 104 NL).
+// v7.38.0: a schedule row's runners and names, from the hydrated linescore.
+// A game that isn't live has no offense to speak of, so these come back
+// empty rather than wrong.
+function _schedBases(ls) {
+  var o = ls && ls.offense;
+  if (!o) return null;
+  return { first: !!o.first, second: !!o.second, third: !!o.third };
+}
+function _schedPerson(p) { return (p && (p.fullName || p.name)) || null; }
+
 function _postseasonFields(g) {
   var t = g && g.gameType;
   var aT = g.teams && g.teams.away && g.teams.away.team || {}, hT = g.teams && g.teams.home && g.teams.home.team || {};

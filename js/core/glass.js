@@ -140,6 +140,7 @@ function _glProfileRows() {
     '<button class="gl-ib" id="glass-bell" onclick="nav(\'notifications\')" aria-label="Notifications">' + GL_ICON.bell + '<span class="gl-dot"></span></button>' +
     '<button class="gl-me" id="glass-me" onclick="nav(\'profile\')" aria-label="Your profile">?</button></div>' +
     '<div class="gl-scroll scroll-bare" id="gl-home-body"><div class="gl-bento">' +
+    '<div class="gl-c2" id="gl-multi" style="display:none"></div>' + // v7.38.0: your Multi view board, after a reload (js/games/multi-view.js)
     '<div class="gl-c2" id="gl-hero" style="display:none"></div>' +
     '<div class="gl-c2" id="gl-live" style="display:none"></div>' +
     '<div class="gl-c2" id="gl-gamescta" style="display:none"></div>' +
@@ -302,6 +303,7 @@ function _glHomeOpen() {
   if (typeof recapsRefresh === 'function') { try { recapsRefresh(); } catch (e) {} }
   _glLoadLive(false);
   _glRenderHero(); _glRenderLive(); _glRenderTonight(); _glRenderRecaps(); _glRenderComing(); _glRenderOtd(); _glBell();
+  if (typeof multiHomeRender === 'function') { try { multiHomeRender(); } catch (e) {} } // v7.38.0
   // Desktop keeps its "Recent memories" list (it used to sit in the Feed's side rail)
   if (typeof _isDesk === 'function' && _isDesk() && typeof _deskRenderRail === 'function') { try { _deskRenderRail(); } catch (e) {} }
 }
@@ -433,6 +435,8 @@ function _glLoadLive(force) {
     window._glLive = live;
     window._glPlayoffs = po;
     window._glLiveLoaded = true;
+    // v7.38.0: the same scores feed Multi view's score flags and its board on Home
+    if (typeof multiIngest === 'function') { try { multiIngest(res); multiHomeRender(); } catch (e) { console.error('[glass] multi view', e); } }
     _glRenderLive();
     _glComputeTonight();
   });

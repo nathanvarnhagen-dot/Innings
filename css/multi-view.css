@@ -1,0 +1,118 @@
+/* ══ MULTI VIEW (v7.38.0) — js/games/multi-view.js ══════════════════════
+   The board screen (#screen-multi), its tile on the league picker, its row
+   in a game's pull-down scoreboard, and the board on Home after a reload. */
+
+/* ── the screen ── */
+.mv-hd{background:#08051A;border-bottom:1px solid rgba(255,255,255,.08);padding:calc(env(safe-area-inset-top,20px) + 14px) 16px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.mv-back{width:34px;height:34px;border-radius:50%;background:var(--bg);border:.5px solid var(--rule);display:flex;align-items:center;justify-content:center;color:var(--mid);flex-shrink:0;padding:0;cursor:pointer}
+.mv-title{flex:1;min-width:0;display:flex;align-items:center;gap:10px;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;white-space:nowrap}
+.mv-live{display:inline-flex;align-items:center;gap:5px;font-size:13px;letter-spacing:.1em;color:#FF9A8E}
+.mv-live i{width:6px;height:6px;border-radius:50%;background:#FF7A6B}
+.mv-edit{height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#F5F3FF;font-family:inherit;font-size:12.5px;font-weight:700;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.mv-edit[aria-pressed="true"]{background:#A89FE8;border-color:#A89FE8;color:#1A1640}
+.mv-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg);padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;flex-direction:column;gap:16px}
+.mv-body::-webkit-scrollbar{display:none}
+.mv-body>*{flex-shrink:0}
+.mv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+/* ── a tile ── */
+.mv-tile{position:relative;min-width:0;border-radius:16px;background:#141033;box-shadow:0 0 0 1px rgba(255,255,255,.09)}
+.mv-tile.scored{box-shadow:0 0 0 1.5px #E8C766}
+.mv-open{display:flex;flex-direction:column;gap:10px;width:100%;height:100%;box-sizing:border-box;padding:12px;border:0;border-radius:16px;background:transparent;color:#F5F3FF;text-align:left;font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mv-open:active{transform:scale(.985)}
+.mv-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'Barlow Condensed',sans-serif;white-space:nowrap}
+.mv-top .lg{font-size:12.5px;font-weight:600;letter-spacing:.14em;color:#B9B2E6;overflow:hidden;text-overflow:ellipsis}
+.mv-top .st{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#C7C0E8}
+.mv-top .st.live{color:#E8C766}
+.mv-top .st i{width:6px;height:6px;border-radius:50%;background:#FF7A6B}
+.mv-tm{display:flex;flex-direction:column;gap:3px}
+.mv-row{display:flex;align-items:center;gap:8px;min-height:34px;font-family:'Barlow Condensed',sans-serif}
+.mv-row i{width:4px;height:22px;border-radius:2px;flex-shrink:0}
+.mv-row .ab{flex:1;min-width:0;font-size:22px;font-weight:700;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mv-row .sc{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.mv-row.lo .ab,.mv-row.lo .sc{color:rgba(245,243,255,.72)}
+.mv-sit{height:68px;box-sizing:border-box;border-radius:10px;background:var(--bg);padding:0 10px;display:flex;font-family:'Barlow Condensed',sans-serif;min-width:0}
+.mv-sit b{font-size:20px;font-weight:700;letter-spacing:.06em;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mv-sit b.sm{font-size:16px}
+.mv-sit small{font-size:12.5px;font-weight:600;letter-spacing:.1em;color:#C7C0E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mv-sit.tx,.mv-sit.gold{flex-direction:column;justify-content:center;gap:4px}
+.mv-sit.gold{background:#E8C766;color:#1A1640}
+.mv-sit.gold b{letter-spacing:.08em}
+.mv-sit.gold small{color:#1A1640}
+.mv-sit.bb{align-items:center;justify-content:space-around;padding:0 8px}
+.mv-sit.bb .col{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.mv-sit.bb b{font-size:22px;letter-spacing:0;line-height:1;font-variant-numeric:tabular-nums}
+.mv-sit.fb{flex-direction:column;justify-content:center;gap:3px}
+.mv-sit.fb .bar{position:relative;display:block;height:6px;margin-top:5px;border-radius:3px;background:rgba(255,255,255,.14)}
+.mv-sit.fb .bar i{position:absolute;left:0;top:0;height:6px;border-radius:3px}
+.mv-sit.fb .bar u{position:absolute;top:-3px;width:2px;height:12px;margin-left:-1px;background:#E8C766}
+.mv-note{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:31px;font-size:11.5px;line-height:1.35;color:#C7C0E8}
+.mv-fr{display:flex;align-items:center;gap:6px;min-height:18px;font-size:11px;color:#B9B2E6;white-space:nowrap;overflow:hidden}
+.mv-fr.on{color:#E2DCFF;font-weight:600}
+.mv-fr .avs{display:flex;flex-shrink:0}
+.mv-fr .avs i{width:18px;height:18px;border-radius:50%;background:#3D3580;box-shadow:0 0 0 1.5px #141033;color:#F5F3FF;font-style:normal;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.mv-fr .avs i+i{margin-left:-5px;background:#6B63B5}
+/* editing: tiles stop opening, and each gets a way off the board */
+.mv-x{display:none;position:absolute;top:-8px;right:-8px;width:44px;height:44px;border:0;border-radius:50%;background:transparent;padding:0;cursor:pointer;align-items:center;justify-content:center;color:#1A1640}
+.mv-x::before{content:'';position:absolute;inset:8px;border-radius:50%;background:#F5F3FF;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+.mv-x svg{position:relative}
+.mv-editing .mv-x{display:flex}
+.mv-editing .mv-open{cursor:default;opacity:.82}
+.mv-editing .mv-top{padding-right:24px}
+.mv-editing .mv-open:active{transform:none}
+
+/* ── also live, and the empty board ── */
+.mv-sec{display:flex;flex-direction:column;gap:8px}
+.mv-lab{display:flex;flex-direction:column;gap:3px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.14em;color:#B9B2E6}
+.mv-lab small{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:12px;font-weight:500;letter-spacing:0;color:#C7C0E8}
+.mv-also{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 8px 0 14px;border-radius:14px;background:#141033;box-shadow:0 0 0 1px rgba(255,255,255,.09)}
+.mv-also .sc{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px;font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;letter-spacing:.06em;color:#F5F3FF;white-space:nowrap;overflow:hidden}
+.mv-also .sc small{font-size:13px;font-weight:600;letter-spacing:.1em;color:#E8C766;overflow:hidden;text-overflow:ellipsis}
+.mv-also button{height:44px;padding:0 14px;border-radius:22px;border:0;background:transparent;color:#A89FE8;font-family:inherit;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.mv-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:56px 24px 28px;text-align:center}
+.mv-empty b{font-size:17px;font-weight:800;color:#fff}
+.mv-empty span{font-size:14px;line-height:1.5;color:var(--mid);max-width:270px}
+.mv-cta{margin-top:10px;height:44px;padding:0 20px;border-radius:22px;border:0;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.mv-back:focus-visible,.mv-edit:focus-visible,.mv-open:focus-visible,.mv-x:focus-visible,.mv-also button:focus-visible,.mv-cta:focus-visible,.mv-pick:focus-visible,.gsbd-multi:focus-visible,.mvh-t:focus-visible,.mvh-x:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+/* wide screens (iPad landscape, desktop): keep the board a readable width */
+@media (min-width:700px){
+  #screen-multi .mv-body>*{width:100%;max-width:760px;margin-left:auto;margin-right:auto}
+}
+
+/* ── Games (the league picker): the first tile ── */
+.mv-pick{width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#E2DCFF;background:rgba(168,159,232,.3);border:1.5px solid #A89FE8;border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.mv-pick .nm{font-size:14.5px;font-weight:700;color:#fff}
+.mv-pick .pill{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;align-self:flex-start;background:rgba(124,242,156,.18);color:#9be8ac}
+.mv-pick .pill.off{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
+
+/* ── inside a game: the row in the pull-down scoreboard ── */
+.gsbd-multi{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;margin:0 0 12px;border-radius:14px;border:1.5px solid #A89FE8;background:rgba(168,159,232,.22);color:#C7C0E8;text-align:left;font-family:inherit;cursor:pointer}
+.gsbd-multi .ic{width:38px;height:38px;border-radius:11px;background:rgba(168,159,232,.28);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#E2DCFF}
+.gsbd-multi .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.gsbd-multi .tx b{font-size:14.5px;font-weight:700;color:#F5F3FF}
+.gsbd-multi .tx small{font-size:12px;color:#C7C0E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gsbd-multi>svg{flex-shrink:0}
+
+/* ── Home: the board, after a reload ── */
+.gl-g.mvh{padding:16px;border-color:rgba(207,199,255,.45);background:rgba(255,255,255,.07);cursor:default}
+.mvh-x{width:44px;height:44px;margin:-12px -10px -12px 0;border:0;background:transparent;color:rgba(244,242,255,.7);display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;cursor:pointer}
+.mvh-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mvh-t{min-width:0;text-align:left;font-family:inherit;background:rgba(9,6,26,.6);border:0;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.1);padding:11px 12px;display:flex;flex-direction:column;gap:7px;color:#F4F2FF;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mvh-t.scored{box-shadow:0 0 0 1.5px #E8C766}
+.mvh-t:active{transform:scale(.985)}
+.mvh-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.1em;color:rgba(244,242,255,.66);white-space:nowrap}
+.mvh-top .st{color:rgba(244,242,255,.78);overflow:hidden;text-overflow:ellipsis}
+.mvh-top .st.live{color:#FF8A98}
+.mvh-tm{display:flex;flex-direction:column;gap:1px}
+.mvh-row{display:flex;align-items:center;gap:8px;min-height:28px;font-family:'Barlow Condensed',sans-serif}
+.mvh-row i{width:4px;height:18px;border-radius:2px;flex-shrink:0}
+.mvh-row .ab{flex:1;min-width:0;font-size:20px;font-weight:700;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mvh-row .sc{font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.mvh-row.lo .ab,.mvh-row.lo .sc{color:rgba(244,242,255,.6)}
+.mvh-sit{display:flex;align-items:center;gap:7px;min-height:18px;min-width:0;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.08em;color:rgba(244,242,255,.74);white-space:nowrap}
+.mvh-sit svg{flex-shrink:0}
+.mvh-sit span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mvh-sit.gold{color:#E8C766;font-weight:700}
+.mvh .gl-lf{padding-top:12px}
+.mvh-open{border:0;height:44px;font-family:inherit;cursor:pointer}
+@media (prefers-reduced-motion: reduce){.mv-open:active,.mvh-t:active{transform:none}}

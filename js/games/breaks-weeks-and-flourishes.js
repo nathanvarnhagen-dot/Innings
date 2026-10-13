@@ -623,7 +623,8 @@ var GAMES_SPORTS = [
 function renderGamesSportGrid() {
   var grid = document.getElementById('games-sport-grid');
   if (!grid) return;
-  grid.innerHTML = GAMES_SPORTS.map(function (s) {
+  // v7.38.0: Multi view sits first, left of MLB (js/games/multi-view.js)
+  grid.innerHTML = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.map(function (s) {
     return '<div onclick="pickGamesSport(\'' + s.key + '\')" style="background:' +
       (s.live ? 'rgba(168,159,232,.13);border-color:rgba(168,159,232,.35)' : 'rgba(255,255,255,.045);border-color:rgba(255,255,255,.09)') +
       ';border-width:1px;border-style:solid;border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px">' +
@@ -634,6 +635,7 @@ function renderGamesSportGrid() {
       '">' + (s.live ? 'Live' : 'Coming soon') + '</div>' +
     '</div>';
   }).join('');
+  if (typeof multiPickSync === 'function') multiPickSync();
 }
 
 function pickGamesSport(key) {
