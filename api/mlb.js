@@ -60,6 +60,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=phase[&date=YYYY-MM-DD]  (v7.40.0)
+    // Where the season stands, in a few words, for the Games page's MLB tile:
+    // "Spring training", "Regular season", the round(s) being played in
+    // October ("Wild Card", "NLDS & ALDS", "NLCS & ALCS", "World Series"),
+    // or "Offseason". The dates come from MLB's season record; the round is
+    // the earliest one that still has a series going (or yet to start).
+    if (mode === 'phase') {
+      const today = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+      const out = await _mlbPhase(today);
+      // an answer keeps for ten minutes; a failed lookup is asked again soon
+      res.setHeader('Cache-Control', out.label ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=30');
+      res.status(200).json(out);
+      return;
+    }
+
     // GET /api/mlb?mode=postseason&season=YYYY  (v6.8.0)
     // Every postseason game of the season (Wild Card → World Series), for
     // the bracket and each series' game-by-game strip.
@@ -2000,6 +2015,63 @@ function _ghostRunnerRule() { return !_gameType || _gameType === 'R' || _gameTyp
 // ── POSTSEASON (v6.8.0) ───────────────────────────────────────────────────
 // gameType F = Wild Card, D = Division Series, L = League Championship
 // Series, W = World Series. League from the teams (103 AL, 104 NL).
+// ── SEASON PHASE (v7.40.0) ────────────────────────────────────────────────
+function _mlbRoundLabel(type, leagues) {
+  if (type === 'W') return 'World Series';
+  if (type === 'F') return 'Wild Card';
+  var tail = type === 'D' ? 'DS' : 'CS';
+  var nl = leagues.indexOf('NL') !== -1, al = leagues.indexOf('AL') !== -1;
+  if (nl && !al) return 'NL' + tail;
+  if (al && !nl) return 'AL' + tail;
+  return 'NL' + tail + ' & AL' + tail;
+}
+// The round still being played, from every postseason game of the season:
+// the earliest round with a series that isn't over. null once the World
+// Series is done (or if there are no postseason games listed at all).
+function _mlbCurrentRound(data) {
+  var series = {}, order = ['F', 'D', 'L', 'W'];
+  (data && data.dates || []).forEach(function (d) {
+    (d.games || []).forEach(function (g) {
+      var t = g.gameType;
+      if (order.indexOf(t) === -1) return;
+      var aT = (g.teams && g.teams.away && g.teams.away.team) || {}, hT = (g.teams && g.teams.home && g.teams.home.team) || {};
+      var ids = [aT.id || 0, hT.id || 0].sort(function (a, b) { return a - b; });
+      var key = t + ':' + ids.join('-');
+      var s = series[key] || (series[key] = { type: t, league: null, over: false });
+      var lgId = (aT.league && aT.league.id) || (hT.league && hT.league.id) || null;
+      if (!s.league && t !== 'W') s.league = lgId === 103 ? 'AL' : lgId === 104 ? 'NL' : null;
+      if (g.seriesStatus && g.seriesStatus.isOver) s.over = true;
+    });
+  });
+  var all = Object.keys(series).map(function (k) { return series[k]; });
+  if (!all.length) return null;
+  for (var i = 0; i < order.length; i++) {
+    var open = all.filter(function (s) { return s.type === order[i] && !s.over; });
+    if (!open.length) continue;
+    var known = open.every(function (s) { return !!s.league; });
+    return { type: order[i], leagues: known ? open.map(function (s) { return s.league; }) : ['NL', 'AL'] };
+  }
+  return null;
+}
+async function _mlbPhase(today) {
+  var year = today.slice(0, 4);
+  var get = async function (url) { try { var r = await fetch(url); return r.ok ? await r.json() : null; } catch (e) { return null; } };
+  var sj = await get('https://statsapi.mlb.com/api/v1/seasons/' + year + '?sportId=1');
+  var s = (sj && sj.seasons && sj.seasons[0]) || null;
+  if (!s) return { error: 'No season record' };
+  var spring = s.springStartDate || s.preSeasonStartDate, regStart = s.regularSeasonStartDate, regEnd = s.regularSeasonEndDate, postEnd = s.postSeasonEndDate;
+  if (spring && today < spring) return { phase: 'off', label: 'Offseason' };
+  if (regStart && today < regStart) return { phase: 'pre', label: 'Spring training' };
+  if (regEnd && today <= regEnd) return { phase: 'reg', label: 'Regular season' };
+  // October: which round
+  var pj = await get('https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=' + year + '&gameType=F,D,L,W&hydrate=team,seriesStatus');
+  var cur = _mlbCurrentRound(pj);
+  if (cur) return { phase: 'post', label: _mlbRoundLabel(cur.type, cur.leagues), round: cur.type };
+  // nothing left to play (or the bracket isn't posted yet, right after the regular season)
+  if (pj && (pj.dates || []).length) return { phase: 'off', label: 'Offseason' };
+  return postEnd && today <= postEnd ? { phase: 'post', label: 'Postseason' } : { phase: 'off', label: 'Offseason' };
+}
+
 // v7.38.0: a schedule row's runners and names, from the hydrated linescore.
 // A game that isn't live has no offense to speak of, so these come back
 // empty rather than wrong.

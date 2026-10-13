@@ -249,3 +249,17 @@
 .fbb-pr .g.pos{color:#7CF29C}.fbb-pr .g.neg{color:#FF7A6B}.fbb-pr .g.zero{color:#8C86B8}
 .gh-plays-row.fbb-now{background:linear-gradient(90deg,rgba(124,242,156,.08),transparent 60%);border-radius:10px;margin:0 -8px;padding-left:8px!important;padding-right:8px!important}
 @media (prefers-reduced-motion: reduce){.fbb-lp{animation:none}.fbb-to i.burn{animation:none}}
+
+/* ── Games: league tiles (v7.40.0) — where each season stands, and how many
+   games are on right now (js/games/breaks-weeks-and-flourishes.js) ── */
+.gsp{position:relative;width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#fff;background:rgba(168,159,232,.13);border:1px solid rgba(168,159,232,.35);border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:8px;-webkit-tap-highlight-color:transparent}
+.gsp.soon{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.09)}
+.gsp .em{display:block;font-size:30px;line-height:36px}
+.gsp .nm{font-size:14.5px;font-weight:700;color:#fff}
+.gsp .ph{box-sizing:border-box;max-width:100%;min-height:19px;font-size:10.5px;font-weight:700;line-height:13px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.12);color:#E2DCFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gsp .ph.post{background:rgba(242,200,105,.16);color:#F2C869}
+.gsp .ph.off,.gsp .ph.soon{background:rgba(255,255,255,.07);color:rgba(255,255,255,.62)}
+.gsp .ph.none{visibility:hidden}
+.gsp-lv{position:absolute;top:14px;right:12px;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;line-height:13px;padding:3px 8px;border-radius:20px;background:rgba(124,242,156,.18);color:#9be8ac;white-space:nowrap}
+.gsp-lv i{width:6px;height:6px;border-radius:50%;background:#7CF29C}
+.gsp:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}

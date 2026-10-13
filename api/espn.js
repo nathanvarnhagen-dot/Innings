@@ -46,6 +46,8 @@ module.exports = async function handler(req, res) {
   if (mode === 'bio') { try { await _playerBio(req, res); } catch (e) { res.status(200).json({ error: 'Bio lookup failed' }); } return; }
   // A football player's stat lines for the player card (v7.33.0).
   if (mode === 'pstats') { try { await _playerStats(req, res); } catch (e) { res.status(200).json({ error: 'Stats lookup failed' }); } return; }
+  // Where each league's season stands right now, all leagues at once (v7.40.0).
+  if (mode === 'phases') { try { await _leaguePhases(req, res); } catch (e) { res.status(200).json({ leagues: {} }); } return; }
   const path = LEAGUE_PATHS[league];
   if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
   try {
@@ -2477,4 +2479,128 @@ async function _playerProfile(req, res, path, league) {
   }
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
   res.status(200).json(result);
+}
+
+
+// ── SEASON PHASE (v7.40.0) ───────────────────────────────────────────────
+// GET /api/espn?mode=phases → { leagues: { nfl: { phase, label }, … } }
+// One line per league for the Games page's tiles: "Week 6", "Preseason",
+// "Regular season", the playoff round ("Semifinals", "Finals"), "Offseason".
+// phase is 'pre' | 'reg' | 'post' | 'off'.
+//   · football: ESPN's scoreboard carries the season calendar (every week
+//     with its dates and name — "Week 6", "Wild Card", "Super Bowl"), so the
+//     label is whichever entry today falls in
+//   · everything else: the games around today (4 days back, 6 ahead) say it
+//     themselves — each carries its season type, and a playoff game's note
+//     names the round ("West Semifinals - Game 3"). The game that counts is
+//     one in progress, else the next one up, else the last one played.
+// Any league that fails to load is simply left out; the app keeps what it had.
+var PHASE_LEAGUES = ['nfl', 'cfb', 'nba', 'wnba', 'nhl', 'mls', 'nwsl'];
+var PHASE_WORDS = { pre: 'Preseason', reg: 'Regular season', post: 'Playoffs', off: 'Offseason' };
+async function _phGet(url, ms) {
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 5000) : null;
+  try {
+    var r = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; } finally { if (tm) clearTimeout(tm); }
+}
+function _phYmd(d) { return d.toISOString().slice(0, 10).replace(/-/g, ''); }
+// A season type's name or slug → 'pre' | 'reg' | 'post' | 'off' | null
+function _phKind(text) {
+  var t = String(text || '').toLowerCase();
+  if (!t) return null;
+  if (/off[- ]?season/.test(t)) return 'off';
+  if (/pre[- ]?season|exhibition/.test(t)) return 'pre';
+  if (/regular/.test(t)) return 'reg';
+  if (/post[- ]?season|play[- ]?off|play[- ]?in|final|championship|round|bowl/.test(t)) return 'post';
+  return null;
+}
+// "West Semifinals - Game 3" → "Semifinals"; "East Finals - Game 1" →
+// "Conference finals"; "WNBA Finals - Game 2" → "Finals"
+function _phRound(headline) {
+  var t = String(headline || '').replace(/\s*[-–,]\s*Game\s*\d+.*$/i, '').replace(/\s*[-–,]\s*(?:Leg|Match)\s*\d+.*$/i, '').trim();
+  if (!t) return '';
+  var confRe = /^(?:east(?:ern)?|west(?:ern)?)(?:\s+conf(?:erence)?\.?)?\s+/i;
+  var conf = confRe.test(t);
+  t = t.replace(confRe, '').replace(/^(?:nba|wnba|nhl|mls|nwsl)\s+/i, '').replace(/^(?:(?:audi\s+)?mls cup|stanley cup|nwsl)\s+playoffs\s*[-–:·]?\s*/i, '').trim();
+  if (conf && /^finals?$/i.test(t)) return 'Conference finals';
+  return t.length > 28 ? '' : t;
+}
+function _phFromSlug(slug) {
+  var s = String(slug || '').toLowerCase();
+  if (!s || /^(post-?season|playoffs?|regular-season|pre-?season|off-?season)$/.test(s)) return '';
+  if (/play-?in/.test(s)) return 'Play-In';
+  return s.split('-').map(function (w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : w; }).join(' ');
+}
+function _phFootball(league, sb, now) {
+  var lg = (sb && sb.leagues && sb.leagues[0]) || {};
+  var cal = Array.isArray(lg.calendar) ? lg.calendar : [];
+  var t = now.getTime(), sect = null, hit = null;
+  cal.forEach(function (c) {
+    if (!c || typeof c !== 'object') return;
+    var cs = Date.parse(c.startDate), ce = Date.parse(c.endDate);
+    if (!(t >= cs && t < ce)) return;
+    sect = c;
+    (c.entries || []).forEach(function (e) {
+      var es = Date.parse(e && e.startDate), ee = Date.parse(e && e.endDate);
+      if (t >= es && t < ee) hit = e;
+    });
+  });
+  var seas = lg.season || {};
+  var kind = sect ? _phKind(sect.label) : null;
+  if (!kind) {
+    var s0 = Date.parse(seas.startDate), s1 = Date.parse(seas.endDate);
+    kind = (s1 && t > s1) || (s0 && t < s0) ? 'off' : _phKind(seas.type && seas.type.name);
+  }
+  if (!kind) return null;
+  var label = PHASE_WORDS[kind];
+  if (kind === 'post' && league === 'cfb') label = 'Bowl season';
+  if (kind !== 'off') {
+    if (hit && hit.label) label = String(hit.label);
+    else if (kind === 'reg' && sb.week && sb.week.number != null) label = 'Week ' + sb.week.number;
+  }
+  return { phase: kind, label: label };
+}
+function _phDaily(league, sb, now) {
+  var lg = (sb && sb.leagues && sb.leagues[0]) || {}, seas = lg.season || {}, t = now.getTime();
+  var evs = ((sb && sb.events) || []).map(function (e) {
+    var comp = (e.competitions && e.competitions[0]) || {};
+    var st = (e.status && e.status.type) || {};
+    var note = (comp.notes || []).filter(function (n) { return n && n.headline; })[0];
+    return { t: Date.parse(e.date), state: st.state || '', slug: (e.season && e.season.slug) || '', head: note ? note.headline : '' };
+  }).filter(function (e) { return isFinite(e.t); });
+  var live = evs.filter(function (e) { return e.state === 'in'; });
+  var next = evs.filter(function (e) { return e.state === 'pre' && e.t > t - 6 * 3600e3; }).sort(function (a, b) { return a.t - b.t; });
+  var last = evs.filter(function (e) { return e.state === 'post' || e.t <= t; }).sort(function (a, b) { return b.t - a.t; });
+  var ref = live[0] || next[0] || last[0] || null;
+  var upcoming = !!(live.length || next.length);
+  var kind = (ref && _phKind(ref.slug)) || _phKind(seas.type && seas.type.name);
+  var s0 = Date.parse(seas.startDate), s1 = Date.parse(seas.endDate);
+  if (!ref && ((s1 && t > s1) || (s0 && t < s0))) kind = 'off';
+  // playoffs with nothing in progress or ahead: over, unless the last game was only just played
+  if (kind === 'post' && !upcoming && !(ref && t - ref.t < 60 * 3600e3)) kind = 'off';
+  if (!kind) return null;
+  var label = PHASE_WORDS[kind];
+  if (kind === 'post' && ref) label = _phRound(ref.head) || _phFromSlug(ref.slug) || label;
+  return { phase: kind, label: label };
+}
+async function _leaguePhases(req, res) {
+  var now = new Date();
+  var from = new Date(now.getTime() - 4 * 864e5), to = new Date(now.getTime() + 6 * 864e5);
+  var out = {};
+  await Promise.all(PHASE_LEAGUES.map(async function (league) {
+    var football = league === 'nfl' || league === 'cfb';
+    var base = 'https://site.api.espn.com/apis/site/v2/sports/' + LEAGUE_PATHS[league] + '/scoreboard';
+    var sb = await _phGet(football ? base : base + '?dates=' + _phYmd(from) + '-' + _phYmd(to) + '&limit=300');
+    if (!sb) return;
+    try {
+      var p = football ? _phFootball(league, sb, now) : _phDaily(league, sb, now);
+      if (p && p.label) out[league] = p;
+    } catch (e) {}
+  }));
+  // every league answered: keep it ten minutes; some missing: ask again soon
+  res.setHeader('Cache-Control', Object.keys(out).length === PHASE_LEAGUES.length ? 's-maxage=600, stale-while-revalidate=3600' : 's-maxage=45');
+  res.status(200).json({ leagues: out });
 }

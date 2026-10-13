@@ -80,10 +80,9 @@
 }
 
 /* ── Games (the league picker): the first tile ── */
-.mv-pick{width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#E2DCFF;background:rgba(168,159,232,.3);border:1.5px solid #A89FE8;border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.mv-pick{position:relative;width:100%;box-sizing:border-box;text-align:left;font-family:inherit;color:#E2DCFF;background:rgba(168,159,232,.3);border:1.5px solid #A89FE8;border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
 .mv-pick .nm{font-size:14.5px;font-weight:700;color:#fff}
-.mv-pick .pill{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;align-self:flex-start;background:rgba(124,242,156,.18);color:#9be8ac}
-.mv-pick .pill.off{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
+.mv-pick .pill{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;align-self:flex-start;background:rgba(255,255,255,.14);color:#E2DCFF;white-space:nowrap}
 
 /* ── inside a game: the row in the pull-down scoreboard ── */
 .gsbd-multi{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;margin:0 0 12px;border-radius:14px;border:1.5px solid #A89FE8;background:rgba(168,159,232,.22);color:#C7C0E8;text-align:left;font-family:inherit;cursor:pointer}

@@ -459,14 +459,20 @@ function multiAdd(i) {
 function multiPickTileHtml() {
   return '<button class="mv-pick" onclick="multiOpen()">' +
     '<svg width="34" height="36" viewBox="0 0 34 36" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="4" width="12" height="12" rx="3.5"/><rect x="19" y="4" width="12" height="12" rx="3.5"/><rect x="3" y="20" width="12" height="12" rx="3.5"/><rect x="19" y="20" width="12" height="12" rx="3.5"/></svg>' +
-    '<span class="nm">Multi view</span><span class="pill" id="mv-pick-pill"></span></button>';
+    '<span class="nm">Multi view</span><span class="pill">Up to 4 at once</span>' +
+    '<span class="gsp-lv" id="mv-pick-lv" style="display:none"></span></button>';
 }
+// v7.40.0: like the league tiles beside it — a green count, top right, while
+// anything is live; and each league's own count is brought up to date too
 function _mvPickPill() {
-  var el = _mv$('mv-pick-pill');
-  if (!el) return;
-  var n = _mvLiveCount(), loaded = _mvHasData();
-  el.textContent = !loaded ? 'Up to 4 games' : n ? n + ' live now' : 'Nothing live';
-  el.classList.toggle('off', loaded && !n);
+  var el = _mv$('mv-pick-lv');
+  if (el) {
+    var n = _mvLiveCount();
+    el.style.display = n ? '' : 'none';
+    el.innerHTML = n ? '<i></i>' + n + ' live' : '';
+    if (n) el.setAttribute('aria-label', n + (n === 1 ? ' game live' : ' games live')); else el.removeAttribute('aria-label');
+  }
+  if (typeof gamesPickerLiveSync === 'function') gamesPickerLiveSync();
 }
 function multiPickSync() { _mvPickPill(); _mvLoad(false); }
 

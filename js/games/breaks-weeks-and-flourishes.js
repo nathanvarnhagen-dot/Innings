@@ -620,22 +620,95 @@ var GAMES_SPORTS = [
   { key:'nwsl', name:'NWSL', emoji:'⚽', live:true, banner:'sc' }
 ];
 
+// ── WHERE EACH LEAGUE'S SEASON STANDS (v7.40.0) ──
+// The league tiles used to all say "Live". Now each says where its season
+// is — "NLCS & ALCS", "Week 6", "Preseason", "Regular season", the playoff
+// round, "Offseason" — and, while games are on, a green count of how many
+// are live in that league (top right of the tile).
+//   · the season line comes from /api/mlb?mode=phase and /api/espn?mode=phases;
+//     it's kept on the phone and asked for again after ten minutes
+//   · the live counts come from the same today's-games lists Multi view
+//     reads (js/games/multi-view.js), refreshed every 30s while this screen
+//     is up
+var GS_PHASE_KEY = 'innings_league_phase_v1', GS_PHASE_TTL = 10 * 60e3, GS_PHASE_KEEP = 24 * 3600e3;
+window._gsPhase = window._gsPhase || { at: 0, by: null, loading: false };
+function _gsPhaseState() {
+  var P = window._gsPhase;
+  if (P.by) return P;
+  P.by = {};
+  try {
+    var v = JSON.parse(localStorage.getItem(GS_PHASE_KEY) || 'null');
+    // yesterday's answer is still a fair first guess; anything older isn't shown
+    if (v && v.by && typeof v.by === 'object' && Date.now() - (Number(v.at) || 0) < GS_PHASE_KEEP) { P.by = v.by; P.at = Number(v.at) || 0; }
+  } catch (e) {}
+  return P;
+}
+function _gsPhaseLoad() {
+  var P = _gsPhaseState();
+  if (P.loading || !window.fetch || (P.at && Date.now() - P.at < GS_PHASE_TTL)) return;
+  P.loading = true;
+  var json = function (url) { return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+  Promise.all([json('/api/mlb?mode=phase&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases')]).then(function (r) {
+    var got = 0;
+    if (r[0] && r[0].label) { P.by.mlb = { phase: r[0].phase || '', label: String(r[0].label) }; got++; }
+    var lg = (r[1] && r[1].leagues) || {};
+    Object.keys(lg).forEach(function (k) { if (lg[k] && lg[k].label) { P.by[k] = { phase: lg[k].phase || '', label: String(lg[k].label) }; got++; } });
+    P.loading = false;
+    if (got) {
+      P.at = Date.now();
+      try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
+    }
+    _gsPhasePaint();
+  }).catch(function (err) { P.loading = false; console.error('[league phase] failed:', err); });
+}
+function _gsPhasePaint() {
+  var P = _gsPhaseState();
+  GAMES_SPORTS.forEach(function (s) {
+    var el = document.getElementById('gsp-ph-' + s.key);
+    if (!el || !s.live) return;
+    var p = P.by[s.key];
+    el.textContent = p ? p.label : '';
+    el.className = 'ph ' + (p ? (/^(pre|reg|post|off)$/.test(p.phase) ? p.phase : 'reg') : 'none');
+  });
+}
+// How many games are on in each league right now
+function gamesPickerLiveSync() {
+  if (!document.getElementById('games-sport-grid') || typeof _mvAll !== 'function') return;
+  var counts = {};
+  _mvAll().forEach(function (x) { if (_mvIsLive(x.sport, x.g)) counts[x.sport] = (counts[x.sport] || 0) + 1; });
+  GAMES_SPORTS.forEach(function (s) {
+    var el = document.getElementById('gsp-lv-' + s.key);
+    if (!el) return;
+    var n = counts[s.key] || 0;
+    el.style.display = n ? '' : 'none';
+    el.innerHTML = n ? '<i></i>' + n + ' live' : '';
+    if (n) el.setAttribute('aria-label', n + (n === 1 ? ' game live' : ' games live')); else el.removeAttribute('aria-label');
+  });
+}
 function renderGamesSportGrid() {
   var grid = document.getElementById('games-sport-grid');
   if (!grid) return;
   // v7.38.0: Multi view sits first, left of MLB (js/games/multi-view.js)
   grid.innerHTML = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.map(function (s) {
-    return '<div onclick="pickGamesSport(\'' + s.key + '\')" style="background:' +
-      (s.live ? 'rgba(168,159,232,.13);border-color:rgba(168,159,232,.35)' : 'rgba(255,255,255,.045);border-color:rgba(255,255,255,.09)') +
-      ';border-width:1px;border-style:solid;border-radius:18px;padding:16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px">' +
-      '<div style="font-size:30px">' + s.emoji + '</div>' +
-      '<div style="font-size:14.5px;font-weight:700;color:#fff">' + _escapeHtml(s.name) + '</div>' +
-      '<div style="font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;align-self:flex-start;' +
-      (s.live ? 'background:rgba(124,242,156,.18);color:#9be8ac' : 'background:rgba(255,255,255,.08);color:rgba(255,255,255,.42)') +
-      '">' + (s.live ? 'Live' : 'Coming soon') + '</div>' +
-    '</div>';
+    return '<button class="gsp' + (s.live ? '' : ' soon') + '" onclick="pickGamesSport(\'' + s.key + '\')">' +
+      '<span class="em" aria-hidden="true">' + s.emoji + '</span>' +
+      '<span class="nm">' + _escapeHtml(s.name) + '</span>' +
+      '<span class="ph ' + (s.live ? 'none' : 'soon') + '" id="gsp-ph-' + s.key + '">' + (s.live ? '' : 'Coming soon') + '</span>' +
+      '<span class="gsp-lv" id="gsp-lv-' + s.key + '" style="display:none"></span>' +
+    '</button>';
   }).join('');
+  _gsPhasePaint();
+  _gsPhaseLoad();
+  gamesPickerLiveSync();
   if (typeof multiPickSync === 'function') multiPickSync();
+  if (!window._gsLiveTimer) {
+    window._gsLiveTimer = setInterval(function () {
+      var scr = document.getElementById('screen-games-picker');
+      if (document.hidden || !scr || !scr.classList.contains('active')) return;
+      if (typeof _mvLoad === 'function') _mvLoad(true);
+      _gsPhaseLoad();
+    }, 30000);
+  }
 }
 
 function pickGamesSport(key) {
