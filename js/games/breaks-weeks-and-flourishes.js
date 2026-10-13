@@ -648,14 +648,16 @@ function _gsPhaseLoad() {
   if (P.loading || !window.fetch || (P.at && Date.now() - P.at < GS_PHASE_TTL)) return;
   P.loading = true;
   var json = function (url) { return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
-  Promise.all([json('/api/mlb?mode=phase&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases')]).then(function (r) {
+  Promise.all([json('/api/mlb?mode=phase&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases&v=2')]).then(function (r) {
     var got = 0;
     if (r[0] && r[0].label) { P.by.mlb = { phase: r[0].phase || '', label: String(r[0].label) }; got++; }
     var lg = (r[1] && r[1].leagues) || {};
     Object.keys(lg).forEach(function (k) { if (lg[k] && lg[k].label) { P.by[k] = { phase: lg[k].phase || '', label: String(lg[k].label) }; got++; } });
     P.loading = false;
     if (got) {
-      P.at = Date.now();
+      // every league answered: good for ten minutes. Some missing: ask again in one
+      var want = GAMES_SPORTS.filter(function (s) { return s.live; }).length;
+      P.at = got >= want ? Date.now() : Date.now() - GS_PHASE_TTL + 60e3;
       try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
     }
     _gsPhasePaint();
