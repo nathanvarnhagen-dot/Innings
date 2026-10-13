@@ -19,7 +19,14 @@ function startNotifBadge(user) {
     .where('toUid', '==', user.uid)
     .where('read', '==', false)
     .onSnapshot(function(snap){
+      // v7.37.0: kept so opening the list can clear every unread one (not
+      // just the ones it happened to load) and a game chat you're reading
+      // can clear its own alerts
+      var unread = [];
+      snap.forEach(function(doc){ unread.push(Object.assign({ _id: doc.id }, doc.data())); });
+      window._notifUnread = unread;
       _renderNotifBadge(snap.size);
+      if (typeof _gcrSeenNotifs === 'function') { try { _gcrSeenNotifs(); } catch (e) {} }
       if (!window._notifLoginToastShown) {
         window._notifLoginToastShown = true;
         var total = snap.size;
@@ -126,11 +133,18 @@ function _fmtRelativeTime(ts) {
 // clears the dot automatically once these writes land).
 function _markAllNotificationsRead(user, items) {
   if (!window.db || !user) return;
-  var unread = items.filter(function(n){ return !n.read; });
-  if (!unread.length) return;
-  var batch = window.db.batch();
-  unread.forEach(function(n){ batch.update(window.db.collection('notifications').doc(n._id), { read: true }); });
-  batch.commit().catch(function(err){ console.error('Mark all notifications read error:', err); });
+  // v7.37.0: also the unread ones the list didn't load. The list reads a
+  // limited number, so with a long history some unread ones were never in
+  // it, never got marked read, and the bell stayed lit for good.
+  var ids = {};
+  (items || []).forEach(function(n){ if (!n.read) ids[n._id] = 1; });
+  (window._notifUnread || []).forEach(function(n){ if (n.toUid === user.uid) ids[n._id] = 1; });
+  ids = Object.keys(ids);
+  for (var i = 0; i < ids.length; i += 400) {
+    var batch = window.db.batch();
+    ids.slice(i, i + 400).forEach(function(id){ batch.update(window.db.collection('notifications').doc(id), { read: true }); });
+    batch.commit().catch(function(err){ console.error('Mark all notifications read error:', err); });
+  }
 }
 
 function loadNotifications() {
@@ -138,10 +152,13 @@ function loadNotifications() {
   var emptyEl = document.getElementById('notif-empty');
   var itemsEl = document.getElementById('notif-items');
   if (!user || !window.db || !itemsEl) return;
-  window.db.collection('notifications').where('toUid','==',user.uid).limit(100).get().then(function(snap){
-    var items = [];
-    snap.forEach(function(doc){ items.push(Object.assign({ _id: doc.id }, doc.data())); });
+  window.db.collection('notifications').where('toUid','==',user.uid).limit(300).get().then(function(snap){
+    var items = [], have = {};
+    snap.forEach(function(doc){ have[doc.id] = 1; items.push(Object.assign({ _id: doc.id }, doc.data())); });
+    // v7.37.0: every unread one is in the list, whatever the read above returned
+    (window._notifUnread || []).forEach(function(n){ if (n.toUid === user.uid && !have[n._id]) { have[n._id] = 1; items.push(Object.assign({}, n)); } });
     items.sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    items = items.slice(0, 100);
     window._notificationsCache = {};
     items.forEach(function(n){ window._notificationsCache[n._id] = n; });
     if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'flex';
@@ -157,6 +174,7 @@ function loadNotifications() {
       else if (n.type === 'game_watch_joined') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started watching ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' with you';
       else if (n.type === 'game_chat_request') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> asked to join your ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'game_chat_approved') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> let you into the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
+      else if (n.type === 'game_chat_mention') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> ' + (n.invite ? 'invited you to the ' : 'mentioned you in the ') + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'game_chat_message') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted in the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'on_this_day') label = '<b>' + (n.yearsAgo > 1 ? n.yearsAgo + ' years' : 'One year') + ' ago today</b> — look back at it';
       else label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> sent you a notification';
@@ -203,9 +221,9 @@ function notifTap(notifId) {
     if (n.category) { setTimeout(function(){ if (typeof feedbackTab === 'function') feedbackTab(n.category); }, 0); }
   } else if (n.type === 'on_this_day' && n.momentId) {
     openMemory(n.momentId, 'notifications');
-  } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message' || n.type === 'game_chat_request' || n.type === 'game_chat_approved') && n.gamePk) {
+  } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved') && n.gamePk) {
     if (typeof openGameScreen === 'function') openGameScreen(n.gamePk, n.away, n.home, n.sport || 'mlb');
-    if (n.type === 'game_chat_message' || n.type === 'game_chat_request' || n.type === 'game_chat_approved') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
+    if (n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
   }
 }
 

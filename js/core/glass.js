@@ -333,6 +333,9 @@ function _glBell() {
   if (!b) return;
   var n = window._glUnread || 0;
   b.classList.toggle('has', n > 0);
+  // v7.37.0: the red dot carries the count, and is only there when there is one
+  var dot = b.querySelector('.gl-dot');
+  if (dot) dot.textContent = n > 99 ? '99+' : n > 0 ? String(n) : '';
   b.setAttribute('aria-label', n > 0 ? 'Notifications, ' + n + ' new' : 'Notifications');
 }
 

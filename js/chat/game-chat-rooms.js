@@ -39,11 +39,23 @@
 // old messages show above the new ones, and the first time someone in an
 // old chat opens the game it gets a gameChatRooms doc of its own (replayOf
 // = its old id), with the same people in it.
+//
+// @ someone who isn't in the chat and that's an invitation (v7.37.0).
+// · They get "Nathan invited you to the LAD @ MIL chat". Tapping it, or just
+//   opening the game's chat, shows that chat with Join instead of Ask in.
+// · Join asks in the usual way, and the moderator's app lets them in by
+//   itself — nobody has to tap Let in — because someone in the chat @'d
+//   them. They see the chat from that @ on. (If the moderator's app isn't
+//   open on the game they wait, exactly like an ask, until it is.)
+// · The room also notes the invitation (invites.<uid>) when the database
+//   allows it; with rules that let an invited person add themselves, Join
+//   goes straight in without waiting on anyone's app.
+// · A "Not now" from the moderator, or leaving, cancels an earlier @.
 var GC_ROOMS_START = Date.parse('2026-10-07T04:15:00Z'); // v7.26.0 went out
 var GC_MOD_START = Date.parse('2026-10-07T20:15:00Z');   // v7.29.0: only the moderator lets people in
 window._gcr = window._gcr || {};
 function _gcrS(key) {
-  return window._gcr[key] || (window._gcr[key] = { all: [], mode: null, rooms: [], rmsgs: {}, listenRid: null, runsub: null, migrating: {}, carried: {}, own: false, seenAsk: {}, prevMine: null, asked: false, leaveArm: 0 });
+  return window._gcr[key] || (window._gcr[key] = { all: [], mode: null, rooms: [], rmsgs: {}, listenRid: null, runsub: null, migrating: {}, carried: {}, own: false, seenAsk: {}, autoIn: {}, prevMine: null, asked: false, leaveArm: 0 });
 }
 function _gcrMe() { var u = window.currentUser || (window.auth && window.auth.currentUser); return u ? u.uid : null; }
 function _gcrMyName() { return (window.userData && window.userData.name) || 'Someone'; }
@@ -70,8 +82,13 @@ function _gcrLineText(act, byUid, byName, p, me) {
   p = p || {};
   var by = byUid === me ? 'You' : _gcrFirst(byName);
   if (act === 'ok') {
-    if (p.who === me) return { t: 'You joined · ' + by + ' let you in', s: 'What was said before you joined stays with them.' };
     var nm = _gcrFirst(p.name);
+    if (p.inv) { // came in on an @ (v7.37.0)
+      var from = p.inv === me ? 'you' : _gcrFirst(p.invName);
+      if (p.who === me) return { t: 'You joined · ' + from + ' invited you', s: p.since ? 'You see the chat from that @ on.' : 'What was said before you joined stays with them.' };
+      return { t: nm + ' joined the chat', s: (p.inv === me ? 'You' : from) + ' invited ' + nm + ' with an @ · ' + nm + (p.since ? ' sees the chat from that @ on.' : ' can’t see anything said before now.') };
+    }
+    if (p.who === me) return { t: 'You joined · ' + by + ' let you in', s: 'What was said before you joined stays with them.' };
     return { t: nm + ' joined the chat', s: nm + ' can’t see anything said before now.' };
   }
   if (act === 'leave') {
@@ -110,8 +127,8 @@ function _gcrFold(all, me) {
       else if (p.act === 'cancel') delete R.asks[m.uid];
       else if (p.act === 'ok' && runs && p.who && where[p.who] !== p.room) {
         var nm = p.name || (R.asks[p.who] && R.asks[p.who].name) || 'Someone';
-        join(p.who, nm, p.room, (m.ts || 0) >= GC_MOD_START ? (m.ts || 0) : null);
-        lines.push({ m: m, room: p.room, act: 'ok', p: { who: p.who, name: nm } });
+        join(p.who, nm, p.room, (m.ts || 0) >= GC_MOD_START ? (p.since && p.since <= (m.ts || 0) ? p.since : (m.ts || 0)) : null);
+        lines.push({ m: m, room: p.room, act: 'ok', p: { who: p.who, name: nm, inv: p.inv || null, invName: p.invName || '', since: p.since || null } });
       } else if (p.act === 'no' && runs && p.who) { delete R.asks[p.who]; R.no[p.who] = m.ts || 0; }
       else if (p.act === 'leave' && member) {
         var wasMod = _gcrModOf(R) === m.uid;
@@ -160,7 +177,7 @@ function _gcrView(key) {
     (st.rooms || []).forEach(function (d) {
       var names = d.names || {}, members = {};
       (d.members || []).forEach(function (u) { members[u] = names[u] || 'Someone'; });
-      var R = { id: d.id, kind: 'new', members: members, asks: d.asks || {}, no: d.no || {}, joined: d.joined || {}, mod: d.mod || d.founder || null, founder: d.founder || null, replayOf: d.replayOf || null };
+      var R = { id: d.id, kind: 'new', members: members, asks: d.asks || {}, no: d.no || {}, joined: d.joined || {}, invites: d.invites || {}, mod: d.mod || d.founder || null, founder: d.founder || null, replayOf: d.replayOf || null };
       if (R.replayOf) byOld[R.replayOf] = R;
       list.push(R);
     });
@@ -191,14 +208,100 @@ function _gcrView(key) {
   return { mode: st.mode === 'rooms' ? 'rooms' : 'replay', f0: f0, rooms: list, mine: mine, visible: vis };
 }
 // chats with a friend in them, that you're not in
-function _gcrFriendRooms(v) {
-  var friends = {};
+function _gcrFriendRooms(v, key) {
+  var friends = {}, me = _gcrMe();
   (window._myFriendUids || []).forEach(function (u) { friends[u] = 1; });
-  return v.rooms.filter(function (R) {
+  var out = v.rooms.filter(function (R) {
     if (R === v.mine) return false;
     var us = Object.keys(R.members);
-    return us.length && us.some(function (u) { return friends[u]; });
+    return us.length && (us.some(function (u) { return friends[u]; }) || !!_gcrInviteFor(R, key, me));
   });
+  // a chat you've been invited to comes first
+  var inv = function (R) { return _gcrInviteFor(R, key, me) ? 0 : 1; };
+  return out.sort(function (a, b) { return inv(a) - inv(b); });
+}
+
+// ── @ invitations (v7.37.0)
+// who a message @'s: [{ uid, name }]
+function _gcrMentions(text) {
+  var out = [], seen = {}, re = /@\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/g, m;
+  while ((m = re.exec(String(text || ''))) !== null) { if (!seen[m[2]]) { seen[m[2]] = 1; out.push({ uid: m[2], name: m[1] }); } }
+  return out;
+}
+function _gcrPlain(text) { return typeof _stripMentionMarkup === 'function' ? _stripMentionMarkup(text) : String(text || ''); }
+// when you last left a chat, on this phone — an @ from before that no longer counts
+function _gcrLeftAt(rid) { try { return Number(localStorage.getItem('innings_gcr_left_' + rid)) || 0; } catch (e) { return 0; } }
+function _gcrNoteLeft(R) {
+  try { localStorage.setItem('innings_gcr_left_' + R.id, String(Date.now())); if (R.replayOf) localStorage.setItem('innings_gcr_left_' + R.replayOf, String(Date.now())); } catch (e) {}
+}
+// your "invited you" alerts, by game and chat — one listener for all of them
+window._gcrInv = window._gcrInv || { on: false, by: {} };
+function _gcrInvListen() {
+  var me = _gcrMe(), I = window._gcrInv;
+  if (!me || !window.db || I.on === me) return;
+  if (I.unsub) { try { I.unsub(); } catch (e) {} }
+  I.on = me; I.by = {};
+  I.unsub = window.db.collection('notifications').where('toUid', '==', me).where('type', '==', 'game_chat_mention').limit(200).onSnapshot(function (snap) {
+    var by = {};
+    snap.forEach(function (doc) {
+      var n = doc.data() || {};
+      if (!n.invite || !n.roomId || n.gamePk == null || !n.fromUid) return;
+      var g = by[String(n.gamePk)] || (by[String(n.gamePk)] = {}), cur = g[n.roomId];
+      var at = n.atTs || n.ts || 0;
+      if (!cur || at > cur.ts) g[n.roomId] = { by: n.fromUid, byName: n.fromName || 'Someone', ts: at };
+    });
+    I.by = by;
+    var key = _gcrKey();
+    if (key && window._gcr[key] && window._gcr[key].view) _gcrPublish(key);
+  }, function (err) { console.error('[game chat] invitations', err); I.on = false; });
+}
+// the invitation you hold to a chat you're not in: { by, byName, ts } or null
+function _gcrInviteFor(R, key, me) {
+  if (!R || !me || !key || R.members[me]) return null;
+  var mine = (window._gcrInv.by || {})[key] || {}, x = null;
+  [R.invites && R.invites[me], mine[R.id], R.replayOf ? mine[R.replayOf] : null].forEach(function (c) {
+    if (c && c.by && (!x || (c.ts || 0) > x.ts)) x = { by: c.by, byName: c.byName || 'Someone', ts: c.ts || 0 };
+  });
+  // whoever @'d you has to still be in it; a "Not now" or leaving since then cancels it
+  if (!x || !R.members[x.by]) return null;
+  var out = Math.max((R.no && R.no[me]) || 0, _gcrLeftAt(R.id), R.replayOf ? _gcrLeftAt(R.replayOf) : 0);
+  if (x.ts <= out) return null;
+  x.byName = R.members[x.by] || x.byName;
+  return x;
+}
+// for the moderator: someone in the chat @'d this person (and they haven't been turned down or left since)
+function _gcrMentionOf(v, uid) {
+  var R = v && v.mine, hit = null, gone = (R && R.no && R.no[uid]) || 0, tag = '](' + uid + ')';
+  if (!R) return null;
+  v.visible.forEach(function (m) {
+    if (m.systemType === 'room') { if (m.uid === uid && !m._join && !m._ask && (m.ts || 0) > gone) gone = m.ts || 0; return; }
+    if (m.system || !m.uid || m.uid === uid || !R.members[m.uid] || String(m.text || '').indexOf(tag) < 0) return;
+    if (!hit || (m.ts || 0) > hit.ts) hit = { by: m.uid, byName: m.author || R.members[m.uid], ts: m.ts || 0 };
+  });
+  return hit && hit.ts > gone ? hit : null;
+}
+// reading a game's chat reads its alerts too, so the bell only counts what you haven't seen
+window._gcrSeen = window._gcrSeen || {};
+function _gcrSeenNotifs() {
+  var key = _gcrKey(), list = window._notifUnread || [];
+  if (!list.length || !window.db) return;
+  var ids = [], held = false, showing = !!key && _gcrChatShowing();
+  list.forEach(function (n) {
+    if (!n || n.gamePk == null || !/^game_chat_/.test(n.type || '') || window._gcrSeen[n._id]) return;
+    // "asked to join" from someone who's in your chat by now (let in off an @): nothing left to do
+    if (n.type === 'game_chat_request' && n.fromUid) {
+      var st = window._gcr[String(n.gamePk)], mine = st && st.view && st.view.mine;
+      if (mine && mine.members[n.fromUid]) { ids.push(n._id); return; }
+    }
+    if (!showing || String(n.gamePk) !== key) return;
+    if (typeof _gdlHideNotif === 'function' && _gdlHideNotif(n)) { held = true; return; } // a delay is holding that message back
+    ids.push(n._id);
+  });
+  if (held) { clearTimeout(window._gcrSeenT); window._gcrSeenT = setTimeout(_gcrSeenNotifs, 5000); }
+  if (!ids.length) return;
+  var batch = window.db.batch();
+  ids.slice(0, 400).forEach(function (id) { window._gcrSeen[id] = 1; batch.update(window.db.collection('notifications').doc(id), { read: true }); });
+  batch.commit().catch(function (err) { console.error('[game chat] mark alerts read', err); ids.forEach(function (id) { delete window._gcrSeen[id]; }); });
 }
 
 // ── listening
@@ -210,6 +313,7 @@ function _gcrFriendRooms(v) {
     if (!window.db) return;
     window._gameChatStarted[key] = true;
     var st = _gcrS(key); st.gamePk = gamePk;
+    _gcrInvListen();
     if (typeof _loadFriendUids === 'function') { try { Promise.resolve(_loadFriendUids()).then(function () { _gcrPublish(key); }, function () {}); } catch (e) {} }
     // everything said in the open (all of it, before private chats)
     window.db.collection('gameChats').where('gamePk', '==', gamePk).limit(600).onSnapshot(function (snap) {
@@ -262,13 +366,25 @@ function _gcrPublish(key) {
   if (typeof _gdlChatFilter === 'function') vis = _gdlChatFilter(key, vis);
   window._gameChatMsgs[key] = vis;
   if (v.mode === 'rooms') _gcrEnsure(key, v);
-  if (_gcrKey() !== key) return;
+  if (_gcrKey() === key && window._activeBrowseGame) st.game = window._activeBrowseGame;
+  // someone in your chat @'d a person who's now asking in: that was the invitation, so they're let
+  // straight in — for any game you've had open, not just the one on screen (v7.37.0)
+  if (v.mine && _gcrIsMod(v.mine, _gcrMe())) Object.keys(v.mine.asks || {}).forEach(function (u) {
+    var a = v.mine.asks[u], k = u + ':' + (a.ts || 0);
+    if (st.autoIn[k]) return;
+    var at = _gcrMentionOf(v, u);
+    if (!at) return;
+    st.autoIn[k] = 1; st.seenAsk[k] = 1;
+    _gcrLetInDo(v.mine.id, u, a.name || 'Someone', null, at, key);
+  });
+  if (_gcrKey() !== key) { try { _gcrSeenNotifs(); } catch (e) {} return; }
   // you just got let in
   if (v.mine && !st.prevMine && st.asked) {
     st.asked = false; st.own = false;
     var by = '';
-    v.visible.forEach(function (m) { var x = m._join && /^You joined · (.+) let you in$/.exec(m._line || ''); if (x) by = x[1]; });
-    if (typeof ib_toast === 'function') ib_toast('You’re in' + (by ? ' — ' + by + ' let you in' : ''));
+    var how = 'let you in';
+    v.visible.forEach(function (m) { var x = m._join && /^You joined · (.+) (let you in|invited you)$/.exec(m._line || ''); if (x) { by = x[1]; how = x[2]; } });
+    if (typeof ib_toast === 'function') ib_toast('You’re in' + (by ? ' — ' + by + ' ' + how : ''));
   }
   st.prevMine = v.mine ? v.mine.id : null;
   // someone wants in (while you're looking at something else) — the moderator hears about it
@@ -281,6 +397,7 @@ function _gcrPublish(key) {
   st.booted = true;
   if (typeof renderGameChat === 'function') renderGameChat(vis);
   _gcrPaint();
+  try { _gcrSeenNotifs(); } catch (e) {}
 }
 // private chats on: move your old chat over, carry over old-style asks, listen to yours
 function _gcrEnsure(key, v) {
@@ -355,7 +472,7 @@ function _gcrEls() {
 function _gcrState() {
   var key = _gcrKey(), st = key ? _gcrS(key) : null, v = st && st.view;
   if (!v) return null;
-  var fr = _gcrFriendRooms(v);
+  var fr = _gcrFriendRooms(v, key);
   return { key: key, st: st, v: v, me: _gcrMe(), mine: v.mine, friendRooms: fr, locked: !v.mine && fr.length > 0 && !st.starting };
 }
 function _gcrFindRoom(rid) { var S = _gcrState(); if (!S) return null; var hit = null; S.v.rooms.forEach(function (R) { if (R.id === rid) hit = R; }); return hit; }
@@ -379,6 +496,17 @@ function _gcrRoomCard(R, me) {
   var esc = _escapeHtml, rid = esc(R.id), us = Object.keys(R.members), m = _gcrModOf(R), modName = _gcrFirst(R.members[m]);
   var names = us.map(function (u) { return _gcrFirst(R.members[u]); });
   var asked = !!(R.asks && R.asks[me]), passed = !asked && R.no && R.no[me] != null;
+  var inv = _gcrInviteFor(R, _gcrKey(), me);
+  if (inv) { // you were @'d from this chat: Join, no asking
+    var from = _gcrFirst(inv.byName), list = _gcrList(names.length > 3 ? names.slice(0, 2).concat([(names.length - 2) + ' others']) : names);
+    var c2 = '<div class="gcr-card inv"><div class="gcr-faces">' + _gcrFacesHtml(R, 3, 'md') + '</div>' +
+      '<div class="gcr-ct"><div class="gcr-cn">' + esc(from) + ' invited you</div><div class="gcr-cs">' + esc(modName) + '’s chat · ' + esc(us.length === 1 ? 'just ' + modName + ' so far' : list) + '</div></div>' +
+      (asked ? '<span class="gcr-asked">Joining…</span>' : '<button type="button" class="gcr-in" onclick="gcrJoin(\'' + rid + '\')">Join</button>') + '</div>';
+    if (asked) c2 += '<div class="gcr-wait" role="status"><b>Almost in.</b> You’re invited, so you’ll be let in as soon as ' + esc(modName) + '’s app has this game open.' +
+      '<div><button type="button" class="gcr-sec" onclick="gcrCancel(\'' + rid + '\')">Cancel</button></div></div>';
+    else c2 += '<div class="gcr-ws">You’ll see the chat from ' + esc(from) + '’s @ on.</div>';
+    return c2;
+  }
   var who = us.length === 1 ? 'Just ' + modName + ' so far' : _gcrList(names.length > 3 ? names.slice(0, 2).concat([(names.length - 2) + ' others']) : names);
   var btn = asked ? '<span class="gcr-asked">Asked</span>' : '<button type="button" class="gcr-in" onclick="gcrAsk(\'' + rid + '\')">' + (passed ? 'Ask again' : 'Ask in') + '</button>';
   var card = '<div class="gcr-card"><div class="gcr-faces">' + _gcrFacesHtml(R, 3, 'md') + '</div>' +
@@ -406,6 +534,10 @@ function _gcrPaint() {
     // your chat's just you: the others going on this game, a tap away
     E.lock.innerHTML = '<div class="gcr-also">' + S.friendRooms.map(function (R) {
       var nm = _gcrFirst(R.members[_gcrModOf(R)]), rid = esc(R.id), asked = !!(R.asks && R.asks[me]);
+      var inv = _gcrInviteFor(R, S.key, me);
+      if (inv) return asked
+        ? '<button type="button" class="gcr-pill inv" onclick="gcrCancel(\'' + rid + '\')">Joining ' + esc(nm) + '’s chat… · Cancel</button>'
+        : '<button type="button" class="gcr-pill inv" onclick="gcrJoin(\'' + rid + '\')">' + esc(_gcrFirst(inv.byName)) + ' invited you to ' + (inv.by === _gcrModOf(R) ? 'the' : esc(nm) + '’s') + ' chat · Join</button>';
       return asked
         ? '<button type="button" class="gcr-pill" onclick="gcrCancel(\'' + rid + '\')">Asked into ' + esc(nm) + '’s chat · Cancel</button>'
         : '<button type="button" class="gcr-pill" onclick="gcrAsk(\'' + rid + '\')">' + esc(nm) + '’s chat is also going · Ask in</button>';
@@ -457,24 +589,24 @@ function _gcrFaces() {
 }
 
 // ── doing things
-function _gcrPostOld(payload) {
-  var g = window._activeBrowseGame, me = _gcrMe();
+function _gcrPostOld(payload, game) {
+  var g = game || window._activeBrowseGame, me = _gcrMe();
   if (!g || !me || !window.db) { if (typeof ib_toast === 'function') ib_toast('Sign in to chat'); return Promise.reject(new Error('signed out')); }
   return window.db.collection('gameChats').add({ gamePk: g.gamePk, uid: me, author: _gcrMyName(), text: JSON.stringify(payload), ts: Date.now(), system: true, systemType: 'room' });
 }
-function _gcrPostLine(rid, payload, ts) {
-  var g = window._activeBrowseGame, me = _gcrMe();
+function _gcrPostLine(rid, payload, ts, game) {
+  var g = game || window._activeBrowseGame, me = _gcrMe();
   return window.db.collection('gameChatRooms').doc(rid).collection('messages').add({ gamePk: g ? g.gamePk : null, uid: me, author: _gcrMyName(), text: JSON.stringify(payload), ts: ts || Date.now(), system: true, systemType: 'room' });
 }
 function _gcrRoomRef(rid) { return window.db.collection('gameChatRooms').doc(rid); }
 function _gcrFail(err) { console.error('[game chat] ' + ((err && err.code) || ''), err); if (typeof ib_toast === 'function') ib_toast('Couldn’t do that — ' + ((err && err.code) || 'try again')); }
-function _gcrNotify(uids, type, preview) {
-  var g = window._activeBrowseGame, me = _gcrMe();
+function _gcrNotify(uids, type, preview, extra, game) {
+  var g = game || window._activeBrowseGame, me = _gcrMe();
   if (!g || !me || !window.db || !uids.length) return;
   var batch = window.db.batch();
   uids.forEach(function (uid) {
     if (!uid || uid === me) return;
-    batch.set(window.db.collection('notifications').doc(), { toUid: uid, type: type, fromUid: me, fromName: _gcrMyName(), gamePk: g.gamePk, away: g.away || null, home: g.home || null, sport: g.sport || 'mlb', messagePreview: preview || '', ts: Date.now(), read: false });
+    batch.set(window.db.collection('notifications').doc(), Object.assign({ toUid: uid, type: type, fromUid: me, fromName: _gcrMyName(), gamePk: g.gamePk, away: g.away || null, home: g.home || null, sport: g.sport || 'mlb', messagePreview: preview || '', ts: Date.now(), read: false }, extra || {}));
   });
   batch.commit().catch(function (err) { console.error('[gameChats:notify ' + type + ']', err); });
 }
@@ -494,17 +626,52 @@ function gcrCancel(rid) {
   else _gcrPostOld({ act: 'cancel', room: rid }).catch(_gcrFail);
 }
 function gcrLetIn(rid, uid, btn) {
-  var R = _gcrFindRoom(rid), FV = _gcrFV(), name = (btn && btn.getAttribute('data-name')) || 'Someone', me = _gcrMe();
+  _gcrLetInDo(rid, uid, (btn && btn.getAttribute('data-name')) || 'Someone', btn, null);
+}
+// at: { by, byName, ts } when they're coming in on an @ — they see the chat from that message on
+// key: the game, when it isn't the one on screen
+function _gcrLetInDo(rid, uid, name, btn, at, key) {
+  var FV = _gcrFV(), me = _gcrMe(), R = null, game = null;
+  if (key && key !== _gcrKey()) {
+    var st = _gcrS(key);
+    ((st.view && st.view.rooms) || []).forEach(function (x) { if (x.id === rid) R = x; });
+    game = st.game || { gamePk: st.gamePk != null ? st.gamePk : key };
+  } else R = _gcrFindRoom(rid);
   if (!R || !_gcrIsMod(R, me)) return;
   if (btn) btn.disabled = true;
-  var done = function () { _gcrNotify([uid], 'game_chat_approved', ''); };
-  var undo = function (err) { if (btn) btn.disabled = false; _gcrFail(err); };
+  var done = function () { _gcrNotify([uid], 'game_chat_approved', '', null, game); };
+  var undo = function (err) {
+    if (btn) btn.disabled = false;
+    // the database wouldn't take the earlier join time: let them in from now instead
+    if (at && at.ts) { console.info('[game chat] invited join from the @ refused (' + ((err && err.code) || err) + ') — letting in from now'); _gcrLetInDo(rid, uid, name, btn, { by: at.by, byName: at.byName }, key); return; }
+    _gcrFail(err);
+  };
+  var now = Date.now(), line = { act: 'ok', who: uid, name: name }, since = now;
+  if (at) { line.inv = at.by; line.invName = at.byName || ''; if (at.ts && at.ts < now) { since = at.ts; line.since = since; } }
   if (R.kind === 'new' && FV) {
     // their join time: they read from here on, and the "joined" line lands right on it
-    var at = Date.now(), upd = { members: FV.arrayUnion(uid) };
-    upd['names.' + uid] = name; upd['asks.' + uid] = FV.delete(); upd['joined.' + uid] = at;
-    _gcrRoomRef(rid).update(upd).then(function () { return _gcrPostLine(rid, { act: 'ok', who: uid, name: name }, at); }).then(done, undo);
-  } else _gcrPostOld({ act: 'ok', room: rid, who: uid, name: name }).then(done, undo);
+    var upd = { members: FV.arrayUnion(uid) };
+    upd['names.' + uid] = name; upd['asks.' + uid] = FV.delete(); upd['joined.' + uid] = since;
+    _gcrRoomRef(rid).update(upd).then(function () { return _gcrPostLine(rid, line, now, game); }).then(done, undo);
+  } else _gcrPostOld(Object.assign({ room: rid }, line), game).then(done, undo);
+}
+// Join a chat you were @'d from. Straight in when the database allows an
+// invited person to add themselves; otherwise it's an ask, and the
+// moderator's app lets you in by itself.
+function gcrJoin(rid) {
+  var S = _gcrState(), R = _gcrFindRoom(rid), me = _gcrMe(), FV = _gcrFV();
+  if (!S || !R || !me) return;
+  var inv = _gcrInviteFor(R, S.key, me);
+  if (!inv || !(R.kind === 'new' && FV && R.invites && R.invites[me])) { gcrAsk(rid); return; }
+  S.st.asked = true;
+  var now = Date.now(), since = inv.ts && inv.ts < now ? inv.ts : now, upd = { members: FV.arrayUnion(me) };
+  upd['names.' + me] = _gcrMyName(); upd['joined.' + me] = since; upd['asks.' + me] = FV.delete(); upd['invites.' + me] = FV.delete();
+  _gcrRoomRef(rid).update(upd).then(function () {
+    _gcrPostLine(rid, { act: 'ok', who: me, name: _gcrMyName(), inv: inv.by, invName: inv.byName, since: since }, now).catch(function (err) { console.error('[game chat] joined line', err); });
+  }, function (err) {
+    console.info('[game chat] joining straight from an invitation isn’t allowed by the database rules (' + ((err && err.code) || err) + ') — asking in instead');
+    gcrAsk(rid);
+  });
 }
 function gcrNotNow(rid, uid) {
   var R = _gcrFindRoom(rid), FV = _gcrFV();
@@ -518,6 +685,7 @@ function gcrLeave() {
   if (!(S.st.leaveArm && Date.now() - S.st.leaveArm < 3500)) { S.st.leaveArm = Date.now(); _gcrPaint(); setTimeout(_gcrPaint, 3600); return; }
   S.st.leaveArm = 0; S.st.own = false;
   var R = S.mine, me = S.me, line = { act: 'leave' };
+  _gcrNoteLeft(R);
   // the moderator leaving hands it to whoever's been in longest
   if (_gcrIsMod(R, me)) {
     var next = Object.keys(R.members).filter(function (u) { return u !== me; })[0];
@@ -557,15 +725,38 @@ function gcrOwn() { gcrStart(); }
   }
   // a new message notifies the people in your chat (it used to go to friends watching)
   _notifyFriendsWatchingOfChatMessage = function (g, text) {
-    var S = _gcrState(), me = _gcrMe();
-    var members = S && S.mine ? Object.keys(S.mine.members).filter(function (u) { return u !== me; }) : [];
-    if (!members.length) return;
-    _gcrNotify(members, 'game_chat_message', String(text || '').length > 80 ? String(text).slice(0, 80) + '…' : String(text || ''));
+    var me = _gcrMe(), plain = _gcrPlain(text), preview = plain.length > 80 ? plain.slice(0, 80) + '…' : plain;
+    var tagged = _gcrMentions(text).filter(function (t) { return t.uid !== me; });
+    // v7.37.0: an @ gets its own alert; @ someone who isn't in the chat and it's an invitation
+    var go = function (tries) {
+      var S = _gcrState(), mine = S && _gcrKey() === String(g.gamePk) ? S.mine : null;
+      // the first thing said starts the chat — give it a moment to exist
+      if (!mine) { if (tagged.length && tries > 0) setTimeout(function () { go(tries - 1); }, 700); return; }
+      // when the message itself was sent: an invited person reads the chat from there on
+      var sent = 0;
+      (S.v.visible || []).forEach(function (m) { if (m.uid === me && !m.system && m.text === text && (m.ts || 0) > sent) sent = m.ts || 0; });
+      if (!sent || Date.now() - sent > 60000) sent = Date.now();
+      var isTag = {}, inside = [], outside = [];
+      tagged.forEach(function (t) { isTag[t.uid] = 1; (mine.members[t.uid] ? inside : outside).push(t); });
+      var members = Object.keys(mine.members).filter(function (u) { return u !== me && !isTag[u]; });
+      if (members.length) _gcrNotify(members, 'game_chat_message', preview, null, g);
+      if (inside.length) _gcrNotify(inside.map(function (t) { return t.uid; }), 'game_chat_mention', preview, null, g);
+      if (!outside.length) return;
+      _gcrNotify(outside.map(function (t) { return t.uid; }), 'game_chat_mention', preview, { roomId: mine.id, invite: true, atTs: sent }, g);
+      // noted on the chat too, where the database allows it
+      var FV = _gcrFV();
+      if (mine.kind === 'new' && FV && window.db) {
+        var upd = {};
+        outside.forEach(function (t) { upd['invites.' + t.uid] = { by: me, byName: _gcrMyName(), name: t.name, ts: sent }; });
+        _gcrRoomRef(mine.id).update(upd).catch(function (err) { console.info('[game chat] invitation not noted on the chat (' + ((err && err.code) || err) + ') — the alert still carries it'); });
+      }
+    };
+    go(4);
   };
   // keep the lock, the asks and the line painted through tab switches and re-renders
   ['gameDetailTab', '_showGameScreen'].forEach(function (name) {
     var f = window[name];
     if (typeof f !== 'function') return;
-    window[name] = function () { var r = f.apply(this, arguments); try { _gcrPaint(); } catch (e) {} return r; };
+    window[name] = function () { var r = f.apply(this, arguments); try { _gcrPaint(); _gcrSeenNotifs(); } catch (e) {} return r; };
   });
 })();

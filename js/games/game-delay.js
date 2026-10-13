@@ -140,7 +140,7 @@ function _gdlChatTick(key) {
 }
 // alert previews for this game's chat (the notifications list)
 function _gdlHideNotif(n) {
-  if (!n || n.type !== 'game_chat_message' || n.gamePk == null) return false;
+  if (!n || (n.type !== 'game_chat_message' && n.type !== 'game_chat_mention') || n.gamePk == null) return false;
   var key = String(n.gamePk), ts = n.ts || 0;
   return _gdlHolding(key) && ts > Date.now() - _gdlSec() * 1000 && ts > window._gdl.caughtAt;
 }
