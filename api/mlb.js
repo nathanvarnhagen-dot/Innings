@@ -182,6 +182,8 @@ module.exports = async function handler(req, res) {
       const jobs = [_seasonLinesForMatchup(out, data).catch(function () { /* keep the box score even if this lookup fails */ })];
       if (req.query.plays === 'all' && st === 'Live') jobs.push(_reserves(out, data).catch(function (e) { console.error('[reserves]', e); }));
       await Promise.all(jobs);
+      // &only=reserves: just that list, for checking it without the whole play-by-play
+      if (req.query.only === 'reserves') { res.status(200).json({ gamePk: out.gamePk, gameState: out.gameState, reserves: out.reserves || null }); return; }
       res.status(200).json(out);
       return;
     }
