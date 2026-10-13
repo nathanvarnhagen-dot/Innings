@@ -630,7 +630,10 @@ var GAMES_SPORTS = [
 //   · the live counts come from the same today's-games lists Multi view
 //     reads (js/games/multi-view.js), refreshed every 30s while this screen
 //     is up
-var GS_PHASE_KEY = 'innings_league_phase_v1', GS_PHASE_TTL = 10 * 60e3, GS_PHASE_KEEP = 24 * 3600e3;
+// (v7.41.1: the key moved to _v2 — an answer saved by a build from before the
+// playoff cards has no series in it, and was being trusted for ten minutes)
+var GS_PHASE_KEY = 'innings_league_phase_v2', GS_PHASE_TTL = 10 * 60e3, GS_PHASE_KEEP = 24 * 3600e3;
+try { localStorage.removeItem('innings_league_phase_v1'); } catch (e) {}
 // v7.41.0: with a league in the playoffs the answer carries series scores, so it's asked for again after two minutes
 var GS_PHASE_TTL_POST = 2 * 60e3;
 window._gsPhase = window._gsPhase || { at: 0, by: null, loading: false };
@@ -652,26 +655,38 @@ function _gsPhaseLoad() {
   var P = _gsPhaseState();
   if (P.loading || !window.fetch || (P.at && Date.now() - P.at < _gsPhaseTtl(P))) return;
   P.loading = true;
-  var json = function (url) { return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
-  var entry = function (x) {
+  // a route that never answers is given up on after 20 seconds
+  var json = function (url) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
+    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+      .then(function (v) { if (tm) clearTimeout(tm); return v; });
+  };
+  var got = 0;
+  var take = function (k, x) {
+    if (!x || !x.label) return false;
     var o = { phase: x.phase || '', label: String(x.label) };
     if (Array.isArray(x.series) && x.series.length) o.series = x.series;
-    return o;
+    P.by[k] = o; got++;
+    return true;
   };
-  Promise.all([json('/api/mlb?mode=phase&v=2&date=' + encodeURIComponent(_todayLocal())), json('/api/espn?mode=phases&v=3')]).then(function (r) {
-    var got = 0;
-    if (r[0] && r[0].label) { P.by.mlb = entry(r[0]); got++; }
-    var lg = (r[1] && r[1].leagues) || {};
-    Object.keys(lg).forEach(function (k) { if (lg[k] && lg[k].label) { P.by[k] = entry(lg[k]); got++; } });
+  var paint = function () { try { _gsPhasePaint(); } catch (e) { console.error('[league phase] paint:', e); } };
+  // v7.41.1: each answer is shown the moment it lands — baseball doesn't wait on the slower all-leagues lookup
+  var mlb = json('/api/mlb?mode=phase&v=2&date=' + encodeURIComponent(_todayLocal())).then(function (r) { if (take('mlb', r)) paint(); });
+  var rest = json('/api/espn?mode=phases&v=3').then(function (r) {
+    var lg = (r && r.leagues) || {}, any = false;
+    Object.keys(lg).forEach(function (k) { if (take(k, lg[k])) any = true; });
+    if (any) paint();
+  });
+  var done = function () {
     P.loading = false;
-    if (got) {
-      // every league answered: good for ten minutes (two, with series scores). Some missing: ask again in one
-      var want = GAMES_SPORTS.filter(function (s) { return s.live; }).length;
-      P.at = got >= want ? Date.now() : Date.now() - _gsPhaseTtl(P) + 60e3;
-      try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
-    }
-    _gsPhasePaint();
-  }).catch(function (err) { P.loading = false; console.error('[league phase] failed:', err); });
+    if (!got) return;
+    // every league answered: good for ten minutes (two, with series scores). Some missing: ask again in one
+    var want = GAMES_SPORTS.filter(function (s) { return s.live; }).length;
+    P.at = got >= want ? Date.now() : Date.now() - _gsPhaseTtl(P) + 60e3;
+    try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
+  };
+  Promise.all([mlb, rest]).then(done, function (err) { console.error('[league phase] failed:', err); done(); });
 }
 function _gsPhasePaint() {
   var P = _gsPhaseState();
@@ -856,6 +871,13 @@ function _gsDraw() {
   var grid = document.getElementById('games-sport-grid');
   if (!grid) return false;
   var cards = document.getElementById('games-playoff-cards');
+  // v7.41.1: a copy of the page from before the cards existed has no place for them — make it
+  if (!cards && grid.parentNode) {
+    cards = document.createElement('div');
+    cards.id = 'games-playoff-cards';
+    cards.style.display = 'none';
+    grid.parentNode.insertBefore(cards, grid);
+  }
   var inCard = {}, cardHtml = '';
   if (cards) GAMES_SPORTS.forEach(function (s) {
     if (!s.live) return;
@@ -877,14 +899,30 @@ function _gsDraw() {
   grid._gsSig = sig;
   if (cards) { cards.innerHTML = cardHtml; cards.style.display = cardHtml ? '' : 'none'; }
   grid.innerHTML = gridHtml;
+  _gsKick();
   return true;
+}
+// v7.41.1: on iPhone a scroll area can come back unable to scroll (taps work,
+// dragging does nothing — see _nudgeScrollers in js/core/navigation.js). The
+// Games page is redrawn after it opens (the cards arrive a moment later), so
+// its scroll area is re-armed after every redraw, and once more a beat later.
+function _gsKick() {
+  var grid = document.getElementById('games-sport-grid'), sc = grid && grid.parentNode;
+  var scr = document.getElementById('screen-games-picker');
+  if (!sc || !scr || !scr.classList.contains('active') || typeof _kickScroller !== 'function') return;
+  // (a page that has been scrolled is plainly working, and is left alone)
+  var go = function () { if (scr.classList.contains('active') && sc.scrollTop === 0) { try { _kickScroller(sc); } catch (e) {} } };
+  requestAnimationFrame(go);
+  clearTimeout(window._gsKickT);
+  window._gsKickT = setTimeout(go, 450);
 }
 function renderGamesSportGrid() {
   var grid = document.getElementById('games-sport-grid');
   if (!grid) return;
   grid._gsSig = null;
-  _gsPhasePaint();
-  _gsPhaseLoad();
+  // (this runs in the middle of a screen change: nothing here may stop it)
+  try { _gsPhasePaint(); } catch (e) { console.error('[games page] draw:', e); }
+  try { _gsPhaseLoad(); } catch (e) { console.error('[games page] load:', e); }
   if (!window._gsLiveTimer) {
     window._gsLiveTimer = setInterval(function () {
       var scr = document.getElementById('screen-games-picker');

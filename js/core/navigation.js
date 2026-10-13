@@ -54,6 +54,10 @@ function _nudgeScrollers(screenEl){
         // "Loading…" at this point) means the nudge above did nothing —
         // do it again once the content has landed
         if (!_canScroll(s)) _nudgeWhenReady(s);
+        // v7.41.1: …and a panel that can already scroll gets the same second
+        // nudge once the screen's fade-in is over (the Games page opened
+        // stuck) — unless it has been scrolled by then, which means it works
+        else _kickAfterFade(s, screenEl);
       });
     });
   });
@@ -85,6 +89,13 @@ function _kickScroller(s){
       s._kickBusy = false;
     });
   });
+}
+function _kickAfterFade(s, screenEl){
+  clearTimeout(s._kickFadeT);
+  var st = s.scrollTop;
+  s._kickFadeT = setTimeout(function(){
+    if (s.isConnected && s.scrollTop === st && (!screenEl || screenEl.classList.contains('active'))) _kickScroller(s);
+  }, 400);
 }
 function _nudgeWhenReady(s){
   if (!s || !window.MutationObserver) return;
