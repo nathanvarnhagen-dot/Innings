@@ -2,7 +2,8 @@
 // After a game, the scoring plays replay one at a time on the live field:
 // the ball runs or flies the real distance into the right end zone (both
 // read from the play's own label, e.g. "Allgeier 57-yd TD run"), the
-// team's touchdown takeover plays for touchdowns, and the card underneath
+// team's touchdown takeover plays for touchdowns (v7.39.0: and the field
+// goal panel for field goals), and the card underneath
 // says what happened and the score after it. Auto-plays once; prev/next,
 // pause and the dots step through by hand. Only the replay card repaints.
 window._fbr = null;
@@ -10,8 +11,8 @@ function _fbrPlay(p) {
   var t = String((p.head || '') + ' ' + (p.sub || ''));
   var yd = t.match(/(\d{1,3})\s*-?\s*(?:yd|yard)/i);
   var yards = yd ? Math.min(99, Number(yd[1])) : null;
-  var kind = 'rush', kindText = 'RUSH · TOUCHDOWN', badge = 'TD', td = true;
-  if (/\bFG\b|field goal/i.test(t)) { kind = 'kick'; kindText = 'FIELD GOAL'; badge = 'FG'; td = false; }
+  var kind = 'rush', kindText = 'RUSH · TOUCHDOWN', badge = 'TD', td = true, fg = false;
+  if (/\bFG\b|field goal/i.test(t)) { kind = 'kick'; kindText = 'FIELD GOAL'; badge = 'FG'; td = false; fg = true; }
   else if (/safety/i.test(t)) { kind = 'none'; kindText = 'SAFETY'; badge = 'SAFETY'; td = false; }
   else if (/pick-six|interception return/i.test(t)) { kindText = 'INTERCEPTION RETURN · TOUCHDOWN'; }
   else if (/fumble/i.test(t)) { kindText = 'FUMBLE RETURN · TOUCHDOWN'; }
@@ -22,16 +23,20 @@ function _fbrPlay(p) {
   // A field goal is kicked from 17 yards behind its listed distance
   var dist = yards != null ? (kind === 'kick' ? Math.max(1, yards - 17) : yards) : 20;
   var start = kind === 'none' ? goal : Math.max(0, Math.min(100, goal - dir * dist));
-  return { kind: kind, kindText: kindText, badge: badge, td: td, side: side, yards: yards, start: start, end: goal };
+  return { kind: kind, kindText: kindText, badge: badge, td: td, fg: fg, side: side, yards: yards, start: start, end: goal };
 }
-function _fbrDur(pl) { return pl.td ? 5200 : 3600; }
+function _fbrDur(pl) { return pl.td || pl.fg ? 5200 : 3600; }
 function _fbrState(m) {
   var g = window._activeBrowseGame, pk = g ? String(g.gamePk) : '';
   var r = window._fbr;
   if (!r || r.pk !== pk || r.n !== m.highlights.length) {
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Autoplay starts once the final hero has finished animating in
-    r = window._fbr = { pk: pk, n: m.highlights.length, i: 0, playing: !reduce, at: Date.now() + 1400 };
+    // v7.39.0: a game you were watching that just ended on a score opens on
+    // that play (the walk-off kick first), not back at the first score
+    var fbx = window._fbx, t = Date.now();
+    var justNow = !!fbx && fbx.pk === pk && ((fbx.fg && t - fbx.fg.kickAt < 6000) || (fbx.td && t - fbx.td.at < 6000));
+    r = window._fbr = { pk: pk, n: m.highlights.length, i: justNow ? Math.max(0, m.highlights.length - 1) : 0, playing: !reduce, at: t + 1400 };
   }
   return r;
 }
@@ -42,8 +47,12 @@ function _fbrHtml(m, first) {
   var pl = _fbrPlay(p);
   var team = pl.side === 'h' ? m.home : m.away;
   var mm = Object.assign({}, m, { situation: { downText: '', possSide: pl.side, lastPlay: null } });
-  var v = { pct: pl.end, firstPct: null, lastPlay: pl.kind === 'none' ? null : { kind: pl.kind === 'kick' ? 'kick' : pl.kind, startPct: pl.start, endPct: pl.end }, aria: p.head || 'Scoring play' };
-  var fx = { playAt: r.at, fromPct: pl.kind === 'none' ? null : pl.start, fromFirst: null, td: pl.td ? { side: pl.side, at: r.at + 950 } : null, burn: null, brkAt: 0 };
+  // v7.39.0: a field goal with a known distance is drawn by the field itself —
+  // the kick arcs from the line of scrimmage through the uprights — so there's
+  // no ball left sitting on the goal line
+  var fgArc = pl.fg && pl.yards != null;
+  var v = { pct: fgArc ? null : pl.end, firstPct: null, lastPlay: pl.kind === 'none' || fgArc ? null : { kind: pl.kind === 'kick' ? 'kick' : pl.kind, startPct: pl.start, endPct: pl.end }, aria: p.head || 'Scoring play' };
+  var fx = { playAt: r.at, fromPct: pl.kind === 'none' ? null : pl.start, fromFirst: null, td: pl.td ? { side: pl.side, at: r.at + 950 } : null, fg: pl.fg ? { side: pl.side, kickAt: r.at, at: r.at + 950, yards: pl.yards, arc: fgArc } : null, burn: null, brkAt: 0 };
   var field = _fbxFieldHtml(mm, v, fx, null);
   var chip = _gxChip(p, m);
   var big = pl.yards != null && pl.kind !== 'none' ? pl.yards + '<small>YDS</small>' : '&mdash;';

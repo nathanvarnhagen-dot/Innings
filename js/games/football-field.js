@@ -4,6 +4,9 @@
 // seen while you're watching. A touchdown takeover only fires when the new
 // scoring play is labeled a touchdown; stoppage notices come from the
 // latest play's own type/text (timeout, two-minute warning, injury, review).
+// v7.39.0: a made field goal gets its own moment too — the kick arcs to the
+// uprights, then the team's panel (quieter than a touchdown's) with the
+// distance. Same rule: only when the new scoring play is labeled a field goal.
 window._fbx = null;
 function _fbxDark(hex, t) {
   var h = String(hex || '').replace('#', '');
@@ -29,7 +32,7 @@ function _fbxTrack(m) {
   var now = Date.now();
   var st = window._fbx;
   if (!st || st.pk !== pk) {
-    st = window._fbx = { pk: pk, seeded: false, playKey: null, pct: null, first: null, poss: null, down: null, playAt: 0, fromPct: null, fromFirst: null, prevPoss: null, prevDown: null, td: null, toA: null, toH: null, burn: null, brk: null, brkAt: 0, sa: null, sh: null, hl: null };
+    st = window._fbx = { pk: pk, seeded: false, playKey: null, pct: null, first: null, poss: null, down: null, playAt: 0, fromPct: null, fromFirst: null, prevPoss: null, prevDown: null, td: null, fg: null, toA: null, toH: null, burn: null, brk: null, brkAt: 0, sa: null, sh: null, hl: null };
   }
   var key = s ? [lp ? (lp.text || '') : '', lp ? (lp.label || '') : '', s.spot, s.downText].join('|') : 'none';
   var pct = v ? v.pct : null, first = v ? v.firstPct : null;
@@ -48,9 +51,14 @@ function _fbxTrack(m) {
     }
     if (st.hl != null && hls.length > st.hl) {
       var newest = hls[hls.length - 1] || {};
-      if (/\bTD\b|touchdown|pick-six/i.test((newest.head || '') + ' ' + (newest.sub || ''))) {
-        var da = (m.away.score || 0) - (st.sa || 0), dh = (m.home.score || 0) - (st.sh || 0);
+      var ntxt = (newest.head || '') + ' ' + (newest.sub || '');
+      var da = (m.away.score || 0) - (st.sa || 0), dh = (m.home.score || 0) - (st.sh || 0);
+      if (/\bTD\b|touchdown|pick-six/i.test(ntxt)) {
         st.td = { side: newest.side || (da >= dh ? 'a' : 'h'), at: now };
+      } else if (/\bFG\b|field goal/i.test(ntxt)) {
+        // the kick plays first (kickAt), the panel follows it (at)
+        var fy = ntxt.match(/(\d{1,2})\s*-?\s*(?:yd|yard)/i);
+        st.fg = { side: newest.side || (da >= dh ? 'a' : 'h'), kickAt: now, at: now + 950, yards: fy ? Number(fy[1]) : null, arc: true };
       }
     }
     if (brk !== st.brk) { st.brk = brk; st.brkAt = brk ? now : 0; }
@@ -117,6 +125,7 @@ function _fbxFieldHtml(m, v, fx, brk) {
   h += '<rect x="0" y="0" width="30" height="' + H + '" fill="url(#' + id + 'ea)"/><rect x="330" y="0" width="30" height="' + H + '" fill="url(#' + id + 'eh)"/>';
   // The scoring team's end zone lights up (away scores into the home end zone)
   var tdLive = fx.td && now - fx.td.at < 3400;
+  var fgLive = !tdLive && !!fx.fg && now - fx.fg.at < 3400;
   if (tdLive) {
     var ezx = fx.td.side === 'a' ? 330 : 0;
     h += '<rect class="fbx-ezg" x="' + ezx + '" y="0" width="30" height="' + H + '" fill="#F2C869" style="animation-delay:' + (-(now - fx.td.at)) + 'ms"/>';
@@ -137,11 +146,31 @@ function _fbxFieldHtml(m, v, fx, brk) {
   h += '<circle cx="' + X(50) + '" cy="' + (H / 2) + '" r="15" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>' +
     '<text x="' + X(50) + '" y="' + (H / 2 + 4) + '" text-anchor="middle" font-size="' + (String(m.home.abbr).length > 3 ? 8 : 11) + '" font-weight="900" fill="rgba(255,255,255,.3)" ' + F + '>' + _escapeHtml(m.home.abbr || '') + '</text>';
   h += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#' + id + 'lt)"/>';
+  // v7.39.0: field goal — the uprights at the back of the end zone it was
+  // kicked at light up, and (live) the kick arcs to them from the line of
+  // scrimmage: a field goal's listed distance is 17 yards longer than that
+  if (fgLive) {
+    var gpx = fx.fg.side === 'a' ? 353 : 7, gy = H / 2;
+    var gdl = 'animation-delay:' + (-(now - fx.fg.kickAt)) + 'ms';
+    if (fx.fg.arc && fx.fg.yards != null) {
+      var los = Math.max(1, Math.min(99, fx.fg.yards - 17));
+      var ksx = X(fx.fg.side === 'a' ? 100 - los : los);
+      h += '<path d="M' + n1(ksx) + ' ' + LANE + ' Q' + n1((ksx + gpx) / 2) + ' ' + (LANE - 48) + ' ' + gpx + ' ' + gy + '" pathLength="1" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" class="fbx-inc" style="' + gdl + '"/>' +
+        '<g class="fbx-gb" style="' + gdl + '"><g transform="translate(' + gpx + ',' + gy + ')"><g class="fbx-air" style="--dx:' + n1(ksx - gpx) + ';' + gdl + '">' +
+        '<ellipse rx="6.4" ry="3.9" fill="url(#' + id + 'lb)" stroke="#3d1f0b" stroke-width=".6"/><path d="M-2.6 0H2.6M-1.6 -1.1V1.1M0 -1.1V1.1M1.6 -1.1V1.1" stroke="#fff" stroke-width=".7" stroke-linecap="round"/></g></g></g>';
+    }
+    h += '<g class="fbx-gp" style="' + gdl + '" filter="url(#' + id + 'gl)"><line x1="' + gpx + '" y1="' + (gy - 14) + '" x2="' + gpx + '" y2="' + (gy + 14) + '" stroke="#F2C869" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<circle cx="' + gpx + '" cy="' + (gy - 14) + '" r="2.8" fill="#F2C869"/><circle cx="' + gpx + '" cy="' + (gy + 14) + '" r="2.8" fill="#F2C869"/></g>' +
+      '<circle class="fbx-gpr" cx="' + gpx + '" cy="' + gy + '" r="7" fill="none" stroke="#FFF3CF" stroke-width="2" style="animation-delay:' + (850 - (now - fx.fg.kickAt)) + 'ms"/>';
+  }
 
   var ghost = '';
+  // v7.39.0: while a live field goal plays, the field belongs to the kick —
+  // the ball and lines for the next snap come in once the panel has gone
+  var fgKick = fgLive && !!fx.fg.arc, hPre = h.length;
   if (v && v.pct != null) {
     var bx = X(v.pct);
-    var moving = fx.fromPct != null && Math.abs(fx.fromPct - v.pct) > 0.5 && eP < 60000;
+    var moving = !fgKick && fx.fromPct != null && Math.abs(fx.fromPct - v.pct) > 0.5 && eP < 60000;
     var dxBall = moving ? X(fx.fromPct) - bx : 0;
     var delay = 'animation-delay:' + (-eP) + 'ms';
     // line of scrimmage and first-down line slide from where they were
@@ -157,7 +186,8 @@ function _fbxFieldHtml(m, v, fx, brk) {
     var s = m.situation || {};
     var incomplete = s.lastPlay && /incomplete/i.test(String(s.lastPlay.label || ''));
     var air = lp && (lp.kind === 'pass' || lp.kind === 'kick');
-    if (lp && lp.startPct != null && Math.abs(X(lp.startPct) - bx) > 3) {
+    if (fgKick) { /* the kick's own arc is drawn above */ }
+    else if (lp && lp.startPct != null && Math.abs(X(lp.startPct) - bx) > 3) {
       var sx = X(lp.startPct), ex = bx, dx = ex - sx, d;
       if (!air) d = 'M' + n1(sx) + ' ' + LANE + ' C' + n1(sx + dx * .3) + ' ' + (LANE - 9) + ' ' + n1(sx + dx * .6) + ' ' + (LANE + 9) + ' ' + n1(ex) + ' ' + (LANE - 2);
       else d = 'M' + n1(sx) + ' ' + LANE + ' Q' + n1((sx + ex) / 2) + ' ' + (LANE - 32) + ' ' + n1(ex) + ' ' + LANE;
@@ -178,13 +208,14 @@ function _fbxFieldHtml(m, v, fx, brk) {
         '<path d="M-6.4 -1.5A7 4 0 0 1 -6.4 1.5M6.4 -1.5A7 4 0 0 0 6.4 1.5" fill="none" stroke="#fff" stroke-width=".6" opacity=".8"/></g></g>';
     // down & distance tag riding the line of scrimmage
     var dd = String(s.downText || '').split(' at ')[0];
-    if (dd && !tdLive) {
+    if (dd && !tdLive && !fgLive) {
       var tw = Math.max(38, dd.length * 5.2 + 12);
       h += '<g transform="translate(' + n1(bx) + ',' + (LANE - 8) + ')"><g class="' + (losDx ? 'fbx-mv' : '') + '" style="--dx:' + n1(losDx) + ';' + delay + '">' +
         '<rect x="' + n1(-tw / 2) + '" y="-24" width="' + n1(tw) + '" height="14" rx="7" fill="rgba(13,8,32,.9)" stroke="rgba(90,176,255,.6)" stroke-width="1"/>' +
         '<text x="0" y="-14" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff" ' + F + '>' + _escapeHtml(dd) + '</text></g></g>';
     }
   }
+  if (fgKick && h.length > hPre) h = h.slice(0, hPre) + '<g class="fbx-late" style="animation-delay:' + (fx.fg.at + 3300 - now) + 'ms">' + h.slice(hPre) + '</g>';
   h += '</g></svg>';
 
   var lights = '<svg class="fbx-lights" viewBox="0 0 360 60" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="' + id + 'bm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9E5FF" stop-opacity=".9"/><stop offset="1" stop-color="#A89FE8" stop-opacity="0"/></linearGradient></defs>' +
@@ -210,7 +241,7 @@ function _fbxFieldHtml(m, v, fx, brk) {
       '<div class="lb">' + _escapeHtml(brk) + '</div><div class="rl"></div>' + (sub ? '<div class="sb">' + _escapeHtml(sub) + '</div>' : '') + '</div>';
   } else {
     var sp = _fbxStoppage(m);
-    if (sp && !tdLive) {
+    if (sp && !tdLive && !fgLive) {
       // v7.33.0: the down & distance stays on the field through a stoppage (the
       // server holds it); when there is no down — right after a score — the
       // notice says what's next
@@ -226,6 +257,18 @@ function _fbxFieldHtml(m, v, fx, brk) {
       '<div class="bg"></div><div class="st b"></div><div class="st"></div><div class="sk"></div>' +
       '<div class="ct"><span class="lg">' + _escapeHtml(tm.abbr || '') + '</span><div class="wd"><span class="sm">TOUCHDOWN</span><span class="bg2' + (nm.length > 10 ? ' long' : '') + '">' + _escapeHtml(nm) + '</span><span class="ln"></span></div></div></div>';
   }
+  // v7.39.0: field goal panel — the ball goes through the uprights, then who and how far
+  if (fgLive) {
+    var ft = fx.fg.side === 'h' ? m.home : m.away;
+    var fnm = _fbxTeamName(ft);
+    over += '<div class="fbx-to fg" style="--t0:' + (-(now - fx.fg.at)) + 'ms;--t1:' + ft.colors.bg + ';--t2:' + _fbxSecond(ft) + ';--tdark:' + _fbxDark(ft.colors.bg, .6) + '">' +
+      '<div class="bg"></div><div class="st b"></div><div class="st"></div><div class="sk"></div>' +
+      '<div class="ct"><svg class="gp" viewBox="0 0 64 56" width="64" height="56" aria-hidden="true">' +
+        '<path class="fbx-fgp" d="M32 54V38M12 38H52M12 38V6M52 38V6" fill="none" stroke="#F2C869" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle class="fbx-fgr" cx="32" cy="20" r="7" fill="none" stroke="#FFF3CF" stroke-width="2"/>' +
+        '<g transform="translate(32 20)"><g class="fbx-fgb"><ellipse rx="6.6" ry="4.2" transform="rotate(-28)" fill="#B3713D" stroke="#3D1F0B" stroke-width=".7"/><path d="M-2.6 1.4L2.6 -1.4" stroke="#fff" stroke-width="1" stroke-linecap="round"/></g></g></svg>' +
+      '<div class="wd"><span class="sm">FIELD GOAL' + (fx.fg.yards != null ? ' \u00b7 ' + fx.fg.yards + ' YDS' : '') + '</span><span class="bg2' + (fnm.length > 9 ? ' long' : '') + '">' + _escapeHtml(fnm) + '</span><span class="ln"></span></div></div></div>';
+  }
   return '<div class="fbx-field">' + lights + '<div class="fbx-tilt">' + h + '</div>' + over + '</div>';
 }
 
@@ -236,8 +279,11 @@ function _fbxResultHtml(m, fx) {
   var label = String(lp.label || '');
   var inc = /incomplete/i.test(label);
   var td = /touchdown/i.test(label) || /touchdown/i.test(lp.text);
+  // v7.39.0: the play's own type says how a field goal went ("Field Goal Good", "Field Goal Missed", "Blocked Field Goal")
+  var fgTry = !td && /field goal/i.test(label);
+  var fg = fgTry && /good/i.test(label) && !/no good/i.test(label), fgMiss = fgTry && /miss|block|no good/i.test(label);
   var yds = lp.yards != null && isFinite(lp.yards) ? Number(lp.yards) : null;
-  var big = inc ? 'INC' : (yds != null ? (yds > 0 ? '+' : '') + yds + '<small>YDS</small>' : '&mdash;');
+  var big = inc ? 'INC' : (yds != null ? (yds > 0 && !fgTry ? '+' : '') + yds + '<small>YDS</small>' : '&mdash;');
   var kind = (lp.kind === 'rush' ? 'RUSH' : lp.kind === 'pass' ? 'PASS' : 'KICK') + (inc ? ' · INCOMPLETE' : '') + (/intercept/i.test(label) ? ' · INTERCEPTED' : '') + (td ? ' · TOUCHDOWN' : '');
   // A first down: same team still has it, it's now 1st down, and the play gained yards
   var firstDown = !td && yds != null && yds > 0 && fx.prevPoss && fx.prevPoss === s.possSide && /^1st/i.test(String(s.downText || '')) && !/^1st/i.test(String(fx.prevDown || '1st'));
@@ -245,11 +291,11 @@ function _fbxResultHtml(m, fx) {
   var acc = td ? '#F2C869' : (firstDown ? '#F2C869' : (inc ? 'rgba(255,255,255,.25)' : (poss ? poss.colors.bg : '#A89FE8')));
   // v7.2.0: broadcast card — big yards, chip + who, one short line
   var P = typeof _fbbParts === 'function' ? _fbbParts(lp.text) : { who: '', what: lp.text, tk: '' };
-  var ck = td ? 'td' : inc ? 'pass' : lp.kind === 'rush' ? 'run' : lp.kind === 'pass' ? 'pass' : 'kick';
-  var chipTxt = td ? 'TD' : inc ? 'INCOMPLETE' : /intercept/i.test(label) ? 'INTERCEPTED' : ({ run: 'RUN', pass: 'PASS', kick: 'KICK' }[ck]);
-  var ydc = inc || yds == null ? '#8C86B8' : yds < 0 ? '#FF7A6B' : td ? '#F2C869' : '#7CF29C';
-  return '<div class="fbb-lp" style="--acc:' + (td || firstDown ? '#F2C869' : ydc) + ';--ydc:' + ydc + ';--t0:' + (fx.playAt ? -(Date.now() - fx.playAt) : -60000) + 'ms">' +
+  var ck = td || fg ? 'td' : inc ? 'pass' : lp.kind === 'rush' ? 'run' : lp.kind === 'pass' ? 'pass' : 'kick';
+  var chipTxt = td ? 'TD' : fg ? 'FG' : fgMiss ? 'FG MISSED' : inc ? 'INCOMPLETE' : /intercept/i.test(label) ? 'INTERCEPTED' : ({ run: 'RUN', pass: 'PASS', kick: 'KICK' }[ck]);
+  var ydc = inc || yds == null || fgMiss ? '#8C86B8' : yds < 0 ? '#FF7A6B' : td || fg ? '#F2C869' : '#7CF29C';
+  return '<div class="fbb-lp" style="--acc:' + (td || fg || firstDown ? '#F2C869' : ydc) + ';--ydc:' + ydc + ';--t0:' + (fx.playAt ? -(Date.now() - fx.playAt) : -60000) + 'ms">' +
     '<span class="yd">' + big + '</span><div style="min-width:0"><div class="l1"><span class="fbb-chip ' + ck + '">' + chipTxt + '</span><b>' + _escapeHtml(P.who || P.what) + '</b>' +
-    (td ? '<span class="tag">TOUCHDOWN</span>' : firstDown ? '<span class="tag">1ST DOWN</span>' : '') + '</div>' +
+    (td ? '<span class="tag">TOUCHDOWN</span>' : fg ? '<span class="tag">FIELD GOAL</span>' : firstDown ? '<span class="tag">1ST DOWN</span>' : '') + '</div>' +
     '<div class="l2">' + _escapeHtml(P.who ? P.what : '') + (P.tk ? ' <em>\u00b7 ' + _escapeHtml(P.tk) + '</em>' : '') + '</div></div></div>';
 }
