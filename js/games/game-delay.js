@@ -423,8 +423,14 @@ function _gdlCalTry() {
     _refreshBoxScoreLegacy = function (gamePk) {
       if (!_gdlMlb()) return prevRef.apply(this, arguments);
       var url = _bsModalBoxscoreUrl('mlb', gamePk) + '&plays=all';
+      // v7.45.0: send the last feed stamp we have; when nothing's newer the
+      // server answers {unchanged:true} in a few ms and the last box is reused
+      var G = window._gdl, lastE = G.pk === String(gamePk) && G.buf.length ? G.buf[G.buf.length - 1].box : null;
+      var lastTs = lastE && lastE.gameState === 'Live' && lastE.feedTs ? lastE.feedTs : null;
+      if (lastTs) url += '&since=' + encodeURIComponent(lastTs);
       return fetch(url).then(function (r) { return r.json(); }).then(function (box) {
         if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
+        if (box && box.unchanged) box = lastE;
         _gdlTake(String(gamePk), box);
         var live = _gdlRelease(gamePk);
         if (window._gdl.cal && window._gdl.cal.step === 'measure') _gdlCalTry();

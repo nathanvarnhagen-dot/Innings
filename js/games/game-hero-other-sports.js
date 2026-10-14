@@ -921,10 +921,14 @@ function _refreshBoxScoreLegacy(gamePk) {
   // into a Firestore doc when a game gets attached to a memory, and a
   // full game's plays have no business being stored there.
   var url = _bsModalBoxscoreUrl(sport, gamePk) + (sport === 'mlb' ? '&plays=all' : '');
+  // v7.45.0: nothing newer than what we have → the server says so in a few ms
+  var last = window._lastLiveBox, lastTs = (sport === 'mlb' && last && String(last.gamePk) === String(gamePk) && last.gameState === 'Live' && last.feedTs) ? last.feedTs : null;
+  if (lastTs) url += '&since=' + encodeURIComponent(lastTs);
   return fetch(url)
     .then(function (r) { return r.json(); })
     .then(function (box) {
       if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk) return false;
+      if (box && box.unchanged) return true;
       return _applyBoxScoreResult(gamePk, sport, box);
     })
     .catch(function (err) { console.error('Load box score error:', err); return false; });

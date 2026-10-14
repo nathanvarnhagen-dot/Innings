@@ -5,6 +5,9 @@
 // the browser doesn't have to fetch it directly, and trims the response
 // down to what a memory card actually needs.
 
+// v7.45.0: per game, the timestamps-list entry and feed stamp from the last full fetch (warm instances only)
+const _FEED_SEEN = global.__inningsFeedSeen || (global.__inningsFeedSeen = new Map());
+
 module.exports = async function handler(req, res) {
   const mode = req.query.mode;
   // v5.91.0: Baseball Savant runs inside this function (see api/_savant.js)
@@ -191,8 +194,32 @@ module.exports = async function handler(req, res) {
       const gamePk = req.query.gamePk;
       if (!gamePk) { res.status(400).json({ error: 'Missing gamePk' }); return; }
       const url = 'https://statsapi.mlb.com/api/v1.1/game/' + encodeURIComponent(gamePk) + '/feed/live';
+      // v7.45.0: the game screen polls every 3–6s but the feed only changes
+      // every pitch or so. The client sends the feed's last timeStamp it saw
+      // (&since=…); MLB's tiny timestamps list says whether anything is newer,
+      // and if not this returns at once — no 1–3MB download, no re-summarize.
+      // (That's what was eating Vercel's function CPU.)
+      // The list's last entry can run a step past the feed's own timeStamp, so
+      // the pair seen on the last full fetch is remembered per game: same last
+      // entry + same feed stamp the client holds → nothing new.
+      let latest = null;
+      if (req.query.since) {
+        try {
+          const tr = await fetch(url + '/timestamps');
+          const stamps = await tr.json();
+          latest = Array.isArray(stamps) && stamps.length ? String(stamps[stamps.length - 1]) : null;
+          const seen = _FEED_SEEN.get(String(gamePk));
+          if (latest && (latest === String(req.query.since) || (seen && seen.latest === latest && seen.feedTs === String(req.query.since)))) {
+            res.setHeader('Cache-Control', 'no-store');
+            res.status(200).json({ gamePk: gamePk, unchanged: true, feedTs: req.query.since });
+            return;
+          }
+        } catch (e) { /* fall through to the full feed */ }
+      }
       const r = await fetch(url);
       const data = await r.json();
+      const feedTs = (data && data.metaData && data.metaData.timeStamp) || null;
+      if (feedTs) _FEED_SEEN.set(String(gamePk), { latest: latest || feedTs, feedTs: String(feedTs), at: Date.now() });
       // v5.85.0: a live game is only cached for a few seconds at the edge
       // (it was a full minute, so polling faster never showed anything
       // newer); finished games can sit much longer.
@@ -204,6 +231,7 @@ module.exports = async function handler(req, res) {
       const jobs = [_seasonLinesForMatchup(out, data).catch(function () { /* keep the box score even if this lookup fails */ })];
       if (req.query.plays === 'all' && st === 'Live') jobs.push(_reserves(out, data).catch(function (e) { console.error('[reserves]', e); }));
       await Promise.all(jobs);
+      out.feedTs = feedTs; // v7.45.0: for &since=
       // &only=reserves: just that list, for checking it without the whole play-by-play
       if (req.query.only === 'reserves') { res.status(200).json({ gamePk: out.gamePk, gameState: out.gameState, reserves: out.reserves || null }); return; }
       res.status(200).json(out);
