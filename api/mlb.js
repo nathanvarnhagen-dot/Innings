@@ -245,7 +245,11 @@ module.exports = async function handler(req, res) {
       const r = await fetch(url);
       const data = await r.json();
       const result = await summarizePregame(data);
-      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate');
+      // v7.45.1: lineups land any time in the hours before first pitch — a
+      // projected lineup is only cached briefly, and never served stale for
+      // long, so the real one shows within a minute of being posted
+      const posted = result && result.away && result.home && !result.away.projected && !result.home.projected;
+      res.setHeader('Cache-Control', posted ? 's-maxage=300, stale-while-revalidate=120' : 's-maxage=45, stale-while-revalidate=30');
       res.status(200).json(result);
       return;
     }

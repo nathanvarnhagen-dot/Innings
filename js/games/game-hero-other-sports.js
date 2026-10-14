@@ -1065,6 +1065,7 @@ function _loadPregameSheet(gamePk, sport) {
       }
       window._gdPregame.data = data;
       renderGameCheatSheet();
+      _pregameWatch(gamePk); // v7.45.1: keep checking for the posted lineup
     })
     .catch(function (err) {
       console.error('Load cheat sheet error:', err);
@@ -1072,6 +1073,26 @@ function _loadPregameSheet(gamePk, sport) {
     });
 }
 
+// v7.45.1: a game opened before the lineups were posted used to keep the
+// projected one until you left and came back. While the screen stays on a
+// pregame MLB game, the lineups are re-asked for every 90s and swapped in
+// the moment either side's real order is up (or a probable changes).
+function _pregameWatch(gamePk) {
+  clearInterval(window._pregameWatchT);
+  var key = function (d) { return !d || !d.away || !d.home ? '' : [d.away, d.home].map(function (sd) { return (sd.projected ? 'p' : 'o') + ':' + (sd.feat && sd.feat.id) + ':' + (sd.rows || []).map(function (r) { return r.id || r.name; }).join(','); }).join('|'); };
+  window._pregameWatchT = setInterval(function () {
+    var g = window._activeBrowseGame, scr = document.getElementById('screen-game'), gp = window._gdPregame;
+    if (!g || g.gamePk != gamePk || !scr || !scr.classList.contains('active') || document.hidden) { if (!g || g.gamePk != gamePk) clearInterval(window._pregameWatchT); return; }
+    if (!gp || gp.boxScoreHtml || (gp.data && !gp.data.away.projected && !gp.data.home.projected)) { clearInterval(window._pregameWatchT); return; } // live, or both lineups in
+    fetch('/api/mlb?mode=pregame&gamePk=' + encodeURIComponent(gamePk)).then(function (r) { return r.json(); }).then(function (data) {
+      if (!window._activeBrowseGame || window._activeBrowseGame.gamePk != gamePk || !data || data.error || !data.away || !data.home) return;
+      if (key(data) === key(window._gdPregame.data)) return;
+      window._gdPregame.data = data;
+      renderGameCheatSheet();
+      if (!data.away.projected && !data.home.projected && typeof ib_toast === 'function') ib_toast('Lineups are in');
+    }).catch(function () {});
+  }, 90000);
+}
 function gameSheetSide(key) {
   window._gdPregame.side = key;
   window._gdPregame.expand = false;
