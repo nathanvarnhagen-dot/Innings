@@ -1065,6 +1065,7 @@ function _loadPregameSheet(gamePk, sport) {
       }
       window._gdPregame.data = data;
       renderGameCheatSheet();
+      if (typeof _wlBoxRender === 'function') try { _wlBoxRender(); } catch (e) {} // v7.46.2: Box tab shows the lineups too
       _pregameWatch(gamePk); // v7.45.1: keep checking for the posted lineup
     })
     .catch(function (err) {
@@ -1089,6 +1090,7 @@ function _pregameWatch(gamePk) {
       if (key(data) === key(window._gdPregame.data)) return;
       window._gdPregame.data = data;
       renderGameCheatSheet();
+      if (typeof _wlBoxRender === 'function') try { _wlBoxRender(); } catch (e) {}
       if (!data.away.projected && !data.home.projected && typeof ib_toast === 'function') ib_toast('Lineups are in');
     }).catch(function () {});
   }, 90000);
@@ -1162,7 +1164,7 @@ function renderGameCheatSheet() {
     h += '<div style="background:rgba(255,255,255,.06);border-left:3px solid #A89FE8;border-radius:0 12px 12px 0;padding:12px;margin-bottom:12px">' +
       '<div style="display:flex;align-items:center;gap:8px">' +
       '<span style="flex:1;font-size:13.5px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-      _escapeHtml(side.feat.name) + ' <span style="font-size:11px;color:rgba(255,255,255,.45);font-weight:400">' +
+      (league === 'mlb' && side.feat.id ? _clickablePlayerNameHtml({ name: side.feat.name, id: side.feat.id }, 'mlb') : _escapeHtml(side.feat.name)) + ' <span style="font-size:11px;color:rgba(255,255,255,.45);font-weight:400">' +
       _escapeHtml(side.feat.role) + (side.feat.age ? ' · ' + side.feat.age : '') + '</span></span>' +
       _cheatSheetLinkChips(side.feat.name, side.feat.id, league) + '</div>' +
       '<div style="color:#CECBF6;font-size:11.5px;margin-top:5px">' + _escapeHtml(side.feat.line) + '</div></div>';
@@ -1181,7 +1183,7 @@ function renderGameCheatSheet() {
       (i === marked ? 'background:rgba(168,159,232,.08)' : '') + '">' +
       '<div style="display:flex;align-items:center;gap:8px">' + lead +
       '<span style="flex:1;min-width:0;font-size:13.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-      _escapeHtml(r.name) +
+      (league === 'mlb' && r.id ? _clickablePlayerNameHtml({ name: r.name, id: r.id }, 'mlb') : _escapeHtml(r.name)) + /* v7.46.2: same card as in a live game */
       (showOrder && r.pos ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + _escapeHtml(r.pos) + '</span>' : '') +
       (r.age ? ' <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:400">' + r.age + '</span>' : '') +
       '</span>' + _cheatSheetLinkChips(r.name, r.id, league) + '</div>' +

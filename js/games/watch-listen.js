@@ -289,6 +289,28 @@ function _wlReservesHtml(b) {
   if (sp.length) h += head('Starters available', String(sp.length)) + arms(sp);
   return h + '<div class="rsv-foot">Season numbers are regular season.</div></div>';
 }
+// v7.46.2: before first pitch the Box tab carries both lineups as soon as
+// they're posted — the probable starter, then 1–9 with position and the
+// season slash line; every name opens the same card as during the game.
+// A side whose lineup isn't up yet says so instead of listing the roster.
+function _wlPregameBoxHtml(d) {
+  var esc = _escapeHtml, out = '';
+  ['away', 'home'].forEach(function (k) {
+    var sd = d[k]; if (!sd) return;
+    var h = '<div class="gh-card rsv pbx"><div class="rsv-top"><span class="rsv-team">' + esc(sd.name || '') + '</span><em class="pbx-st">' + (sd.projected ? 'Lineup not posted yet' : 'Lineup posted') + '</em></div>';
+    if (sd.feat) h += '<div class="rsv-h"><b>Starting pitcher</b><em>' + esc(sd.feat.role || '') + '</em></div>' +
+      '<div class="rsv-r"><span class="n">' + _clickablePlayerNameHtml({ name: sd.feat.name, id: sd.feat.id }, 'mlb') + (sd.feat.hand ? ' <small>' + esc(sd.feat.hand + 'HP') + '</small>' : '') + '</span><i class="w pbx-line">' + esc(sd.feat.line || '') + '</i></div>';
+    if (sd.projected) h += '<div class="rsv-none">Posted lineups show here the moment they’re announced.</div>';
+    else {
+      h += '<div class="rsv-h"><b>Lineup</b><em>AVG / OBP / SLG</em></div>';
+      (sd.rows || []).forEach(function (r, i) {
+        h += '<div class="rsv-r"><span class="n"><small class="pbx-n">' + (i + 1) + '</small> ' + _clickablePlayerNameHtml({ name: r.name, id: r.id }, 'mlb') + (r.pos ? ' <small>' + esc(r.pos) + '</small>' : '') + '</span><i class="w pbx-line">' + esc(r.line || '') + '</i></div>';
+      });
+    }
+    out += h + '</div>';
+  });
+  return out;
+}
 function _wlBoxRender() {
   var el = document.getElementById('game-box-panel');
   if (!el || el.style.display === 'none') return;
@@ -306,6 +328,8 @@ function _wlBoxRender() {
     if (html) html = '<div class="gbx-nohead"><div class="gh-card">' + html + '</div></div>' + _wlReservesHtml(b);
   } else if (window._lastLiveBox && typeof _boxScoreCardHtml === 'function') {
     html = _boxScoreCardHtml(window._lastLiveBox, true, false); // other sports when the gamecast isn't available
+  } else if (g && (g.sport || 'mlb') === 'mlb' && gp && gp.data && gp.data.away && gp.data.home) {
+    html = _wlPregameBoxHtml(gp.data); // v7.46.2: the posted lineups, before first pitch
   }
   var scroll = el.scrollTop;
   el.innerHTML = html ? '<div class="gbx">' + html + '</div>' : '<div class="wl-empty">The box score shows up here once the game starts.</div>';
