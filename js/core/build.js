@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.44.1-crew-from-chat';
+window.INNINGS_BUILD = 'v7.44.2-save-error-text';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

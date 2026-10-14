@@ -209,7 +209,7 @@ function gattChoose(mode) {
   op.then(function () { s.busy = false; _gattRender(); }).catch(function (err) {
     console.error('[attend] save choice failed:', err);
     s.busy = false; s.mode = prev; _gattRender();
-    if (typeof ib_toast === 'function') ib_toast('Couldn\'t save that — try again');
+    if (typeof ib_toast === 'function') ib_toast('Couldn\'t save that — ' + ((err && (err.code || err.message)) || 'try again')); // v7.44.2: say why
   });
 }
 
