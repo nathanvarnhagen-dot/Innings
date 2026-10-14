@@ -1288,6 +1288,91 @@ function _bbShot(text) {
   if (/alley/i.test(t)) return 'alley-oop';
   return 'bucket';
 }
+// ── v7.46.0: the live court. Every shot's spot (ESPN's coordinate: x across the
+// floor 0–50 ft, y = feet out from the basket; FTs and dead balls carry a
+// sentinel), the newest play, and the possession/shot-clock reset worked out
+// from the play-by-play — ESPN sends no shot clock, so the app counts down
+// from the last reset (24 on a change of possession or a score, 14 after an
+// offensive rebound) against the game clock.
+function _bbCoord(p) {
+  var c = p && p.coordinate;
+  if (!c || c.x == null || c.y == null) return null;
+  var x = Number(c.x), y = Number(c.y);
+  if (!isFinite(x) || !isFinite(y) || x < -5 || x > 55 || y < -10 || y > 60) return null;
+  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+}
+function _bbPlayKind(p) {
+  var t = String((p.type && p.type.text) || '') + ' ' + String(p.text || '');
+  if (/free throw/i.test(t)) return 'ft';
+  if (p.shootingPlay) return 'shot';
+  if (/offensive rebound/i.test(t)) return 'oreb';
+  if (/defensive rebound/i.test(t)) return 'dreb';
+  if (/\brebound\b/i.test(t)) return 'reb';
+  // a steal is logged on the team that lost the ball ("X bad pass turnover (Y steals)")
+  if (/turnover|traveling|double dribble|out of bounds|\bsteals?\b/i.test(t)) return 'to';
+  if (/\bblock/i.test(t)) return 'block';
+  if (/timeout/i.test(t)) return 'timeout';
+  if (/jump ?ball/i.test(t)) return 'jump';
+  if (/\bfoul\b/i.test(t)) return 'foul';
+  if (/end of|start of|end period|start period/i.test(t)) return 'period';
+  return 'other';
+}
+function _bbCourt(data, away, home, league) {
+  var raw = (data.plays || []).filter(function (p) { return p && p.text; });
+  var sideOf = function (p) { var id = p.team && String(p.team.id); return id === String(home.id) ? 'h' : (id === String(away.id) ? 'a' : null); };
+  var other = function (s) { return s === 'h' ? 'a' : (s === 'a' ? 'h' : null); };
+  var shots = [];
+  var poss = null, resetVal = 24, resetClock = null, resetPeriod = null;
+  var last = null, lastShot = null, scLast = null, scLastShot = null;
+  var periodSecs = league === 'wnba' ? 600 : 720;
+  raw.forEach(function (p) {
+    var kind = _bbPlayKind(p), side = sideOf(p), per = (p.period && p.period.number) || 0, clk = p.clock && p.clock.displayValue;
+    var secs = _bbSecs(clk);
+    if (per !== resetPeriod) { resetPeriod = per; resetVal = 24; resetClock = per > 4 ? 300 : periodSecs; }
+    // the shot clock as this play happened (before it resets anything)
+    var scNow = (secs != null && resetClock != null) ? Math.max(0, Math.min(resetVal, resetVal - (resetClock - secs), secs)) : null;
+    var reset = function (s, v) { poss = s; resetVal = v; resetClock = secs != null ? secs : resetClock; };
+    if (kind === 'shot') {
+      var c = _bbCoord(p);
+      var made = !!p.scoringPlay;
+      var pts = p.scoreValue != null ? Number(p.scoreValue) : (p.pointsAttempted != null ? Number(p.pointsAttempted) : (/three/i.test(p.text) ? 3 : 2));
+      if (c) shots.push({ x: c.x, y: c.y, s: side, m: made ? 1 : 0, p: pts, q: per, id: String(p.id || '') });
+      if (side) poss = side;
+      if (made) reset(other(side), 24);
+      lastShot = p; scLastShot = scNow;
+    } else if (kind === 'ft') {
+      // the last free throw of a trip: made → other team's ball; missed → live rebound
+      var ofm = String(p.text || '').match(/(\d) of (\d)/);
+      var lastOf = !ofm || ofm[1] === ofm[2];
+      if (lastOf && p.scoringPlay) reset(other(side), 24);
+      else if (side) poss = side;
+    } else if (kind === 'dreb') reset(side, 24);
+    else if (kind === 'oreb') reset(side, 14);
+    else if (kind === 'reb') { if (side && side !== poss) reset(side, 24); else if (side) reset(side, 14); }
+    else if (kind === 'to') reset(other(side), 24);
+    else if (kind === 'jump' && side) reset(side, 24);
+    last = p; scLast = scNow;
+  });
+  var mk = function (pl, sc) {
+    if (!pl) return null;
+    var k = _bbPlayKind(pl), c2 = _bbCoord(pl), t = String(pl.text || '');
+    var dm = t.match(/(\d+)-foot/i);
+    var as = t.match(/\(([^)]+?) assists\)/i);
+    var who = t.match(/^(.+?) (makes|misses|made|missed|dunks|lays|hits|blocks|steals|offensive|defensive|bad|lost|traveling|out of)/i);
+    var blk = t.match(/^(.+?) blocks (.+?) ?'s /i);
+    var stl = t.match(/\(([^)]+?) steals\)/i);
+    return {
+      id: String(pl.id || ''), kind: k, text: t, type: (pl.type && pl.type.text) || '', side: sideOf(pl),
+      made: !!pl.scoringPlay, pts: pl.scoreValue != null ? Number(pl.scoreValue) : 0,
+      x: c2 ? c2.x : null, y: c2 ? c2.y : null, ft: dm ? Number(dm[1]) : null, sc: sc,
+      who: who ? _lastName(who[1]) : '', whoId: (pl.participants && pl.participants[0] && pl.participants[0].athlete && pl.participants[0].athlete.id) || null,
+      blocker: blk ? _lastName(blk[1]) : '', shooter: blk ? _lastName(blk[2]) : '', stealer: stl ? _lastName(stl[1]) : '',
+      assist: as ? _lastName(as[1]) : '', period: (pl.period && pl.period.number) || null, clock: (pl.clock && pl.clock.displayValue) || null,
+      as: pl.awayScore != null ? Number(pl.awayScore) : null, hs: pl.homeScore != null ? Number(pl.homeScore) : null
+    };
+  };
+  return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs };
+}
 function _bbShooter(text) {
   var m = String(text || '').match(/^(.+?) (makes|made|dunks|lays|hits)/i);
   return m ? _lastName(m[1]) : '';
@@ -1499,6 +1584,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
         { label: 'Turnovers', names: ['turnovers', 'totalTurnovers', 'TO'], lower: true }
       ]);
       if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH };
+      if (phase !== 'pre') { try { model.court = _bbCourt(data, away, home, league); } catch (e) { model.court = null; } } // v7.46.0
       boxById = _bbBox(data);
     } else if (sport === 'soccer') {
       var sc = _scEvents(data, away, home);

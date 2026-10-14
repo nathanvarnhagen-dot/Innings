@@ -358,11 +358,14 @@ function _gxStripHtml(m) {
     return '<div class="gh-panel gh-strip fbx" style="display:flex;flex-direction:column;gap:10px">' + _fbxResultHtml(m, fx) + field + '</div>';
   }
   if (m.sport === 'basketball') {
-    if (!s || (!s.momA && !s.momH)) return '';
+    // v7.46.0: the live court (arena, takeover, tracking panel) when the
+    // play-by-play is there; the run bar rides underneath it
+    var hasCourt = !!(m.court && typeof _bkxStripHtml === 'function');
+    if (!s || (!s.momA && !s.momH)) return hasCourt ? _bkxStripHtml(m, '') : '';
     var leadT = s.momA > s.momH ? m.away : m.home;
     var hi = Math.max(s.momA, s.momH), lo = Math.min(s.momA, s.momH);
     var mx = Math.max(s.momA, s.momH, 1);
-    return '<div class="gh-panel gh-strip" style="display:flex;flex-direction:column;gap:8px">' +
+    var runHtml = '<div class="bkx-run">' +
       '<div class="gh-row"><span style="font-size:13.5px;font-weight:700">' + (hi - lo >= 6 ? _escapeHtml(leadT.short) + ' on a ' + hi + '–' + lo + ' run' : 'Back and forth · ' + s.momA + '–' + s.momH) + '</span>' +
       '<span class="gh-tag" style="background:' + _ghHexAlpha(leadT.colors.accent, .2) + ';color:' + leadT.colors.accent + '">LAST 8 SCORES</span></div>' +
       '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;width:34px;color:' + m.away.colors.accent + '">' + _escapeHtml(m.away.abbr) + '</span>' +
@@ -370,6 +373,8 @@ function _gxStripHtml(m) {
       '<div class="gh-bar-track"><div class="gh-bar gh-grow-r" style="width:' + Math.max(8, Math.round(s.momH / mx * 90)) + '%;background:' + m.home.colors.accent + ';opacity:' + (s.momH >= s.momA ? 1 : .45) + '"></div></div>' +
       '<span style="font-size:11px;font-weight:800;width:34px;text-align:right;color:' + m.home.colors.accent + '">' + _escapeHtml(m.home.abbr) + '</span></div>' +
       (m.leadChanges != null ? '<div class="gh-sub" style="font-size:11px">' + m.leadChanges + ' lead changes</div>' : '') + '</div>';
+    if (hasCourt) return _bkxStripHtml(m, runHtml);
+    return '<div class="gh-panel gh-strip" style="display:flex;flex-direction:column;gap:8px">' + runHtml + '</div>';
   }
   if (m.sport === 'hockey') {
     s = s || {};
@@ -419,7 +424,8 @@ function _gxLiveHtml(m, st) {
   var prev = st.lastScore;
   var pt = _gxPeriodText(m);
   var mini = _gxMiniText(m);
-  var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
+  var center = (m.sport === 'basketball' && m.court && typeof _bkxCenterHtml === 'function') ? _bkxCenterHtml(m, pt) : // v7.46.0: the shot clock is the main clock
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
     '<span class="gh-num" style="font-size:22px;line-height:1">' + _escapeHtml(pt.big) + '</span>' +
     '<span class="' + (m.sport === 'football' ? _fbxClockClass(m) : '') + '" style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(pt.small) + '</span>' +
     (mini ? '<div class="gh-mini" aria-hidden="true"><span class="gh-runner" style="width:6px;height:6px;border-radius:50%;background:#FF7A6B"></span><span style="font-size:11px;font-weight:700;color:#D9D4FA">' + _escapeHtml(mini) + '</span></div>' : '') + '</div>';
@@ -837,7 +843,7 @@ function _gxHtmlForState(state) {
     st.lastScore = { away: m.away.score, home: m.home.score };
   }
   var modeCls = m.phase === 'live' ? ' gh-m-' + (st.renderMode || 'compact') : (m.phase === 'final' ? ' gh-m-' + (st.finalRenderMode || 'compact') : '');
-  var keep = m.sport === 'football' ? ' gh-keep-strip' : '';
+  var keep = (m.sport === 'football' || (m.sport === 'basketball' && m.court)) ? ' gh-keep-strip' : ''; // v7.46.0: the court stays up like the field
   return '<div class="gh' + (animate ? ' gh-anim' : '') + modeCls + keep + '" data-phase="' + m.phase + '" data-sport="' + m.sport + '">' +
     '<div class="gh-orb" style="' + (m.phase === 'live' ? 'right:-90px;top:-40px' : 'left:-80px;top:-30px') + '"></div>' +
     '<div class="gh-body">' + body + '</div></div>';
@@ -921,7 +927,7 @@ function _refreshBoxScoreLegacy(gamePk) {
   // into a Firestore doc when a game gets attached to a memory, and a
   // full game's plays have no business being stored there.
   var url = _bsModalBoxscoreUrl(sport, gamePk) + (sport === 'mlb' ? '&plays=all' : '');
-  // v7.45.0: nothing newer than what we have → the server says so in a few ms
+  // v7.46.0: nothing newer than what we have → the server says so in a few ms
   var last = window._lastLiveBox, lastTs = (sport === 'mlb' && last && String(last.gamePk) === String(gamePk) && last.gameState === 'Live' && last.feedTs) ? last.feedTs : null;
   if (lastTs) url += '&since=' + encodeURIComponent(lastTs);
   return fetch(url)
