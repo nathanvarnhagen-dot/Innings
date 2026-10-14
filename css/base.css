@@ -18,6 +18,16 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .app{width:100%;height:100%;max-width:430px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;transform:translateZ(0)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.22s ease;background:var(--bg)}
 .screen.active{opacity:1;pointer-events:all}
+/* v7.43.1: iPhone scroll stuck on a screen that fills in after it opens
+   (the game page). The screen fades in on an opacity transition, which
+   gives it a compositing layer for .22s and then drops it — and Safari
+   could fail to rebuild the scroll layer for a panel whose content landed
+   around that moment (taps worked, dragging did nothing). The nudges in
+   navigation.js patched over it; this keeps every scroller on its own
+   layer the whole time so there's no flip to get wrong. Contained
+   overscroll stops the rubber-band from reaching the page behind. */
+.screen{will-change:opacity}
+.scroll,.scroll-bare,.screen [style*="overflow-y:auto"],.screen [style*="overflow-y: auto"],.screen [style*="overflow-y:scroll"]{transform:translateZ(0);will-change:scroll-position;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
 /* v7.17.1: nothing inside a screen you've left can catch a tap — a child
    with pointer-events:auto (the live score bug, sheets, banners) used to
    stay tappable, invisibly, over whatever screen came next */
