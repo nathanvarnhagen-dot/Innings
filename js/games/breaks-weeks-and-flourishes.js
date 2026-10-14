@@ -816,8 +816,40 @@ function _gsFinalHtml(sport, x, i) {
     '<span class="gpo-fr">' + side(x.a) + num(a, a != null && b != null && a < b) + '<span class="gpo-ln" aria-hidden="true"></span><span class="gpo-cup" aria-hidden="true">' + GS_CUP + '</span><span class="gpo-ln" aria-hidden="true"></span>' + num(b, a != null && b != null && b < a) + side(x.b) + '</span>' +
     _gsCapHtml(sport, x) + '</button>';
 }
+// v7.42.0: a league with no game today takes a slim strip instead of the
+// full card — it stays on the page, but doesn't crowd out a league playing
+// tonight. It grows back to the card on a day it plays.
+function _gsPlaysToday(sport, list) {
+  return list.some(function (x) { var g = x.g; return !!g && (_gsGameLive(sport, g) || _gsDayWord(g) === 'TODAY'); });
+}
+function _gsChipHtml(sport, x, i) {
+  var w = _gsWhen(sport, x);
+  var dot = function (t) { var L = _gsLook(sport, t); return '<i style="background:' + (L.accent || L.bg) + '"></i>'; };
+  var ab = function (t, dim) { return '<span class="ab' + (dim ? ' dn' : '') + '">' + _escapeHtml(String(t.abbr || t.name || '').toUpperCase().slice(0, 4)) + '</span>'; };
+  var a, b, mid;
+  if (x.single) { a = _gsNum(x.a.score); b = _gsNum(x.b.score); mid = a == null || b == null ? '<span class="sc vs">vs</span>' : '<span class="sc">' + a + '\u2013' + b + '</span>'; }
+  else { a = _gsNum(x.a.wins) || 0; b = _gsNum(x.b.wins) || 0; mid = '<span class="sc">' + a + '\u2013' + b + '</span>'; }
+  return '<button class="gpo-ch" onclick="gsSeriesOpen(\'' + sport + '\',' + i + ')" aria-label="' + _escapeHtml(_gsSay(sport, x)) + '">' +
+    dot(x.a) + ab(x.a, a != null && b != null && a < b) + mid + ab(x.b, a != null && b != null && b < a) + dot(x.b) +
+    (w.when ? '<span class="w' + w.cls + '">' + _escapeHtml(w.when) + '</span>' : '') + '</button>';
+}
+function _gsStripHtml(s, list, p) {
+  var idx = list.map(function (x, i) { return { x: x, i: i }; });
+  var rank = function (e) { var g = e.x.g || {}; return e.x.over ? 9e15 : (Date.parse(g.t) || 8e15); };
+  idx.sort(function (a, b) { return (rank(a) - rank(b)) || (a.i - b.i); });
+  var show = idx.slice(0, 3), more = idx.length - show.length;
+  return '<div class="gpo gpo-sm">' +
+    '<button class="gpo-hd" onclick="pickGamesSport(\'' + s.key + '\')" aria-label="' + _escapeHtml(s.name + ': ' + (p.label || 'Playoffs') + '. All games') + '">' +
+      '<span class="em" aria-hidden="true">' + s.emoji + '</span><span class="tx"><span class="nm">' + _escapeHtml(s.name) + '</span><span class="rd2">' + _escapeHtml(p.label || 'Playoffs') + '</span></span>' +
+    '</button>' +
+    '<div class="gpo-chips">' + show.map(function (e) { return _gsChipHtml(s.key, e.x, e.i); }).join('') +
+      (more > 0 ? '<button class="gpo-more" onclick="pickGamesSport(\'' + s.key + '\')">+' + more + ' more</button>' : '') + '</div>' +
+    '<svg class="chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F2C869" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>' +
+  '</div>';
+}
 function _gsCardHtml(s, list) {
   var P = _gsPhaseState(), p = P.by[s.key] || {};
+  if (!_gsPlaysToday(s.key, list)) return _gsStripHtml(s, list, p);
   var idx = list.map(function (x, i) { return { x: x, i: i }; });
   var body = '';
   var fin = idx.filter(function (e) { return e.x.final; });

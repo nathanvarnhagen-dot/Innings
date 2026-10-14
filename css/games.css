@@ -311,6 +311,26 @@
 .gpo-t.wide .gpo-bd.sm{font-size:11px}
 .gpo-t.wide .gpo-sc{font-size:30px}
 .gpo-more{align-self:center;border:0;background:none;padding:2px 8px;font-family:inherit;font-size:12.5px;font-weight:700;color:#F2C869;cursor:pointer}
+/* no game today: the slim strip (v7.42.0) */
+.gpo.gpo-sm{flex-direction:row;align-items:center;gap:10px;padding:10px 10px 10px 14px}
+.gpo-sm .gpo-hd{width:auto;flex:0 0 auto;min-height:0;padding:0;gap:10px}
+.gpo-sm .gpo-hd .em{font-size:24px}
+.gpo-sm .gpo-hd .tx{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.gpo-sm .gpo-hd .rd2{font-size:11.5px;font-weight:800;color:#F2C869;white-space:nowrap}
+.gpo-chips{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.gpo-ch{max-width:100%;box-sizing:border-box;height:28px;border:0;border-radius:10px;background:rgba(13,8,32,.6);color:#fff;padding:0 9px;font-family:'Barlow Condensed',sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gpo-ch i{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.gpo-ch .ab{font-size:15px;font-weight:700;letter-spacing:.04em}
+.gpo-ch .ab.dn{color:rgba(245,243,255,.72)}
+.gpo-ch .sc{font-size:17px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gpo-ch .sc.vs{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,243,255,.6)}
+.gpo-ch .w{margin-left:4px;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#C7C0E8}
+.gpo-ch .w.td{color:#F2C869}
+.gpo-ch .w.lv{color:#9be8ac}
+.gpo-sm .gpo-more{align-self:flex-end;padding:0 4px;font-size:12px}
+.gpo-sm .chev{flex-shrink:0}
+.gpo-ch:focus-visible{outline:2px solid #F2C869;outline-offset:2px}
+@media(max-width:340px){.gpo-ch .w{display:none}}
 .gpo-hd:focus-visible,.gpo-t:focus-visible,.gpo-more:focus-visible{outline:2px solid #F2C869;outline-offset:2px}
 @media(max-width:374px){.gpo-to{white-space:normal;width:min-content;text-align:center}}
 @media(max-width:340px){.gpo-pr .gpo-t{flex-basis:112px}.gpo-bd{width:28px;height:28px}.gpo-sc{font-size:23px}.gpo-cup{width:30px;height:30px}.gpo-cup svg{width:22px;height:22px}.gpo-to{font-size:11px;letter-spacing:.04em}}
