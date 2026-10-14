@@ -6,7 +6,11 @@
 // no ball in play (strikeout, walk) stay on the pitch view.
 // Everything is timed from when the play started, so the cheat sheet
 // re-rendering every 15 seconds picks the animation up where it was.
-var PA = { SW: 2.4, T0: 3.4, END: 14, THROW: .6, LEG: .7 };
+var PA = { SW: 2.4, T0: 3.4, END: 14, THROW: .6, LEG: .7, HOLD: 5 };
+// v7.43.0: HOLD — a ball in play usually reaches the app a few seconds
+// before Statcast's hit data does. Rather than draw the play from nothing
+// and never fix it, the square waits up to HOLD seconds for the data, and
+// a play already running is corrected in place when better data arrives.
 window._pa = { gamePk: null, seen: null, startAt: 0, play: null, box: null };
 var PA_H = [250, 366], PA_B = { '1B': [330, 286], '2B': [250, 206], '3B': [170, 286], 'score': [250, 366], 'HM': [250, 366], '4B': [250, 366] };
 // v7.8.7: base code → words for play text. MLB reports home as '4B' (or 'HM'/'score'); base 4 reads as "home".
@@ -40,7 +44,35 @@ function _paNote(box) {
   if (newest) { s.play = Object.assign({ kind: 'action' }, newest, { atBatIndex: ps.atBatIndex + ':a' + newest.index }); s.startAt = Date.now(); s.seq = false; s.keep = false; }
   if (!lp || lp.atBatIndex == null) { if (firstLoad) { s.gamePk = pk; s.seen = null; } return; }
   if (s.gamePk !== pk) { s.gamePk = pk; s.seen = lp.atBatIndex; s.play = lp; s.startAt = 0; return; }
-  if (lp.atBatIndex !== s.seen) { var wasNull = s.seen == null; s.seen = lp.atBatIndex; if (!wasNull || !firstLoad) { s.play = lp; s.startAt = Date.now(); s.seq = false; s.keep = false; } }
+  if (lp.atBatIndex !== s.seen) {
+    var wasNull = s.seen == null; s.seen = lp.atBatIndex;
+    if (!wasNull || !firstLoad) {
+      s.play = lp; s.startAt = Date.now(); s.seq = false; s.keep = false;
+      // v7.43.0: ball in play, hit data not here yet — give it a moment
+      if (lp.hitPending && !lp.hit) s.startAt = Date.now() + PA.HOLD * 1000;
+    }
+  } else if (s.play && s.startAt && !s.play.kind && String(s.play.atBatIndex) === String(lp.atBatIndex) && _paChanged(s.play, lp)) {
+    // v7.43.0: the same play, better data (hit coordinates landed, the
+    // scorer changed a hit to an error, a runner's out was added): swap it
+    // in and redraw. Everything is timed from startAt, so the redraw picks
+    // up at the same point with the right ball path.
+    var hadNoHit = !s.play.hit && !!lp.hit;
+    s.play = lp;
+    if (hadNoHit && Date.now() < s.startAt) s.startAt = Date.now(); // still waiting: go now
+    setTimeout(function () { var sl = document.getElementById('gh-pa-slot'); if (sl && window._pa.play === lp) try { _paFill(); } catch (e) { console.error('[play anim refill]', e); } }, 0);
+  }
+}
+// v7.43.0: does a refreshed copy of the same play change how it's drawn?
+function _paChanged(a, b) {
+  if (!a || !b) return false;
+  var ha = a.hit, hb = b.hit;
+  if (!ha !== !hb) return true;
+  if (ha && hb && (ha.x !== hb.x || ha.y !== hb.y || ha.distance !== hb.distance || ha.trajectory !== hb.trajectory)) return true;
+  if ((a.eventType || '') !== (b.eventType || '') || (a.outs || 0) !== (b.outs || 0) || !!a.droppedK !== !!b.droppedK) return true;
+  if ((a.fielders || []).join('-') !== (b.fielders || []).join('-')) return true;
+  var rk = function (r) { return (r.batter ? 'B' : r.start || '') + '>' + (r.end || '') + (r.out ? 'x' + (r.outBase || '') : ''); };
+  if ((a.runners || []).map(rk).join(',') !== (b.runners || []).map(rk).join(',')) return true;
+  return (a.description || '') !== (b.description || '');
 }
 function _paActive() {
   var s = window._pa;
@@ -161,16 +193,48 @@ function _paWallR(deg) {
   }
   return best;
 }
+// v7.43.0: the fielder the play text names ("singles on a line drive to
+// center fielder …", "flies out to right fielder …") — the fallback when the
+// hit coordinates aren't in yet, and the only direction a clean hit has
+// then (no fielder gets a credit on a hit).
+var _PA_DESC_POS = { pitcher: '1', catcher: '2', 'first baseman': '3', 'second baseman': '4', 'third baseman': '5', shortstop: '6', 'left fielder': '7', 'center fielder': '8', 'right fielder': '9' };
+var _PA_HR_DEG = { 'left': -36, 'left center': -18, 'center': 0, 'right center': 18, 'right': 36 };
+function _paDescPos(lp) {
+  var d = String(lp.description || lp.desc || '').toLowerCase().split(/\bdeflected\b/)[0];
+  var m = d.match(/\b(?:ball|drive|fly|bunt|liner|pop ?up|grounder|chopper)\b[^,.]*?\bto (pitcher|catcher|first baseman|second baseman|third baseman|shortstop|left fielder|center fielder|right fielder)\b/) ||
+    d.match(/\b(?:singles|doubles|triples)\b[^,.]*?\bto (pitcher|catcher|first baseman|second baseman|third baseman|shortstop|left fielder|center fielder|right fielder)\b/);
+  return m ? _PA_DESC_POS[m[1]] : null;
+}
+function _paDescHrDeg(lp) {
+  var m = String(lp.description || lp.desc || '').toLowerCase().match(/\bto (left center|right center|left|center|right) field\b/);
+  return m ? _PA_HR_DEG[m[1]] : null;
+}
 function _paLanding(lp) {
   var h = lp.hit;
-  if (!h || h.x == null || h.y == null) return null;
   var t = lp.eventType || '';
-  var dx = h.x - 125.42, dy = 198.27 - h.y;
-  var deg = Math.atan2(dx, dy) * 180 / Math.PI;
+  var dx, dy, deg, coordFt, est = false;
+  if (h && h.x != null && h.y != null) {
+    dx = h.x - 125.42; dy = 198.27 - h.y;
+    deg = Math.atan2(dx, dy) * 180 / Math.PI;
+    coordFt = Math.sqrt(dx * dx + dy * dy) * 2.5;
+  } else {
+    // v7.43.0: no coordinates (yet) — place it by the fielder the play text
+    // names, or the field a homer went to; nothing at all → no landing
+    est = true;
+    // an out's first fielder beats the play text ("grounds out, shortstop X to first baseman Y" names first base too)
+    var f0 = (lp.fielders || [])[0], isHit = /^(single|double|triple)$/.test(t);
+    var hd = t === 'home_run' ? _paDescHrDeg(lp) : null, dp = (!isHit && f0 && PA_F[f0]) ? f0 : _paDescPos(lp);
+    if (hd != null) { deg = hd; coordFt = (h && h.distance) || 400; }
+    else if (dp && PA_F[dp]) {
+      var fp = PA_F[dp], fr = Math.hypot(fp[0] - PA_H[0], fp[1] - PA_H[1]);
+      deg = Math.atan2(fp[0] - PA_H[0], PA_H[1] - fp[1]) * 180 / Math.PI;
+      // an outfielder's spot is ~290 ft out; a double or triple went past him
+      coordFt = fr / _paWallR(deg) * (330 + 70 * Math.cos(2 * deg * Math.PI / 180)) * (dp >= '7' && /^(double|triple)$/.test(t) ? 1.18 : 1);
+    } else return null;
+  }
   var fairForSure = /^(single|double|triple|home_run|field_error)$/.test(t);
   if (fairForSure) deg = Math.max(-43, Math.min(43, deg));
-  var coordFt = Math.sqrt(dx * dx + dy * dy) * 2.5;
-  var feet = t === 'home_run' ? (h.distance || coordFt) : coordFt;
+  var feet = t === 'home_run' ? ((h && h.distance) || coordFt) : coordFt;
   var fence = 330 + 70 * Math.cos(2 * deg * Math.PI / 180);
   var wallR = _paWallR(deg);
   var r = feet / fence * wallR;
@@ -179,7 +243,7 @@ function _paLanding(lp) {
   var desc = String(lp.description || lp.desc || '');
   if (/^(single|double|triple|field_error)$/.test(t) && /(left|center|right) fielder/i.test(desc) && r < 190) r = 190;
   var rad = deg * Math.PI / 180;
-  return { x: PA_H[0] + r * Math.sin(rad), y: PA_H[1] - r * Math.cos(rad), ang: deg, feet: Math.round(feet) };
+  return { x: PA_H[0] + r * Math.sin(rad), y: PA_H[1] - r * Math.cos(rad), ang: deg, feet: Math.round(feet), est: est };
 }
 function _paDir(deg) {
   if (deg < -30) return 'left'; if (deg < -12) return 'left-center'; if (deg <= 12) return 'center'; if (deg <= 30) return 'right-center'; return 'right';
@@ -649,6 +713,14 @@ function _paFieldSvg(lp, land, E) {
     bounceAt = Math.max(.25, Math.min(.8, bR / reach));
   }
   var flight = droppedK ? .55 : hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
+  // v7.43.0: a ball in the air flies for as long as its launch says — a
+  // pop-up hangs, a line drive is there in a blink (Statcast hang time
+  // from exit velo + launch angle, at the square's pace)
+  var hh = lp.hit || {};
+  if ((air || hr) && !droppedK && hh.speed > 0 && hh.angle != null && hh.angle > 4) {
+    var hang = 2 * hh.speed * 1.467 * Math.sin(hh.angle * Math.PI / 180) / 32.2 * .75;
+    flight = Math.max(hr ? 1.3 : .7, Math.min(2.4, hang * .45));
+  }
   var t1 = T0 + flight;
   var noBall = !lp.hit && /^(walk|intent_walk|hit_by_pitch|catcher_interf)$/.test(t);
   if (noBall) t1 = T0;

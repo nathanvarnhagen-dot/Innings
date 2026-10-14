@@ -1496,8 +1496,13 @@ function _playAnimSummary(p, prev) {
   });
   var lastPd = null;
   for (var i = pitchEvs.length - 1; i >= 0; i--) { if (pitchEvs[i].pitchData) { lastPd = pitchEvs[i].pitchData; break; } }
-  var hit = null;
-  for (var j = evs.length - 1; j >= 0; j--) { if (evs[j] && evs[j].hitData) { hit = evs[j].hitData; break; } }
+  // v7.43.0: hit data only from the pitch that was put in play (the last
+  // one). Statcast tracks foul balls too, and when the in-play pitch's data
+  // hadn't landed yet a foul's coordinates were drawn as the play. A ball
+  // in play whose data hasn't arrived is flagged so the square can wait.
+  var hit = null, inPlayEv = pitchEvs.length ? pitchEvs[pitchEvs.length - 1] : null;
+  if (inPlayEv && inPlayEv.hitData) hit = inPlayEv.hitData;
+  var hitPending = !hit && !!(inPlayEv && inPlayEv.details && inPlayEv.details.isInPlay);
   // v6.1.0: things that happened between pitches of this at-bat (a caught
   // stealing, a wild pitch…) are their own scenes, not part of the final
   // play. Their runners and fielders are kept out of the play below, and
@@ -1586,6 +1591,7 @@ function _playAnimSummary(p, prev) {
     hit: hit ? { x: hit.coordinates && hit.coordinates.coordX != null ? hit.coordinates.coordX : null, y: hit.coordinates && hit.coordinates.coordY != null ? hit.coordinates.coordY : null,
       trajectory: hit.trajectory || null, distance: hit.totalDistance != null ? Math.round(hit.totalDistance) : null, speed: hit.launchSpeed != null ? Math.round(hit.launchSpeed * 10) / 10 : null,
       angle: hit.launchAngle != null ? Math.round(hit.launchAngle) : null } : null,
+    hitPending: hitPending, // v7.43.0
     runners: order.map(function (id) { return byRunner[id]; }),
     pre: pre,
     fielders: fielders,
