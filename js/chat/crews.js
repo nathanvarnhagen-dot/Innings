@@ -77,6 +77,8 @@ function _crwPaintFriends() {
 
 // ── make / edit
 function crwNew() { _crwEditOpen(null); }
+// v7.44.1: from a game's Chat tab — Create makes the crew and starts it on this game right away
+function crwNewHere() { _crwEditOpen(null); if (window._crews.edit) window._crews.edit.startHere = !!window._activeBrowseGame; }
 function crwOpen(id) { _crwEditOpen(_crwFind(id)); }
 function _crwEditOpen(c) {
   var me = _crwMe();
@@ -112,13 +114,13 @@ function _crwEditPaint() {
   sheet.innerHTML = '<div class="crw-box" role="dialog" aria-label="' + (E.id ? 'Edit crew' : 'New crew') + '">' +
     '<div class="crw-grab"></div>' +
     '<div class="crw-top"><button type="button" class="crw-x" onclick="crwClose()">Cancel</button><b>' + (E.id ? (E.own ? 'Edit crew' : esc(E.name)) : 'New crew') + '</b>' +
-      (E.own ? '<button type="button" class="crw-save" onclick="crwSave()"' + (E.name.trim() && n ? '' : ' disabled') + '>' + (E.id ? 'Save' : 'Create') + '</button>' : '<button type="button" class="crw-x" onclick="crwLeave()">Leave</button>') + '</div>' +
+      (E.own ? '<button type="button" class="crw-save" onclick="crwSave()"' + (E.name.trim() && n ? '' : ' disabled') + '>' + (E.id ? 'Save' : E.startHere ? 'Create & start' : 'Create') + '</button>' : '<button type="button" class="crw-x" onclick="crwLeave()">Leave</button>') + '</div>' +
     '<div class="crw-body">' +
       (E.own ? '<div class="crw-lab">Name</div><input id="crw-name" class="crw-in" placeholder="Baseball Nerds" maxlength="32" value="' + esc(E.name) + '" oninput="window._crews.edit.name=this.value;_crwEditSaveBtn()">' : '') +
       '<div class="crw-lab">' + (E.own ? 'Who’s in · ' + n + (n >= CREW_MAX ? ' (max)' : '') : 'In this crew') + '</div>' +
       (E.own && uids.length > 8 ? '<input class="crw-in sm" placeholder="Search friends" value="' + esc(E.q) + '" oninput="window._crews.edit.q=this.value;_crwEditPaint()">' : '') +
       '<div class="crw-list">' + (list || '<div class="crw-note">' + (Object.keys(friends).length ? 'No one matches.' : 'Add friends first — a crew is made of them.') + '</div>') + '</div>' +
-      '<div class="crw-note">A crew is a list, not a chat. Bring it into any game from the Chat tab and everyone in it gets a notification. They see the chat from the moment they join, not before.</div>' +
+      '<div class="crw-note">' + (E.startHere ? 'Create & start opens this crew’s chat on this game: everyone in it gets a notification, and they see the chat from the moment they join.' : 'A crew is a list, not a chat. Bring it into any game from the Chat tab and everyone in it gets a notification. They see the chat from the moment they join, not before.') + '</div>' +
       (E.id && E.own ? '<button type="button" class="crw-del" onclick="crwDelete()">Delete crew</button>' : '') +
     '</div></div>';
 }
@@ -139,10 +141,11 @@ function crwSave() {
   var ref = E.id ? window.db.collection('crews').doc(E.id) : window.db.collection('crews').doc();
   var p = E.id ? ref.update(doc) : ref.set(Object.assign({ createdAt: Date.now() }, doc));
   var btn = document.querySelector('#crw-sheet .crw-save'); if (btn) btn.disabled = true;
-  var isNew = !E.id, added = uids.filter(function (u) { return !(E.c && (E.c.members || []).indexOf(u) >= 0); });
+  var isNew = !E.id, added = uids.filter(function (u) { return !(E.c && (E.c.members || []).indexOf(u) >= 0); }), startHere = !!E.startHere;
   p.then(function () {
     crwClose();
-    _crwToast(isNew ? name + ' · bring it into any game from Chat' : 'Saved');
+    if (startHere) { _crwStartCrew(Object.assign({ id: ref.id }, doc)); }
+    else _crwToast(isNew ? name + ' · bring it into any game from Chat' : 'Saved');
     // the people you added hear about it
     if (added.length) _crwNotify(added, 'crew_added', { crewId: ref.id, crewName: name });
   }, function (err) { if (btn) btn.disabled = false; console.error('[crews] save', err); _crwToast('Couldn’t save — ' + ((err && err.code) || 'try again')); });
@@ -196,7 +199,7 @@ function _crwPaintChat() {
   var g = window._activeBrowseGame, S = typeof _gcrState === 'function' ? _gcrState() : null;
   var mine = S && S.mine, esc = _crwEsc, C = window._crews;
   // in a chat already (crew or not): the tiles step aside; the crew's name sits in the line at the top
-  if (!g || !me || !(S && S.v) || mine || !C.list.length) { host.innerHTML = ''; host.style.display = 'none'; return; }
+  if (!g || !me || !(S && S.v) || mine || S.v.mode !== 'rooms') { host.innerHTML = ''; host.style.display = 'none'; return; }
   host.style.display = '';
   var sport = g.sport || 'mlb';
   var rooms = (S.v.rooms || []);
@@ -210,11 +213,13 @@ function _crwPaintChat() {
     else if (own) btn = '<button type="button" class="crw-go" onclick="crwStart(\'' + esc(c.id) + '\')"' + (C.starting[c.id] ? ' disabled' : '') + '>' + (C.starting[c.id] ? 'Starting…' : 'Start') + '</button>';
     else btn = '<span class="crw-wait">' + esc(_crwFirst((c.names || {})[c.owner])) + ' starts it</span>';
     return '<div class="crw-tile' + (going ? ' live' : '') + '"><div class="crw-faces">' + _crwFaces(c, 3) + '</div><div class="n">' + esc(c.name) + '</div><div class="s">' + sub + '</div>' + btn + '</div>';
-  }).join('') + '</div><div class="crw-ws">Start a crew and everyone in it gets a notification. They see the chat from the moment they join.</div>';
+  }).join('') + '<button type="button" class="crw-tile crw-new" onclick="crwNewHere()"><span class="plus">+</span><div class="n">New crew</div><div class="s">Pick friends, start it here</div></button>' +
+    '</div><div class="crw-ws">' + (C.list.length ? 'Start a crew and everyone in it gets a notification. They see the chat from the moment they join.' : 'A crew is a group of friends you can bring into any game’s chat with one tap.') + '</div>';
 }
 // Start the crew on this game: a private chat you run, an invite for every member, and the alerts
-function crwStart(id) {
-  var c = _crwFind(id), me = _crwMe(), g = window._activeBrowseGame, key = typeof _gcrKey === 'function' ? _gcrKey() : '';
+function crwStart(id) { var c = _crwFind(id); if (c) _crwStartCrew(c); }
+function _crwStartCrew(c) {
+  var id = c && c.id, me = _crwMe(), g = window._activeBrowseGame, key = typeof _gcrKey === 'function' ? _gcrKey() : '';
   var st = key && typeof _gcrS === 'function' ? _gcrS(key) : null, v = st && st.view, C = window._crews;
   if (!c || !me || !g || !st || !window.db) { _crwToast('Sign in to chat'); return; }
   if (c.owner !== me) return;
