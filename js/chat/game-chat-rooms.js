@@ -348,6 +348,7 @@ function _gcrListenRoom(key, rid, since) {
   if (st.runsub) { try { st.runsub(); } catch (e) {} st.runsub = null; }
   st.listenRid = tag;
   if (!rid || !window.db) return;
+  try {
   st.runsub = window.db.collection('gameChatRooms').doc(rid).collection('messages').where('ts', '>=', since || 0).limit(600).onSnapshot(function (snap) {
     var arr = [];
     snap.forEach(function (doc) { arr.push(Object.assign({ _id: doc.id, _col: 'gameChatRooms/' + rid + '/messages' }, doc.data())); });
@@ -356,9 +357,10 @@ function _gcrListenRoom(key, rid, since) {
   }, function (err) {
     console.error('[game chat] room messages', err);
     // v7.46.3: say so on screen — a read that's refused looks exactly like "nothing happens"
-    if (typeof ib_toast === 'function') ib_toast('Chat can’t load (room messages) — ' + ((err && err.code) || err));
+    _gcrSay('Chat can’t load (room messages) — ' + ((err && err.code) || err) + ' · ' + ((err && err.message) || '').slice(0, 120));
     if (st.listenRid === tag) { st.listenRid = null; st.runsub = null; }
   });
+  } catch (e) { st.listenRid = null; st.runsub = null; _gcrSay('Chat listen threw — ' + (e && e.message ? e.message : e) + ' · rid ' + rid + ' · since ' + JSON.stringify(since)); }
 }
 function _gcrPublish(key) {
   var st = _gcrS(key), v = _gcrView(key);
@@ -367,7 +369,7 @@ function _gcrPublish(key) {
   window._gameChatRaw[key] = vis;
   if (typeof _gdlChatFilter === 'function') vis = _gdlChatFilter(key, vis);
   window._gameChatMsgs[key] = vis;
-  if (v.mode === 'rooms') _gcrEnsure(key, v);
+  if (v.mode === 'rooms') { try { _gcrEnsure(key, v); } catch (e) { _gcrSay('Chat setup threw — ' + (e && e.message ? e.message : e) + ' · ' + String(e && e.stack || '').split('\n').slice(0, 2).join(' | ').slice(0, 160)); } }
   if (_gcrKey() === key && window._activeBrowseGame) st.game = window._activeBrowseGame;
   // someone in your chat @'d a person who's now asking in: that was the invitation, so they're let
   // straight in — for any game you've had open, not just the one on screen (v7.37.0)
@@ -459,12 +461,15 @@ function _gcrCheckLanded(key, rid, id) {
     var shown = ((window._gameChatMsgs || {})[key] || []).some(function (m) { return m._id === id; });
     if (have && shown) return;
     var mine = v && v.mine, short = function (x) { return x ? String(x).slice(-14) : 'none'; };
+    if (!st.listenRid && mine && mine.kind === 'new') _gcrListenRoom(key, mine.id, (mine.joined && mine.joined[_gcrMe()]) || 0); // nothing listening: try again now, so the reason shows
     var line = 'Sent but not shown · wrote ' + short(rid) + ' · listening ' + short(st.listenRid) + ' · mine ' + short(mine && mine.id) + (mine ? '/' + mine.kind : '') +
       ' · got ' + (have ? 'yes' : 'no') + ' · mode ' + (v ? v.mode : 'none') + ' · room msgs ' + (st.rmsgs[rid] || []).length + ' · visible ' + (((window._gameChatMsgs || {})[key]) || []).length + ' · key ' + key + '/' + _gcrKey();
     console.warn('[game chat] ' + line);
     if (typeof ib_toast === 'function') { ib_toast(line); var t = document.getElementById('ib-toast'); if (t) { clearTimeout(t._t); t._t = setTimeout(function () { t.style.display = 'none'; }, 15000); } }
   }, 4000);
 }
+// v7.47.2: a toast that stays up long enough to read a stack line on a phone
+function _gcrSay(msg) { console.warn('[game chat] ' + msg); if (typeof ib_toast !== 'function') return; ib_toast(msg); var t = document.getElementById('ib-toast'); if (t) { clearTimeout(t._t); t._t = setTimeout(function () { t.style.display = 'none'; }, 15000); } }
 function _gcrChatShowing() {
   var scr = document.getElementById('screen-game');
   if (!scr || !scr.classList.contains('active') || document.hidden) return false;
