@@ -449,9 +449,22 @@ _gcAdd = function (data) {
   var key = _gcrKey(), st = key ? _gcrS(key) : null, v = st && st.view;
   if (!v || v.mode !== 'rooms') return window.db.collection('gameChats').add(data);
   var p = v.mine && v.mine.kind === 'new' ? Promise.resolve(v.mine.id) : v.mine ? _gcrMigrate(key, v.mine.id) : _gcrNewRoom(key);
-  return p.then(function (rid) { return window.db.collection('gameChatRooms').doc(rid).collection('messages').add(data); })
+  return p.then(function (rid) { return window.db.collection('gameChatRooms').doc(rid).collection('messages').add(data).then(function (ref) { _gcrCheckLanded(key, rid, ref.id); return ref; }); })
     .catch(function (err) { console.error('[game chat] send to room', err); if (typeof ib_toast === 'function') ib_toast('Couldn’t send (room) — ' + ((err && err.code) || err)); throw err; });
 };
+// v7.47.1: a sent message that hasn't shown up after a few seconds says why (what the app is listening to vs where it wrote)
+function _gcrCheckLanded(key, rid, id) {
+  setTimeout(function () {
+    var st = _gcrS(key), v = st.view, have = (st.rmsgs[rid] || []).some(function (m) { return m._id === id; });
+    var shown = ((window._gameChatMsgs || {})[key] || []).some(function (m) { return m._id === id; });
+    if (have && shown) return;
+    var mine = v && v.mine, short = function (x) { return x ? String(x).slice(-14) : 'none'; };
+    var line = 'Sent but not shown · wrote ' + short(rid) + ' · listening ' + short(st.listenRid) + ' · mine ' + short(mine && mine.id) + (mine ? '/' + mine.kind : '') +
+      ' · got ' + (have ? 'yes' : 'no') + ' · mode ' + (v ? v.mode : 'none') + ' · room msgs ' + (st.rmsgs[rid] || []).length + ' · visible ' + (((window._gameChatMsgs || {})[key]) || []).length + ' · key ' + key + '/' + _gcrKey();
+    console.warn('[game chat] ' + line);
+    if (typeof ib_toast === 'function') { ib_toast(line); var t = document.getElementById('ib-toast'); if (t) { clearTimeout(t._t); t._t = setTimeout(function () { t.style.display = 'none'; }, 15000); } }
+  }, 4000);
+}
 function _gcrChatShowing() {
   var scr = document.getElementById('screen-game');
   if (!scr || !scr.classList.contains('active') || document.hidden) return false;
