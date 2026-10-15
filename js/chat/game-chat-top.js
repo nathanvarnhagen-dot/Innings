@@ -18,10 +18,19 @@ function _gctHost() {
   }
   return host;
 }
-function _gctPeople() {
-  var g = window._activeBrowseGame, W = window._gameWatchers;
-  if (!g || !W || W.gamePk != g.gamePk) return [];
-  return W.people || [];
+// friends on this game: anyone marked watching/attending, plus any friend in a chat
+// on it (v7.48.1 — a friend who started a chat is on the game even if he never tapped Watching)
+function _gctPeople(v) {
+  var g = window._activeBrowseGame, W = window._gameWatchers, out = [], seen = {}, me = _gcrMe();
+  if (g && W && W.gamePk == g.gamePk) (W.people || []).forEach(function (p) { if (!seen[p.uid]) { seen[p.uid] = 1; out.push(p); } });
+  var friends = {}; (window._myFriendUids || []).forEach(function (u) { friends[u] = 1; });
+  ((v && v.rooms) || []).forEach(function (R) {
+    Object.keys(R.members || {}).forEach(function (u) {
+      if (u === me || seen[u] || !friends[u]) return;
+      seen[u] = 1; out.push({ uid: u, name: R.members[u] || 'A friend', first: _gcrFirst(R.members[u]) });
+    });
+  });
+  return out;
 }
 // you invited them to this chat, and they haven't passed since
 function _gctInvited(R, uid, me) {
@@ -41,7 +50,7 @@ function _gctPaint() {
   if (!S || !me || !S.v) { host.innerHTML = ''; host.style.display = 'none'; return; }
   var v = S.v, mine = S.mine;
   var others = (v.rooms || []).filter(function (R) { return R !== mine && R.members[me] && Object.keys(R.members).length > 1; });
-  var people = _gctPeople().filter(function (p) { return p.uid !== me && !(mine && mine.members[p.uid]); });
+  var people = _gctPeople(v).filter(function (p) { return p.uid !== me && !(mine && mine.members[p.uid]); });
   if (!others.length && !people.length) { host.innerHTML = ''; host.style.display = 'none'; return; }
   host.style.display = '';
   var tiles = [];
@@ -54,7 +63,7 @@ function _gctPaint() {
   });
   people.forEach(function (p) {
     var R = _gctRoomOf(v, p.uid), uid = esc(p.uid);
-    var where = R ? (R.crewName || _gcrFirst(R.members[_gcrModOf(R)]) + '’s chat') : null;
+    var where = R ? (R.crewName || _gcrFirst(R.members[_gcrModOf(R)]) + '’s chat') + (R.asks && R.asks[me] ? ' · you asked in' : '') : null;
     var inv = mine && _gctInvited(mine, p.uid, me), asked = !!(mine && mine.asks && mine.asks[p.uid]);
     var canInvite = mine && !inv && !asked;
     var act = !mine ? '' : asked ? '<span class="gct-tag">Wants in</span>' : inv ? '<span class="gct-tag">Invited</span>' : '<span class="gct-go">Invite</span>';
