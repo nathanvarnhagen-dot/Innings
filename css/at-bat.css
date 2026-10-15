@@ -174,3 +174,25 @@ button.gst-pc+button.gst-pc{border-left:.5px solid rgba(255,255,255,.07)}
 .gst-fl .gst-gg{display:inline-flex;align-items:center;gap:1px;margin-left:3px;vertical-align:-2px}
 .gst-fl .gst-gg svg{position:static;flex-shrink:0;width:12px;height:12px}
 .gst-fl .gst-gg b{color:#E8C766;font-size:11px;font-weight:700}
+
+/* ═══ v7.47.0 · HEATER — a top-5% velo pitch lights the readout (js/games/at-bat-stage.js: _gstHeatHtml) ═══ */
+.gst-heat{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
+.gst-heat-fx{position:absolute;inset:0;overflow:visible}
+@keyframes gstHeatRim{to{stroke-dashoffset:0}}
+@keyframes gstHeatOut{to{opacity:0}}
+@keyframes gstHeatGlow{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+@keyframes gstHeatEmber{0%{transform:translate(0,0);opacity:0}12%{opacity:1}100%{transform:translate(var(--ex),-64px);opacity:0}}
+@keyframes gstHeatUp{0%{transform:scale(.92);opacity:0;filter:blur(6px)}100%{transform:scale(1);opacity:1;filter:blur(0)}}
+@keyframes gstHeatDown{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx,-40px),var(--dy,-40px)) scale(.3);opacity:0}}
+@keyframes gstHeatWheel{0%{box-shadow:inset 0 2px 4px rgba(0,0,0,.9),0 0 0 .5px rgba(255,255,255,.09)}35%{box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 1px #FFB347,0 0 18px 4px rgba(255,94,58,.75)}100%{box-shadow:inset 0 2px 4px rgba(0,0,0,.9),0 0 0 .5px rgba(255,255,255,.09)}}
+@keyframes gstHeatDigit{0%{color:#FFD58A}35%{color:#FFFFFF;text-shadow:0 0 14px #FFB347,0 0 4px #fff}100%{color:#FFD58A;text-shadow:0 0 10px rgba(242,200,105,.45)}}
+.gst-heat .hr{stroke-dasharray:100;stroke-dashoffset:100;animation:gstHeatRim 1s cubic-bezier(.4,0,.2,1) both,gstHeatOut .6s linear forwards}
+.gst-heat .hg{opacity:0;animation:gstHeatGlow 2.2s ease-in-out both}
+.gst-heat .he{transform-box:fill-box;transform-origin:center;animation:gstHeatEmber 2s cubic-bezier(.2,.6,.4,1) both}
+.gst-heat-big{position:absolute;right:10px;top:56px;transform-origin:top right;display:flex;flex-direction:column;align-items:flex-end;opacity:0;filter:url(#gstHeatHaze);animation:gstHeatUp .8s cubic-bezier(.2,.8,.2,1) both,gstHeatDown .55s cubic-bezier(.6,0,.3,1) forwards}
+.gst-heat-big b{font-family:'Barlow Condensed',sans-serif;font-size:54px;font-weight:700;line-height:1;color:#FFF4DD;font-variant-numeric:tabular-nums;letter-spacing:-.01em;text-shadow:0 2px 18px rgba(9,6,24,.8)}
+.gst-heat-big b small{font-size:14px;color:#E8B86A;margin-left:4px;letter-spacing:.1em;font-weight:600}
+.gst-heat-big em{font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.26em;color:#E8B86A;margin-top:3px}
+.gst-mws.heat .gst-mw.v{animation:gstHeatWheel 1.2s ease-out var(--hd,0s) both}
+.gst-mws.heat .gst-mw.v .gst-ms i{animation:gstHeatDigit 1.2s ease-out var(--hd,0s) both}
+@media (prefers-reduced-motion: reduce){.gst-heat{display:none}.gst-mws.heat .gst-mw.v,.gst-mws.heat .gst-mw.v .gst-ms i{animation:none}}

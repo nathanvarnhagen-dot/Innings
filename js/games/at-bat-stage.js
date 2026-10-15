@@ -65,7 +65,13 @@ function _gstRailHtml(s, seq, box) {
     var wheels = '';
     for (var i = 0; i < v.length; i++) wheels += _gstWheel('v', Number(pv.charAt(i)), Number(v.charAt(i)), 9);
     var pc = _gstPct(lp), col = pc != null && typeof _savPctColor === 'function' ? _savPctColor(pc) : null;
-    h += '<span class="gst-mv" aria-label="Last pitch ' + _escapeHtml(v) + ' miles an hour"><span class="gst-dv"></span><span class="gst-mws">' + wheels + '</span>' +
+    // v7.47.0: a heater — top 5% velo for the pitch type — lights the readout (see _gstHeatHtml)
+    var hkey = pk + ':' + (seq && seq.atBatIndex != null ? seq.atBatIndex : seq && seq.batter) + ':' + (lp.num != null ? lp.num : ps.length);
+    var hseen = window._gstHeatSeen[pk];
+    window._gstHeatSeen[pk] = hkey;
+    if (hseen && hseen !== hkey && pc != null && pc >= GST_HEAT_PCT && GST_HEAT_RE.test(String(lp.code || '')) && !(typeof _ghReducedMotion === 'function' && _ghReducedMotion())) window._gstHeat = { key: hkey, pk: pk, at: Date.now(), v: Number(mph), pc: pc };
+    var heatE = _gstHeatE(pk);
+    h += '<span class="gst-mv" aria-label="Last pitch ' + _escapeHtml(v) + ' miles an hour"><span class="gst-dv"></span><span class="gst-mws' + (heatE != null ? ' heat' : '') + '"' + (heatE != null ? ' style="--hd:' + (GST_HEAT.wheels - heatE).toFixed(2) + 's"' : '') + '>' + wheels + '</span>' +
       '<span class="gst-mm"><span>' + _escapeHtml(_gstPitchName(lp)) + '</span>' + (lp.call ? '<span style="color:' + _pitchCallColor(lp.call) + ';filter:brightness(1.25);font-weight:700">' + _escapeHtml(_gstShortCall(lp.call)) + '</span>' : '') + '</span>' +
       (col ? '<span class="gst-lamp" style="background:' + col + ';box-shadow:0 0 10px ' + col + '" title="Velo percentile for that pitch type">' + pc + '</span>' : '') + '</span>';
   } else {
@@ -73,11 +79,71 @@ function _gstRailHtml(s, seq, box) {
   }
   clearTimeout(window._gstRollT);
   window._gstRollT = setTimeout(_gstRailRoll, 30);
-  return h + '</div>';
+  return h + '</div>' + _gstHeatHtml(pk);
+}
+// ── v7.47.0: HEATER — the readout smolders when a pitch is in the top 5% of velo for its type.
+// A gold rim traces clockwise around the whole pitch readout (divider → wheels → name →
+// lamp → the rail's rounded end), a warm glow breathes behind it, a few embers lift, and
+// the speed comes up big under the rail through heat haze, holds, then shrinks into the
+// velo wheels, which glow as it lands. Everything is timed from when the pitch arrived,
+// so the rail re-rendering every few seconds picks the animation up where it was.
+var GST_HEAT_PCT = 95;
+var GST_HEAT_RE = /^(FF|FA|SI|FT|FC)$/; // fastballs only — a 91 mph changeup can be 99th percentile for a changeup, but it isn't a heater
+var GST_HEAT = { rim: 1.0, glow: 2.2, bigUp: .7, bigDown: 2.3, wheels: 2.8, end: 4.4 };
+window._gstHeatSeen = window._gstHeatSeen || {};
+function _gstHeatE(pk) {
+  var H = window._gstHeat;
+  if (!H || H.pk !== pk) return null;
+  var E = (Date.now() - H.at) / 1000;
+  return E < GST_HEAT.end ? E : null;
+}
+function _gstHeatHtml(pk) {
+  var E = _gstHeatE(pk), H = window._gstHeat;
+  if (E == null) return '';
+  var d = function (t) { return (t - E).toFixed(2) + 's'; };
+  var vTxt = (Math.round(H.v * 10) / 10).toFixed(1), top = Math.max(1, 100 - H.pc);
+  var embers = '';
+  for (var i = 0; i < 7; i++) {
+    embers += '<circle class="he" style="--ex:' + ((i % 2 ? 1 : -1) * (3 + i * 1.5)).toFixed(0) + 'px;animation-delay:' + d(.3 + i * .13) + '" data-fx="' + (0.12 + (i * 0.123) % .8).toFixed(2) + '" data-fy="' + (0.35 + (i * 0.37) % .5).toFixed(2) + '" r="' + (1 + (i % 3) * .5) + '" fill="' + (i % 3 ? '#FFB347' : '#FFF4DD') + '"/>';
+  }
+  return '<div class="gst-heat" aria-hidden="true">' +
+    '<svg class="gst-heat-fx" width="100%" height="100%">' +
+      '<defs><linearGradient id="gstHeatGold" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF8A5B"/><stop offset=".6" stop-color="#E8B86A"/><stop offset="1" stop-color="#FFF4DD"/></linearGradient>' +
+      '<radialGradient id="gstHeatWarm" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFF4DD"/><stop offset=".35" stop-color="#FFB347" stop-opacity=".8"/><stop offset="1" stop-color="#FF5E3A" stop-opacity="0"/></radialGradient>' +
+      '<filter id="gstHeatSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>' +
+      '<filter id="gstHeatHaze" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="0"><animate attributeName="scale" values="0;13;8;0" keyTimes="0;.3;.7;1" dur="2s" begin="' + d(0) + '" fill="freeze"/></feDisplacementMap></filter></defs>' +
+      '<rect class="hg" rx="13" fill="url(#gstHeatWarm)" filter="url(#gstHeatSoft)" style="animation-delay:' + d(0) + '"/>' +
+      '<path class="hr" pathLength="100" fill="none" stroke="url(#gstHeatGold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="animation-delay:' + d(0) + ',' + d(2.4) + '"/>' +
+      embers + '</svg>' +
+    '<div class="gst-heat-big" style="animation-delay:' + d(GST_HEAT.bigUp) + ',' + d(GST_HEAT.bigDown) + '"><b>' + vTxt + '<small>MPH</small></b><em>TOP ' + top + '% VELO</em></div></div>';
+}
+// after a render: the rim is drawn around the readout's real box (the wheels included,
+// three of them on a 100+), and the big number knows where the wheels are to fall into
+function _gstHeatPlace() {
+  var st = document.getElementById('gh-stage'), ov = st && st.querySelector('.gst-heat');
+  if (!ov) return;
+  var sq = ov.parentNode, mv = st.querySelector('.gst-mv'), mws = st.querySelector('.gst-mws');
+  if (!sq || !mv) return;
+  var S = sq.getBoundingClientRect(), M = mv.getBoundingClientRect(), W = (mws || mv).getBoundingClientRect();
+  var pad = 5, x = M.left - S.left - pad, y = M.top - S.top - pad, w = M.width + pad * 2, h = M.height + pad * 2, r = Math.min(13, h / 2);
+  var hr = ov.querySelector('.hr'), hg = ov.querySelector('.hg');
+  // clockwise from the divider's top corner, around the rounded right end, back along the bottom
+  if (hr) hr.setAttribute('d', 'M ' + x + ' ' + y + ' L ' + (x + w - r) + ' ' + y + ' Q ' + (x + w) + ' ' + y + ' ' + (x + w) + ' ' + (y + r) + ' L ' + (x + w) + ' ' + (y + h - r) + ' Q ' + (x + w) + ' ' + (y + h) + ' ' + (x + w - r) + ' ' + (y + h) + ' L ' + x + ' ' + (y + h) + ' Z');
+  if (hg) { hg.setAttribute('x', x - 6); hg.setAttribute('y', y - 6); hg.setAttribute('width', w + 12); hg.setAttribute('height', h + 12); }
+  ov.querySelectorAll('.he').forEach(function (c) { c.setAttribute('cx', (x + w * Number(c.getAttribute('data-fx'))).toFixed(1)); c.setAttribute('cy', (y + h * Number(c.getAttribute('data-fy'))).toFixed(1)); });
+  var big = ov.querySelector('.gst-heat-big');
+  if (big) {
+    big.style.top = (y + h + 8) + 'px';
+    var B = big.getBoundingClientRect();
+    // shrink toward the wheels' centre (the number's own origin is its top-right corner)
+    big.style.setProperty('--dx', (W.left + W.width / 2 - B.right).toFixed(0) + 'px');
+    big.style.setProperty('--dy', (W.top + W.height / 2 - B.top).toFixed(0) + 'px');
+  }
 }
 function _gstRailRoll() {
   var st = document.getElementById('gh-stage');
   if (!st) return;
+  try { _gstHeatPlace(); } catch (e) { console.error('[heater]', e); }
   var wheels = st.querySelectorAll('.gst-ms[data-to]'), pips = st.querySelectorAll('.gst-pip[data-on]');
   if (!wheels.length && !pips.length) return;
   void st.offsetHeight; // the starting position has to be laid out before it moves

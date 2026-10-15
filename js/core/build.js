@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.46.3-chat-errors-on-screen';
+window.INNINGS_BUILD = 'v7.47.0-heater';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
