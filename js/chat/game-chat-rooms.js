@@ -334,7 +334,7 @@ function _gcrSeenNotifs() {
       st.mode = 'rooms'; st.rooms = rooms;
       _gcrPublish(key);
     }, function (err) {
-      if (st.mode !== 'replay') console.info('[game chat] private chats are off until the gameChatRooms rules are published (' + ((err && err.code) || err) + ')');
+      if (st.mode !== 'replay') { console.info('[game chat] private chats are off until the gameChatRooms rules are published (' + ((err && err.code) || err) + ')'); if (typeof ib_toast === 'function') ib_toast('Chat can’t load (rooms) — ' + ((err && err.code) || err)); }
       st.mode = 'replay';
       _gcrPublish(key);
     });
@@ -355,6 +355,8 @@ function _gcrListenRoom(key, rid, since) {
     _gcrPublish(key);
   }, function (err) {
     console.error('[game chat] room messages', err);
+    // v7.46.3: say so on screen — a read that's refused looks exactly like "nothing happens"
+    if (typeof ib_toast === 'function') ib_toast('Chat can’t load (room messages) — ' + ((err && err.code) || err));
     if (st.listenRid === tag) { st.listenRid = null; st.runsub = null; }
   });
 }
@@ -447,7 +449,8 @@ _gcAdd = function (data) {
   var key = _gcrKey(), st = key ? _gcrS(key) : null, v = st && st.view;
   if (!v || v.mode !== 'rooms') return window.db.collection('gameChats').add(data);
   var p = v.mine && v.mine.kind === 'new' ? Promise.resolve(v.mine.id) : v.mine ? _gcrMigrate(key, v.mine.id) : _gcrNewRoom(key);
-  return p.then(function (rid) { return window.db.collection('gameChatRooms').doc(rid).collection('messages').add(data); });
+  return p.then(function (rid) { return window.db.collection('gameChatRooms').doc(rid).collection('messages').add(data); })
+    .catch(function (err) { console.error('[game chat] send to room', err); if (typeof ib_toast === 'function') ib_toast('Couldn’t send (room) — ' + ((err && err.code) || err)); throw err; });
 };
 function _gcrChatShowing() {
   var scr = document.getElementById('screen-game');
