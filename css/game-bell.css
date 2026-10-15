@@ -1,0 +1,19 @@
+/* ══ FLOATING NOTIFICATION BELL ON THE SPORTS SCREENS (v7.48.0) — js/games/game-bell.js ══ */
+.gbell{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;width:46px;height:46px;padding:0;border-radius:50%;border:1px solid rgba(168,159,232,.35);background:rgba(61,53,128,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:grid;place-items:center;color:#E9E5FF;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4);font-family:inherit;--gbell-ring:#A89FE8;transition:transform .15s ease,bottom .25s ease}
+.gbell>svg{width:19px;height:19px;display:block}
+.gbell:active{transform:scale(.94)}
+.gbell:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+/* the count: only there when something's unread, like Home's bell */
+.gbell-n{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#E5484D;color:#fff;font-size:10.5px;font-weight:800;line-height:1;display:grid;place-items:center;border:2px solid #0D0820;font-variant-numeric:tabular-nums;transform:scale(0);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.gbell.has .gbell-n{transform:scale(1)}
+/* a new one: the ring (home team's color) pulses twice, the bell shakes once */
+.gbell::before{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--gbell-ring);opacity:0;pointer-events:none}
+.gbell.new::before{animation:gbellPulse 1.8s ease-out 2}
+.gbell.new>svg{animation:gbellShake .9s ease-in-out 1;transform-origin:50% 15%}
+@keyframes gbellPulse{0%{opacity:.9;transform:scale(.9)}100%{opacity:0;transform:scale(1.4)}}
+@keyframes gbellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-5deg)}}
+/* on a game's Chat tab it rides up above the message box */
+#screen-game.gbell-up .gbell{bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}
+/* desktop: the chat lives in a right column, so the bell stays in the content column */
+html.desk #screen-game .gbell{right:calc(420px + 18px);bottom:18px}
+@media (prefers-reduced-motion: reduce){.gbell.new::before,.gbell.new>svg{animation:none}.gbell,.gbell-n{transition:none}}

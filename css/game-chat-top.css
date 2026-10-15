@@ -1,0 +1,20 @@
+/* ══ WHO'S ON THIS GAME — top of the Chat tab (v7.48.0) — js/chat/game-chat-top.js ══ */
+.gct{display:flex;flex-direction:column;gap:8px;padding:2px 0 10px;border-bottom:.5px solid rgba(255,255,255,.08);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;color:#F4F2FF}
+.gct:empty{display:none}
+.gct-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.gct-ct{font-size:11.5px;font-weight:600;color:#8F87BE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.gct-rail{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;scrollbar-width:none}
+.gct-rail::-webkit-scrollbar{display:none}
+.gct-t{flex:none;width:112px;min-height:112px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:#17122F;color:inherit;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+.gct-t.chat{border-color:rgba(168,159,232,.35);background:rgba(168,159,232,.1)}
+.gct-t:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.gct-faces{display:flex;height:28px;margin-bottom:2px}
+.gcr-av.xs{width:28px;height:28px;font-size:11.5px;box-shadow:0 0 0 2px #17122F}
+.gct-faces .gcr-av.xs+.gcr-av.xs{margin-left:-8px!important}
+.gct-n{font-size:13px;font-weight:700;line-height:1.2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gct-s{font-size:11px;line-height:1.2;color:#A9A2D6;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gct-go{margin-top:auto;font-size:11.5px;font-weight:800;color:#1A1640;background:#A89FE8;border-radius:9px;padding:5px 10px}
+.gct-go.alt{background:rgba(168,159,232,.22);color:#E9E5FF}
+.gct-tag{margin-top:auto;font-size:11.5px;font-weight:700;color:#CFC7FF;padding:5px 0}
+/* the old green faces strip is replaced by the rail */
+#game-chat-watchers{display:none!important}

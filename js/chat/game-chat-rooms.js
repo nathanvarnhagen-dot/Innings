@@ -185,6 +185,8 @@ function _gcrView(key) {
     Object.keys(f0.rooms).forEach(function (k) { if (!byOld[k] && Object.keys(f0.rooms[k].members).length) list.push(f0.rooms[k]); });
     // in more than one (let into a friend's chat while you had your own): the bigger one is yours
     var inNew = list.filter(function (R) { return R.kind === 'new' && R.members[me]; }).sort(function (a, b) { return Object.keys(b.members).length - Object.keys(a.members).length; });
+    // v7.48.0: the one you switched to from the rail at the top of the chat (js/chat/game-chat-top.js) comes first
+    if (st.pickRoom) inNew.sort(function (a, b) { return (a.id === st.pickRoom ? 0 : 1) - (b.id === st.pickRoom ? 0 : 1); });
     mine = inNew[0] || null;
     st.extraRooms = inNew.slice(1).filter(function (R) { return Object.keys(R.members).length === 1; }).map(function (R) { return R.id; });
     if (!mine && f0.mine && !byOld[f0.mine]) mine = f0.rooms[f0.mine];
