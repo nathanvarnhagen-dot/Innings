@@ -184,6 +184,23 @@ function _paBasesBetween(start, end) {
 //    first bounced, which is why singles through the hole looked like
 //    infield hits. A hit the play text sends to an outfielder is never
 //    left on the infield.
+// v7.48.2: feet → drawing units. The diamond is drawn big (2B sits 160 units
+// out = 127 ft, 1.26 u/ft) while the fence is only ~346 units out (400 ft,
+// 0.87 u/ft), so one straight scale put a 217-ft fly ball on the infield
+// dirt. Inside 127 ft the diamond's scale applies; past it the rest of the
+// way to the wall stretches to fit, so a shallow fly lands in the shallow
+// outfield and a warning-track out reaches the track.
+var PA_IF_FT = 127, PA_IF_R = 160;
+function _paFeetToR(feet, deg) {
+  if (feet <= PA_IF_FT) return feet * (PA_IF_R / PA_IF_FT);
+  var fence = 330 + 70 * Math.cos(2 * deg * Math.PI / 180), wallR = _paWallR(deg);
+  return PA_IF_R + (feet - PA_IF_FT) / (fence - PA_IF_FT) * (wallR - PA_IF_R);
+}
+function _paRToFeet(r, deg) {
+  if (r <= PA_IF_R) return r * (PA_IF_FT / PA_IF_R);
+  var fence = 330 + 70 * Math.cos(2 * deg * Math.PI / 180), wallR = _paWallR(deg);
+  return PA_IF_FT + (r - PA_IF_R) / (wallR - PA_IF_R) * (fence - PA_IF_FT);
+}
 function _paWallR(deg) {
   var best = 270, bd = 1e9;
   for (var i = 0; i <= 80; i++) {
@@ -229,19 +246,19 @@ function _paLanding(lp) {
       var fp = PA_F[dp], fr = Math.hypot(fp[0] - PA_H[0], fp[1] - PA_H[1]);
       deg = Math.atan2(fp[0] - PA_H[0], PA_H[1] - fp[1]) * 180 / Math.PI;
       // an outfielder's spot is ~290 ft out; a double or triple went past him
-      coordFt = fr / _paWallR(deg) * (330 + 70 * Math.cos(2 * deg * Math.PI / 180)) * (dp >= '7' && /^(double|triple)$/.test(t) ? 1.18 : 1);
+      coordFt = _paRToFeet(fr, deg) * (dp >= '7' && /^(double|triple)$/.test(t) ? 1.18 : 1);
     } else return null;
   }
   var fairForSure = /^(single|double|triple|home_run|field_error)$/.test(t);
   if (fairForSure) deg = Math.max(-43, Math.min(43, deg));
   var feet = t === 'home_run' ? ((h && h.distance) || coordFt) : coordFt;
-  var fence = 330 + 70 * Math.cos(2 * deg * Math.PI / 180);
+  var desc = String(lp.description || lp.desc || '');
+  // an outfielder fielded it: it got out there (coordinates can lag the play text)
+  if (/^(single|double|triple|field_error)$/.test(t) && /(left|center|right) fielder/i.test(desc) && feet < 190) feet = 190;
   var wallR = _paWallR(deg);
-  var r = feet / fence * wallR;
+  var r = _paFeetToR(feet, deg);
   if (t === 'home_run') r = Math.max(r, wallR + 22);
   else r = Math.min(r, wallR - 10);
-  var desc = String(lp.description || lp.desc || '');
-  if (/^(single|double|triple|field_error)$/.test(t) && /(left|center|right) fielder/i.test(desc) && r < 190) r = 190;
   var rad = deg * Math.PI / 180;
   return { x: PA_H[0] + r * Math.sin(rad), y: PA_H[1] - r * Math.cos(rad), ang: deg, feet: Math.round(feet), est: est };
 }

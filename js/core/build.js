@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.48.1-chat-rail-friends-in-chats';
+window.INNINGS_BUILD = 'v7.48.2-landing-spot-scale';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
