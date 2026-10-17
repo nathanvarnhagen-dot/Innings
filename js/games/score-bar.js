@@ -130,9 +130,18 @@ function _gshHeroEls(panel) {
   var hero = panel.querySelector(':scope > .gh');
   if (!hero) return [];
   var els = [], n = panel.firstElementChild;
-  while (n) { els.push(n); if (n === hero) break; n = n.nextElementSibling; }
+  while (n && n !== hero) { els.push(n); n = n.nextElementSibling; }
+  // v7.50.2: when the field or court stays up (football, basketball), only
+  // the scoreboard part of the hero folds into the bug — everything from the
+  // strip down scrolls like the rest of the page, readable the whole way
+  var body = hero.classList.contains('gh-keep-strip') ? hero.querySelector(':scope > .gh-body') : null;
+  var strip = body ? body.querySelector(':scope > .gh-strip') : null;
+  if (body && strip) { var c = body.firstElementChild; while (c && c !== strip) { els.push(c); c = c.nextElementSibling; } }
+  else els.push(hero);
   return els;
 }
+// an element's top in the panel's scroll space (works for nested ones)
+function _gshTopOf(panel, el) { return el.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop; }
 function _gshFade(panel, p) {
   _gshHeroEls(panel).forEach(function (el) {
     if (window._gshGone && !el._gshHiding) { el.style.display = 'none'; return; }
@@ -175,8 +184,8 @@ function _gshUpdate() {
   if (live && stays) _gshUntuck(panel);
   if (live && !stays && els.length && !window._gshGone && !window._gshTimer) window._gshTimer = setTimeout(_gshAutoHide, 2000); // v7.17.3: was 4s
   if (live && els.length && !window._gshGone) {
-    var top0 = els[0].offsetTop, hero = els[els.length - 1];
-    var span = Math.max(1, hero.offsetTop + hero.offsetHeight - top0);
+    var top0 = _gshTopOf(panel, els[0]), hero = els[els.length - 1];
+    var span = Math.max(1, _gshTopOf(panel, hero) + hero.offsetHeight - top0);
     p = Math.max(0, Math.min(1, y / span));
   }
   _gshFade(panel, reduceMotion() ? 0 : p);
@@ -210,8 +219,8 @@ function _gshAutoHide() {
   var els = _gshHeroEls(panel);
   if (!els.length) return;
   var on = scr && (scr.classList.contains('gsh-on') || scr.classList.contains('gsh-dk')) && panel.style.display !== 'none';
-  var top0 = els[0].offsetTop, last = els[els.length - 1];
-  var span = last.offsetTop + last.offsetHeight + (parseFloat(getComputedStyle(last).marginBottom) || 0) - top0;
+  var top0 = _gshTopOf(panel, els[0]), last = els[els.length - 1];
+  var span = _gshTopOf(panel, last) + last.offsetHeight + (parseFloat(getComputedStyle(last).marginBottom) || 0) - top0;
   var instant = !on || panel.scrollTop > span * 0.5 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   if (instant) {
     els.forEach(function (el) { el.style.display = 'none'; });

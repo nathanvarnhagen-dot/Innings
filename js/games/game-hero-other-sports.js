@@ -1243,6 +1243,9 @@ function _ghPatch(el, html) {
     _ghAdded = [];
     _ghMorphChildren(el, tpl.content);
     var added = _ghAdded; _ghAdded = null;
+    // v7.50.2: the scoreboard's scroll fade lives in inline styles the patch
+    // may have rewritten — put it back before the frame paints
+    if (typeof _gshUpdate === 'function') { try { _gshUpdate(); } catch (e2) {} }
     // 4. New pieces at or below the view start folded shut and open up;
     //    ones above the view go in at full size (the anchor fix hides them)
     var grow = [];
@@ -1349,4 +1352,4 @@ function _ghMorphNode(parent, on, nn) {
   if (!nn.firstChild && on.firstChild && /^(play-react-|gh-pa-|reel)/.test(on.id || '')) return;
   _ghMorphChildren(on, nn);
 }
-function _ghOnlyMotionStyle(n) { return /^(\s*(transform|transition|height|overflow|opacity)\s*:[^;]*;?)*\s*$/.test(n.getAttribute('style') || ''); }
+function _ghOnlyMotionStyle(n) { return /^(\s*(transform|transform-origin|transition|height|overflow|opacity|filter)\s*:[^;]*;?)*\s*$/.test(n.getAttribute('style') || ''); }
