@@ -102,7 +102,8 @@ module.exports = async function handler(req, res) {
         model.teamColors = await _gcTeamColors(path, league);
       }
       if (model.phase === 'live' && league === 'nba') await _nbaLiveOverlay(model); // v7.50.0
-      if (req.query.debug) model.debug = { topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
+      if (!req.query.debug) delete model._nbaDbg;
+      if (req.query.debug) model.debug = { nba: model._nbaDbg, topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
       // A live football score can change on one snap, so the edge holds it
       // for five seconds rather than ten. stale-while-revalidate still
       // serves instantly while the refresh happens behind it.
@@ -1421,6 +1422,7 @@ function _bbFtTrip(raw, sideOf) {
 // time, matched by nickname. Fails soft: nothing changes.
 var _nbaLiveCache = { at: 0, data: null };
 async function _nbaLiveOverlay(model) {
+  model._nbaDbg = '';
   try {
     var now = Date.now();
     if (!_nbaLiveCache.data || now - _nbaLiveCache.at > 2000) {
@@ -1428,13 +1430,13 @@ async function _nbaLiveOverlay(model) {
       var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, 1800) : null;
       var r = await fetch('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json', Object.assign({ headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Referer': 'https://www.nba.com/' } }, ctrl ? { signal: ctrl.signal } : {}));
       if (tm) clearTimeout(tm);
-      if (!r.ok) return;
+      if (!r.ok) { model._nbaDbg = 'http ' + r.status; return; }
       _nbaLiveCache = { at: now, data: await r.json() };
     }
     var games = (_nbaLiveCache.data && _nbaLiveCache.data.scoreboard && _nbaLiveCache.data.scoreboard.games) || [];
     var nick = function (name) { return String(name || '').split(' ').pop().toLowerCase(); };
     var g = games.filter(function (x) { return x.homeTeam && x.awayTeam && nick(x.homeTeam.teamName) === nick(model.home.name) && nick(x.awayTeam.teamName) === nick(model.away.name); })[0];
-    if (!g || g.gameStatus !== 2) return;
+    if (!g || g.gameStatus !== 2) { model._nbaDbg = !g ? 'no match in ' + games.map(function (x) { return x.awayTeam.teamName + '@' + x.homeTeam.teamName; }).join(',') : 'status ' + g.gameStatus; return; }
     var cm = String(g.gameClock || '').match(/PT(\d+)M(\d+(?:\.\d+)?)S/);
     var clock = null;
     if (cm) { var mm = Number(cm[1]), ss = Number(cm[2]); clock = mm > 0 || ss >= 60 ? mm + ':' + (ss < 10 ? '0' : '') + Math.floor(ss) : ss.toFixed(1); }
@@ -1443,7 +1445,7 @@ async function _nbaLiveOverlay(model) {
     if (g.period) model.period = g.period;
     if (clock) model.clock = clock;
     model.fast = { src: 'nba', at: now, statusText: g.gameStatusText || null };
-  } catch (e) {}
+  } catch (e) { model._nbaDbg = 'err ' + (e && e.message); }
 }
 function _bbShooter(text) {
   var m = String(text || '').match(/^(.+?) (makes|made|dunks|lays|hits)/i);
