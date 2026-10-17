@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.50.0-nba-clock-free-throws';
+window.INNINGS_BUILD = 'v7.50.1-court-stays-up';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

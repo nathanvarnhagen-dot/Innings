@@ -79,16 +79,23 @@ function _bkxTrack(m) {
   } else if (st.ft && !st.ft.done) { st.ft.done = true; st.ftDoneAt = now; } // the log moved on past the trip
   // the game clock moved since the last poll → it's running (tick between polls)
   if (secs != null) {
-    if (st.clockSecs != null && per === st.period) st.running = secs !== st.clockSecs;
+    if (st.srvSecs != null && per === st.period) st.running = secs !== st.srvSecs;
     else {
       // first look: the clock is running unless the log says play is stopped
       var lk = lp ? lp.kind : '';
       st.running = secs > 0 && !/half|end of|intermission/i.test(m.statusDetail || '') && lk !== 'timeout' && lk !== 'period' && !(ft && !ft.done);
     }
     if (ft && !ft.done) st.running = false; // the clock stops for free throws
-    if (secs !== st.clockSecs || per !== st.period) { st.clockSecs = secs; st.clockAt = now; }
+    // v7.50.1: the feed's clock trails the floor by a few seconds and arrives
+    // in 4-second steps; the one on screen keeps ticking through a poll and
+    // only snaps when the feed disagrees by more than a few seconds (or play
+    // stopped, or the period changed)
+    var local = st.clockSecs != null && per === st.period ? st.clockSecs - (st.wasRunning ? (now - st.clockAt) / 1000 : 0) : null;
+    if (local == null || !st.running || !st.wasRunning || Math.abs(local - secs) > 4) { st.clockSecs = secs; st.clockAt = now; }
+    else { st.clockSecs = Math.max(0, local); st.clockAt = now; }
+    st.srvSecs = secs; st.wasRunning = st.running;
     st.period = per;
-  } else { st.running = false; }
+  } else { st.running = false; st.wasRunning = false; }
   st.m = m;
   return st;
 }
@@ -168,6 +175,15 @@ function _bkxStartTick() {
 
 function _bkxCourtHtml(m, st) {
   var c = m.court || {}, now = Date.now();
+  // v7.50.1: nothing on the floor changed and nothing is mid-animation →
+  // the same markup as last time, so the poll leaves the floor's DOM alone
+  var ftk = st.ft ? st.ft.id + ':' + st.ft.results.length + ':' + (st.ft.done ? 1 : 0) + ':' + (st.ft.done && st.ftDoneAt && now - st.ftDoneAt > 4500 ? 'x' : '') : '';
+  var key = [c.lastShot && c.lastShot.id, c.last && c.last.id, st.poss, ftk, st.to ? st.to.at : 0, (c.shots || []).length, m.away.abbr, m.home.abbr].join('|');
+  var quiet = (!st.shotAt || now - st.shotAt > 6500) && (!st.to || now - st.to.at > 3500) && (!st.possAt || now - st.possAt > 1500) && (!st.ftAt || now - st.ftAt > 6500);
+  if (st.courtKey === key && st.courtHtml && quiet) {
+    var scq = _bkxShotClock(m, st);
+    return scq ? st.courtHtml.replace(/(id="bkx-fc-num">)[^<]*/, '$1' + _bkxClockText(scq.v)) : st.courtHtml;
+  }
   var id = 'bkx' + ((window._bkxSeq = (window._bkxSeq || 0) + 1));
   var A = m.away, H = m.home;
   var aC = A.colors.bg, hC = H.colors.bg, aA = A.colors.accent, hA = H.colors.accent;
@@ -241,7 +257,9 @@ function _bkxCourtHtml(m, st) {
   // the shot clock hanging over the baseline at the lit end
   var sc = _bkxShotClock(m, st);
   var fc = sc ? '<div class="bkx-fc ' + (st.poss === 'h' ? 'r' : 'l') + '"><b id="bkx-fc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
-  return '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
+  var out = '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
+  st.courtKey = key; st.courtHtml = out;
+  return out;
 }
 
 // ── v7.50.0: free throws. A card over the lit end while someone's at the
