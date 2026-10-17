@@ -279,12 +279,17 @@ function _bkxBreak(m) {
     return { key: 'final', lb: 'FINAL' + ot, sub: w ? (w.short || w.name) + ' win' : 'Tied', acc: w ? w.colors.bg : '#A89FE8', win: w };
   }
   if (m.phase !== 'live') return null;
+  // v7.51.1: the card lives only while the clock sits at zero (or the feed
+  // still says the break); the moment the next period's clock runs, it's gone
+  var clockZero = /^0?\.0$|^0:00$/.test(String(m.clock || ''));
+  if (!clockZero && !/half|end of/i.test(sd)) return null;
   var endOf = sd.match(/end of (?:the )?(\d)(?:st|nd|rd|th)|end of (?:the )?(\d*)\s*OT/i);
   var lpEnd = lp && lp.kind === 'period' && /end of/i.test(lp.text || '') && String(m.clock || '') === '0.0' && lp.period === per;
-  if (/half/i.test(sd) || (lpEnd && per === 2)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
+  if ((/half/i.test(sd) && (per <= 2 || clockZero)) || (lpEnd && per === 2)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
   if (endOf || lpEnd || (/^0?\.0$|^0:00$/.test(String(m.clock || '')) && lp && lp.kind === 'period')) {
     var n = endOf && endOf[1] ? Number(endOf[1]) : per;
     var isOt = (endOf && endOf[2] != null) || n > 4;
+    if (per > n && !clockZero) return null; // the feed's status is behind the clock
     if (!isOt && n === 4 && a.score === h.score) return { key: 'reg', lb: 'END OF REGULATION', sub: 'Overtime is next', acc: '#5AB0FF' };
     if (isOt && a.score === h.score) return { key: 'ot' + n, lb: 'END OF ' + (otTag(n) || 'OT'), sub: 'More overtime', acc: '#5AB0FF' };
     return { key: 'q' + n, lb: 'END OF ' + (isOt ? (otTag(n) || 'OT') : ord(n)), sub: _bkxLeadText(m), acc: '#A89FE8' };
@@ -319,7 +324,8 @@ function _bkxBreakHtml(m, st) {
     return '<div class="bkx-brs" style="animation-delay:calc(var(--t0) + ' + (420 + i * 70) + 'ms)"><span class="v' + (aw ? ' w' : '') + '" style="--c:' + a.colors.accent + '">' + _escapeHtml(r.a) + '</span><span class="k">' + _escapeHtml(r.l) + '</span><span class="v r' + (hw ? ' w' : '') + '" style="--c:' + h.colors.accent + '">' + _escapeHtml(r.h) + '</span></div>';
   }).join('');
   if (st.brkKey !== br.key) { st.brkKey = br.key; st.brkAt = st.seeded && st.m ? now : now - 60000; }
-  return '<div class="fbx-brk bkx-brk" style="--t0:' + (-(now - st.brkAt)) + 'ms;--acc:' + br.acc + '">' +
+  var t0 = now - st.brkAt > 2500 ? -60000 : -(now - st.brkAt); // frozen once played: a later poll only changes the numbers
+  return '<div class="fbx-brk bkx-brk" style="--t0:' + t0 + 'ms;--acc:' + br.acc + '">' +
     '<div class="sc"><span style="color:' + a.colors.accent + '">' + _escapeHtml(a.abbr) + '</span> <b' + lo(a.score, h.score) + '>' + (a.score != null ? a.score : '\u2013') + '</b> &nbsp;\u00b7&nbsp; <span style="color:' + h.colors.accent + '">' + _escapeHtml(h.abbr) + '</span> <b' + lo(h.score, a.score) + '>' + (h.score != null ? h.score : '\u2013') + '</b></div>' +
     '<div class="lb">' + _escapeHtml(br.lb) + '</div><div class="rl"></div>' + (br.sub ? '<div class="sb">' + _escapeHtml(br.sub) + '</div>' : '') +
     (grid ? '<div class="bkx-brg">' + grid + '</div>' : '') + '</div>';
@@ -336,7 +342,7 @@ function _bkxFtHtml(m, st) {
   var now = Date.now();
   if (ft.done && st.ftDoneAt && now - st.ftDoneAt > 4500) return '';
   var tm = _bkxTeam(m, ft.side) || m.home, acc = tm.colors.accent, bg = tm.colors.bg;
-  var fresh = st.ftAt && now - st.ftAt < 6000 ? -(now - st.ftAt) : -99000;
+  var fresh = st.ftAt && now - st.ftAt < 2500 ? -(now - st.ftAt) : -99000;
   var balls = '';
   for (var i = 0; i < ft.n; i++) {
     var r = ft.results[i], cur = r == null && i === ft.results.length;
