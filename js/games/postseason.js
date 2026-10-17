@@ -30,17 +30,61 @@ function _psSeries(g) {
   var d = window._psData;
   if (!d || !g || g.awayId == null) return null;
   var ids = [g.awayId, g.homeId].sort().join('-');
-  return d.games.filter(function (x) { return x.gameType === g.gameType && [x.awayId, x.homeId].sort().join('-') === ids; })
-    .sort(function (a, b) { return (a.seriesGameNumber || 0) - (b.seriesGameNumber || 0); });
+  return d.games.filter(function (x) { return x.gameType === g.gameType && [x.awayId, x.homeId].sort().join('-') === ids && !_psOff(x); })
+    .sort(function (a, b) { return _psWhen(a) - _psWhen(b); });
 }
+// v7.49.0: the series is numbered by the order its games are played, not by
+// MLB's seriesGameNumber. After a rainout that number stays glued to the
+// makeup game even once it's pushed past the next one (ALCS 2026: Game 4
+// rained out Friday, made up Sunday, still "4" in the feed while Saturday's
+// game — now played fourth — stays "5"). MLB's own description renumbers
+// them; so do we. Games with no time yet keep MLB's number as the order.
+function _psWhen(x) {
+  var t = Date.parse(x.startTime || '') || Date.parse((x.date || '') + 'T23:59:00Z') || 0;
+  return t + (x.seriesGameNumber || 0) / 1000;
+}
+// the rained-out listing itself (its makeup is a separate row, if set)
+function _psOff(x) { return !!(x && (x.postponed || /postponed|cancel|suspended/i.test(x.status || ''))); }
+function _psSeq(g) {
+  if (!g) return '';
+  var list = _psSeries(g);
+  if (list && list.length) {
+    for (var i = 0; i < list.length; i++) if (String(list[i].gamePk) === String(g.gamePk)) return i + 1;
+  }
+  return g.seriesGameNumber || '';
+}
+// "Friday's game was rained out · Game 4 is now Sat 5:00 PM" — while the
+// makeup is still ahead of us (shown for the whole series, since the day
+// that was lost is the day everyone had circled)
+function _psPostponedNote(g) {
+  var list = _psSeries(g) || [], moved = null, pending = null;
+  list.forEach(function (x) { if (x.rescheduledFrom && !_psDone(x) && !moved) moved = x; });
+  var lg = (g && g.rescheduledFrom && !_psDone(g)) ? g : null;
+  // a rained-out game with no makeup set yet (only the postponed row exists)
+  if (!moved && !lg && window._psData) window._psData.games.forEach(function (x) {
+    if (!pending && x.gameType === g.gameType && _psOff(x) && [x.awayId, x.homeId].sort().join('-') === [g.awayId, g.homeId].sort().join('-')) pending = x;
+  });
+  var x = lg || moved;
+  if (!x && !pending) return '';
+  var day = function (iso) { var d = iso ? new Date(String(iso).slice(0, 10) + 'T12:00:00') : null; return d && !isNaN(d) ? d.toLocaleDateString(undefined, { weekday: 'long' }) : 'The'; };
+  var why = (x || pending).reason ? ' (' + String((x || pending).reason).toLowerCase() + ')' : '';
+  if (!x) return day(pending.date) + '\u2019s game was postponed' + why + ' \u00b7 makeup date coming';
+  var next = list.filter(function (y) { return !_psDone(y); })[0];
+  var when = typeof _ghCountdownText === 'function' ? _ghCountdownText(next && next.startTime) : null;
+  var isCd = when && /^\d\d:\d\d:\d\d$|^Any minute$/.test(when);
+  var whenTxt = next ? (isCd ? (_psIsToday(next.startTime) ? 'today' : 'tomorrow') + ' ' + (_formatGameTime(next.startTime) || '') : (when || '')) : '';
+  return day(x.rescheduledFrom) + '\u2019s game was postponed' + why + (next ? ' \u00b7 Game ' + _psSeq(next) + ' is now ' + whenTxt.trim() : '');
+}
+function _psIsToday(iso) { var d = new Date(iso), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); }
 // Wins for each side of `g`, counting the series' finished games before
 // this one (after: include this game once it's final).
 function _psWins(g, after) {
   var list = _psSeries(g), w = { away: 0, home: 0 };
   if (list && list.length) {
     list.forEach(function (x) {
-      var n = x.seriesGameNumber || 0, me = g.seriesGameNumber || 0;
-      if (n > me || (n === me && !after)) return;
+      var n = _psWhen(x), me = _psWhen(g);
+      if (String(x.gamePk) !== String(g.gamePk) && n > me) return;
+      if (String(x.gamePk) === String(g.gamePk) && !after) return;
       var wid = _psFinalWinnerId(x);
       if (wid == null) return;
       if (wid === g.awayId) w.away++; else if (wid === g.homeId) w.home++;
@@ -54,7 +98,7 @@ function _psWins(g, after) {
   if (s.leader) { w[s.leader] = s.wins; w[s.leader === 'away' ? 'home' : 'away'] = s.losses || 0; }
   return w;
 }
-function _psDone(g) { return /final|game over|completed/i.test(g.status || '') || g.state === 'Final'; }
+function _psDone(g) { return !_psOff(g) && (/final|game over|completed/i.test(g.status || '') || g.state === 'Final'); }
 // "Game 1" for game 1 (until it's over), the series score after that
 function _psScoreText(g) {
   var done = _psDone(g), w = _psWins(g, done), need = _psNeed(g);
@@ -67,7 +111,7 @@ function _psScoreText(g) {
 function _psStakes(g) {
   if (_psDone(g)) return '';
   var w = _psWins(g, false), need = _psNeed(g), a = _psAbbr(g, 'away'), h = _psAbbr(g, 'home');
-  if (w.away === need - 1 && w.home === need - 1) return g.gameType === 'W' ? 'GAME ' + (g.seriesGameNumber || '') + ' \u00b7 WINNER TAKES THE TITLE' : 'WINNER-TAKE-ALL';
+  if (w.away === need - 1 && w.home === need - 1) return g.gameType === 'W' ? 'GAME ' + _psSeq(g) + ' \u00b7 WINNER TAKES THE TITLE' : 'WINNER-TAKE-ALL';
   if (w.away === need - 1) return a + ' CAN ' + (g.gameType === 'W' ? 'WIN IT ALL' : 'CLINCH') + ' TONIGHT';
   if (w.home === need - 1) return h + ' CAN ' + (g.gameType === 'W' ? 'WIN IT ALL' : 'CLINCH') + ' TONIGHT';
   return '';
@@ -75,8 +119,9 @@ function _psStakes(g) {
 function _psListLineHtml(g) {
   var R = _psRound(g); if (!R) return '';
   var sc = _psScoreText(g), st = _psStakes(g);
-  return '<div class="ps-lc"><span class="ps-chip" style="background:' + _ghHexAlpha(R.rc, .16) + ';color:' + R.rc + '">' + _escapeHtml((_psName(g) + ' \u00b7 Game ' + (g.seriesGameNumber || '')).toUpperCase()) + '</span>' +
-    (sc ? '<span class="ps-ser">' + _escapeHtml(sc) + '</span>' : '') + (st ? '<span class="ps-hot">' + _escapeHtml(st) + '</span>' : '') + '</div>';
+  return '<div class="ps-lc"><span class="ps-chip" style="background:' + _ghHexAlpha(R.rc, .16) + ';color:' + R.rc + '">' + _escapeHtml((_psName(g) + ' \u00b7 Game ' + _psSeq(g)).toUpperCase()) + '</span>' +
+    (sc ? '<span class="ps-ser">' + _escapeHtml(sc) + '</span>' : '') + (st ? '<span class="ps-hot">' + _escapeHtml(st) + '</span>' : '') +
+    (typeof _psPostponedNote === 'function' && _psPostponedNote(g) ? '<span class="ps-ppd">' + _escapeHtml(_psPostponedNote(g)) + '</span>' : '') + '</div>';
 }
 function _psVars(R) { return '--rc:' + R.rc + ';--rc2:' + R.rc2 + ';--rcx:' + _ghHexAlpha(R.rc, .15) + ';--rcb:' + _ghHexAlpha(R.rc, .45); }
 function _psBannerHtml(games) {
@@ -107,11 +152,11 @@ function _psGame() {
   if (!g || (g.sport || 'mlb') !== 'mlb') return null;
   var pk = String(g.gamePk), hit = null;
   (window._gamesListCache || []).forEach(function (x) { if (x && String(x.gamePk) === pk && x.gameType) hit = x; });
-  if (window._psData) window._psData.games.forEach(function (x) { if (String(x.gamePk) === pk) hit = Object.assign({}, hit || {}, x); });
+  if (window._psData) window._psData.games.forEach(function (x) { if (String(x.gamePk) === pk) { hit = Object.assign({}, hit || {}, x); if (!x.postponed) delete hit.postponed; } });
   return hit && _psRound(hit) ? hit : null;
 }
 function _psSeason() { var g = window._activeBrowseGame; var d = (g && g.date) || window._gamesDate || ''; return parseInt(String(d).slice(0, 4), 10) || new Date().getFullYear(); }
-function _psShortTag() { var g = _psGame(); return g ? (_psName(g).replace('Wild Card', 'WC').replace('World Series', 'WS') + ' \u00b7 G' + (g.seriesGameNumber || '')).toUpperCase() : ''; }
+function _psShortTag() { var g = _psGame(); return g ? (_psName(g).replace('Wild Card', 'WC').replace('World Series', 'WS') + ' \u00b7 G' + _psSeq(g)).toUpperCase() : ''; }
 function _psDecorate() {
   var panel = document.getElementById('game-sheet-panel');
   if (!panel) return;
@@ -126,12 +171,13 @@ function _psDecorate() {
     return;
   }
   if (!window._psData || window._psData.season !== _psSeason() || Date.now() - window._psData.at > 60000) _psLoad(_psSeason(), function () { _psDecorate(); if (typeof _gshRefresh === 'function') _gshRefresh(); });
-  var R = _psRound(g), sc = _psScoreText(g), st = _psStakes(g), n = g.seriesGameNumber || '';
+  var R = _psRound(g), sc = _psScoreText(g), st = _psStakes(g), n = _psSeq(g);
   var list = _psSeries(g) || [], need = _psNeed(g), total = g.gamesInSeries || R.best;
+  var ppd = _psPostponedNote(g);
   var pips = '';
   if (list.length) {
     for (var k = 1; k <= total; k++) {
-      var x = list.filter(function (y) { return y.seriesGameNumber === k; })[0];
+      var x = list[k - 1] || null;
       var now = x && String(x.gamePk) === String(g.gamePk);
       var wid = x ? _psFinalWinnerId(x) : null;
       var lab = wid != null ? (wid === x.awayId ? _psAbbr(x, 'away') : _psAbbr(x, 'home')) + ' ' + Math.max(x.awayScore, x.homeScore) + '\u2013' + Math.min(x.awayScore, x.homeScore)
@@ -143,6 +189,7 @@ function _psDecorate() {
     '<div class="k">' + _psSeason() + ' POSTSEASON</div><div class="t">' + _escapeHtml(g.gameType === 'W' ? 'World Series' : _psName(g).replace(/DS$/, ' Division Series').replace(/CS$/, ' Championship Series').replace(/^(AL|NL) Wild Card$/, '$1 Wild Card Series')) + '</div>' +
     '<div class="s">Game ' + n + (sc ? ' \u00b7 ' + _escapeHtml(sc) : '') + '</div>' +
     (st ? '<div style="margin-top:8px"><span class="ps-hot">' + _escapeHtml(st) + '</span></div>' : '') +
+    (ppd ? '<div class="ps-ppd-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"/><path d="M16 14v6M8 14v6M12 16v6"/></svg><span>' + _escapeHtml(ppd) + '</span></div>' : '') +
     (pips ? '<div class="ps-pips">' + pips + '</div>' : '') + '</div>';
   // only touch the DOM when something changed (keeps the shine running)
   if (old && old._psh === html && old.parentNode === panel && panel.firstChild === old) { if (bar) bar.style.setProperty('--gsb-rc', R.rc); return; }
@@ -187,12 +234,14 @@ function _psBracketHtml(season, d) {
     s.games.forEach(function (x) { var wid = _psFinalWinnerId(x); if (wid != null && s.teams[wid]) s.teams[wid].w++; });
     s.need = Math.ceil((s.games[0].gamesInSeries || PS_ROUND[s.type].best) / 2);
     s.list = Object.keys(s.teams).map(function (k) { return s.teams[k]; }).sort(function (a, b) { return (a.seed || 99) - (b.seed || 99); });
-    s.next = s.games.filter(function (x) { return x.state !== 'Final'; }).sort(function (a, b) { return (a.seriesGameNumber || 0) - (b.seriesGameNumber || 0); })[0] || s.games[s.games.length - 1];
+    s.games = s.games.filter(function (x) { return !_psOff(x); }).sort(function (a, b) { return _psWhen(a) - _psWhen(b); });
+    s.games.forEach(function (x, i) { x._seq = i + 1; });
+    s.next = s.games.filter(function (x) { return !_psDone(x); })[0] || s.games[s.games.length - 1];
   });
   var latest = 'F'; series.forEach(function (s) { if ('FDLW'.indexOf(s.type) > 'FDLW'.indexOf(latest)) latest = s.type; });
   var card = function (s) {
     var R = PS_ROUND[s.type], a = s.list[0], b = s.list[1];
-    if (!a || !b) return '';
+    if (!a || !b || !s.next) return '';
     var over = a.w >= s.need || b.w >= s.need, lead = a.w === b.w ? null : (a.w > b.w ? a : b);
     var row = function (t, lose) {
       var c = typeof _ghTeamColors === 'function' ? _ghTeamColors(t.abbr) : { bg: '#3D3580', fg: '#fff' }, pips = '';
@@ -200,8 +249,8 @@ function _psBracketHtml(season, d) {
       return '<span class="psb-tr' + (lose ? ' out' : '') + '"><span class="sd">' + (t.seed != null ? t.seed : '') + '</span><span class="lo" style="background:' + c.bg + ';color:' + c.fg + '">' + _escapeHtml(t.abbr) + '</span><span class="n">' + _escapeHtml(t.name) + '</span><span class="w">' + pips + '</span></span>';
     };
     var st = over ? '<b>' + _escapeHtml(lead.abbr) + '</b> won ' + lead.w + '\u2013' + Math.min(a.w, b.w)
-      : lead ? '<b>' + _escapeHtml(lead.abbr) + '</b> leads ' + lead.w + '\u2013' + Math.min(a.w, b.w) + (s.next ? ' \u00b7 Game ' + s.next.seriesGameNumber + ' next' : '')
-      : (a.w ? 'Series tied ' + a.w + '\u2013' + b.w : 'Game 1') + (s.next && a.w ? ' \u00b7 Game ' + s.next.seriesGameNumber + ' next' : '');
+      : lead ? '<b>' + _escapeHtml(lead.abbr) + '</b> leads ' + lead.w + '\u2013' + Math.min(a.w, b.w) + (s.next ? ' \u00b7 Game ' + s.next._seq + ' next' : '')
+      : (a.w ? 'Series tied ' + a.w + '\u2013' + b.w : 'Game 1') + (s.next && a.w ? ' \u00b7 Game ' + s.next._seq + ' next' : '');
     return '<button class="psb-s" style="--rcs:' + R.rc + '" onclick="psOpenGame(' + s.next.gamePk + ')">' + row(a, over && b.w > a.w) + row(b, over && a.w > b.w) + '<span class="psb-st">' + st + '</span></button>';
   };
   // each league scrolls to the latest round it has reached

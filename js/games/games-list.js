@@ -396,6 +396,17 @@ function _gameBadgeHtml(g, dayPrefix) {
   var live = !concluded && _isGameStatusLive(g.status);
   var scoreLabel = (g.awayScore != null && g.homeScore != null) ? (g.awayScore + '–' + g.homeScore) : null;
   var prefix = dayPrefix ? dayPrefix + ' ' : '';
+  // v7.49.0: a postponed, suspended or cancelled game says so (every
+  // sport), with its makeup time once the league has set one — it used to
+  // read FINAL because "concluded" covers it
+  var offM = String(g.status || g.statusDetail || '').match(/postponed|suspended|cancel/i);
+  if (!live && (offM || g.postponed)) {
+    var word = (offM ? offM[0] : 'postponed').toLowerCase();
+    word = word === 'cancel' ? 'CANCELLED' : word.toUpperCase();
+    var mk = g.rescheduleDate && typeof _ghCountdownText === 'function' ? _ghCountdownText(g.rescheduleDate) : null;
+    if (mk && /^\d\d:\d\d:\d\d$|^Any minute$/.test(mk)) mk = 'today ' + (_formatGameTime(g.rescheduleDate) || '');
+    return '<div style="font-size:10.5px;padding:4px 10px;border-radius:20px;background:rgba(122,178,255,.16);border:1px solid rgba(122,178,255,.45);color:#BFD6FF;flex-shrink:0;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:6px;white-space:nowrap">' + (prefix ? _escapeHtml(prefix) : '') + '<span>' + _escapeHtml(word + (g.reason ? ' · ' + String(g.reason).toUpperCase() : '')) + '</span>' + (mk ? '<span style="color:#fff">\u2192 ' + _escapeHtml(mk.trim()) + '</span>' : '') + '</div>';
+  }
   if (concluded) {
     // v5.85.0: a finished game says so plainly — FINAL plus the score.
     return '<div style="font-size:10.5px;padding:4px 10px;border-radius:20px;background:rgba(168,159,232,.26);border:1px solid rgba(168,159,232,.45);color:#fff;flex-shrink:0;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:6px">' + (prefix ? _escapeHtml(prefix) : '') + '<span style="color:#CECBF6">FINAL</span>' + (scoreLabel ? '<span>' + _escapeHtml(scoreLabel) + '</span>' : '') + '</div>';

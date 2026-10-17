@@ -222,7 +222,25 @@ function _ghSideFromPregame(s) {
 }
 function _ghModelFromMlbPregame(data) {
   if (!data || !data.away || !data.home) return null;
-  return { phase: 'pre', away: _ghSideFromPregame(data.away), home: _ghSideFromPregame(data.home), startTime: data.startTime || null, venue: data.venue || null };
+  // v7.49.0: a rained-out game carries its status and reason; a makeup
+  // game carries the day it was moved from
+  var off = /postponed|cancel|suspended/i.test(data.status || '');
+  return { phase: 'pre', away: _ghSideFromPregame(data.away), home: _ghSideFromPregame(data.home), startTime: data.startTime || null, venue: data.venue || null,
+    off: off ? data.status : null, reason: data.reason || null, movedFrom: data.rescheduledFrom || null };
+}
+// v7.49.0: "Postponed · Rain" / "Moved from Friday · Rain" for the pre-game card
+function _ghPostponedHtml(m) {
+  var g = window._activeBrowseGame, box = (window._gdPregame && window._gdPregame.heroBox) || null;
+  var off = m.off || (g && g.postponed ? (g.offStatus || 'Postponed') : null) || (box && /postponed|cancel|suspended/i.test(box.status || '') ? box.status : null);
+  var reason = m.reason || (g && g.reason) || (box && box.reason) || null;
+  var from = m.movedFrom || (g && g.rescheduledFrom) || (box && box.rescheduledFrom) || null;
+  var mk = (g && g.rescheduleDate) || null;
+  var dayName = function (iso) { var d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { weekday: 'long' }); };
+  var txt;
+  if (off) txt = String(off).replace(/^\w/, function (c) { return c.toUpperCase(); }) + (reason ? ' \u00b7 ' + reason : '') + (mk ? ' \u00b7 now ' + (_ghCountdownText(mk) || '').replace(/^\d\d:\d\d:\d\d$|^Any minute$/, 'today ' + (_formatGameTime(mk) || '')) : ' \u00b7 makeup date coming');
+  else if (from) txt = 'Moved from ' + dayName(from) + (reason ? ' \u00b7 ' + reason : '');
+  if (!txt) return '';
+  return '<div class="gh-panel gh-up ps-ppd-row" style="' + _ghDelay(.5) + 'margin-top:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"/><path d="M16 14v6M8 14v6M12 16v6"/></svg><span>' + _escapeHtml(txt) + '</span></div>';
 }
 function _ghModelFromMlbBox(box) {
   if (!box || box.error || !box.home) return null;
@@ -355,8 +373,11 @@ function _ghPreHtml(m, st, animating) {
       teamTile(m.home, 'gh-from-r', .35) +
     '</div></div>';
 
+  var ppd = _ghPostponedHtml(m);
+  h += ppd;
   var cd = _ghCountdownText(m.startTime);
-  if (cd) {
+  // a rained-out game has no first pitch to count down to
+  if (cd && !(ppd && (m.off || (window._activeBrowseGame && window._activeBrowseGame.postponed)))) {
     h += '<div class="gh-panel gh-up gh-row" style="' + _ghDelay(.55) + '">' +
       '<span class="gh-eyebrow">First pitch</span>' +
       '<span id="gh-countdown" class="gh-num" style="font-size:24px;line-height:1.15">' + _escapeHtml(cd) + '</span></div>';

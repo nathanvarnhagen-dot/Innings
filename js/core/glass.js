@@ -470,7 +470,7 @@ function _glPoLine(sport, g) {
     var R = _psRound(g); if (!R) return '';
     var stakes = typeof _psStakes === 'function' ? _psStakes(g) : '';
     var sc = typeof _psScoreText === 'function' ? _psScoreText(g) : '';
-    return '<span class="gl-pst"><b style="color:' + R.rc + '">' + _glEsc((_psName(g) + (g.seriesGameNumber ? ' · Game ' + g.seriesGameNumber : '')).toUpperCase()) + '</b>' +
+    return '<span class="gl-pst"><b style="color:' + R.rc + '">' + _glEsc((_psName(g) + (g.seriesGameNumber ? ' · Game ' + (typeof _psSeq === 'function' ? _psSeq(g) : g.seriesGameNumber) : '')).toUpperCase()) + '</b>' +
       (stakes ? '<em>' + _glEsc(stakes.replace(/ TONIGHT$/, '')) + '</em>' : sc ? '<span>' + _glEsc(sc.toUpperCase()) + '</span>' : '') + '</span>';
   }
   var head = String(g.headline || 'Playoffs').replace(/\s+-\s+/g, ' · ');
@@ -519,7 +519,7 @@ function _glRenderLive() {
     var sub = r.fw.names.length ? r.fw.names[0] + (r.fw.names.length > 1 ? ' + ' + (r.fw.names.length - 1) : '') + ' here'
       : r.fw.mine ? 'You’re watching'
       : mode === 'live' && ph !== 'live' ? (r.x.fav ? '★ Your team' : 'Following')
-      : (mode === 'live' && sp === 'mlb' && g.gameType && typeof _psName === 'function' ? _psName(g) + (g.seriesGameNumber ? ' · G' + g.seriesGameNumber : '') : '');
+      : (mode === 'live' && sp === 'mlb' && g.gameType && typeof _psName === 'function' ? _psName(g) + (g.seriesGameNumber ? ' · G' + (typeof _psSeq === 'function' ? _psSeq(g) : g.seriesGameNumber) : '') : '');
     var team = function (name, ab, c, sc, lo) {
       return '<span class="gl-tl' + (lo ? ' lo' : '') + '"><span class="sw" style="background:' + c.accent + '"></span><span class="ab">' + _glEsc(_glShort(name) || ab || 'TBD') + '</span><span class="sc gl-num">' + (scored ? _glEsc(sc) : '') + '</span></span>';
     };

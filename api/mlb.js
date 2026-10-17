@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
             pitcher: _schedPerson(g.linescore && g.linescore.defense && g.linescore.defense.pitcher),
             // v7.16.1: playoff games often go up before their time is set
             startTimeTBD: !!(g.status && g.status.startTimeTBD)
-          }, _postseasonFields(g)));
+          }, _postponementFields(g, d), _postseasonFields(g)));
         });
       });
       // v5.85.0: scores on the schedule list refresh within ~15s (was 5 min).
@@ -87,10 +87,10 @@ module.exports = async function handler(req, res) {
       const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=' + season + '&gameType=F,D,L,W&hydrate=team,seriesStatus';
       const r = await fetch(url);
       const data = await r.json();
-      const games = [];
+      const games = [], seen = {};
       (data.dates || []).forEach(function (d) {
         (d.games || []).forEach(function (g) {
-          games.push(Object.assign({
+          var row = Object.assign({
             gamePk: g.gamePk, date: d.date || null,
             status: g.status && g.status.detailedState,
             state: g.status && g.status.abstractGameState,
@@ -101,7 +101,16 @@ module.exports = async function handler(req, res) {
             awaySeed: g.teams && g.teams.away && g.teams.away.seriesNumber != null ? g.teams.away.seriesNumber : null,
             homeSeed: g.teams && g.teams.home && g.teams.home.seriesNumber != null ? g.teams.home.seriesNumber : null,
             startTime: g.gameDate || null, venue: g.venue && g.venue.name
-          }, _postseasonFields(g)));
+          }, _postponementFields(g, d), _postseasonFields(g));
+          // v7.49.0: a postponed game is listed twice — on the day it was
+          // rained out (status Postponed) and again on its makeup day. Keep
+          // one row per gamePk: the makeup listing, carrying the original day.
+          var k = String(g.gamePk);
+          if (seen[k] != null) {
+            var old = games[seen[k]];
+            if (row.postponed && !old.postponed) { old.rescheduledFrom = old.rescheduledFrom || row.date; old.reason = old.reason || row.reason; }
+            else { row.rescheduledFrom = row.rescheduledFrom || old.date; row.reason = row.reason || old.reason; games[seen[k]] = row; }
+          } else { seen[k] = games.length; games.push(row); }
         });
       });
       res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
@@ -677,6 +686,8 @@ function summarize(data, gamePk, wantAllPlays) {
     venue: (gameData.venue && gameData.venue.name) || null,
     date: (gameData.datetime && gameData.datetime.officialDate) || null,
     status: (gameData.status && gameData.status.detailedState) || null,
+    reason: (gameData.status && gameData.status.reason) || null, // v7.49.0
+    rescheduledFrom: _movedFrom(gameData),
     winningPitcher: (decisions.winner && decisions.winner.fullName) || null,
     losingPitcher: (decisions.loser && decisions.loser.fullName) || null,
     savePitcher: (decisions.save && decisions.save.fullName) || null,
@@ -1106,8 +1117,18 @@ async function summarizePregame(data) {
     away: away,
     home: home,
     startTime: (gameData.datetime && gameData.datetime.dateTime) || null,
-    venue: (gameData.venue && gameData.venue.name) || null
+    venue: (gameData.venue && gameData.venue.name) || null,
+    // v7.49.0: a makeup game says what day it was moved from, and why
+    status: (gameData.status && gameData.status.detailedState) || null,
+    reason: (gameData.status && gameData.status.reason) || null,
+    rescheduledFrom: _movedFrom(gameData)
   };
+}
+// The live feed's datetime block keeps the original day of a rescheduled
+// game (originalDate) beside the day it's now played (officialDate).
+function _movedFrom(gameData) {
+  var dt = (gameData && gameData.datetime) || {};
+  return (dt.originalDate && dt.officialDate && dt.originalDate !== dt.officialDate) ? dt.originalDate : null;
 }
 
 // Last 10 completed regular-season games for a team, oldest first, from
@@ -2154,7 +2175,12 @@ function _mlbSeriesList(data, type) {
   var tail = type === 'D' ? 'DS' : 'CS';
   var list = Object.keys(by).map(function (key) {
     var s = by[key];
-    s.games.sort(function (a, b) { return ((a.n || 0) - (b.n || 0)) || (Date.parse(a.t) - Date.parse(b.t)); });
+    // v7.49.0: games are numbered by the order they're played, not by
+    // MLB's seriesGameNumber — after a rainout that number stays glued to
+    // the makeup game even once it's been pushed past the next one
+    s.games = s.games.filter(function (x) { return !x.off; });
+    s.games.sort(function (a, b) { return (Date.parse(a.t) || 0) - (Date.parse(b.t) || 0); });
+    s.games.forEach(function (x, i) { x.n = i + 1; });
     var played = s.games.filter(function (x) { return x.abs === 'Final' && !x.off && x.as != null && x.hs != null && x.as !== x.hs; });
     played.forEach(function (x) { var w = x.as > x.hs ? x.awayId : x.homeId; if (s.teams[w]) s.teams[w].wins++; });
     var best = s.best || bestBy[type] || 7, need = Math.ceil(best / 2);
@@ -2189,6 +2215,20 @@ function _schedBases(ls) {
 }
 function _schedPerson(p) { return (p && (p.fullName || p.name)) || null; }
 
+// v7.49.0: a game knocked off its day. `postponed` is the rained-out row
+// itself; `rescheduleDate` is when that game is now played (if MLB has set
+// it); `rescheduledFrom` is the original day on the makeup listing; `reason`
+// is MLB's one word ("Rain", "Weather").
+function _postponementFields(g, d) {
+  var st = (g && g.status) || {};
+  var off = /postponed|cancel|suspended/i.test(st.detailedState || '');
+  var out = {};
+  if (off) { out.postponed = true; out.offStatus = st.detailedState || null; }
+  if (st.reason) out.reason = st.reason;
+  if (g.rescheduleDate || g.rescheduleGameDate) out.rescheduleDate = g.rescheduleDate || (g.rescheduleGameDate + 'T00:00:00Z');
+  if (g.rescheduledFromDate || g.rescheduledFrom) out.rescheduledFrom = g.rescheduledFromDate || String(g.rescheduledFrom).slice(0, 10);
+  return out;
+}
 function _postseasonFields(g) {
   var t = g && g.gameType;
   var aT = g.teams && g.teams.away && g.teams.away.team || {}, hT = g.teams && g.teams.home && g.teams.home.team || {};
