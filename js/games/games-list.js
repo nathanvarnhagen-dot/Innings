@@ -404,7 +404,7 @@ function _gameBadgeHtml(g, dayPrefix) {
     var word = (offM ? offM[0] : 'postponed').toLowerCase();
     word = word === 'cancel' ? 'CANCELLED' : word.toUpperCase();
     var mk = g.rescheduleDate && typeof _ghCountdownText === 'function' ? _ghCountdownText(g.rescheduleDate) : null;
-    if (mk && /^\d\d:\d\d:\d\d$|^Any minute$/.test(mk)) mk = 'today ' + (_formatGameTime(g.rescheduleDate) || '');
+    if (mk && /^\d\d:\d\d:\d\d$|^Any minute$/.test(mk)) mk = _ghDayWord(g.rescheduleDate) + ' ' + (_formatGameTime(g.rescheduleDate) || '');
     return '<div style="font-size:10.5px;padding:4px 10px;border-radius:20px;background:rgba(122,178,255,.16);border:1px solid rgba(122,178,255,.45);color:#BFD6FF;flex-shrink:0;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:6px;white-space:nowrap">' + (prefix ? _escapeHtml(prefix) : '') + '<span>' + _escapeHtml(word + (g.reason ? ' · ' + String(g.reason).toUpperCase() : '')) + '</span>' + (mk ? '<span style="color:#fff">\u2192 ' + _escapeHtml(mk.trim()) + '</span>' : '') + '</div>';
   }
   if (concluded) {

@@ -72,7 +72,7 @@ function _psPostponedNote(g) {
   var next = list.filter(function (y) { return !_psDone(y); })[0];
   var when = typeof _ghCountdownText === 'function' ? _ghCountdownText(next && next.startTime) : null;
   var isCd = when && /^\d\d:\d\d:\d\d$|^Any minute$/.test(when);
-  var whenTxt = next ? (isCd ? (_psIsToday(next.startTime) ? 'today' : 'tomorrow') + ' ' + (_formatGameTime(next.startTime) || '') : (when || '')) : '';
+  var whenTxt = next ? (isCd ? (typeof _ghDayWord === 'function' ? _ghDayWord(next.startTime).toLowerCase() : (_psIsToday(next.startTime) ? 'today' : 'tomorrow')) + ' ' + (_formatGameTime(next.startTime) || '') : (when || '')) : '';
   return day(x.rescheduledFrom) + '\u2019s game was postponed' + why + (next ? ' \u00b7 Game ' + _psSeq(next) + ' is now ' + whenTxt.trim() : '');
 }
 function _psIsToday(iso) { var d = new Date(iso), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); }

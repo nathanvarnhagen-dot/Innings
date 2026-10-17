@@ -237,7 +237,7 @@ function _ghPostponedHtml(m) {
   var mk = (g && g.rescheduleDate) || null;
   var dayName = function (iso) { var d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { weekday: 'long' }); };
   var txt;
-  if (off) txt = String(off).replace(/^\w/, function (c) { return c.toUpperCase(); }) + (reason ? ' \u00b7 ' + reason : '') + (mk ? ' \u00b7 now ' + (_ghCountdownText(mk) || '').replace(/^\d\d:\d\d:\d\d$|^Any minute$/, 'today ' + (_formatGameTime(mk) || '')) : ' \u00b7 makeup date coming');
+  if (off) txt = String(off).replace(/^\w/, function (c) { return c.toUpperCase(); }) + (reason ? ' \u00b7 ' + reason : '') + (mk ? ' \u00b7 now ' + (_ghCountdownText(mk) || '').replace(/^\d\d:\d\d:\d\d$|^Any minute$/, _ghDayWord(mk).toLowerCase() + ' ' + (_formatGameTime(mk) || '')) : ' \u00b7 makeup date coming');
   else if (from) txt = 'Moved from ' + dayName(from) + (reason ? ' \u00b7 ' + reason : '');
   if (!txt) return '';
   return '<div class="gh-panel gh-up ps-ppd-row" style="' + _ghDelay(.5) + 'margin-top:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"/><path d="M16 14v6M8 14v6M12 16v6"/></svg><span>' + _escapeHtml(txt) + '</span></div>';
@@ -284,6 +284,15 @@ function _ghHeader(chipClass, chipInner, meta, rightHtml) {
 }
 
 // ── PRE-GAME ──────────────────────────────────────────────────────────
+// v7.49.1: "Today" / "Tomorrow" / "Sat" for a time inside the countdown window
+function _ghDayWord(iso) {
+  var d = new Date(iso), n = new Date();
+  if (isNaN(d)) return '';
+  var same = function (a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); };
+  if (same(d, n)) return 'Today';
+  var tm = new Date(n); tm.setDate(tm.getDate() + 1);
+  return same(d, tm) ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short' });
+}
 function _ghCountdownText(startIso) {
   var t = startIso ? new Date(startIso).getTime() : NaN;
   if (isNaN(t)) return null;

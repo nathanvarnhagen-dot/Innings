@@ -407,8 +407,12 @@ function _glIsPost(sport, g) {
   if (g.seasonType != null) return Number(g.seasonType) === 3;
   return /playoff|semifinal|final|championship|round/i.test(g.headline || '');
 }
+// v7.49.1: a postponed, suspended or cancelled game (any sport) is not
+// final — it reads as upcoming, with the status column saying what happened
+function _glOff(g) { return !!(g && (g.postponed || /postponed|suspended|cancel/i.test((g.status || '') + ' ' + (g.statusDetail || '')))); }
 function _glPhase(sport, g) {
   if (_glIsLive(sport, g)) return 'live';
+  if (_glOff(g)) return 'pre';
   if (g.state) return g.state === 'post' ? 'post' : 'pre';
   return typeof _isGameConcluded === 'function' && _isGameConcluded(g.status) ? 'post' : 'pre';
 }
@@ -459,9 +463,29 @@ function _glLiveStatus(sport, g) {
 function _glRowStatus(sport, g, phase) {
   if (phase === 'live') return _glLiveStatus(sport, g);
   if (phase === 'post') { var d = g.statusDetail || g.status || ''; return /^final/i.test(d) ? d : 'Final'; }
-  if (/postponed|suspended|delayed/i.test(g.status || '')) return g.status;
+  if (_glOff(g)) { var m = String((g.status || '') + ' ' + (g.statusDetail || '')).match(/postponed|suspended|cancel/i); return m ? (m[0].toLowerCase() === 'cancel' ? 'Cancelled' : m[0].charAt(0).toUpperCase() + m[0].slice(1).toLowerCase()) : 'Postponed'; }
+  if (/delayed/i.test(g.status || '')) return g.status;
   if (_glTbd(g)) return 'TBD';
   return (typeof _formatGameTime === 'function' && _formatGameTime(g.startTime)) || 'Today';
+}
+// v7.49.1: under "Postponed" — where the series picks up ("Game 4 · Sat
+// 5:00 PM", the next game to be played), or this game's makeup time
+function _glOffSub(sport, g) {
+  var when = function (iso) {
+    if (!iso || typeof _ghCountdownText !== 'function') return '';
+    var t = _ghCountdownText(iso);
+    return /^\d\d:\d\d:\d\d$|^Any minute$/.test(t || '') ? _ghDayWord(iso) + ' ' + (_formatGameTime(iso) || '') : (t || '');
+  };
+  if (sport === 'mlb' && typeof _psSeries === 'function' && typeof _psRound === 'function' && _psRound(g)) {
+    // the series' games come from the season's postseason list; fetch it
+    // once and redraw the tile when it lands
+    var yr = parseInt(String(g.date || new Date().toISOString()).slice(0, 4), 10) || new Date().getFullYear();
+    if (!window._psData && typeof _psLoad === 'function' && !window._glPsAsked) { window._glPsAsked = true; _psLoad(yr, function () { _glRenderLive(); }); }
+    var next = (_psSeries(g) || []).filter(function (x) { return typeof _psDone === 'function' && !_psDone(x); })[0];
+    if (next && next.startTime) return 'Game ' + _psSeq(next) + ' · ' + when(next.startTime);
+  }
+  if (g.rescheduleDate) return 'Now ' + when(g.rescheduleDate);
+  return g.reason ? String(g.reason) : '';
 }
 // The round line over a playoff game: "NLDS · GAME 3 · LAD LEADS 2–0"
 function _glPoLine(sport, g) {
@@ -470,7 +494,8 @@ function _glPoLine(sport, g) {
     var R = _psRound(g); if (!R) return '';
     var stakes = typeof _psStakes === 'function' ? _psStakes(g) : '';
     var sc = typeof _psScoreText === 'function' ? _psScoreText(g) : '';
-    return '<span class="gl-pst"><b style="color:' + R.rc + '">' + _glEsc((_psName(g) + (g.seriesGameNumber ? ' · Game ' + (typeof _psSeq === 'function' ? _psSeq(g) : g.seriesGameNumber) : '')).toUpperCase()) + '</b>' +
+    var gm = _glOff(g) ? ' · ' + (/rain/i.test(g.reason || '') ? 'Rained out' : 'Postponed') : (g.seriesGameNumber ? ' · Game ' + (typeof _psSeq === 'function' ? _psSeq(g) : g.seriesGameNumber) : '');
+    return '<span class="gl-pst"><b style="color:' + R.rc + '">' + _glEsc((_psName(g) + gm).toUpperCase()) + '</b>' +
       (stakes ? '<em>' + _glEsc(stakes.replace(/ TONIGHT$/, '')) + '</em>' : sc ? '<span>' + _glEsc(sc.toUpperCase()) + '</span>' : '') + '</span>';
   }
   var head = String(g.headline || 'Playoffs').replace(/\s+-\s+/g, ' · ');
@@ -518,6 +543,7 @@ function _glRenderLive() {
     var friend = r.fw.names.length || r.fw.mine;
     var sub = r.fw.names.length ? r.fw.names[0] + (r.fw.names.length > 1 ? ' + ' + (r.fw.names.length - 1) : '') + ' here'
       : r.fw.mine ? 'You’re watching'
+      : _glOff(g) ? _glOffSub(sp, g)
       : mode === 'live' && ph !== 'live' ? (r.x.fav ? '★ Your team' : 'Following')
       : (mode === 'live' && sp === 'mlb' && g.gameType && typeof _psName === 'function' ? _psName(g) + (g.seriesGameNumber ? ' · G' + (typeof _psSeq === 'function' ? _psSeq(g) : g.seriesGameNumber) : '') : '');
     var team = function (name, ab, c, sc, lo) {
