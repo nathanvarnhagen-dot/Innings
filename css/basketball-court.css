@@ -29,12 +29,27 @@
 .bkx-fc.l{left:14%}.bkx-fc.r{right:14%}
 .bkx-fc b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:800;color:#FF4D4D;font-variant-numeric:tabular-nums}
 /* the 24 as a ring in the score bar */
-.bkx-sc{position:relative;width:46px;height:46px;flex:none;--c:#A89FE8}
-.bkx-sc svg{width:46px;height:46px;transform:rotate(-90deg);display:block}
-.bkx-sc circle:last-child{stroke:var(--c);transition:stroke-dashoffset .1s linear,stroke .3s}
-.bkx-sc b{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:#fff;transition:color .3s}
-.bkx-sc.warn{--c:#F2C869}.bkx-sc.warn b{color:#F2C869}
-.bkx-sc.crit{--c:#FF4D4D}.bkx-sc.crit b{color:#FF7A7A;animation:bkxPulse .6s ease-in-out infinite}
+/* v7.52.0: the Dial — shot-clock ring eroding clockwise from 12, a dark ball
+   with the possessing team's seams, the game clock on a band; under five the
+   ball flushes red and the seconds take the middle */
+.bkx-dial{position:relative;width:80px;height:80px;flex:none;--c:#A89FE8}
+.bkx-dial svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);display:block}
+.bkx-dial .trk{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4}
+.bkx-dial .arc{fill:none;stroke:var(--c);stroke-width:4;stroke-linecap:round;transition:stroke .3s}
+.bkx-dial svg.ball{position:absolute;left:11px;top:11px;width:58px;height:58px;display:block}
+.bkx-dial .ball .body{fill:#1A1640;transition:fill .3s}
+.bkx-dial .ball .seam{stroke:var(--b1,var(--c));transition:stroke .3s}
+.bkx-dial .band{position:absolute;left:11px;right:11px;top:50%;height:22px;margin-top:-11px;background:rgba(10,6,24,.55);transition:opacity .3s}
+.bkx-dial .in{position:absolute;inset:0;display:grid;place-items:center}
+.bkx-dial .gc{font-family:'Barlow Condensed',-apple-system,'Helvetica Neue',sans-serif;font-size:22px;font-weight:700;line-height:1;color:#fff;font-variant-numeric:tabular-nums;transition:opacity .25s}
+.bkx-dial .tip{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--c);color:#1A1640;display:grid;place-items:center;font-size:10.5px;font-weight:800;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px #15103A,0 0 12px var(--c);transition:background .3s,box-shadow .3s,opacity .25s}
+.bkx-dial .big{position:absolute;inset:0;display:grid;place-items:center;font-family:'Barlow Condensed',-apple-system,'Helvetica Neue',sans-serif;font-size:30px;font-weight:700;line-height:1;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);font-variant-numeric:tabular-nums;opacity:0;pointer-events:none;transition:opacity .25s}
+.bkx-dial.warn{--c:#F2C869}
+.bkx-dial.crit{--c:#FF4D4D}
+.bkx-dial.crit .tip,.bkx-dial.crit .gc,.bkx-dial.crit .band{opacity:0}
+.bkx-dial.crit .ball .body{fill:#FF4D4D}.bkx-dial.crit .ball .seam{stroke:#5A0F12}
+.bkx-dial.crit .big{opacity:1;animation:bkxBeat .5s ease-in-out infinite}
+@keyframes bkxBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
 @keyframes bkxPulse{50%{transform:scale(1.12)}}
 .gh-m-compact .bkx-ctr .gh-num{font-size:15px}
 /* panel: tidy label for the shooter row */
@@ -42,7 +57,7 @@
 /* the run bar sits as a quiet row under the panel */
 .bkx-run{display:flex;flex-direction:column;gap:6px;padding:8px 2px 0}
 @media (orientation:landscape){html.is-tablet .bkx-arena{max-width:720px}}
-@media (prefers-reduced-motion: reduce){.bkx-spot.mv,.bkx-fly,.bkx-ring,.bkx-x,.bkx-to .who,.bkx-to .stx,.bkx-sc.crit b{animation:none!important}.bkx-ring,.bkx-x{display:none}}
+@media (prefers-reduced-motion: reduce){.bkx-spot.mv,.bkx-fly,.bkx-ring,.bkx-x,.bkx-to .who,.bkx-to .stx,.bkx-dial.crit .big{animation:none!important}.bkx-ring,.bkx-x{display:none}}
 
 /* ═══ FREE THROWS (v7.50.0) — a card over the lit end while someone's at the
    line: one ball per shot, filling in as each is made or missed ═══ */

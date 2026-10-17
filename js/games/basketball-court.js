@@ -127,17 +127,37 @@ function _bkxGameClock(m, st) {
 }
 function _bkxClockState(v) { return v <= 5 ? 'crit' : (v <= 10 ? 'warn' : ''); }
 
-// The score bar's center: the 24 as a draining ring, the game clock as its caption
+// The score bar's center (v7.52.0, the "Dial"): the 24 is a ring in the
+// color of the team with the ball, eroding clockwise from 12 with the
+// seconds riding its leading edge; inside it a dark ball with that team's
+// seams carries the game clock on a band. Under five seconds the game
+// clock steps aside, the ball flushes red and the seconds take the middle.
+var BKX_L = 219.9; // circumference of the r=35 ring
+function _bkxDialArc(v, reset) {
+  var rem = BKX_L * Math.max(0, Math.min(1, v / reset));
+  var ang = -Math.PI / 2 + Math.PI * 2 * (1 - v / reset);
+  return { da: rem.toFixed(1) + ' ' + (BKX_L * 2).toFixed(1), off: (-(BKX_L - rem)).toFixed(1), tx: (Math.cos(ang) * 35).toFixed(1), ty: (Math.sin(ang) * 35).toFixed(1) };
+}
 function _bkxCenterHtml(m, pt) {
   var st = _bkxTrack(m);
   var sc = _bkxBreak(m) ? null : _bkxShotClock(m, st);
   var poss = _bkxTeam(m, st.poss);
   var col = poss ? poss.colors.accent : '#A89FE8';
-  var ring = sc ? '<div class="bkx-sc ' + _bkxClockState(sc.v) + '" id="bkx-sc" style="--c:' + col + '"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/><circle id="bkx-sc-ring" cx="24" cy="24" r="20" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="125.7" stroke-dashoffset="' + (125.7 * (1 - sc.v / sc.reset)).toFixed(1) + '"/></svg><b id="bkx-sc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
-  return '<div class="bkx-ctr" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
-    '<div style="display:flex;align-items:center;gap:8px">' + ring + '<div style="display:flex;flex-direction:column;align-items:center">' +
-      '<span class="gh-num' + (ring ? ' bkx-gc' : '') + '" style="font-size:' + (ring ? '15px' : '22px') + ';line-height:1">' + _escapeHtml(ring ? (_bkxGameClockOr(m, st, pt.small)) : pt.big) + '</span>' +
-      '<span class="' + (ring ? '' : 'bkx-gc') + '" style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(ring ? pt.big : (pt.small || '')) + '</span></div></div></div>';
+  if (!sc) {
+    return '<div class="bkx-ctr" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
+      '<span class="gh-num" style="font-size:22px;line-height:1">' + _escapeHtml(pt.big) + '</span>' +
+      '<span class="bkx-gc" style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(pt.small || '') + '</span></div>';
+  }
+  var a = _bkxDialArc(sc.v, sc.reset), txt = _bkxClockText(sc.v);
+  var ball = '<svg class="ball" viewBox="0 0 58 58" aria-hidden="true"><defs><radialGradient id="bkxDialSh" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></radialGradient></defs><circle class="body" cx="29" cy="29" r="28"/><g class="seam" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M29 1v56M1 29h56"/><path d="M9 9c9 8 9 32 0 40M49 9c-9 8-9 32 0 40"/></g><circle cx="29" cy="29" r="28" fill="url(#bkxDialSh)"/></svg>';
+  return '<div class="bkx-ctr" style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">' +
+    '<div class="bkx-dial ' + _bkxClockState(sc.v) + '" id="bkx-sc" style="--c:' + col + ';--b1:' + col + '" role="timer" aria-label="Shot clock ' + _escapeHtml(txt) + ', game clock ' + _escapeHtml(_bkxGameClockOr(m, st, pt.small)) + '">' +
+      '<svg class="ring" viewBox="0 0 80 80" aria-hidden="true"><circle class="trk" cx="40" cy="40" r="35"/><circle id="bkx-sc-ring" class="arc" cx="40" cy="40" r="35" stroke-dasharray="' + a.da + '" stroke-dashoffset="' + a.off + '"/></svg>' +
+      ball + '<span class="band"></span>' +
+      '<div class="in"><span class="gc bkx-gc">' + _escapeHtml(_bkxGameClockOr(m, st, pt.small)) + '</span></div>' +
+      '<span class="tip" id="bkx-sc-num" style="transform:translate(' + a.tx + 'px,' + a.ty + 'px)">' + _escapeHtml(txt) + '</span>' +
+      '<span class="big" id="bkx-sc-big">' + _escapeHtml(txt) + '</span></div>' +
+    '<span style="font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(pt.big) + '</span></div>';
 }
 
 function _bkxGameClockOr(m, st, fallback) { return (m.phase === 'live' && m.clock && !/half|end of|intermission/i.test(m.statusDetail || '')) ? _bkxGameClock(m, st) : (fallback || ''); }
@@ -162,12 +182,15 @@ function _bkxStartTick() {
     if (ftEl && st.ft && st.ft.done && st.ftDoneAt && Date.now() - st.ftDoneAt > 4500) ftEl.classList.add('out');
     var sc = _bkxShotClock(m, st);
     if (!sc) return;
-    var txt = _bkxClockText(sc.v);
+    var txt = _bkxClockText(sc.v), a = _bkxDialArc(sc.v, sc.reset);
     if (num.textContent !== txt) num.textContent = txt;
+    num.style.transform = 'translate(' + a.tx + 'px,' + a.ty + 'px)';
+    var big = document.getElementById('bkx-sc-big');
+    if (big && big.textContent !== txt) big.textContent = txt;
     var ring = document.getElementById('bkx-sc-ring');
-    if (ring) ring.style.strokeDashoffset = (125.7 * (1 - sc.v / sc.reset)).toFixed(1);
+    if (ring) { ring.setAttribute('stroke-dasharray', a.da); ring.setAttribute('stroke-dashoffset', a.off); }
     var wrap = document.getElementById('bkx-sc');
-    if (wrap) { var cls = 'bkx-sc ' + _bkxClockState(sc.v); if (wrap.className !== cls) wrap.className = cls; }
+    if (wrap) { var cls = 'bkx-dial ' + _bkxClockState(sc.v); if (wrap.className !== cls) wrap.className = cls; }
     var fc = document.getElementById('bkx-fc-num');
     if (fc && fc.textContent !== txt) fc.textContent = txt;
   }, 100);
