@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
       if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
         model.teamColors = await _gcTeamColors(path, league);
       }
-      if (model.phase === 'live' && league === 'nba') await _nbaLiveOverlay(model); // v7.50.0
+      if (model.phase === 'live' && BASKETBALL_LEAGUES[league]) await _nbaLiveOverlay(model, path, eventId); // v7.50.0
       if (!req.query.debug) delete model._nbaDbg;
       if (req.query.debug) model.debug = { nba: model._nbaDbg, topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
       // A live football score can change on one snap, so the edge holds it
@@ -1416,35 +1416,38 @@ function _bbFtTrip(raw, sideOf) {
     as: last.awayScore != null ? Number(last.awayScore) : null, hs: last.homeScore != null ? Number(last.homeScore) : null };
 }
 
-// v7.50.0: the NBA's own live scoreboard (cdn.nba.com) updates within a
-// second or two of the floor; ESPN's summary trails it. For a live NBA
-// game the score, period and clock come from there when it answers in
-// time, matched by nickname. Fails soft: nothing changes.
-var _nbaLiveCache = { at: 0, data: null };
-async function _nbaLiveOverlay(model) {
+// v7.50.0: ESPN's scoreboard for the day refreshes a few seconds ahead of
+// the summary the gamecast is built from (the NBA's own cdn.nba.com feed
+// answers Vercel with a 403). For a live basketball game the score, period
+// and clock come from the scoreboard's event when it answers in time.
+// Fails soft: nothing changes.
+var _sbLiveCache = {};
+async function _nbaLiveOverlay(model, path, eventId) {
   model._nbaDbg = '';
   try {
     var now = Date.now();
-    if (!_nbaLiveCache.data || now - _nbaLiveCache.at > 2000) {
+    var day = new Date(now - 7 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
+    var key = path + ':' + day, c = _sbLiveCache[key];
+    if (!c || now - c.at > 1500) {
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, 1800) : null;
-      var r = await fetch('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json', Object.assign({ headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Referer': 'https://www.nba.com/' } }, ctrl ? { signal: ctrl.signal } : {}));
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/scoreboard?dates=' + day, ctrl ? { signal: ctrl.signal } : undefined);
       if (tm) clearTimeout(tm);
       if (!r.ok) { model._nbaDbg = 'http ' + r.status; return; }
-      _nbaLiveCache = { at: now, data: await r.json() };
+      c = _sbLiveCache[key] = { at: now, data: await r.json() };
     }
-    var games = (_nbaLiveCache.data && _nbaLiveCache.data.scoreboard && _nbaLiveCache.data.scoreboard.games) || [];
-    var nick = function (name) { return String(name || '').split(' ').pop().toLowerCase(); };
-    var g = games.filter(function (x) { return x.homeTeam && x.awayTeam && nick(x.homeTeam.teamName) === nick(model.home.name) && nick(x.awayTeam.teamName) === nick(model.away.name); })[0];
-    if (!g || g.gameStatus !== 2) { model._nbaDbg = !g ? 'no match in ' + games.map(function (x) { return x.awayTeam.teamName + '@' + x.homeTeam.teamName; }).join(',') : 'status ' + g.gameStatus; return; }
-    var cm = String(g.gameClock || '').match(/PT(\d+)M(\d+(?:\.\d+)?)S/);
-    var clock = null;
-    if (cm) { var mm = Number(cm[1]), ss = Number(cm[2]); clock = mm > 0 || ss >= 60 ? mm + ':' + (ss < 10 ? '0' : '') + Math.floor(ss) : ss.toFixed(1); }
-    if (g.homeTeam.score != null) model.home.score = g.homeTeam.score;
-    if (g.awayTeam.score != null) model.away.score = g.awayTeam.score;
-    if (g.period) model.period = g.period;
-    if (clock) model.clock = clock;
-    model.fast = { src: 'nba', at: now, statusText: g.gameStatusText || null };
+    var ev = ((c.data && c.data.events) || []).filter(function (e) { return String(e.id) === String(eventId); })[0];
+    var comp = ev && ev.competitions && ev.competitions[0];
+    if (!comp) { model._nbaDbg = 'no event'; return; }
+    var st = comp.status || ev.status || {};
+    if (!st.type || st.type.state !== 'in') { model._nbaDbg = 'state ' + (st.type && st.type.state); return; }
+    (comp.competitors || []).forEach(function (t) {
+      var side = t.homeAway === 'home' ? 'home' : 'away';
+      if (t.score != null && model[side]) model[side].score = Number(t.score);
+    });
+    if (st.period) model.period = st.period;
+    if (st.displayClock) model.clock = st.displayClock;
+    model.fast = { src: 'espn-sb', at: now };
   } catch (e) { model._nbaDbg = 'err ' + (e && e.message); }
 }
 function _bbShooter(text) {
