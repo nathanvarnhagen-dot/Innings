@@ -1,9 +1,11 @@
 // ═══ TEAM PAGE (v5.65.0) ══════════════════════════════════════════════
 // Tap a team on a game's cheat sheet → record, roster, and the whole
 // season (football: a week-by-week board; baseball: a month calendar).
-// Data: /api/espn?mode=team (NFL, CFB) and /api/mlb?mode=team. Other
-// leagues get the page by adding them here once their layout is checked.
-var _TM_LEAGUES = { nfl: true, cfb: true, mlb: true };
+// Data: /api/espn?mode=team (NFL, CFB, NBA, WNBA, NHL, MLS, NWSL) and
+// /api/mlb?mode=team. v7.54.0: every league. Football is a week-by-week
+// board; everything that plays most days gets the month calendar.
+var _TM_LEAGUES = { nfl: true, cfb: true, mlb: true, nba: true, wnba: true, nhl: true, mls: true, nwsl: true };
+function _tmIsWeekly(league) { return league === 'nfl' || league === 'cfb'; }
 var _TM_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 window._tmCache = window._tmCache || {};
 window._tm = window._tm || null;
@@ -207,7 +209,7 @@ function _tmRender() {
   }
   var d = s.data;
   var body = s.tab === 'schedule'
-    ? '<div id="tm-sched">' + (d.league === 'mlb' ? _tmCalendarHtml(d, s) : _tmWeeksHtml(d)) + '</div>'
+    ? '<div id="tm-sched">' + (_tmIsWeekly(d.league) ? _tmWeeksHtml(d) : _tmCalendarHtml(d, s)) + '</div>'
     : _tmRosterHtml(d, s);
   el.innerHTML = '<div class="tm-wrap">' + _tmHeroHtml(d) + body + '</div>';
 }
@@ -216,12 +218,14 @@ function _tmHeroHtml(d) {
   var t = d.team, c = _tmSelfColors(d);
   var finals = d.games.filter(function (g) { return g.res; });
   var regular = finals.filter(function (g) { return !g.post; });
-  var rec = t.record || _tmRec(regular);
+  var rec = (regular.length >= 10 || !t.record) ? _tmRec(regular) : t.record; // ESPN's summary can be a postseason slice
   var chips = [];
   if (t.standing) chips.push(t.standing);
   var sk = _tmStreak(finals);
   if (sk) chips.push(sk);
-  if (d.league === 'mlb' && finals.length >= 10) chips.push('Last 10: ' + _tmRec(finals.slice(-10)));
+  if (!_tmIsWeekly(d.league) && finals.length >= 10) chips.push('Last 10: ' + _tmRec(finals.slice(-10)));
+  var postF = finals.filter(function (g) { return g.post; });
+  if (postF.length) chips.push('Playoffs ' + _tmRec(postF));
   var ni = _tmNextIndex(d), next = '';
   if (ni >= 0) {
     var g = d.games[ni];
