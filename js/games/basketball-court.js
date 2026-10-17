@@ -179,13 +179,16 @@ function _bkxCourtHtml(m, st) {
   // the same markup as last time, so the poll leaves the floor's DOM alone
   var ftk = st.ft ? st.ft.id + ':' + st.ft.results.length + ':' + (st.ft.done ? 1 : 0) + ':' + (st.ft.done && st.ftDoneAt && now - st.ftDoneAt > 4500 ? 'x' : '') : '';
   var brk = _bkxBreak(m);
-  var key = [c.lastShot && c.lastShot.id, c.last && c.last.id, st.poss, ftk, st.to ? st.to.at : 0, (c.shots || []).length, m.away.abbr, m.home.abbr, brk ? brk.key + ':' + m.away.score + '-' + m.home.score + ':' + JSON.stringify(m.teamStats || null) + ':' + JSON.stringify(m.leaders || null) : ''].join('|');
-  var quiet = (!st.shotAt || now - st.shotAt > 6500) && (!st.to || now - st.to.at > 3500) && (!st.possAt || now - st.possAt > 1500) && (!st.ftAt || now - st.ftAt > 6500) && (!brk || !st.brkAt || now - st.brkAt > 2500);
+  // v7.51.2: the break card is spliced in at the end, so its numbers can
+  // change without the floor being rebuilt
+  var key = [c.lastShot && c.lastShot.id, c.last && c.last.id, st.poss, ftk, st.to ? st.to.at : 0, (c.shots || []).length, m.away.abbr, m.home.abbr, brk ? brk.key : ''].join('|');
+  var quiet = (!st.shotAt || now - st.shotAt > 6500) && (!st.to || now - st.to.at > 3500) && (!st.possAt || now - st.possAt > 1500) && (!st.ftAt || now - st.ftAt > 6500);
   if (st.courtKey === key && st.courtHtml && quiet) {
-    var scq = _bkxShotClock(m, st);
-    return scq ? st.courtHtml.replace(/(id="bkx-fc-num">)[^<]*/, '$1' + _bkxClockText(scq.v)) : st.courtHtml;
+    var scq = brk ? null : _bkxShotClock(m, st);
+    var cached = scq ? st.courtHtml.replace(/(id="bkx-fc-num">)[^<]*/, '$1' + _bkxClockText(scq.v)) : st.courtHtml;
+    return cached.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st));
   }
-  var id = 'bkx' + ((window._bkxSeq = (window._bkxSeq || 0) + 1));
+  var id = 'bkx' + String(st.pk || '').replace(/\W/g, ''); // v7.51.2: stable per game — a fresh id every render changed every fill on the floor
   var A = m.away, H = m.home;
   var aC = A.colors.bg, hC = H.colors.bg, aA = A.colors.accent, hA = H.colors.accent;
   var F = 'font-family="-apple-system,Helvetica,sans-serif"';
@@ -255,14 +258,13 @@ function _bkxCourtHtml(m, st) {
       '<span class="ln"></span></div></div></div>';
   }
   over += _bkxFtHtml(m, st);
-  var brkHtml = _bkxBreakHtml(m, st);
-  over += brkHtml;
+  over += '<!--bkx-brk-->';
   // the shot clock hanging over the baseline at the lit end
-  var sc = brkHtml ? null : _bkxShotClock(m, st);
+  var sc = brk ? null : _bkxShotClock(m, st);
   var fc = sc ? '<div class="bkx-fc ' + (st.poss === 'h' ? 'r' : 'l') + '"><b id="bkx-fc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
   var out = '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
   st.courtKey = key; st.courtHtml = out;
-  return out;
+  return out.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st));
 }
 
 // ── v7.51.0: the break between quarters, halftime, the end of regulation
