@@ -90,16 +90,33 @@
 @media (prefers-reduced-motion: reduce){.bkx-ft,.bkx-ftb.up,.bkx-ftb i,.bkx-ft.out{animation:none!important}}
 
 /* ═══ BREAKS (v7.51.0) — end of quarter, halftime, end of regulation, final ═══ */
-.bkx-floor .bkx-brk{top:0;bottom:0;left:0;right:0;border-radius:5px;z-index:5;gap:4px;padding:8px 10px;background:rgba(9,6,26,.8);justify-content:center}
-.bkx-brk .lb{font-size:19px;letter-spacing:.22em}
-.bkx-brk .sb{margin-bottom:2px}
-.bkx-brg{display:flex;flex-direction:column;gap:0;width:min(100%,320px);margin-top:4px}
-.bkx-brs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:4px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12px;animation:fbxFade .35s ease both}
+/* v7.55.2: sized to the floor (940:500) — everything fits inside it, nothing clips at the top or bottom */
+.bkx-floor .bkx-brk{top:0;bottom:0;left:0;right:0;border-radius:5px;z-index:5;gap:3px;padding:6px 10px;background:rgba(9,6,26,.84);justify-content:center}
+.bkx-brk .sc{font-size:11px}
+.bkx-brk .lb{font-size:16px;letter-spacing:.22em;line-height:1.1}
+.bkx-brk .rl{height:2px}
+.bkx-brk .sb{font-size:11px;margin-bottom:0;line-height:1.2}
+.bkx-brg{display:flex;flex-direction:column;gap:0;width:min(100%,320px);margin-top:3px}
+.bkx-brs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:2px 0;border-top:1px solid rgba(255,255,255,.07);font-size:11px;line-height:1.25;animation:fbxFade .35s ease both}
 .bkx-brs .k{font-size:9px;font-weight:800;letter-spacing:.12em;color:#9C95D0;text-transform:uppercase;white-space:nowrap}
 .bkx-brs .v{font-weight:700;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .bkx-brs .v.r{text-align:right}
 .bkx-brs .v.w{color:#fff;font-weight:900;text-shadow:0 0 14px var(--c)}
-@media (max-width:420px){.bkx-brk .lb{font-size:15px}.bkx-brs{font-size:11px;padding:3px 0}.bkx-brk .sc{font-size:12px}}
+.bkx-brs .k{font-size:8.5px}
+@media (max-width:420px){.bkx-brk .lb{font-size:13px}.bkx-brs{font-size:10px;padding:1px 0}.bkx-brk .sc{font-size:10px}.bkx-brk .sb{font-size:10px}.bkx-brs .k{font-size:8px}}
+
+/* v7.55.2: the tracking panel under the floor, compact — half the height of the baseball one */
+.bkx-pap{padding:10px 12px;gap:6px}
+.bkx-pap .pap-g{gap:6px}
+.bkx-pap .pap-r{min-height:0;gap:4px;padding:8px 10px;border-radius:12px}
+.bkx-pap .pap-l{font-size:11px;letter-spacing:.12em}
+.bkx-pap .pap-l em{font-size:9px}
+.bkx-pap .pap-v{font-size:20px}
+.bkx-pap .pap-v small{font-size:10px}
+.bkx-pap .pap-tx{font-size:13.5px;line-height:1.2}
+.bkx-pap .pap-bar{height:5px}
+.bkx-pap .pap-bar b{height:16px;margin-top:-8px;font-size:10px}
+.bkx-pap .pap-bd{font-size:11px;padding:4px 9px}
 @media (prefers-reduced-motion: reduce){.bkx-brs{animation:none;opacity:1}}
 
 /* ═══ RUN CHIP (v7.53.0) — a flame under the score of a team on a run ═══ */

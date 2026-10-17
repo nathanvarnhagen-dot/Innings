@@ -361,12 +361,12 @@ function _bkxBreakHtml(m, st) {
   if (pts && (pts.a || pts.h)) rows.push({ l: 'Leading scorer', a: pts.a ? _patLastOr(pts.a.name) + ' ' + (pts.a.value != null ? pts.a.value : '') : '\u2014', h: pts.h ? _patLastOr(pts.h.name) + ' ' + (pts.h.value != null ? pts.h.value : '') : '\u2014', an: pts.a ? pts.a.value : null, hn: pts.h ? pts.h.value : null });
   var reb = (m.leaders || []).filter(function (l) { return l.label === 'REB'; })[0];
   (m.teamStats || []).forEach(function (r) {
-    if (rows.length >= 5) return;
+    if (rows.length >= 4) return; // v7.55.2: four rows fit the floor
     var lower = !!r[5];
     rows.push({ l: r[0], a: String(r[1]), h: String(r[2]), an: lower ? -r[3] : r[3], hn: lower ? -r[4] : r[4] });
   });
   var s2 = m.situation || {};
-  if (s2.momA != null && s2.momH != null && rows.length < 5 && (s2.momA || s2.momH)) rows.push({ l: 'Last 8 scores', a: String(s2.momA), h: String(s2.momH), an: s2.momA, hn: s2.momH });
+  if (s2.momA != null && s2.momH != null && rows.length < 4 && (s2.momA || s2.momH)) rows.push({ l: 'Last 8 scores', a: String(s2.momA), h: String(s2.momH), an: s2.momA, hn: s2.momH });
   var grid = rows.map(function (r, i) {
     var aw = r.an != null && r.hn != null && r.an > r.hn, hw = r.an != null && r.hn != null && r.hn > r.an;
     return '<div class="bkx-brs" style="animation-delay:calc(var(--t0) + ' + (420 + i * 70) + 'ms)"><span class="v' + (aw ? ' w' : '') + '" style="--c:' + a.colors.accent + '">' + _escapeHtml(r.a) + '</span><span class="k">' + _escapeHtml(r.l) + '</span><span class="v r' + (hw ? ' w' : '') + '" style="--c:' + h.colors.accent + '">' + _escapeHtml(r.h) + '</span></div>';
