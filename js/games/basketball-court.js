@@ -210,7 +210,7 @@ function _bkxCourtHtml(m, st) {
   if (st.courtKey === key && st.courtHtml && quiet) {
     var scq = brk ? null : _bkxShotClock(m, st);
     var cached = scq ? st.courtHtml.replace(/(id="bkx-fc-num">)[^<]*/, '$1' + _bkxClockText(scq.v)) : st.courtHtml;
-    return cached.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st));
+    return cached.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st) || _bkxTimeoutHtml(m, st));
   }
   var id = 'bkx' + String(st.pk || '').replace(/\W/g, ''); // v7.51.2: stable per game — a fresh id every render changed every fill on the floor
   var A = m.away, H = m.home;
@@ -288,7 +288,7 @@ function _bkxCourtHtml(m, st) {
   var fc = sc ? '<div class="bkx-fc ' + (st.poss === 'h' ? 'r' : 'l') + '"><b id="bkx-fc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
   var out = '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
   st.courtKey = key; st.courtHtml = out;
-  return out.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st));
+  return out.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st) || _bkxTimeoutHtml(m, st));
 }
 
 // ── v7.53.0: the run chip under the score of a team on a run (8+ unanswered,
@@ -468,5 +468,94 @@ function _bkxPanelHtml(m, st) {
 function _bkxStripHtml(m, runHtml) {
   var st = _bkxTrack(m);
   setTimeout(_bkxStartTick, 0);
-  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxCourtHtml(m, st) + _bkxPanelHtml(m, st) + (runHtml || '') + '</div>';
+  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxCourtHtml(m, st) + _bkxPanelHtml(m, st) + (runHtml || '') + _bkxBoardHtml(m) + '</div>';
+}
+
+// ── v7.55.0: TIMEOUT — a card over the floor in the colors of the team that
+// called it (neutral for an official timeout): which kind, when, how many
+// they've used, and the run that made them call it. Up until the clock runs.
+function _bkxTimeoutHtml(m, st) {
+  var c = m.court, t = c && c.timeout;
+  if (!t || m.phase !== 'live' || st.running) return '';
+  var now = Date.now(), a = m.away, h = m.home;
+  var tm = _bkxTeam(m, t.side), official = t.kind === 'official' || !tm;
+  var bg = official ? '#3D3580' : tm.colors.bg, acc = official ? '#A89FE8' : tm.colors.accent;
+  if (st.tmoKey !== t.id) { st.tmoKey = t.id; st.tmoAt = st.seeded && st.m ? now : now - 60000; }
+  var t0 = now - st.tmoAt > 2500 ? -60000 : -(now - st.tmoAt);
+  var ord = function (n) { return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'); };
+  var when = (t.period ? (t.period <= 4 ? 'Q' + t.period : (t.period === 5 ? 'OT' : (t.period - 4) + 'OT')) : '') + (t.clock ? ' ' + t.clock : '');
+  var bits = [];
+  if (!official) bits.push(t.kind === 'short' ? '20 second' : 'Full');
+  if (when) bits.push(when);
+  if (!official && t.n) bits.push(ord(t.n) + ' of the game');
+  // the run they're trying to stop
+  var run = m.situation && m.situation.run, runT = run && _bkxTeam(m, run.side);
+  var why = (run && !official && run.side !== t.side && runT) ? 'After a ' + run.pts + '\u2013' + run.opp + ' ' + (runT.short || runT.abbr) + ' run' : '';
+  var lo = function (x, y) { return x != null && y != null && x < y ? ' class="lo"' : ''; };
+  return '<div class="fbx-brk bkx-brk bkx-tmo" style="--t0:' + t0 + 'ms;--acc:' + acc + ';--tbg:' + bg + '">' +
+    '<div class="sc"><span style="color:' + a.colors.accent + '">' + _escapeHtml(a.abbr) + '</span> <b' + lo(a.score, h.score) + '>' + (a.score != null ? a.score : '\u2013') + '</b> &nbsp;\u00b7&nbsp; <span style="color:' + h.colors.accent + '">' + _escapeHtml(h.abbr) + '</span> <b' + lo(h.score, a.score) + '>' + (h.score != null ? h.score : '\u2013') + '</b></div>' +
+    '<div class="bkx-tmo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9l4 2"/><circle cx="12" cy="12" r="9"/></svg></div>' +
+    '<div class="lb">' + (official ? 'OFFICIAL TIMEOUT' : 'TIMEOUT \u00b7 ' + _escapeHtml(String(tm.short || tm.name || tm.abbr).toUpperCase())) + '</div><div class="rl"></div>' +
+    (bits.length ? '<div class="sb">' + _escapeHtml(bits.join(' \u00b7 ')) + '</div>' : '') +
+    (why ? '<div class="bkx-tmo-why">' + _escapeHtml(why) + '</div>' : '') + '</div>';
+}
+
+// ── v7.55.0: THE ARENA BOARD under the floor — what the big board at the
+// arena shows: the five on the floor for each team (PTS REB AST PF), each
+// team's numbers, the Four Factors, timeouts used and team fouls this period.
+function _bkxOnFloor(m, side) {
+  var box = m.box && m.box[side === 'h' ? 'home' : 'away'], rows = [];
+  if (!box) return { rows: rows, live: false };
+  var all = [];
+  (box.sections || []).forEach(function (sec) { (sec.rows || []).forEach(function (r) { if (!r.dnp) all.push({ r: r, pi: sec.cols.indexOf('PTS'), ri: sec.cols.indexOf('REB'), ai: sec.cols.indexOf('AST') }); }); });
+  var live = all.some(function (x) { return x.r.on != null; });
+  var pick = live ? all.filter(function (x) { return x.r.on === 1; }) : all.slice(0, 5);
+  if (live && !pick.length) { live = false; pick = all.slice(0, 5); }
+  return { live: live, rows: pick.slice(0, 5).map(function (x) {
+    var r = x.r, cell = function (i) { return i >= 0 && r.cells[i] != null && r.cells[i] !== '' ? String(r.cells[i]) : '0'; };
+    return { name: r.name, id: r.id, pts: cell(x.pi), reb: cell(x.ri), ast: cell(x.ai), pf: r.pf != null ? String(r.pf) : '0' };
+  }) };
+}
+function _bkxShortName(full) {
+  var p = String(full || '').trim().split(/\s+/);
+  if (p.length < 2) return full || '';
+  return p[0].charAt(0) + '. ' + _ghLastName(full);
+}
+function _bkxBoardHtml(m) {
+  var B = m.board;
+  if (!B || (m.phase !== 'live' && m.phase !== 'final')) return '';
+  var A = m.away, H = m.home, c = m.court || {};
+  var v = function (x, pct) { return x == null ? '\u2013' : (pct ? (x === 100 ? '100' : x.toFixed(1)) : String(x)); };
+  var teamBox = function (t, side, o) {
+    var of = _bkxOnFloor(m, side), bg = t.colors.bg, acc = t.colors.accent;
+    var head = '<div class="bkb-hd"><span>' + _escapeHtml(String(t.short || t.name || t.abbr).toUpperCase()) + '</span><span>PTS</span><span>REB</span><span>AST</span><span>PF</span></div>';
+    var rows = of.rows.map(function (r) {
+      return '<div class="bkb-r"><span class="n">' + _gxPlayerLink(_bkxShortName(r.name), r.id, m.league, 'text-decoration:none') + '</span><b>' + _escapeHtml(r.pts) + '</b><span>' + _escapeHtml(r.reb) + '</span><span>' + _escapeHtml(r.ast) + '</span><span class="pf' + (Number(r.pf) >= 5 ? ' hot' : '') + '">' + _escapeHtml(r.pf) + '</span></div>';
+    }).join('');
+    var stat = function (k, x, pct) { return '<div class="bkb-s"><span>' + k + '</span><b>' + v(x, pct) + '</b></div>'; };
+    var stats = '<div class="bkb-stats">' + stat('AST', o.ast) + stat('BLK', o.blk) + stat('OREB', o.oreb) + stat('TO', o.to) + stat('DREB', o.dreb) + stat('POT', o.pot) + stat('STL', o.stl) + stat('PITP', o.pitp) +
+      stat('2P%', o.twoPct, 1) + stat('FG%', o.fgPct, 1) + stat('3P%', o.tpPct, 1) + stat('FT%', o.ftPct, 1) + '</div>';
+    return { floor: '<div class="bkb-box" style="--tb:' + bg + ';--ta:' + acc + '">' + head + (rows || '<div class="bkb-none">Lineup not in yet</div>') + '</div>', stats: '<div class="bkb-box bkb-tm" style="--tb:' + bg + ';--ta:' + acc + '">' + stats + '</div>', live: of.live };
+  };
+  var ta = teamBox(A, 'a', B.a), th = teamBox(H, 'h', B.h);
+  var live = ta.live || th.live;
+  var pt = m.period ? (m.period <= 4 ? ['1ST', '2ND', '3RD', '4TH'][m.period - 1] + ' QTR' : (m.period === 5 ? 'OT' : (m.period - 4) + 'OT')) : '';
+  var hdr = function (l, r) { return '<div class="bkb-eye"><span>' + l + '</span><span>' + (r || '') + '</span></div>'; };
+  // four factors: a tug-of-war bar each, leader's number lit
+  var ff = [['EFG%', B.a.efg, B.h.efg, 0], ['TO%', B.a.toPct, B.h.toPct, 1], ['OREB%', B.a.orebPct, B.h.orebPct, 0], ['FT RATE', B.a.ftRate, B.h.ftRate, 0]].map(function (f) {
+    var x = f[1], y = f[2], lower = f[3], tot = (x || 0) + (y || 0);
+    var aw = x != null && y != null && (lower ? x < y : x > y), hw = x != null && y != null && (lower ? y < x : y > x);
+    var pa = tot ? Math.round((x || 0) / tot * 100) : 50;
+    return '<div class="bkb-ff"><b class="' + (aw ? 'w' : '') + '" style="color:' + A.colors.accent + '">' + v(x, 1) + '</b><div class="m"><span>' + f[0] + '</span><div class="bar"><i style="width:' + pa + '%;background:' + A.colors.accent + '"></i><i style="flex:1;background:' + H.colors.accent + '"></i></div></div><b class="r ' + (hw ? 'w' : '') + '" style="color:' + H.colors.accent + '">' + v(y, 1) + '</b></div>';
+  }).join('');
+  var foot = function (t, side) {
+    var tu = c.timeouts ? c.timeouts[side] : null, fl = c.fouls && c.foulsPeriod === m.period ? c.fouls[side] : null;
+    return '<div class="bkb-ft" style="--tb:' + t.colors.bg + ';--ta:' + t.colors.accent + '"><span>TO USED <b>' + (tu != null ? tu : '\u2013') + '</b></span><span>FLS <b>' + (fl != null ? fl : '\u2013') + '</b>' + (fl != null && fl >= 4 ? '<em>BONUS</em>' : '') + '</span></div>';
+  };
+  return '<div class="bkb">' +
+    hdr(live ? 'ON THE FLOOR' : 'STARTERS', pt + (m.clock && m.phase === 'live' ? ' \u00b7 <span class="bkx-gc">' + _escapeHtml(m.clock) + '</span>' : '')) +
+    '<div class="bkb-2">' + ta.floor + th.floor + '</div>' +
+    hdr('TEAM STATS') + '<div class="bkb-2">' + ta.stats + th.stats + '</div>' +
+    hdr('FOUR FACTORS', 'PCT \u00b7 LEADER LIT') + '<div class="bkb-ffs">' + ff + '</div>' +
+    (m.phase === 'live' ? '<div class="bkb-2">' + foot(A, 'a') + foot(H, 'h') + '</div>' : '') + '</div>';
 }

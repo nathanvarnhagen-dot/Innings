@@ -1329,10 +1329,22 @@ function _bbCourt(data, away, home, league) {
   var poss = null, resetVal = 24, resetClock = null, resetPeriod = null;
   var last = null, lastShot = null, scLast = null, scLastShot = null;
   var periodSecs = league === 'wnba' ? 600 : 720;
+  // v7.55.0: timeouts used and team fouls this period (for the arena board),
+  // plus the timeout in progress — the newest timeout play with nothing but
+  // substitutions and the like logged after it
+  var tmo = { a: 0, h: 0 }, fouls = { a: 0, h: 0 }, foulsPer = null, curTmo = null;
   raw.forEach(function (p) {
     var kind = _bbPlayKind(p), side = sideOf(p), per = (p.period && p.period.number) || 0, clk = p.clock && p.clock.displayValue;
     var secs = _bbSecs(clk);
     if (per !== resetPeriod) { resetPeriod = per; resetVal = 24; resetClock = per > 4 ? 300 : periodSecs; }
+    if (per !== foulsPer) { foulsPer = per; fouls = { a: 0, h: 0 }; }
+    if (kind === 'foul' && side && !/offensive|technical|charge/i.test(String(p.text || ''))) fouls[side]++;
+    if (kind === 'timeout') {
+      if (side) tmo[side]++;
+      var tt = String(p.text || '');
+      curTmo = { side: side, text: tt, kind: /official|tv|media/i.test(tt) ? 'official' : /20|short/i.test(tt) ? 'short' : 'full', n: side ? tmo[side] : null,
+        period: per, clock: clk || null, as: p.awayScore != null ? Number(p.awayScore) : null, hs: p.homeScore != null ? Number(p.homeScore) : null, id: String(p.id || '') };
+    } else if (curTmo && !/enters the game|substitution|review|challenge|delay|instant replay/i.test(String(p.text || ''))) curTmo = null;
     // the shot clock as this play happened (before it resets anything)
     var scNow = (secs != null && resetClock != null) ? Math.max(0, Math.min(resetVal, resetVal - (resetClock - secs), secs)) : null;
     var reset = function (s, v) { poss = s; resetVal = v; resetClock = secs != null ? secs : resetClock; };
@@ -1375,7 +1387,8 @@ function _bbCourt(data, away, home, league) {
       as: pl.awayScore != null ? Number(pl.awayScore) : null, hs: pl.homeScore != null ? Number(pl.homeScore) : null
     };
   };
-  return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs, ft: _bbFtTrip(raw, sideOf) };
+  return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs, ft: _bbFtTrip(raw, sideOf),
+    timeouts: tmo, fouls: fouls, foulsPeriod: foulsPer, timeout: curTmo }; // v7.55.0
 }
 // v7.50.0: the free-throw trip in progress (or just finished): who's at the
 // line, how many he gets, and each one's result so far. Walked back from
@@ -1543,6 +1556,39 @@ function _bbRun(scoring) {
   var first = scoring[start];
   return { side: side, pts: pts, opp: opp, since: (first.clock && first.clock.displayValue) || null, sincePeriod: (first.period && first.period.number) || null, period: (last.period && last.period.number) || null };
 }
+// v7.55.0: the team numbers the arena board shows (assists, boards, steals,
+// blocks, turnovers, points off turnovers, points in the paint, the shooting
+// splits) and the Four Factors computed from the raw makes and attempts:
+// eFG% = (FGM + .5·3PM) / FGA · TO% = TO / (FGA + .44·FTA + TO) ·
+// OREB% = OREB / (OREB + opponent DREB) · FT rate = FTA / FGA
+function _bbBoard(data, away, home) {
+  var teams = (data.boxscore && data.boxscore.teams) || [];
+  var split = function (txt) { var m = String(txt || '').match(/^(\d+)\s*[-\/]\s*(\d+)$/); return m ? [Number(m[1]), Number(m[2])] : null; };
+  var one = function (id) {
+    var g = function (names) { return _gcTeamStat(teams, id, names); };
+    var fg = split(g(['fieldGoalsMade-fieldGoalsAttempted', 'FG'])) || [null, null];
+    var tp = split(g(['threePointFieldGoalsMade-threePointFieldGoalsAttempted', '3PT'])) || [null, null];
+    var ft = split(g(['freeThrowsMade-freeThrowsAttempted', 'FT'])) || [null, null];
+    var n = function (names) { return _num(g(names)); };
+    var o = { fgm: fg[0], fga: fg[1], tpm: tp[0], tpa: tp[1], ftm: ft[0], fta: ft[1],
+      ast: n(['assists', 'AST']), oreb: n(['offensiveRebounds', 'OREB']), dreb: n(['defensiveRebounds', 'DREB']), reb: n(['totalRebounds', 'REB']),
+      stl: n(['steals', 'STL']), blk: n(['blocks', 'BLK']), to: n(['totalTurnovers', 'turnovers', 'TO']), pot: n(['turnoverPoints', 'Points Off Turnovers']),
+      pitp: n(['pointsInPaint', 'Points in Paint']), fb: n(['fastBreakPoints', 'Fast Break Points']), fouls: n(['fouls', 'PF']), lead: n(['largestLead', 'Largest Lead']) };
+    var pct = function (a, b) { return (a != null && b) ? Math.round(a / b * 1000) / 10 : null; };
+    o.fgPct = pct(o.fgm, o.fga); o.tpPct = pct(o.tpm, o.tpa); o.ftPct = pct(o.ftm, o.fta);
+    o.twoPct = (o.fgm != null && o.tpm != null) ? pct(o.fgm - o.tpm, o.fga - o.tpa) : null;
+    o.efg = (o.fgm != null && o.tpm != null && o.fga) ? Math.round((o.fgm + .5 * o.tpm) / o.fga * 1000) / 10 : null;
+    var possLike = (o.fga != null && o.fta != null && o.to != null) ? o.fga + .44 * o.fta + o.to : null;
+    o.toPct = (possLike && o.to != null) ? Math.round(o.to / possLike * 1000) / 10 : null;
+    o.ftRate = (o.fga && o.fta != null) ? Math.round(o.fta / o.fga * 1000) / 10 : null;
+    return o;
+  };
+  var a = one(away.id), h = one(home.id);
+  a.orebPct = (a.oreb != null && h.dreb != null && a.oreb + h.dreb) ? Math.round(a.oreb / (a.oreb + h.dreb) * 1000) / 10 : null;
+  h.orebPct = (h.oreb != null && a.dreb != null && h.oreb + a.dreb) ? Math.round(h.oreb / (h.oreb + a.dreb) * 1000) / 10 : null;
+  if (a.fga == null && h.fga == null && a.ast == null) return null;
+  return { a: a, h: h };
+}
 function _bbBox(data) {
   var want = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG'];
   var out = {};
@@ -1553,10 +1599,13 @@ function _bbBox(data) {
     var labels = st.labels || [];
     var idx = want.map(function (w) { return labels.indexOf(w); });
     var cols = want.filter(function (w, i) { return idx[i] !== -1; });
+    var pfI = labels.indexOf('PF'), anyActive = (st.athletes || []).some(function (a) { return a.active === true; });
     var toRow = function (a) {
       var p = _gcPlayer(a.athlete);
       var dnp = a.didNotPlay || !(a.stats || []).length;
-      return { name: p.name, id: p.id, pos: p.pos, cells: dnp ? cols.map(function (c, i) { return i === 0 ? 'DNP' : ''; }) : idx.filter(function (x) { return x !== -1; }).map(function (x) { return a.stats[x]; }), sub: false, dnp: dnp };
+      // v7.55.0: on the floor right now (ESPN's active flag; the starters when it isn't there) and personal fouls, for the arena board
+      return { name: p.name, id: p.id, pos: p.pos, cells: dnp ? cols.map(function (c, i) { return i === 0 ? 'DNP' : ''; }) : idx.filter(function (x) { return x !== -1; }).map(function (x) { return a.stats[x]; }), sub: false, dnp: dnp,
+        on: anyActive ? (a.active === true ? 1 : 0) : null, pf: (!dnp && pfI >= 0) ? _num(a.stats[pfI]) : null };
     };
     var athletes = st.athletes || [];
     var starters = athletes.filter(function (a) { return a.starter; }).map(toRow);
@@ -1687,6 +1736,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
       ]);
       if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH, run: bb.run || null };
       if (phase !== 'pre') { try { model.court = _bbCourt(data, away, home, league); } catch (e) { model.court = null; } } // v7.46.0
+      try { model.board = _bbBoard(data, away, home); } catch (e) { model.board = null; } // v7.55.0: the arena board's numbers
       boxById = _bbBox(data);
     } else if (sport === 'soccer') {
       var sc = _scEvents(data, away, home);

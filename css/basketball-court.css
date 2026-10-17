@@ -115,3 +115,43 @@
 @keyframes bkxFlick{0%,100%{box-shadow:0 0 0 0 rgba(255,122,61,0)}50%{box-shadow:0 0 14px 0 rgba(255,122,61,.5)}}
 .gh-m-compact .bkx-runchip{font-size:9.5px;padding:1px 6px 1px 4px}
 @media (prefers-reduced-motion: reduce){.bkx-runchip,.bkx-runchip b{animation:none!important}}
+
+/* ═══ TIMEOUT (v7.55.0) — a card over the floor in the calling team's colors ═══ */
+.bkx-floor .bkx-brk.bkx-tmo{background:linear-gradient(135deg,var(--tbg) 0%,rgba(9,6,26,.86) 70%)}
+.bkx-tmo .lb{color:#fff;text-shadow:0 0 18px var(--acc)}
+.bkx-tmo .rl{background:var(--acc)}
+.bkx-tmo-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.1);border:1.5px solid var(--acc);color:#fff;animation:fbxUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--t0) + 150ms)}
+.bkx-tmo-ic svg{width:18px;height:18px}
+.bkx-tmo-why{margin-top:4px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:11px;font-weight:800;letter-spacing:.06em;color:#fff;animation:fbxUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--t0) + 420ms)}
+@media (max-width:420px){.bkx-tmo-ic{width:28px;height:28px}.bkx-tmo-ic svg{width:15px;height:15px}.bkx-tmo-why{font-size:10px}}
+
+/* ═══ THE ARENA BOARD (v7.55.0) — what the big board shows, under the floor ═══ */
+.bkb{display:flex;flex-direction:column;gap:8px;padding-top:4px;font-variant-numeric:tabular-nums}
+.bkb-eye{display:flex;justify-content:space-between;align-items:center;padding:4px 4px 0;font-size:10px;font-weight:800;letter-spacing:.16em;color:#9C95D0}
+.bkb-eye span:last-child{letter-spacing:.1em;color:#7F77DD}
+.bkb-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.bkb-box{border-radius:14px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--tb) 62%,#0F0B24),color-mix(in srgb,var(--tb) 32%,#0F0B24));border:1px solid color-mix(in srgb,var(--ta) 45%,transparent)}
+@supports not (color: color-mix(in srgb,#000,#fff)){.bkb-box{background:var(--tb)}}
+.bkb-hd,.bkb-r{display:grid;grid-template-columns:minmax(0,1fr) 24px 24px 24px 20px;gap:2px;padding:6px 8px;align-items:center}
+.bkb-hd{padding:7px 8px 4px;font-size:9px;font-weight:800;letter-spacing:.08em;color:#fff;opacity:.85}
+.bkb-hd span:not(:first-child),.bkb-r>*:not(.n){text-align:right}
+.bkb-r{font-size:13px;font-weight:700;border-top:1px solid rgba(255,255,255,.08);color:#fff}
+.bkb-r .n{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkb-r b{font-weight:900}
+.bkb-r .pf{color:rgba(255,255,255,.6)}.bkb-r .pf.hot{color:#FF9A6B;font-weight:900}
+.bkb-none{padding:14px 8px;font-size:11.5px;color:rgba(255,255,255,.6);text-align:center}
+.bkb-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px;row-gap:5px;padding:8px 10px}
+.bkb-s{display:flex;justify-content:space-between;align-items:center;min-width:0}
+.bkb-s span{font-size:9.5px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.72)}
+.bkb-s b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
+.bkb-ffs{border-radius:14px;background:rgba(168,159,232,.06);border:1px solid rgba(168,159,232,.2);padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.bkb-ff{display:grid;grid-template-columns:50px minmax(0,1fr) 50px;align-items:center;gap:10px}
+.bkb-ff b{font-size:16px;font-weight:900;opacity:.55;white-space:nowrap}.bkb-ff b.r{text-align:right}.bkb-ff b.w{opacity:1;text-shadow:0 0 14px currentColor}
+.bkb-ff .m{display:flex;flex-direction:column;align-items:center;gap:3px}
+.bkb-ff .m span{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#9C95D0}
+.bkb-ff .bar{display:flex;width:100%;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.08)}
+.bkb-ff .bar i{display:block;height:100%}
+.bkb-ft{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:10px;background:color-mix(in srgb,var(--tb) 40%,transparent);border:1px solid color-mix(in srgb,var(--ta) 30%,transparent);font-size:10.5px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.75)}
+.bkb-ft b{color:#fff;font-size:12px;margin-left:3px}
+.bkb-ft em{font-style:normal;margin-left:6px;padding:1px 5px;border-radius:4px;background:#F2C869;color:#1A1640;font-size:8.5px;letter-spacing:.08em}
+@media (max-width:380px){.bkb-hd,.bkb-r{grid-template-columns:minmax(0,1fr) 22px 22px 22px 18px;padding-left:6px;padding-right:6px}.bkb-r{font-size:12px}.bkb-s b{font-size:14px}}
