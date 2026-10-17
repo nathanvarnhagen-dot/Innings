@@ -1519,7 +1519,8 @@ function _bbAnalyze(data, away, home) {
       tag: _gcPeriodTag('basketball', p.period && p.period.number), time: (p.clock && p.clock.displayValue) || '',
       side: sideOf(p), text: p.text, kind: isBlock ? 'block' : 'score',
       pts: p.scoreValue != null ? Number(p.scoreValue) : null,
-      as: isBlock ? null : Number(p.awayScore), hs: isBlock ? null : Number(p.homeScore)
+      as: isBlock ? null : Number(p.awayScore), hs: isBlock ? null : Number(p.homeScore),
+      id: String(p.id || '') // v7.55.3: keys the play's reactions
     };
   });
   // Momentum — points over the last 8 scoring plays

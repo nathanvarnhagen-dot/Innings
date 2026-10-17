@@ -631,14 +631,25 @@ function _gxFeedHtml(m) {
   if (!feed.length) return '';
   var all = window._gxFeedAll;
   var shown = all ? feed : feed.slice(0, 25);
+  // v7.55.3: same affordances as a football or baseball play row — the
+  // arrow quotes the play into the chat, a double tap reacts to it
+  var playIds = [];
   var rows = shown.map(function (p) {
     var chip = p.kind === 'block' ? '<span class="gh-tag" style="background:rgba(168,159,232,.16);color:#D9D4FA">BLK</span>' : '<span class="gh-num" style="font-size:13px;white-space:nowrap">' + _escapeHtml(_gxChip(p, m)) + '</span>';
     var t = p.side === 'h' ? m.home : (p.side === 'a' ? m.away : null);
-    return '<div class="gh-feedrow"><div style="width:46px;flex-shrink:0;display:flex;flex-direction:column;gap:2px">' +
+    var tag = (p.tag || '') + (p.time ? ' ' + p.time : '');
+    var playId = (p.id && m.gameId != null) ? (m.gameId + '_' + p.id) : null;
+    if (playId) playIds.push(playId);
+    var attrs = playId ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"' : '';
+    return '<div class="gh-feedrow" style="flex-wrap:wrap"' + attrs + '><div style="width:46px;flex-shrink:0;display:flex;flex-direction:column;gap:2px">' +
       '<span class="gh-tag" style="' + (t ? 'background:' + _ghHexAlpha(t.colors.accent, .2) + ';color:' + t.colors.accent : 'background:rgba(255,255,255,.08);color:#D9D4FA') + ';align-self:flex-start">' + _escapeHtml(p.tag) + '</span>' +
       '<span style="font-size:10.5px;color:#9C95D0">' + _escapeHtml(p.time || '') + '</span></div>' +
-      '<span style="flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:' + (p.kind === 'block' ? '#D9D4FA' : '#F5F3FF') + '">' + (p.kind === 'score' && p.pts === 3 ? '<b style="color:#F2C869">3 · </b>' : '') + _escapeHtml(p.text) + '</span>' + chip + '</div>';
+      '<span style="flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:' + (p.kind === 'block' ? '#D9D4FA' : '#F5F3FF') + '">' + (p.kind === 'score' && p.pts === 3 ? '<b style="color:#F2C869">3 · </b>' : '') + _escapeHtml(p.text) + '</span>' + chip +
+      '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(p.text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' +
+      (playId ? '<div id="play-react-' + _escapeHtml(playId) + '" style="flex-basis:100%"></div>' : '') + '</div>';
   }).join('');
+  if (playIds.length && typeof _loadPlayReactions === 'function') setTimeout(function () { _loadPlayReactions(playIds); }, 0);
   var more = feed.length > 25 ? '<button onclick="gxFeedMore()" style="width:100%;margin-top:8px;height:40px;border-radius:12px;border:1px solid rgba(168,159,232,.22);background:transparent;color:#C9C2F5;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">' + (all ? 'Show fewer' : 'Show all ' + feed.length + ' plays') + '</button>' : '';
   return _gxCard('Every basket & block', feed.length + ' plays · newest first', rows + more, .55);
 }
