@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.55.0-arena-board-timeouts';
+window.INNINGS_BUILD = 'v7.55.1-arena-board-stacked-names';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

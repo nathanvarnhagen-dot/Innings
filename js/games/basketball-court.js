@@ -528,14 +528,15 @@ function _bkxBoardHtml(m) {
   var v = function (x, pct) { return x == null ? '\u2013' : (pct ? (x === 100 ? '100' : x.toFixed(1)) : String(x)); };
   var teamBox = function (t, side, o) {
     var of = _bkxOnFloor(m, side), bg = t.colors.bg, acc = t.colors.accent;
-    var head = '<div class="bkb-hd"><span>' + _escapeHtml(String(t.short || t.name || t.abbr).toUpperCase()) + '</span><span>PTS</span><span>REB</span><span>AST</span><span>PF</span></div>';
+    // v7.55.1: the two teams stack in one full-width table so names never truncate
     var rows = of.rows.map(function (r) {
       return '<div class="bkb-r"><span class="n">' + _gxPlayerLink(_bkxShortName(r.name), r.id, m.league, 'text-decoration:none') + '</span><b>' + _escapeHtml(r.pts) + '</b><span>' + _escapeHtml(r.reb) + '</span><span>' + _escapeHtml(r.ast) + '</span><span class="pf' + (Number(r.pf) >= 5 ? ' hot' : '') + '">' + _escapeHtml(r.pf) + '</span></div>';
     }).join('');
+    var head = '<div class="bkb-tn">' + _escapeHtml(String(t.short || t.name || t.abbr).toUpperCase()) + '</div>';
     var stat = function (k, x, pct) { return '<div class="bkb-s"><span>' + k + '</span><b>' + v(x, pct) + '</b></div>'; };
     var stats = '<div class="bkb-stats">' + stat('AST', o.ast) + stat('BLK', o.blk) + stat('OREB', o.oreb) + stat('TO', o.to) + stat('DREB', o.dreb) + stat('POT', o.pot) + stat('STL', o.stl) + stat('PITP', o.pitp) +
       stat('2P%', o.twoPct, 1) + stat('FG%', o.fgPct, 1) + stat('3P%', o.tpPct, 1) + stat('FT%', o.ftPct, 1) + '</div>';
-    return { floor: '<div class="bkb-box" style="--tb:' + bg + ';--ta:' + acc + '">' + head + (rows || '<div class="bkb-none">Lineup not in yet</div>') + '</div>', stats: '<div class="bkb-box bkb-tm" style="--tb:' + bg + ';--ta:' + acc + '">' + stats + '</div>', live: of.live };
+    return { floor: '<div class="bkb-blk" style="--tb:' + bg + ';--ta:' + acc + '">' + head + (rows || '<div class="bkb-none">Lineup not in yet</div>') + '</div>', stats: '<div class="bkb-box bkb-tm" style="--tb:' + bg + ';--ta:' + acc + '">' + stats + '</div>', live: of.live };
   };
   var ta = teamBox(A, 'a', B.a), th = teamBox(H, 'h', B.h);
   var live = ta.live || th.live;
@@ -554,7 +555,7 @@ function _bkxBoardHtml(m) {
   };
   return '<div class="bkb">' +
     hdr(live ? 'ON THE FLOOR' : 'STARTERS', pt + (m.clock && m.phase === 'live' ? ' \u00b7 <span class="bkx-gc">' + _escapeHtml(m.clock) + '</span>' : '')) +
-    '<div class="bkb-2">' + ta.floor + th.floor + '</div>' +
+    '<div class="bkb-fl"><div class="bkb-hd"><span></span><span>PTS</span><span>REB</span><span>AST</span><span>PF</span></div>' + ta.floor + th.floor + '</div>' +
     hdr('TEAM STATS') + '<div class="bkb-2">' + ta.stats + th.stats + '</div>' +
     hdr('FOUR FACTORS', 'PCT \u00b7 LEADER LIT') + '<div class="bkb-ffs">' + ff + '</div>' +
     (m.phase === 'live' ? '<div class="bkb-2">' + foot(A, 'a') + foot(H, 'h') + '</div>' : '') + '</div>';
