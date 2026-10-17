@@ -547,6 +547,7 @@ function _gxFinalHtml(m, st) {
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">' + (soccer ? 'FT' : 'FINAL') + '</span>' +
     (extra ? '<span class="gh-sub" style="font-weight:700">' + extra + '</span>' : '') + '</div>';
   h += _ghScoreboard(m, center, { away: false, home: false }, true);
+  if (m.sport === 'basketball' && m.court && typeof _bkxStripHtml === 'function') h += _bkxStripHtml(m, ''); // v7.51.0: the floor, with the final card over it
   if (m.sport === 'football' && m.highlights.length) h += _fbrHtml(m, true);
   h += _gxHighlightsListHtml(m, st, { title: m.sport === 'basketball' ? 'Every big moment' : (m.sport === 'football' ? 'Every scoring play' : 'Every goal') });
 

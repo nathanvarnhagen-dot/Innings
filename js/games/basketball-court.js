@@ -130,7 +130,7 @@ function _bkxClockState(v) { return v <= 5 ? 'crit' : (v <= 10 ? 'warn' : ''); }
 // The score bar's center: the 24 as a draining ring, the game clock as its caption
 function _bkxCenterHtml(m, pt) {
   var st = _bkxTrack(m);
-  var sc = _bkxShotClock(m, st);
+  var sc = _bkxBreak(m) ? null : _bkxShotClock(m, st);
   var poss = _bkxTeam(m, st.poss);
   var col = poss ? poss.colors.accent : '#A89FE8';
   var ring = sc ? '<div class="bkx-sc ' + _bkxClockState(sc.v) + '" id="bkx-sc" style="--c:' + col + '"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/><circle id="bkx-sc-ring" cx="24" cy="24" r="20" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="125.7" stroke-dashoffset="' + (125.7 * (1 - sc.v / sc.reset)).toFixed(1) + '"/></svg><b id="bkx-sc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
@@ -178,8 +178,9 @@ function _bkxCourtHtml(m, st) {
   // v7.50.1: nothing on the floor changed and nothing is mid-animation →
   // the same markup as last time, so the poll leaves the floor's DOM alone
   var ftk = st.ft ? st.ft.id + ':' + st.ft.results.length + ':' + (st.ft.done ? 1 : 0) + ':' + (st.ft.done && st.ftDoneAt && now - st.ftDoneAt > 4500 ? 'x' : '') : '';
-  var key = [c.lastShot && c.lastShot.id, c.last && c.last.id, st.poss, ftk, st.to ? st.to.at : 0, (c.shots || []).length, m.away.abbr, m.home.abbr].join('|');
-  var quiet = (!st.shotAt || now - st.shotAt > 6500) && (!st.to || now - st.to.at > 3500) && (!st.possAt || now - st.possAt > 1500) && (!st.ftAt || now - st.ftAt > 6500);
+  var brk = _bkxBreak(m);
+  var key = [c.lastShot && c.lastShot.id, c.last && c.last.id, st.poss, ftk, st.to ? st.to.at : 0, (c.shots || []).length, m.away.abbr, m.home.abbr, brk ? brk.key + ':' + m.away.score + '-' + m.home.score + ':' + JSON.stringify(m.teamStats || null) + ':' + JSON.stringify(m.leaders || null) : ''].join('|');
+  var quiet = (!st.shotAt || now - st.shotAt > 6500) && (!st.to || now - st.to.at > 3500) && (!st.possAt || now - st.possAt > 1500) && (!st.ftAt || now - st.ftAt > 6500) && (!brk || !st.brkAt || now - st.brkAt > 2500);
   if (st.courtKey === key && st.courtHtml && quiet) {
     var scq = _bkxShotClock(m, st);
     return scq ? st.courtHtml.replace(/(id="bkx-fc-num">)[^<]*/, '$1' + _bkxClockText(scq.v)) : st.courtHtml;
@@ -254,13 +255,76 @@ function _bkxCourtHtml(m, st) {
       '<span class="ln"></span></div></div></div>';
   }
   over += _bkxFtHtml(m, st);
+  var brkHtml = _bkxBreakHtml(m, st);
+  over += brkHtml;
   // the shot clock hanging over the baseline at the lit end
-  var sc = _bkxShotClock(m, st);
+  var sc = brkHtml ? null : _bkxShotClock(m, st);
   var fc = sc ? '<div class="bkx-fc ' + (st.poss === 'h' ? 'r' : 'l') + '"><b id="bkx-fc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
   var out = '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
   st.courtKey = key; st.courtHtml = out;
   return out;
 }
+
+// ── v7.51.0: the break between quarters, halftime, the end of regulation
+// and the final — a card over the floor with the score, who's carrying each
+// team and the numbers that explain the gap so far.
+function _bkxBreak(m) {
+  var a = m.away, h = m.home, sd = String(m.statusDetail || ''), lp = m.court && m.court.last;
+  var per = m.period || 0;
+  var ord = function (n) { return n === 1 ? '1ST' : n === 2 ? '2ND' : n === 3 ? '3RD' : n + 'TH'; };
+  var otTag = function (n) { return n <= 4 ? '' : (n === 5 ? 'OT' : (n - 4) + 'OT'); };
+  if (m.phase === 'final') {
+    var ot = per > 4 ? ' \u00b7 ' + otTag(per) : (/\/\s*(\d*)OT/i.test(sd) ? ' \u00b7 ' + sd.replace(/^.*\/\s*/, '').toUpperCase() : '');
+    var w = (a.score || 0) > (h.score || 0) ? a : ((h.score || 0) > (a.score || 0) ? h : null);
+    return { key: 'final', lb: 'FINAL' + ot, sub: w ? (w.short || w.name) + ' win' : 'Tied', acc: w ? w.colors.bg : '#A89FE8', win: w };
+  }
+  if (m.phase !== 'live') return null;
+  var endOf = sd.match(/end of (?:the )?(\d)(?:st|nd|rd|th)|end of (?:the )?(\d*)\s*OT/i);
+  var lpEnd = lp && lp.kind === 'period' && /end of/i.test(lp.text || '') && String(m.clock || '') === '0.0' && lp.period === per;
+  if (/half/i.test(sd) || (lpEnd && per === 2)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
+  if (endOf || lpEnd || (/^0?\.0$|^0:00$/.test(String(m.clock || '')) && lp && lp.kind === 'period')) {
+    var n = endOf && endOf[1] ? Number(endOf[1]) : per;
+    var isOt = (endOf && endOf[2] != null) || n > 4;
+    if (!isOt && n === 4 && a.score === h.score) return { key: 'reg', lb: 'END OF REGULATION', sub: 'Overtime is next', acc: '#5AB0FF' };
+    if (isOt && a.score === h.score) return { key: 'ot' + n, lb: 'END OF ' + (otTag(n) || 'OT'), sub: 'More overtime', acc: '#5AB0FF' };
+    return { key: 'q' + n, lb: 'END OF ' + (isOt ? (otTag(n) || 'OT') : ord(n)), sub: _bkxLeadText(m), acc: '#A89FE8' };
+  }
+  return null;
+}
+function _bkxLeadText(m) {
+  var a = m.away, h = m.home;
+  if (a.score == null || h.score == null) return '';
+  if (a.score === h.score) return 'All tied';
+  var L = a.score > h.score ? a : h;
+  return (L.short || L.name) + ' by ' + Math.abs(a.score - h.score);
+}
+function _bkxBreakHtml(m, st) {
+  var br = _bkxBreak(m);
+  if (!br) return '';
+  var now = Date.now(), a = m.away, h = m.home;
+  var lo = function (x, y) { return x != null && y != null && x < y ? ' class="lo"' : ''; };
+  // who's carrying each team, then the team numbers behind the score
+  var rows = [], pts = (m.leaders || []).filter(function (l) { return l.label === 'PTS'; })[0];
+  if (pts && (pts.a || pts.h)) rows.push({ l: 'Leading scorer', a: pts.a ? _patLastOr(pts.a.name) + ' ' + (pts.a.value != null ? pts.a.value : '') : '\u2014', h: pts.h ? _patLastOr(pts.h.name) + ' ' + (pts.h.value != null ? pts.h.value : '') : '\u2014', an: pts.a ? pts.a.value : null, hn: pts.h ? pts.h.value : null });
+  var reb = (m.leaders || []).filter(function (l) { return l.label === 'REB'; })[0];
+  (m.teamStats || []).forEach(function (r) {
+    if (rows.length >= 5) return;
+    var lower = !!r[5];
+    rows.push({ l: r[0], a: String(r[1]), h: String(r[2]), an: lower ? -r[3] : r[3], hn: lower ? -r[4] : r[4] });
+  });
+  var s2 = m.situation || {};
+  if (s2.momA != null && s2.momH != null && rows.length < 5 && (s2.momA || s2.momH)) rows.push({ l: 'Last 8 scores', a: String(s2.momA), h: String(s2.momH), an: s2.momA, hn: s2.momH });
+  var grid = rows.map(function (r, i) {
+    var aw = r.an != null && r.hn != null && r.an > r.hn, hw = r.an != null && r.hn != null && r.hn > r.an;
+    return '<div class="bkx-brs" style="animation-delay:calc(var(--t0) + ' + (420 + i * 70) + 'ms)"><span class="v' + (aw ? ' w' : '') + '" style="--c:' + a.colors.accent + '">' + _escapeHtml(r.a) + '</span><span class="k">' + _escapeHtml(r.l) + '</span><span class="v r' + (hw ? ' w' : '') + '" style="--c:' + h.colors.accent + '">' + _escapeHtml(r.h) + '</span></div>';
+  }).join('');
+  if (st.brkKey !== br.key) { st.brkKey = br.key; st.brkAt = st.seeded && st.m ? now : now - 60000; }
+  return '<div class="fbx-brk bkx-brk" style="--t0:' + (-(now - st.brkAt)) + 'ms;--acc:' + br.acc + '">' +
+    '<div class="sc"><span style="color:' + a.colors.accent + '">' + _escapeHtml(a.abbr) + '</span> <b' + lo(a.score, h.score) + '>' + (a.score != null ? a.score : '\u2013') + '</b> &nbsp;\u00b7&nbsp; <span style="color:' + h.colors.accent + '">' + _escapeHtml(h.abbr) + '</span> <b' + lo(h.score, a.score) + '>' + (h.score != null ? h.score : '\u2013') + '</b></div>' +
+    '<div class="lb">' + _escapeHtml(br.lb) + '</div><div class="rl"></div>' + (br.sub ? '<div class="sb">' + _escapeHtml(br.sub) + '</div>' : '') +
+    (grid ? '<div class="bkx-brg">' + grid + '</div>' : '') + '</div>';
+}
+function _patLastOr(name) { return typeof _ghLastName === 'function' ? _ghLastName(name || '') : String(name || '').split(' ').pop(); }
 
 // ── v7.50.0: free throws. A card over the lit end while someone's at the
 // line: the shooter, one ball per shot he gets (1, 2 or 3), each one
