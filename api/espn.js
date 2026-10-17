@@ -1516,7 +1516,32 @@ function _bbAnalyze(data, away, home) {
     momA += Number(tail[i].awayScore) - Number(tail[i - 1].awayScore);
     momH += Number(tail[i].homeScore) - Number(tail[i - 1].homeScore);
   }
-  return { moments: momentList, feed: feed, leadChanges: leadChanges, momA: momA, momH: momH, hasPlays: raw.length > 0 };
+  return { moments: momentList, feed: feed, leadChanges: leadChanges, momA: momA, momH: momH, hasPlays: raw.length > 0, run: _bbRun(scoring) };
+}
+// v7.53.0: the run in progress — unanswered points by one side since the
+// other last scored (8+ counts), or a lopsided stretch (10+ while the other
+// side scored once). `since` is the clock of the run's first basket.
+function _bbRun(scoring) {
+  if (!scoring.length) return null;
+  var n = scoring.length, last = scoring[n - 1];
+  var dA = function (i) { return Number(scoring[i].awayScore) - (i ? Number(scoring[i - 1].awayScore) : 0); };
+  var dH = function (i) { return Number(scoring[i].homeScore) - (i ? Number(scoring[i - 1].homeScore) : 0); };
+  var side = dA(n - 1) > 0 ? 'a' : dH(n - 1) > 0 ? 'h' : null;
+  if (!side) return null;
+  var mine = side === 'a' ? dA : dH, theirs = side === 'a' ? dH : dA;
+  // walk back: unanswered points first; then allow one answer and keep
+  // going if the stretch beyond it reaches 10+
+  var pts = 0, i = n - 1;
+  while (i >= 0 && theirs(i) === 0) { pts += mine(i); i--; }
+  var start = i + 1, opp = 0;
+  if (i >= 0) {
+    var j = i - 1, pts2 = pts, ans = theirs(i);
+    while (j >= 0 && theirs(j) === 0) { pts2 += mine(j); j--; }
+    if (pts2 >= 10 && pts2 - pts > 0) { pts = pts2; opp = ans; start = j + 1; }
+  }
+  if (pts < 8 || (opp > 0 && pts < 10)) return null;
+  var first = scoring[start];
+  return { side: side, pts: pts, opp: opp, since: (first.clock && first.clock.displayValue) || null, sincePeriod: (first.period && first.period.number) || null, period: (last.period && last.period.number) || null };
 }
 function _bbBox(data) {
   var want = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG'];
@@ -1660,7 +1685,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
         { label: 'Rebounds', names: ['totalRebounds', 'REB', 'rebounds'] },
         { label: 'Turnovers', names: ['turnovers', 'totalTurnovers', 'TO'], lower: true }
       ]);
-      if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH };
+      if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH, run: bb.run || null };
       if (phase !== 'pre') { try { model.court = _bbCourt(data, away, home, league); } catch (e) { model.court = null; } } // v7.46.0
       boxById = _bbBox(data);
     } else if (sport === 'soccer') {

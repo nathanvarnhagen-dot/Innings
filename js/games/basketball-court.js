@@ -291,6 +291,25 @@ function _bkxCourtHtml(m, st) {
   return out.replace('<!--bkx-brk-->', _bkxBreakHtml(m, st));
 }
 
+// ── v7.53.0: the run chip under the score of a team on a run (8+ unanswered,
+// or 10+ with one answer). Appears with a pop, warms as the run grows, and is
+// gone the moment the other side scores.
+function _bkxRunChipHtml(m, side) {
+  var r = m.situation && m.situation.run;
+  if (!r || r.side !== side || m.phase !== 'live') return '';
+  var st = window._bkx;
+  var key = r.side + ':' + r.pts + '-' + r.opp;
+  var now = Date.now();
+  if (st) { if (st.runKey !== key) { st.runAt = st.runKey && st.runKey.split(':')[0] === r.side ? st.runAt : now; st.runGrewAt = now; st.runKey = key; } }
+  var fresh = st && st.runAt && now - st.runAt < 600 ? ' in' : '';
+  var grew = st && st.runGrewAt && now - st.runGrewAt < 600 && !fresh ? ' grew' : '';
+  var hot = r.pts >= 12 ? ' hot' : '';
+  var since = r.since && r.sincePeriod && r.sincePeriod !== r.period ? ' \u00b7 since Q' + r.sincePeriod : '';
+  return '<span class="bkx-runchip' + fresh + grew + hot + '" role="status">' +
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 1-3s0 3 2 3c0-4 2-6 2-10z"/></svg>' +
+    '<b>' + r.pts + '\u2013' + r.opp + ' RUN</b>' + (since ? '<small>' + _escapeHtml(since) + '</small>' : '') + '</span>';
+}
+
 // ── v7.51.0: the break between quarters, halftime, the end of regulation
 // and the final — a card over the floor with the score, who's carrying each
 // team and the numbers that explain the gap so far.

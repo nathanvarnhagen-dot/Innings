@@ -438,6 +438,7 @@ function _gxLiveHtml(m, st) {
         '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short || '') + '</span>' +
         '<span class="gh-num gh-sb-score' + ((m.away.score >= 100 || m.home.score >= 100) ? ' gh-sb3' : '') + '" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
       (m.sport === 'football' ? _fbbTimeoutsHtml(m, t === m.away ? 'a' : 'h') : '') +
+      (m.sport === 'basketball' ? _bkxRunChipHtml(m, t === m.away ? 'a' : 'h') : '') + // v7.53.0
       '</div></div>';
   };
   if (m.sport === 'football' && typeof _fbxTrack === 'function') _fbxTrack(m); // timeouts read the burn state
