@@ -156,7 +156,8 @@ function _bkxCenterHtml(m, pt) {
       ball + '<span class="band"></span>' +
       '<div class="in"><span class="gc bkx-gc">' + _escapeHtml(_bkxGameClockOr(m, st, pt.small)) + '</span></div>' +
       '<span class="tip" id="bkx-sc-num" style="transform:translate(' + a.tx + 'px,' + a.ty + 'px)">' + _escapeHtml(txt) + '</span>' +
-      '<span class="big" id="bkx-sc-big">' + _escapeHtml(txt) + '</span></div>' +
+      '<span class="big" id="bkx-sc-big">' + _escapeHtml(txt) + '</span>' +
+      '<span class="gc-top bkx-gc" aria-hidden="true">' + _escapeHtml(_bkxGameClockOr(m, st, pt.small)) + '</span></div>' +
     '<span style="font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(pt.big) + '</span></div>';
 }
 
@@ -308,8 +309,11 @@ function _bkxBreak(m) {
   // still says the break); the moment the next period's clock runs, it's gone
   var clockZero = /^0?\.0$|^0:00$/.test(String(m.clock || ''));
   if (!clockZero && !/half|end of/i.test(sd)) return null;
+  // v7.52.1: the clock at zero is the end of the period, whatever the feed's
+  // status or last play say yet
+  if (clockZero && !/half|end of/i.test(sd) && !(lp && lp.kind === 'period')) lp = { kind: 'period', text: 'End of period', period: per };
   var endOf = sd.match(/end of (?:the )?(\d)(?:st|nd|rd|th)|end of (?:the )?(\d*)\s*OT/i);
-  var lpEnd = lp && lp.kind === 'period' && /end of/i.test(lp.text || '') && String(m.clock || '') === '0.0' && lp.period === per;
+  var lpEnd = lp && lp.kind === 'period' && /end of/i.test(lp.text || '') && clockZero && lp.period === per;
   if ((/half/i.test(sd) && (per <= 2 || clockZero)) || (lpEnd && per === 2)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
   if (endOf || lpEnd || (/^0?\.0$|^0:00$/.test(String(m.clock || '')) && lp && lp.kind === 'period')) {
     var n = endOf && endOf[1] ? Number(endOf[1]) : per;
