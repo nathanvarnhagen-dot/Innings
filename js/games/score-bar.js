@@ -40,7 +40,9 @@ function _gshBarHtml() {
       '<span class="gsb-ct">' + (s.balls != null ? s.balls : 0) + '–' + (s.strikes != null ? s.strikes : 0) + '</span>');
   } else {
     var pt = typeof _gxPeriodText === 'function' ? _gxPeriodText(m) : { big: '', small: '' };
-    mid = '<span class="gsb-word">' + _escapeHtml(pt.big || '') + (pt.small ? ' <span class="sub">' + _escapeHtml(pt.small) + '</span>' : '') + '</span>';
+    var gcCls = (m.sport === 'basketball' && m.phase === 'live' && typeof _bkxGameClockOr === 'function') ? ' bkx-gc' : ''; // v7.50.0: ticks with the floor
+    var gcTxt = gcCls ? _bkxGameClockOr(m, window._bkx, pt.small) : pt.small;
+    mid = '<span class="gsb-word">' + _escapeHtml(pt.big || '') + (gcTxt ? ' <span class="sub' + gcCls + '">' + _escapeHtml(gcTxt) + '</span>' : '') + '</span>';
   }
   return '<div class="gsb-in"><button class="gsb-back" onclick="navBack()" aria-label="Back"><svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 1 1 6.5 7 12"/></svg></button>' +
     '<button class="gsb-bug" onclick="gshToggleDrop()" aria-label="Show the scoreboard" aria-expanded="' + (window._gshDropOn ? 'true' : 'false') + '">' +

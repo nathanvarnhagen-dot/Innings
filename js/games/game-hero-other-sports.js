@@ -972,6 +972,7 @@ window._gameLiveRefreshTimer = null;
 function _gameLiveRefreshMs() {
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   if (sport === 'mlb' && typeof _gdlFast === 'function' && _gdlFast()) return 3000; // v7.25.0: a delay (or matching your TV) wants finer steps
+  if (sport === 'nba' || sport === 'wnba') return 4000; // v7.50.0: the score moves every few seconds
   return (sport === 'nfl' || sport === 'cfb') ? 8000 : 6000; // v5.85.0: MLB every 6s (was 15s)
 }
 function _startGameLiveRefresh(gamePk) {

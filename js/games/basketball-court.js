@@ -53,10 +53,11 @@ function _bkxTrack(m) {
   var st = window._bkx;
   if (st && st.pk === pk && st.m === m) return st; // already tracked this poll
   if (!st || st.pk !== pk) {
-    st = window._bkx = { pk: pk, seeded: false, lastId: null, playAt: 0, shotId: null, shotAt: 0, poss: null, prevPoss: null, possAt: 0, to: null, clockSecs: null, clockAt: 0, running: false, period: null };
+    st = window._bkx = { pk: pk, seeded: false, lastId: null, playAt: 0, shotId: null, shotAt: 0, poss: null, prevPoss: null, possAt: 0, to: null, clockSecs: null, clockAt: 0, running: false, period: null, ft: null, ftAt: 0, ftN: 0, ftDoneAt: 0 };
   }
   var lp = c.last || null, ls = c.lastShot || null;
   var secs = _bkxSecs(m.clock), per = m.period;
+  var ft = c.ft || null, firstLook = !st.seeded;
   if (!st.seeded) {
     st.seeded = true; st.lastId = lp ? lp.id : null; st.shotId = ls ? ls.id : null; st.poss = c.poss || null; st.playAt = 0; st.shotAt = 0;
   } else {
@@ -68,9 +69,23 @@ function _bkxTrack(m) {
     if (ls && ls.id !== st.shotId) { st.shotId = ls.id; st.shotAt = now; }
     if ((c.poss || null) !== st.poss) { st.prevPoss = st.poss; st.poss = c.poss || null; st.possAt = now; }
   }
+  // v7.50.0: the free-throw trip — kept after the log moves on, so the
+  // card stays up through the last shot and a beat after it
+  if (ft) {
+    if (!st.ft || st.ft.id !== ft.id) { st.ft = ft; st.ftAt = now; st.ftN = ft.results.length; st.ftDoneAt = ft.done ? (firstLook ? now - 9e5 : now) : 0; if (firstLook) st.ftAt = now - 9e5; }
+    else if (ft.results.length !== st.ftN) { st.ft = ft; st.ftAt = now; st.ftN = ft.results.length; if (ft.done && !st.ftDoneAt) st.ftDoneAt = now; }
+    else st.ft = ft;
+    if (ft.done && !st.ftDoneAt) st.ftDoneAt = now;
+  } else if (st.ft && !st.ft.done) { st.ft.done = true; st.ftDoneAt = now; } // the log moved on past the trip
   // the game clock moved since the last poll → it's running (tick between polls)
   if (secs != null) {
     if (st.clockSecs != null && per === st.period) st.running = secs !== st.clockSecs;
+    else {
+      // first look: the clock is running unless the log says play is stopped
+      var lk = lp ? lp.kind : '';
+      st.running = secs > 0 && !/half|end of|intermission/i.test(m.statusDetail || '') && lk !== 'timeout' && lk !== 'period' && !(ft && !ft.done);
+    }
+    if (ft && !ft.done) st.running = false; // the clock stops for free throws
     if (secs !== st.clockSecs || per !== st.period) { st.clockSecs = secs; st.clockAt = now; }
     st.period = per;
   } else { st.running = false; }
@@ -93,6 +108,16 @@ function _bkxShotClock(m, st) {
   return { v: v, reset: reset, running: st.running && live > 0 };
 }
 function _bkxClockText(v) { return v < 5 ? v.toFixed(1) : String(Math.ceil(v)); }
+// v7.50.0: the game clock right now — counted down from the last poll
+// while play is running, the way the arena clock does
+function _bkxGameClock(m, st) {
+  if (!st || st.clockSecs == null) return m.clock || '';
+  var v = st.clockSecs - (st.running ? (Date.now() - st.clockAt) / 1000 : 0);
+  if (v < 0) v = 0;
+  if (v < 60) return v.toFixed(1);
+  var mm = Math.floor(v / 60), ss = Math.floor(v - mm * 60);
+  return mm + ':' + (ss < 10 ? '0' : '') + ss;
+}
 function _bkxClockState(v) { return v <= 5 ? 'crit' : (v <= 10 ? 'warn' : ''); }
 
 // The score bar's center: the 24 as a draining ring, the game clock as its caption
@@ -104,10 +129,11 @@ function _bkxCenterHtml(m, pt) {
   var ring = sc ? '<div class="bkx-sc ' + _bkxClockState(sc.v) + '" id="bkx-sc" style="--c:' + col + '"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/><circle id="bkx-sc-ring" cx="24" cy="24" r="20" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="125.7" stroke-dashoffset="' + (125.7 * (1 - sc.v / sc.reset)).toFixed(1) + '"/></svg><b id="bkx-sc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
   return '<div class="bkx-ctr" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">' +
     '<div style="display:flex;align-items:center;gap:8px">' + ring + '<div style="display:flex;flex-direction:column;align-items:center">' +
-      '<span class="gh-num" style="font-size:' + (ring ? '15px' : '22px') + ';line-height:1">' + _escapeHtml(ring ? (pt.small || '') : pt.big) + '</span>' +
-      '<span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(ring ? pt.big : (pt.small || '')) + '</span></div></div></div>';
+      '<span class="gh-num' + (ring ? ' bkx-gc' : '') + '" style="font-size:' + (ring ? '15px' : '22px') + ';line-height:1">' + _escapeHtml(ring ? (_bkxGameClockOr(m, st, pt.small)) : pt.big) + '</span>' +
+      '<span class="' + (ring ? '' : 'bkx-gc') + '" style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(ring ? pt.big : (pt.small || '')) + '</span></div></div></div>';
 }
 
+function _bkxGameClockOr(m, st, fallback) { return (m.phase === 'live' && m.clock && !/half|end of|intermission/i.test(m.statusDetail || '')) ? _bkxGameClock(m, st) : (fallback || ''); }
 // Ticks the ring between polls (started by the strip render, stops itself
 // when the basketball hero is gone)
 window._bkxTimer = null;
@@ -120,6 +146,13 @@ function _bkxStartTick() {
       if (!num) { clearInterval(window._bkxTimer); window._bkxTimer = null; }
       return;
     }
+    // the game clock, everywhere it shows (score bar, collapsed scorebug)
+    if (m.clock && !/half|end of|intermission/i.test(m.statusDetail || '')) {
+      var gc = _bkxGameClock(m, st);
+      document.querySelectorAll('.bkx-gc').forEach(function (el) { if (el.textContent !== gc) el.textContent = gc; });
+    }
+    var ftEl = document.getElementById('bkx-ft');
+    if (ftEl && st.ft && st.ft.done && st.ftDoneAt && Date.now() - st.ftDoneAt > 4500) ftEl.classList.add('out');
     var sc = _bkxShotClock(m, st);
     if (!sc) return;
     var txt = _bkxClockText(sc.v);
@@ -204,10 +237,39 @@ function _bkxCourtHtml(m, st) {
       (to.stx && to.stx.length ? '<span class="stx">' + to.stx.map(function (s) { return '<span>' + _escapeHtml(String(s[0])) + '<small>' + _escapeHtml(s[1]) + '</small></span>'; }).join('') + '</span>' : '') +
       '<span class="ln"></span></div></div></div>';
   }
+  over += _bkxFtHtml(m, st);
   // the shot clock hanging over the baseline at the lit end
   var sc = _bkxShotClock(m, st);
   var fc = sc ? '<div class="bkx-fc ' + (st.poss === 'h' ? 'r' : 'l') + '"><b id="bkx-fc-num">' + _bkxClockText(sc.v) + '</b></div>' : '';
   return '<div class="bkx-arena" style="--ra:' + aA + ';--rh:' + hA + '">' + fc + '<div class="bkx-floor">' + h + spot + over + '</div></div>';
+}
+
+// ── v7.50.0: free throws. A card over the lit end while someone's at the
+// line: the shooter, one ball per shot he gets (1, 2 or 3), each one
+// filling in as it's made or missed, and the card holds until the last
+// one is shot and a beat after.
+function _bkxFtHtml(m, st) {
+  var ft = st.ft;
+  if (!ft) return '';
+  var now = Date.now();
+  if (ft.done && st.ftDoneAt && now - st.ftDoneAt > 4500) return '';
+  var tm = _bkxTeam(m, ft.side) || m.home, acc = tm.colors.accent, bg = tm.colors.bg;
+  var fresh = st.ftAt && now - st.ftAt < 6000 ? -(now - st.ftAt) : -99000;
+  var balls = '';
+  for (var i = 0; i < ft.n; i++) {
+    var r = ft.results[i], cur = r == null && i === ft.results.length;
+    var cls = r === true ? 'in' : r === false ? 'miss' : cur ? 'up' : '';
+    var newest = r != null && i === ft.results.length - 1;
+    balls += '<span class="bkx-ftb ' + cls + '"' + (newest ? ' style="animation-delay:' + fresh + 'ms"' : '') + '>' +
+      '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><path d="M3 20H37M20 3V37M8 8c6 6 6 18 0 24M32 8c-6 6-6 18 0 24"/></svg>' +
+      (r === true ? '<i class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>' : r === false ? '<i class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></i>' : '') + '</span>';
+  }
+  var made = ft.results.filter(function (x) { return x; }).length;
+  var sm = (ft.kind ? ft.kind.toUpperCase() + ' · ' : '') + (ft.n === 1 ? 'FREE THROW' : ft.n + ' FREE THROWS');
+  var line = ft.done ? (made === ft.n ? (ft.n === 1 ? 'Good' : 'Both good' + (ft.n === 3 ? ' — all three' : '')).replace('Both good — all three', 'All three') : made === 0 ? (ft.n === 1 ? 'Missed' : 'Missed ' + (ft.n === 2 ? 'both' : 'all ' + ft.n)) : made + ' of ' + ft.n) : ('Shot ' + (ft.results.length + 1) + ' of ' + ft.n);
+  return '<div id="bkx-ft" class="bkx-ft ' + (ft.side === 'h' ? 'r' : 'l') + (ft.done ? ' done' : '') + '" style="--t1:' + bg + ';--t2:' + acc + '">' +
+    '<span class="sm">' + _escapeHtml(sm) + '</span><span class="who">' + _escapeHtml(ft.who || '') + '</span>' +
+    '<span class="balls">' + balls + '</span><span class="ln">' + _escapeHtml(line) + '</span></div>';
 }
 
 // ── The tracking panel under the floor: the last shot, until the next one

@@ -43,3 +43,31 @@
 .bkx-run{display:flex;flex-direction:column;gap:6px;padding:8px 2px 0}
 @media (orientation:landscape){html.is-tablet .bkx-arena{max-width:720px}}
 @media (prefers-reduced-motion: reduce){.bkx-spot.mv,.bkx-fly,.bkx-ring,.bkx-x,.bkx-to .who,.bkx-to .stx,.bkx-sc.crit b{animation:none!important}.bkx-ring,.bkx-x{display:none}}
+
+/* ═══ FREE THROWS (v7.50.0) — a card over the lit end while someone's at the
+   line: one ball per shot, filling in as each is made or missed ═══ */
+.bkx-ft{position:absolute;top:50%;z-index:6;width:46%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px 11px;border-radius:12px;background:linear-gradient(160deg,rgba(10,6,24,.9),rgba(10,6,24,.78));border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.04);animation:bkxFtIn .5s cubic-bezier(.22,1,.36,1) both}
+.bkx-ft::before{content:"";position:absolute;left:10%;right:10%;top:0;height:2px;border-radius:1px;background:var(--t2)}
+.bkx-ft.l{left:5%}.bkx-ft.r{right:5%}
+.bkx-ft .sm{font-size:8.5px;font-weight:900;letter-spacing:.22em;color:var(--t2)}
+.bkx-ft .who{font-size:15px;font-weight:900;color:#fff;letter-spacing:-.01em;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bkx-ft .balls{display:flex;gap:8px;margin-top:5px}
+.bkx-ft .ln{font-size:10.5px;font-weight:700;color:rgba(255,255,255,.75);margin-top:1px}
+.bkx-ftb{position:relative;width:30px;height:30px;color:rgba(255,255,255,.3)}
+.bkx-ftb svg{width:30px;height:30px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.bkx-ftb svg circle{stroke-width:2.2}
+.bkx-ftb.up{color:#E8762C;animation:bkxFtUp 1.1s ease-in-out infinite}
+.bkx-ftb.in{color:#E8762C}.bkx-ftb.in svg circle{fill:rgba(232,118,44,.22)}
+.bkx-ftb.miss{color:rgba(255,255,255,.22)}
+.bkx-ftb i{position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #0A0618;animation:bkxFtPop .45s cubic-bezier(.34,1.56,.64,1) both}
+.bkx-ftb i svg{width:10px;height:10px;stroke:#0A0618}
+.bkx-ftb i.ok{background:#7CF29C}.bkx-ftb i.no{background:#FF6A58}
+.bkx-ftb i.no svg{stroke:#fff}
+.bkx-ft.done .ln{color:#fff}
+.bkx-ft.out{animation:bkxFtOut .4s ease-in both}
+@keyframes bkxFtIn{from{opacity:0;transform:translateY(-50%) scale(.92)}to{opacity:1;transform:translateY(-50%) scale(1)}}
+@keyframes bkxFtOut{to{opacity:0;transform:translateY(-50%) scale(.96)}}
+@keyframes bkxFtUp{0%,100%{transform:translateY(0);color:#E8762C}50%{transform:translateY(-4px);color:#FFA66B}}
+@keyframes bkxFtPop{from{transform:scale(0)}to{transform:scale(1)}}
+@media (max-width:380px){.bkx-ft{width:52%}.bkx-ft .who{font-size:13.5px}.bkx-ftb{width:26px;height:26px}.bkx-ftb svg{width:26px;height:26px}}
+@media (prefers-reduced-motion: reduce){.bkx-ft,.bkx-ftb.up,.bkx-ftb i,.bkx-ft.out{animation:none!important}}

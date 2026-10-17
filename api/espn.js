@@ -101,11 +101,14 @@ module.exports = async function handler(req, res) {
       if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
         model.teamColors = await _gcTeamColors(path, league);
       }
+      if (model.phase === 'live' && league === 'nba') await _nbaLiveOverlay(model); // v7.50.0
       if (req.query.debug) model.debug = { topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
       // A live football score can change on one snap, so the edge holds it
       // for five seconds rather than ten. stale-while-revalidate still
       // serves instantly while the refresh happens behind it.
-      res.setHeader('Cache-Control', model.phase === 'live' ? 's-maxage=5, stale-while-revalidate' : 's-maxage=120, stale-while-revalidate');
+      // v7.50.0: a basketball score moves every few seconds, so its edge copy
+      // lives two seconds and never goes out stale for long
+      res.setHeader('Cache-Control', model.phase === 'live' ? (BASKETBALL_LEAGUES[league] ? 's-maxage=2, stale-while-revalidate=2' : 's-maxage=5, stale-while-revalidate') : 's-maxage=120, stale-while-revalidate');
       res.status(200).json(model);
       return;
     }
@@ -1371,7 +1374,76 @@ function _bbCourt(data, away, home, league) {
       as: pl.awayScore != null ? Number(pl.awayScore) : null, hs: pl.homeScore != null ? Number(pl.homeScore) : null
     };
   };
-  return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs };
+  return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs, ft: _bbFtTrip(raw, sideOf) };
+}
+// v7.50.0: the free-throw trip in progress (or just finished): who's at the
+// line, how many he gets, and each one's result so far. Walked back from
+// the newest play over the trip's free throws and whatever the log slips
+// between them (substitutions, timeouts, the foul). "1 of 2" / "2 of 2"
+// from ESPN's text; a technical or a flagrant with no "of" is one shot.
+function _bbFtTrip(raw, sideOf) {
+  var trip = [], i = raw.length - 1, shooter = null, total = null;
+  var isFt = function (p) { return _bbPlayKind(p) === 'ft'; };
+  var skip = function (p) { var k = _bbPlayKind(p); return k === 'timeout' || k === 'foul' || k === 'other' || /enters the game|substitution|review|challenge|delay|instant replay/i.test(String(p.text || '')); };
+  // the newest play must be a free throw (allowing a sub or timeout after it)
+  var j = i; while (j >= 0 && !isFt(raw[j]) && skip(raw[j])) j--;
+  if (j < 0 || !isFt(raw[j])) return null;
+  for (var k = j; k >= 0; k--) {
+    var p = raw[k];
+    if (isFt(p)) {
+      var t = String(p.text || ''), who = (t.match(/^(.+?) (makes|misses|made|missed)/i) || [])[1] || '';
+      var of = t.match(/(\d) of (\d)/);
+      var n = of ? Number(of[2]) : 1, idx = of ? Number(of[1]) : 1;
+      if (shooter == null) { shooter = who; total = n; }
+      else if (who !== shooter || n !== total) break;
+      trip.unshift({ idx: idx, made: !!p.scoringPlay, id: String(p.id || '') });
+      if (idx === 1) break;
+    } else if (!skip(p)) break;
+  }
+  if (!trip.length) return null;
+  var first = raw[j];
+  for (var q = j; q >= 0; q--) { if (isFt(raw[q]) && String(raw[q].id || '') === trip[0].id) { first = raw[q]; break; } }
+  var last = raw[j], lt = String(last.text || '');
+  var kind = /technical/i.test(lt) ? 'Technical' : /flagrant/i.test(lt) ? 'Flagrant' : /clear path/i.test(lt) ? 'Clear path' : /and one|and-one/i.test(lt) ? 'And one' : '';
+  // "and one": a single free throw right after that shooter's made basket
+  if (!kind && total === 1 && trip.length === 1) {
+    for (var r = j - 1; r >= 0 && r >= j - 4; r--) { var pr = raw[r]; if (_bbPlayKind(pr) === 'shot') { if (pr.scoringPlay && new RegExp('^' + shooter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(String(pr.text || ''))) kind = 'And one'; break; } }
+  }
+  return { id: trip[0].id, who: _lastName(shooter), whoFull: shooter, whoId: (last.participants && last.participants[0] && last.participants[0].athlete && last.participants[0].athlete.id) || null,
+    side: sideOf(last), n: total, results: trip.map(function (x) { return x.made; }), shot: trip[trip.length - 1].idx, done: trip[trip.length - 1].idx >= total, kind: kind,
+    period: (last.period && last.period.number) || null, clock: (last.clock && last.clock.displayValue) || null,
+    as: last.awayScore != null ? Number(last.awayScore) : null, hs: last.homeScore != null ? Number(last.homeScore) : null };
+}
+
+// v7.50.0: the NBA's own live scoreboard (cdn.nba.com) updates within a
+// second or two of the floor; ESPN's summary trails it. For a live NBA
+// game the score, period and clock come from there when it answers in
+// time, matched by nickname. Fails soft: nothing changes.
+var _nbaLiveCache = { at: 0, data: null };
+async function _nbaLiveOverlay(model) {
+  try {
+    var now = Date.now();
+    if (!_nbaLiveCache.data || now - _nbaLiveCache.at > 2000) {
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var tm = ctrl ? setTimeout(function () { ctrl.abort(); }, 1800) : null;
+      var r = await fetch('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json', Object.assign({ headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Referer': 'https://www.nba.com/' } }, ctrl ? { signal: ctrl.signal } : {}));
+      if (tm) clearTimeout(tm);
+      if (!r.ok) return;
+      _nbaLiveCache = { at: now, data: await r.json() };
+    }
+    var games = (_nbaLiveCache.data && _nbaLiveCache.data.scoreboard && _nbaLiveCache.data.scoreboard.games) || [];
+    var nick = function (name) { return String(name || '').split(' ').pop().toLowerCase(); };
+    var g = games.filter(function (x) { return x.homeTeam && x.awayTeam && nick(x.homeTeam.teamName) === nick(model.home.name) && nick(x.awayTeam.teamName) === nick(model.away.name); })[0];
+    if (!g || g.gameStatus !== 2) return;
+    var cm = String(g.gameClock || '').match(/PT(\d+)M(\d+(?:\.\d+)?)S/);
+    var clock = null;
+    if (cm) { var mm = Number(cm[1]), ss = Number(cm[2]); clock = mm > 0 || ss >= 60 ? mm + ':' + (ss < 10 ? '0' : '') + Math.floor(ss) : ss.toFixed(1); }
+    if (g.homeTeam.score != null) model.home.score = g.homeTeam.score;
+    if (g.awayTeam.score != null) model.away.score = g.awayTeam.score;
+    if (g.period) model.period = g.period;
+    if (clock) model.clock = clock;
+    model.fast = { src: 'nba', at: now, statusText: g.gameStatusText || null };
+  } catch (e) {}
 }
 function _bbShooter(text) {
   var m = String(text || '').match(/^(.+?) (makes|made|dunks|lays|hits)/i);
