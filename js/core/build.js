@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.55.3-basketball-play-replies';
+window.INNINGS_BUILD = 'v7.56.0-steals-in-play-by-play';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

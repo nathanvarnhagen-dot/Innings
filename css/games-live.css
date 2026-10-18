@@ -227,6 +227,13 @@
 .pbp-sc span{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:7px;background:rgba(168,159,232,.14);color:#D9D4FA;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pbp-sc span.hr{background:rgba(242,200,105,.12);color:#F2C869}
 .pbp-sub{display:flex;align-items:center;gap:7px;margin:0 0 6px;padding:6px 9px;border-radius:9px;background:rgba(242,200,105,.07);border:1px solid rgba(242,200,105,.2);font-size:12px;color:#F5E3B0}
+/* v7.56.0: baserunning inside an at-bat (steal, CS, pickoff, WP, PB, balk) */
+.pbp-run{display:flex;align-items:center;gap:7px;margin:0 0 6px;padding:6px 9px;border-radius:9px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.22);font-size:12px;color:#D9D4FA;line-height:1.35}
+.pbp-run svg{flex-shrink:0;color:#A89FE8}
+.pbp-run b{flex-shrink:0;font-size:9.5px;font-weight:800;letter-spacing:.1em;padding:2px 6px;border-radius:6px;background:rgba(168,159,232,.18);color:#C9C2F5}
+.pbp-run.sb{background:rgba(124,242,156,.08);border-color:rgba(124,242,156,.26);color:#E4FAEA}
+.pbp-run.sb svg{color:#9be8ac}.pbp-run.sb b{background:rgba(124,242,156,.18);color:#9be8ac}
+.pbp-run.run{border-color:rgba(124,242,156,.4)}
 .gh-ph{align-self:flex-end;margin-top:3px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:7px;background:rgba(242,200,105,.12);border:1px solid rgba(242,200,105,.35);color:#F2C869;white-space:nowrap}
 .pa-sc .ps-m{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
 .pa-sc .ps-m+.ps-m{border-left:1px solid rgba(255,255,255,.08)}

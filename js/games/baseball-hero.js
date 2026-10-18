@@ -1111,6 +1111,17 @@ function _ghPbpStatcastHtml(box, pl) {
   }
   return bits.length ? '<div class="pbp-sc">' + bits.join('') + '</div>' : '';
 }
+// v7.56.0: stolen bases, caught stealings, pickoffs, wild pitches, passed
+// balls and balks happen inside an at-bat, so each one is its own line
+// above the play it happened during (the way pinch hitters already are).
+function _ghRunnerRowsHtml(runs) {
+  return (runs || []).map(function (r) {
+    var tag = r.kind && r.kind !== 'RUN' ? '<b>' + _escapeHtml(r.kind) + '</b>' : '';
+    return '<div class="pbp-run' + (r.kind === 'SB' ? ' sb' : '') + (r.scored ? ' run' : '') + '">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/></svg>' +
+      tag + '<span>' + _escapeHtml(r.text) + '</span></div>';
+  }).join('');
+}
 function _ghHalfLabel(half, inning) {
   return (half === 'top' ? 'Top ' : 'Bottom ') + _ordinalSuffix(inning);
 }
@@ -1202,7 +1213,7 @@ function _ghPlaysByInningHtml(box, bare, mode) {
       var subsHtml = (pl.subs || []).map(function (sb) {
         return '<div class="pbp-sub"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2C869" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h12l-3-3"/><path d="M17 17H5l3 3"/></svg>' + _escapeHtml(sb.text) + '</div>';
       }).join('');
-      rows += '<div class="gh-plays-row" data-k="pl' + _escapeHtml(String(idPart)) + '"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' + subsHtml +
+      rows += '<div class="gh-plays-row" data-k="pl' + _escapeHtml(String(idPart)) + '"' + rowAttrs + ' style="border-top:0;padding:6px 0 6px 21px">' + subsHtml + _ghRunnerRowsHtml(pl.runs) +
         '<div style="display:flex;gap:10px;align-items:flex-start">' +
           '<span style="flex:1;font-size:13px;line-height:1.45;color:#F5F3FF">' + _escapeHtml(pl.text) + '</span>' +
           (chip ? '<span class="gh-num" style="font-size:12px;color:#D9D4FA;flex-shrink:0;white-space:nowrap">' + _escapeHtml(chip) + '</span>' : '') +
@@ -1214,6 +1225,12 @@ function _ghPlaysByInningHtml(box, bare, mode) {
         (playId ? '<div id="play-react-' + _escapeHtml(playId) + '"></div>' : '') +
         '</div>';
     });
+    // v7.56.0: a steal during the at-bat still going has no finished play
+    // to sit with yet, so it closes out the half-inning on its own row
+    var pr = box.pendingRuns;
+    if (pr && pr.runs && pr.runs.length && pr.inning === grp.inning && (pr.half === 'top' ? 'top' : 'bottom') === grp.half) {
+      rows += '<div class="gh-plays-row" data-k="plpend' + _escapeHtml(String(pr.atBatIndex != null ? pr.atBatIndex : '')) + '" style="border-top:0;padding:6px 0 6px 21px">' + _ghRunnerRowsHtml(pr.runs) + '</div>';
+    }
     rows += '</div></div>';
   });
 

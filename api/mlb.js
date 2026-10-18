@@ -516,6 +516,7 @@ function summarize(data, gamePk, wantAllPlays) {
         },
         anim: (p.about && p.about.isComplete) ? _playAnimSummary(p, _fp[fpIdx - 1]) : null,
         subs: _subsIn(p, gameData.players || {}),   // v7.6.0: pinch hitters/runners, kept with the play
+        runs: _runnerEventsIn(p),                   // v7.56.0: steals, pickoffs, wild pitches during the at-bat
         pitches: (p.playEvents || []).filter(function (e) { return e && e.isPitch; }).map(function (e) {
           var d = e.details || {};
           return {
@@ -527,6 +528,17 @@ function summarize(data, gamePk, wantAllPlays) {
         })
       };
     });
+  }
+  // v7.56.0: a steal (or pickoff, wild pitch…) during the at-bat still in
+  // progress belongs to no finished play yet, so it rides separately and
+  // the half-inning list shows it as its own trailing row.
+  var pendingRuns = null;
+  if (wantAllPlays && abstractState === 'Live') {
+    var openP = allPlays[allPlays.length - 1];
+    if (openP && !(openP.result && openP.result.description)) {
+      var pr = _runnerEventsIn(openP);
+      if (pr) pendingRuns = { inning: openP.about && openP.about.inning, half: (openP.about && openP.about.isTopInning) ? 'top' : 'bottom', atBatIndex: openP.about ? openP.about.atBatIndex : null, runs: pr };
+    }
   }
 
   // ── Pitch-by-pitch strike zone for the current at-bat — same Live
@@ -696,6 +708,7 @@ function summarize(data, gamePk, wantAllPlays) {
     matchup: matchup,
     recentPlays: recentPlays,
     allPlays: fullPlays,
+    pendingRuns: pendingRuns,   // v7.56.0: baserunning in the at-bat still going
     lastPlay: (abstractState === 'Live' || abstractState === 'Final') ? _lastPlaySummary(allPlays) : null,
     pitchSequence: pitchSequence,
     boxScoreDetail: boxScoreDetail,
@@ -821,6 +834,22 @@ function _starOfGame(boxscore, detail) {
   if (b.rbi) bits.push(b.rbi + ' RBI');
   if (b.r && !b.hr) bits.push(b.r + ' R');
   return { name: b.name, id: b.id, side: best.side, summary: bits.join(' · ') };
+}
+
+// ── v7.56.0: baserunning that happens mid-at-bat ─────────────────────
+// A stolen base, caught stealing, pickoff, wild pitch, passed ball or
+// balk is an 'action' event inside the plate appearance it happened in,
+// so the play-by-play never listed it. Kept as its own line with the play.
+var _RUNNER_EVENTS = /^(stolen_base|caught_stealing|pickoff|wild_pitch|passed_ball|balk|defensive_indiff|other_advance|runner_double_play|runner_interference|error)/;
+function _runnerEventsIn(play) {
+  var out = [];
+  (play && play.playEvents || []).forEach(function (e) {
+    var d = (e && e.details) || {};
+    if (!e || e.type !== 'action' || !_RUNNER_EVENTS.test(d.eventType || '') || !d.description) return;
+    var t = d.eventType, kind = /^stolen_base/.test(t) ? 'SB' : /caught_stealing/.test(t) ? 'CS' : /^pickoff/.test(t) ? 'PO' : t === 'wild_pitch' ? 'WP' : t === 'passed_ball' ? 'PB' : t === 'balk' ? 'BK' : 'RUN';
+    out.push({ kind: kind, eventType: t, text: String(d.description).replace(/\s+/g, ' ').trim(), scored: !!d.isScoringPlay || /scores\./i.test(d.description) });
+  });
+  return out.length ? out : undefined;
 }
 
 // ── v7.6.0: pinch hitters and pinch runners ──────────────────────────
