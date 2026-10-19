@@ -450,3 +450,16 @@ button.pap-pt:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px;border
 .apl-pstrip .mid{flex:1;text-align:center;font-size:13px;font-weight:600;letter-spacing:.14em;color:#C9C2F5;white-space:nowrap}
 .apl-pstrip .tri{color:#A89FE8;font-size:11px;margin-right:4px}
 @media (prefers-reduced-motion: reduce){.apl-ls.gh-up{animation:none}}
+
+/* v7.57.0: disengagement takeover (pickoff throw / balk) over the at-bat square */
+.pa-dis{position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;background:radial-gradient(ellipse at 50% 45%,rgba(13,8,32,.78),rgba(13,8,32,.55) 70%);animation:paIn .35s linear both}
+.pa-dis .e{font-size:10px;font-weight:800;letter-spacing:.24em;color:#F2C869}
+.pa-dis .b{font-size:30px;font-weight:900;font-style:italic;letter-spacing:-.01em;line-height:1;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.45);padding:0 14px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pa-dis .w{font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)}
+.pa-dis-pips{display:inline-flex;gap:7px;margin-top:8px}
+.pa-dis-pips i{width:12px;height:12px;transform:rotate(45deg);border-radius:2px;border:1.5px solid rgba(255,255,255,.35);background:transparent}
+.pa-dis-pips i.u{background:#F2C869;border-color:#F2C869}
+.pa-dis-pips i.w{background:#E8565C;border-color:#E8565C;box-shadow:0 0 9px rgba(232,86,92,.8)}
+.pa-dis.balk .e{color:#E8565C}
+.pa-dis.balk .b{color:#FFB3A8}
+@media (prefers-reduced-motion: reduce){.pa-dis{animation:none}}

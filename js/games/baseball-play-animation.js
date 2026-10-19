@@ -453,11 +453,13 @@ function _paActionHtml(a, s, box) {
   var reduce = typeof _ghReducedMotion === 'function' && _ghReducedMotion();
   var E = (Date.now() - s.startAt) / 1000;
   if (reduce) E = 30;
-  var END = 5.4;
+  var et = a.eventType || '', desc = String(a.description || '');
+  // v7.57.0: a pickoff throw or a balk is a quick takeover, not a full scene
+  var disTO = /^pickoff_attempt/.test(et) || et === 'balk';
+  var END = disTO ? 3.4 : 5.4;
   s.total = END;
   if (s.keep) E = Math.min(E, END - .01);
   else if (E > END + .6) return '';
-  var et = a.eventType || '', desc = String(a.description || '');
   var err = /error/.test(et) || /throwing error|fielding error/i.test(desc);
   var isSB = /^stolen_base/.test(et), isCS = /caught_stealing/.test(et), isPOA = /^pickoff_attempt/.test(et);
   var isPO = /^pickoff/.test(et) && !isPOA, isWP = et === 'wild_pitch' || et === 'passed_ball', isBK = et === 'balk', isDI = et === 'defensive_indiff';
@@ -555,11 +557,51 @@ function _paActionHtml(a, s, box) {
   if ((isCS || isPO) && fl.length) note = (isCS ? 'CS ' : 'PO ') + fl.join('-') + (note ? ' · ' + note : '');
   if (note.length > 90) note = note.slice(0, 88) + '…';
   var tT = Math.max(tArrive, runT0 + .9) + .1;
+  if (disTO) {
+    // v7.57.0: the disengagement takeover — "PICKOFF THROW · Smith to 1st ·
+    // Simpson back safely · 1 left", with two pips for the two a pitcher
+    // gets per plate appearance; the third without an out is a balk.
+    var ps = box && box.pitchSequence, n = _paDisCount(a, ps), left = Math.max(0, 2 - n);
+    var pitcher = (box && box.matchup && box.matchup.pitcher && box.matchup.pitcher.name) || '';
+    var baseK = (lead && lead.start) || a.base || '1B';
+    var rName = (lead && lead.name) || (ps && ps.runners && ps.runners[baseK]) || '';
+    var last = function (x) { return typeof _ghLastName === 'function' ? _ghLastName(x) : x; };
+    var bw = _paBaseLabel(baseK);
+    var eyebrow, big, who;
+    if (isBK) {
+      eyebrow = n >= 2 ? 'THIRD DISENGAGEMENT' : 'BALK';
+      big = 'BALK';
+      var ends = runners.filter(function (r) { return r.end; }).map(function (r) { return (r.name ? last(r.name) + ' to ' : 'Runner to ') + _paBaseLabel(r.end); });
+      who = ends.length ? ends.join(' · ') : 'Every runner moves up';
+    } else {
+      eyebrow = 'PICKOFF THROW';
+      big = (pitcher ? last(pitcher) + ' to ' : 'Throw to ') + bw;
+      who = (rName ? last(rName) + ' back safely' : 'Back safely') + ' · ' + (left === 0 ? 'none left' : left + ' left');
+    }
+    var pips = '<span class="pa-dis-pips">' + [0, 1].map(function (i) { return '<i class="' + (isBK ? 'w' : i < n ? 'u' : '') + (n === 2 && i === 1 && !isBK ? ' w' : '') + '"></i>'; }).join('') + '</span>';
+    return '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : 'animation:paOut .4s ease ' + sec(END) + ' both;') + '">' +
+      '<div style="position:absolute;inset:0;animation:paIn .35s linear ' + sec(0) + ' both">' + g + '</div>' +
+      '<div class="pa-dis' + (isBK ? ' balk' : '') + '" style="animation-delay:' + sec(Math.min(tT, 1.1)) + '"><span class="e">' + _escapeHtml(eyebrow) + '</span><span class="b">' + _escapeHtml(big) + '</span><span class="w">' + _escapeHtml(who) + '</span>' + pips + '</div></div>';
+  }
   return '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep ? '' : 'animation:paOut .5s ease ' + sec(END) + ' both;') + '">' +
     '<div style="position:absolute;inset:0;animation:paIn .35s linear ' + sec(0) + ' both">' + g + '</div>' +
     '<div style="position:absolute;left:0;right:0;top:8px;text-align:center;z-index:4;pointer-events:none;animation:paIn .4s linear ' + sec(Math.min(tT, 1.4)) + ' both">' +
       '<div style="font-size:17px;font-weight:800;letter-spacing:.06em;color:#F5F3FF;text-shadow:0 1px 10px rgba(11,8,32,.95)">' + _escapeHtml(title) + '</div>' +
       (note ? '<div style="margin:2px 12px 0;font-size:12px;font-weight:700;color:#B9B3E6;text-shadow:0 1px 8px rgba(11,8,32,.95)">' + _escapeHtml(note) + '</div>' : '') + '</div></div>';
+}
+
+// v7.57.0: how many disengagements the pitcher has used in this plate
+// appearance, counting this one. The feed logs pickoff throws (and
+// pickoffs) but not step-offs, so this is a floor, never an overcount.
+function _paDisCount(a, ps) {
+  var acts = (ps && ps.actions) || [], n = 0, seen = false;
+  acts.forEach(function (x) {
+    if (!/^pickoff/.test(x.eventType || '')) return;
+    if (a.index == null || x.index == null || x.index <= a.index) n++;
+    if (x.index === a.index) seen = true;
+  });
+  if (!seen && /^pickoff/.test(a.eventType || '')) n++;
+  return n;
 }
 
 // ── v6.1.0: between-pitch scenes inside a replayed at-bat ───────────────

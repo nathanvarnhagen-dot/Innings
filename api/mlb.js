@@ -609,7 +609,9 @@ function summarize(data, gamePk, wantAllPlays) {
         zoneBottom: (lastEvent && lastEvent.pitchData.strikeZoneBottom != null) ? lastEvent.pitchData.strikeZoneBottom : 1.5,
         pitches: pitches,
         actions: actions,
-        bases: { '1B': !!(linescore.offense && linescore.offense.first), '2B': !!(linescore.offense && linescore.offense.second), '3B': !!(linescore.offense && linescore.offense.third) }
+        bases: { '1B': !!(linescore.offense && linescore.offense.first), '2B': !!(linescore.offense && linescore.offense.second), '3B': !!(linescore.offense && linescore.offense.third) },
+        // v7.57.0: who's on each base, for the pickoff / balk takeover
+        runners: { '1B': (linescore.offense && linescore.offense.first && linescore.offense.first.fullName) || null, '2B': (linescore.offense && linescore.offense.second && linescore.offense.second.fullName) || null, '3B': (linescore.offense && linescore.offense.third && linescore.offense.third.fullName) || null }
       };
     }
   }
