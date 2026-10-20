@@ -150,6 +150,45 @@ function mgcGo(pk) {
   setTimeout(function () { if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0);
 }
 
+// v7.61.1: a play from another game in the chat — a "reacted to" line or a reply
+// quoting the play — takes you to that game and opens the play there, instead
+// of looking for it in the game on screen ("Couldn't find that play")
+function _mgcPlayGame(text, playId) {
+  var key = typeof _gcrKey === 'function' ? _gcrKey() : '', hit = null;
+  if (!key) return null;
+  ((window._gameChatRaw || {})[key] || []).forEach(function (c) {
+    if (!c || c.gamePk == null) return;
+    [c.play, c.replyTo ? (c.replyTo.play || null) : null].forEach(function (p) {
+      if (!p) return;
+      if ((playId && p.playId && String(p.playId) === String(playId)) || (text && p.text && p.text === text)) hit = String(c.gamePk);
+    });
+  });
+  return hit && hit !== key ? hit : null;
+}
+function mgcGoPlay(pk, tag, text, playId) {
+  var S = _mgcS(), R = S ? S.mine : null;
+  if (!R || typeof openGameScreen !== 'function') return;
+  var I = _mgcInfo(R, pk);
+  if (typeof _gcrS === 'function') _gcrS(String(pk)).pickRoom = R.id;
+  if (typeof closePlayContext === 'function') closePlayContext();
+  openGameScreen(I.gamePk, I.away || null, I.home || null, I.sport, I.date || _mgcToday());
+  if (typeof ib_toast === 'function') ib_toast('Over to ' + I.label);
+  // once that game's plays are on screen, open this one (up to ~12s while it loads)
+  var tries = 0, want = String(pk), c = { text: text, playId: playId || null };
+  clearInterval(window._mgcPlayT);
+  window._mgcPlayT = setInterval(function () {
+    var g = window._activeBrowseGame;
+    if (!g || String(g.gamePk) !== want || ++tries > 24) { clearInterval(window._mgcPlayT); return; }
+    var row = typeof _pctxRowIn === 'function' ? (_pctxRowIn('game-sheet-panel', c) || _pctxRowIn('game-plays-panel', c)) : null;
+    // the loaded play list has to be this game's, not the one just left
+    var bx = typeof _gcBox === 'function' ? _gcBox() : null, fresh = bx && bx.gamePk != null && String(bx.gamePk) === want;
+    var found = row || (fresh && typeof _gcFindPlay === 'function' && (function () { try { return _gcFindPlay(text, playId).idx >= 0; } catch (e) { return false; } })());
+    if (!found) return;
+    clearInterval(window._mgcPlayT);
+    openPlayContext(tag, text, playId);
+  }, 500);
+}
+
 // ── in the thread: ALL shows every game's messages, each tagged; "only this" filters
 function _mgcTagHtml(I) {
   return '<span class="mgc-tag"><i style="background:' + _mgcEsc(I.ca.accent || '#A89FE8') + '"></i>' + _mgcEsc(I.league + ' · ' + I.label) + '</span>';
@@ -169,9 +208,7 @@ function _mgcAnnotate(msgs, S) {
     if (el.classList.contains('gc-sys')) {
       var txt = el.querySelector('span:last-child');
       if (txt) txt.insertAdjacentHTML('afterbegin', _mgcTagHtml(I));
-      // a reaction to a play in another game opens that game
-      if (pk !== S.key) { el.removeAttribute('onclick'); el.setAttribute('data-mgc', pk); el.onclick = function () { mgcGo(this.getAttribute('data-mgc')); }; }
-      return;
+      return; // tapping it goes through openPlayContext, which knows its game (below)
     }
     var col = el.lastElementChild;
     if (col) col.insertAdjacentHTML('afterbegin', _mgcTagHtml(I));
@@ -190,6 +227,16 @@ function _mgcAnnotate(msgs, S) {
       var r = prevRender.apply(this, args);
       if (multi && filter === 'all') { try { _mgcAnnotate(msgs, S); } catch (e) { console.error('[multi-game chat] tags', e); } }
       return r;
+    };
+  }
+  // a play from another game in the chat opens in that game
+  if (typeof openPlayContext === 'function') {
+    var prevCtx = openPlayContext;
+    openPlayContext = function (tag, text, playId) {
+      var pk = null;
+      try { pk = _mgcS() ? _mgcPlayGame(text, playId) : null; } catch (e) {}
+      if (pk) { mgcGoPlay(pk, tag, text, playId); return; }
+      return prevCtx.apply(this, arguments);
     };
   }
   // "Nathan added LAD @ NYM to the chat"
