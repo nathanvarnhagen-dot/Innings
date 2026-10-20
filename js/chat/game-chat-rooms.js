@@ -177,18 +177,22 @@ function _gcrView(key) {
     (st.rooms || []).forEach(function (d) {
       var names = d.names || {}, members = {};
       (d.members || []).forEach(function (u) { members[u] = names[u] || 'Someone'; });
-      var R = { id: d.id, kind: 'new', members: members, asks: d.asks || {}, no: d.no || {}, joined: d.joined || {}, invites: d.invites || {}, mod: d.mod || d.founder || null, founder: d.founder || null, replayOf: d.replayOf || null };
+      var R = { id: d.id, kind: 'new', members: members, asks: d.asks || {}, no: d.no || {}, joined: d.joined || {}, invites: d.invites || {}, mod: d.mod || d.founder || null, founder: d.founder || null, replayOf: d.replayOf || null,
+        pk: d.pk != null ? String(d.pk) : key, gamePks: Array.isArray(d.gamePks) ? d.gamePks.map(String) : null, games: d.games || {} }; // v7.61.0: the games in it
       if (R.replayOf) byOld[R.replayOf] = R;
       list.push(R);
     });
     // old chats nobody has moved over yet
     Object.keys(f0.rooms).forEach(function (k) { if (!byOld[k] && Object.keys(f0.rooms[k].members).length) list.push(f0.rooms[k]); });
     // in more than one (let into a friend's chat while you had your own): the bigger one is yours
-    var inNew = list.filter(function (R) { return R.kind === 'new' && R.members[me]; }).sort(function (a, b) { return Object.keys(b.members).length - Object.keys(a.members).length; });
+    // v7.61.0: a tie goes to the chat with more games in it
+    var nG = function (R) { return (R.gamePks && R.gamePks.length) || 1; };
+    var inNew = list.filter(function (R) { return R.kind === 'new' && R.members[me]; }).sort(function (a, b) { return (Object.keys(b.members).length - Object.keys(a.members).length) || (nG(b) - nG(a)); });
     // v7.48.0: the one you switched to from the rail at the top of the chat (js/chat/game-chat-top.js) comes first
     if (st.pickRoom) inNew.sort(function (a, b) { return (a.id === st.pickRoom ? 0 : 1) - (b.id === st.pickRoom ? 0 : 1); });
     mine = inNew[0] || null;
-    st.extraRooms = inNew.slice(1).filter(function (R) { return Object.keys(R.members).length === 1; }).map(function (R) { return R.id; });
+    // (never one holding other games — leaving it would leave those games' chat too)
+    st.extraRooms = inNew.slice(1).filter(function (R) { return Object.keys(R.members).length === 1 && nG(R) < 2; }).map(function (R) { return R.id; });
     if (!mine && f0.mine && !byOld[f0.mine]) mine = f0.rooms[f0.mine];
     if (mine) {
       vis = _gcrOldItems(f0, mine.kind === 'new' ? mine.replayOf : mine.id, me);
@@ -330,15 +334,32 @@ function _gcrSeenNotifs() {
       if (typeof ib_toast === 'function') ib_toast('Chat unavailable — check Firestore rules');
     });
     // the private chats — if the database lets us, they're on
+    // v7.61.0: plus chats started on another game that this game was added to
+    // (gamePks — js/chat/multi-game-chat.js); the two lists merge by id
+    st.roomsPk = []; st.roomsX = [];
+    var merge = function () {
+      var by = {}, out = [];
+      st.roomsPk.concat(st.roomsX).forEach(function (d) { if (!by[d.id]) { by[d.id] = 1; out.push(d); } });
+      st.rooms = out;
+    };
     window.db.collection('gameChatRooms').where('pk', '==', key).onSnapshot(function (snap) {
       var rooms = [];
       snap.forEach(function (doc) { rooms.push(Object.assign({ id: doc.id }, doc.data())); });
-      st.mode = 'rooms'; st.rooms = rooms;
+      st.mode = 'rooms'; st.roomsPk = rooms; merge();
       _gcrPublish(key);
     }, function (err) {
       if (st.mode !== 'replay') { console.info('[game chat] private chats are off until the gameChatRooms rules are published (' + ((err && err.code) || err) + ')'); if (typeof ib_toast === 'function') ib_toast('Chat can’t load (rooms) — ' + ((err && err.code) || err)); }
       st.mode = 'replay';
       _gcrPublish(key);
+    });
+    window.db.collection('gameChatRooms').where('gamePks', 'array-contains', key).onSnapshot(function (snap) {
+      var rooms = [];
+      snap.forEach(function (doc) { rooms.push(Object.assign({ id: doc.id }, doc.data())); });
+      st.roomsX = rooms; merge();
+      if (st.mode === 'rooms') _gcrPublish(key);
+    }, function (err) {
+      console.info('[game chat] chats from other games are off until the database allows reading gameChatRooms by gamePks (' + ((err && err.code) || err) + ')');
+      st.roomsX = []; merge();
     });
   };
 })();

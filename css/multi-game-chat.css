@@ -1,0 +1,60 @@
+/* ══ ONE CHAT, EVERY GAME (v7.61.0) — js/chat/multi-game-chat.js ══ */
+.mgc{display:flex;flex-direction:column;gap:8px;padding:2px 0 12px;border-bottom:.5px solid rgba(255,255,255,.08);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;color:#F4F2FF}
+.mgc:empty{display:none}
+.mgc-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.mgc-ct{font-size:11.5px;font-weight:600;color:#8F87BE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mgc-rail{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;scrollbar-width:none}
+.mgc-rail::-webkit-scrollbar{display:none}
+.mgc-c{flex:none;min-width:104px;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:8px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:#17122F;color:inherit;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+.mgc-c.here{border-color:rgba(168,159,232,.3)}
+.mgc-c.on{border:1.5px solid #A89FE8;background:rgba(168,159,232,.18)}
+.mgc-c:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.mgc-c.all{min-width:66px;align-items:center}
+.mgc-all{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.06em;line-height:1}
+.mgc-lg{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9C95D0;white-space:nowrap}
+.mgc-lg i{width:6px;height:6px;border-radius:3px;background:#6F68A0}
+.mgc-lg i.live{background:#FF5A5F}
+.mgc-lg em{font-style:normal;font-size:8.5px;letter-spacing:.08em;color:#1A1640;background:#A89FE8;border-radius:5px;padding:1px 5px;margin-left:2px}
+.mgc-c.here:not(.on) .mgc-lg em{background:rgba(168,159,232,.22);color:#E9E5FF}
+.mgc-tm{display:flex;gap:9px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.03em;line-height:1;white-space:nowrap}
+.mgc-tr{display:flex;align-items:center;gap:4px}
+.mgc-tr i{width:3px;height:14px;border-radius:2px}
+.mgc-tr b{font-weight:800;margin-left:2px}
+.mgc-tr.lo{color:#A9A2D6}
+.mgc-st{font-size:10.5px;font-weight:700;color:#B9B3E6;white-space:nowrap;min-height:13px}
+.mgc-c.add{min-width:84px;align-items:center;gap:5px;background:transparent;border:1.5px dashed rgba(168,159,232,.45);color:#CFC7FF;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.mgc-hint{font-size:12px;line-height:1.35;color:#A9A2D6}
+/* a message's game, in ALL */
+.mgc-tag{display:inline-flex;align-items:center;gap:5px;align-self:inherit;width:fit-content;max-width:100%;padding:2px 7px;border-radius:6px;background:rgba(168,159,232,.12);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#CFC7FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mgc-tag i{flex:none;width:6px;height:6px;border-radius:3px}
+.gc-sys .mgc-tag{display:flex;margin-bottom:4px}
+/* + Add game */
+.mgc-ov{position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;color:#F4F2FF}
+.mgc-scrim{position:absolute;inset:0;border:0;background:rgba(5,3,14,.62);cursor:pointer}
+.mgc-pn{position:relative;display:flex;flex-direction:column;gap:12px;max-height:82vh;padding:10px 16px calc(18px + env(safe-area-inset-bottom));background:#17122E;border-top:1px solid rgba(168,159,232,.25);border-radius:22px 22px 0 0;box-sizing:border-box;width:100%;max-width:560px;margin:0 auto}
+.mgc-grab{align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(168,159,232,.35)}
+.mgc-sh-hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mgc-sh-t{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.mgc-sh-s{font-size:12.5px;color:#A9A2D6;margin-top:2px}
+.mgc-done{flex:none;min-height:38px;padding:0 16px;border:0;border-radius:11px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.mgc-q{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-radius:12px;background:#0D0A1F;border:1px solid rgba(168,159,232,.2);color:#8F87BE}
+.mgc-q input{flex:1;min-width:0;border:0;background:transparent;color:#fff;font-family:inherit;font-size:15px;outline:none}
+.mgc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mgc-sp{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.mgc-sp::-webkit-scrollbar{display:none}
+.mgc-pill{flex:none;min-height:34px;padding:0 13px;border-radius:10px;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#E9E5FF;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.mgc-pill.on{background:#A89FE8;border-color:#A89FE8;color:#1A1640}
+.mgc-list{overflow-y:auto;min-height:120px;margin:0 -16px;padding:0 16px;-webkit-overflow-scrolling:touch}
+.mgc-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06)}
+.mgc-bd{flex:none;display:flex;flex-direction:column;gap:3px;width:42px}
+.mgc-bd span{height:19px;border-radius:5px;display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.03em}
+.mgc-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mgc-rn{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mgc-rs{display:flex;align-items:center;gap:6px;font-size:12px;color:#A9A2D6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mgc-rs i{flex:none;width:6px;height:6px;border-radius:3px;background:#6F68A0}
+.mgc-rs i.live{background:#FF5A5F}
+.mgc-b{flex:none;min-width:74px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #A89FE8;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:grid;place-items:center}
+.mgc-b.in{background:transparent;color:#CFC7FF;border-color:rgba(168,159,232,.45)}
+.mgc-b.fixed{background:transparent;border-color:transparent;color:#8F87BE;font-size:12px;font-weight:700;cursor:default}
+.mgc-b:disabled{opacity:.6}
+.mgc-empty{padding:28px 0;text-align:center;font-size:13px;color:#8F87BE}
