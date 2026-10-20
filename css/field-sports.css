@@ -177,3 +177,7 @@
 .fs-cin input{flex:1;min-width:0}
 .fs-cin button{width:44px;height:44px;flex-shrink:0;border-radius:50%;border:0;background:#A89FE8;color:#1A1640;display:grid;place-items:center;cursor:pointer}
 @media (prefers-reduced-motion: reduce){.fs-band.fresh,.fs-band.fresh .k,.fs-band.fresh .w,.fs-band.fresh .s{animation:none}}
+
+/* v7.65.1: Games page tiles — the grid's columns can't be pushed wider by a long season line, and the newest leagues say they're still being built */
+.gsp{min-width:0}
+.gsp-wip{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;line-height:13px;padding:3px 8px;border-radius:20px;border:1px dashed rgba(242,200,105,.55);color:#F2C869}

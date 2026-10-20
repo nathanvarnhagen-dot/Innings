@@ -932,6 +932,8 @@ function _gsDraw() {
       '<span class="em" aria-hidden="true">' + s.emoji + '</span>' +
       '<span class="nm">' + _escapeHtml(s.name) + '</span>' +
       '<span class="ph ' + (s.live ? 'none' : 'soon') + '" id="gsp-ph-' + s.key + '">' + (s.live ? '' : 'Coming soon') + '</span>' +
+      // v7.65.1: the newest leagues say they're still being built
+      (s.ev ? '<span class="gsp-wip">In progress</span>' : '') +
       '<span class="gsp-lv" id="gsp-lv-' + s.key + '" style="display:none"></span>' +
     '</button>';
   }).join('');
