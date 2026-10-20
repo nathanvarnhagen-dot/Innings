@@ -61,6 +61,97 @@
 .mv-editing .mv-top{padding-right:24px}
 .mv-editing .mv-open:active{transform:none}
 
+/* ── v7.59.0: the glance panels — one fixed height for every sport ── */
+.mv-sit.pn{height:92px;padding:8px 9px;flex-direction:column;justify-content:center;gap:5px;overflow:hidden}
+.mv-sit.pn .dd{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0}
+.mv-sit.pn .dd b{font-size:18px}
+.mv-sit.pn .dd small{font-size:11px;flex-shrink:1}
+/* baseball: zone + count */
+.mv-sit.bb2{flex-direction:row;align-items:center;gap:9px}
+.mvz{width:52px;height:68px;flex-shrink:0;display:block}
+.mvz rect{fill:rgba(168,159,232,.08);stroke:rgba(168,159,232,.5);stroke-width:1}
+.mvz path{stroke:rgba(168,159,232,.14);stroke-width:1;fill:none}
+.mvz circle{opacity:.78}
+.mvz circle.bl{fill:#5FD39B}.mvz circle.ck{fill:#E8C766}.mvz circle.sw{fill:#FF7A6B}.mvz circle.fl{fill:#A89FE8}.mvz circle.ip{fill:#fff}
+.mvz circle.last{opacity:1;stroke:#fff;stroke-width:1.2}
+.mv-sit.bb2 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.mvc{display:flex;align-items:center;gap:5px;min-height:14px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif}
+.mvc em{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:.1em;color:#8F88C8}
+.mvc .b,.mvc .s,.mvc .o{display:inline-flex;gap:3px;margin-right:4px}
+.mvc .b i,.mvc .s i,.mvc .o i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.12)}
+.mvc .b i.on{background:#5FD39B}.mvc .s i.on{background:#E8C766}.mvc .o i.on{background:#FF7A6B}
+.mvbs{margin-left:auto;display:inline-flex}
+.mvw{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10.5px;font-weight:700;color:#F5F3FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvw small{font-size:9px;font-weight:600;color:#C7C0E8}
+.mvp{display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;overflow:hidden}
+.mvp b{font-size:16px;letter-spacing:.02em;line-height:1;flex-shrink:0}
+.mvp b small{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:8px;font-weight:800;letter-spacing:.1em;color:#C7C0E8;margin-left:2px}
+.mvp span{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10px;font-weight:600;color:#C7C0E8;overflow:hidden;text-overflow:ellipsis}
+/* baseball: the takeover on a hit or a homer */
+.mv-sit.mvto{position:relative;background:var(--t1);padding:0;justify-content:stretch;color:#fff}
+.mv-sit.mvto .bgd{position:absolute;inset:0;background:linear-gradient(115deg,var(--t1) 0%,var(--t1) 48%,var(--tdark) 100%)}
+.mv-sit.mvto .st{position:absolute;left:-20%;top:0;bottom:0;width:140%;background:repeating-linear-gradient(-28deg,transparent 0 26px,rgba(255,255,255,.07) 26px 32px);opacity:.6}
+.mv-sit.mvto .ln{position:absolute;left:9px;right:9px;bottom:7px;height:2px;background:var(--t2);border-radius:1px;animation:mvLn .9s cubic-bezier(.22,1,.36,1) both}
+@keyframes mvLn{from{transform:scaleX(0);transform-origin:left}to{transform:scaleX(1)}}
+.mv-sit.mvto .ct{position:relative;padding:9px 9px 12px;display:flex;flex-direction:column;gap:1px;min-width:0;animation:mvUp .45s cubic-bezier(.22,1,.36,1) both}
+.mv-sit.mvto.sp .ct{padding-right:70px}
+@keyframes mvUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.mv-sit.mvto .sm{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:8.5px;font-weight:800;letter-spacing:.22em;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-sit.mvto .big{font-size:22px;font-weight:700;line-height:.95;letter-spacing:.04em;color:#fff}
+.mv-sit.mvto .who{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10.5px;font-weight:700;color:#fff;margin-top:3px;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-sit.mvto .stx{display:flex;gap:8px;margin-top:4px}
+.mv-sit.mvto .stx span{font-size:14px;font-weight:700;color:#fff;line-height:1}
+.mv-sit.mvto .stx small{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:7.5px;font-weight:800;letter-spacing:.1em;color:var(--t2);margin-left:2px}
+.mvsp{position:absolute;right:6px;top:50%;width:64px;height:56px;margin-top:-28px;animation:mvUp .5s cubic-bezier(.22,1,.36,1) both;animation-delay:.25s}
+/* football: field strip under the down & distance */
+.mv-sit.fb2 .fld{position:relative;display:block;height:26px;border-radius:5px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 1px,transparent 1px 8.2%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.mv-sit.fb2 .fld i{position:absolute;top:0;bottom:0;width:9%;opacity:.45}
+.mv-sit.fb2 .fld i.l{left:0}.mv-sit.fb2 .fld i.r{right:0}
+.mv-sit.fb2 .fld i.mid{left:50%;width:1px;opacity:1;background:rgba(255,255,255,.25)}
+.mv-sit.fb2 .fld u{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#FFD94D}
+.mv-sit.fb2 .fld b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+.mv-sit.fb2 .ft{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.08em;color:#C7C0E8;white-space:nowrap;overflow:hidden}
+.mv-sit.fb2 .ft u{text-decoration:none;color:#FF7A6B;font-weight:700}
+.mv-sit.fb2 .ft s{width:3px;height:3px;border-radius:50%;background:#6E66B0;text-decoration:none}
+/* basketball: shot clock dial + a few lines */
+.mv-sit.hp2{flex-direction:row;align-items:center;gap:9px}
+.mv-sit.hp2 .dial{position:relative;width:52px;height:52px;flex-shrink:0}
+.mv-sit.hp2 .dial svg{width:52px;height:52px;transform:rotate(-90deg)}
+.mv-sit.hp2 .dial circle{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4}
+.mv-sit.hp2 .dial circle.arc{stroke-linecap:round;transition:stroke-dashoffset .4s linear}
+.mv-sit.hp2 .dial b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:1;letter-spacing:0}
+.mv-sit.hp2 .dial b small{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:7px;font-weight:800;letter-spacing:.08em;color:#C7C0E8;margin-top:2px}
+.mv-sit.hp2 .dial.hot b{color:#FF7A6B}
+.mv-sit.hp2 .dial.hot circle.arc{stroke:#FF7A6B!important}
+.mv-sit.hp2 .kv{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif}
+.mv-sit.hp2 .kv span{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:#C7C0E8;white-space:nowrap;min-width:0}
+.mv-sit.hp2 .kv em{font-style:normal;overflow:hidden;text-overflow:ellipsis}
+.mv-sit.hp2 .kv b{font-family:inherit;font-size:11px;letter-spacing:0;color:#F5F3FF;font-variant-numeric:tabular-nums}
+.mv-sit.hp2 .kv b.run{padding:1px 6px;border-radius:6px;background:rgba(232,199,102,.14);color:#E8C766}
+/* hockey: power play + shots */
+.mv-sit.hk2 .ppb{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:7px;background:rgba(95,211,155,.12);color:#5FD39B;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.06em;white-space:nowrap;flex-shrink:0}
+.mv-sit.hk2 .ppb i{width:5px;height:5px;border-radius:50%;background:#5FD39B;animation:mvBlink 1s infinite}
+.mv-sit.hk2 .ppb.en{background:rgba(255,122,107,.12);color:#FF7A6B}
+@keyframes mvBlink{50%{opacity:.25}}
+.mv-sit.hk2 .sog{display:flex;flex-direction:column;gap:3px}
+.mv-sit.hk2 .sog em{font-style:normal;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:8.5px;font-weight:800;letter-spacing:.1em;color:#8F88C8}
+.mv-sit.hk2 .sog .row{display:grid;grid-template-columns:22px 1fr 22px;align-items:center;gap:6px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.mv-sit.hk2 .sog .row>span:last-child{text-align:right}
+.mv-sit.hk2 .bar,.mv-sit.sc2 .bar{position:relative;display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.mv-sit.hk2 .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.mv-sit.hk2 .bar i.r{left:auto;right:0}
+/* soccer: match clock + the last goal or card */
+.mv-sit.sc2 .dd b{font-size:22px;font-variant-numeric:tabular-nums}
+.mv-sit.sc2 .dd b small{font-size:11px;color:#E8C766;letter-spacing:.04em}
+.mv-sit.sc2 .ld{font-size:12px}
+.mv-sit.sc2 .evs{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mv-sit.sc2 .ev{display:flex;align-items:center;gap:5px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10.5px;font-weight:600;color:#C7C0E8;white-space:nowrap;min-width:0}
+.mv-sit.sc2 .ev span{overflow:hidden;text-overflow:ellipsis}
+.mv-sit.sc2 .ev .gl{font-style:normal;font-size:11px}
+.mv-sit.sc2 .ev .cd{width:8px;height:11px;border-radius:2px;flex-shrink:0}
+.mv-sit.sc2 .ev .cd.y{background:#E8C766}.mv-sit.sc2 .ev .cd.r{background:#FF5A5A}
+@media (prefers-reduced-motion: reduce){.mv-sit.mvto .ct,.mv-sit.mvto .ln,.mvsp,.mv-sit.hk2 .ppb i{animation:none}}
+
 /* ── also live, and the empty board ── */
 .mv-sec{display:flex;flex-direction:column;gap:8px}
 .mv-lab{display:flex;flex-direction:column;gap:3px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.14em;color:#B9B2E6}

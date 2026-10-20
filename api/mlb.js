@@ -63,6 +63,29 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=glance&pks=a,b,c  (v7.59.0)
+    // Multi view's baseball tiles: the pitches of the at-bat in progress
+    // (for the little zone), the count and runners, and the last finished
+    // play with its hit data — enough to take the tile over on a hit. Reads
+    // the play-by-play + linescore (a third of the live feed) for up to four
+    // games at once; a bad game comes back null, never a failed request.
+    if (mode === 'glance') {
+      const pks = String(req.query.pks || '').split(',').map(function (s) { return s.trim(); }).filter(function (s) { return /^\d+$/.test(s); }).slice(0, 4);
+      const games = {};
+      await Promise.all(pks.map(async function (pk) {
+        try {
+          const parts = await Promise.all([
+            fetch('https://statsapi.mlb.com/api/v1/game/' + pk + '/playByPlay').then(function (r) { return r.ok ? r.json() : null; }),
+            fetch('https://statsapi.mlb.com/api/v1/game/' + pk + '/linescore').then(function (r) { return r.ok ? r.json() : null; })
+          ]);
+          games[pk] = _glanceOf(parts[0], parts[1]);
+        } catch (e) { games[pk] = null; }
+      }));
+      res.setHeader('Cache-Control', 's-maxage=8, stale-while-revalidate=8');
+      res.status(200).json({ games: games });
+      return;
+    }
+
     // GET /api/mlb?mode=phase[&date=YYYY-MM-DD]  (v7.40.0)
     // Where the season stands, in a few words, for the Games page's MLB tile:
     // "Spring training", "Regular season", the round(s) being played in
@@ -2245,6 +2268,41 @@ function _schedBases(ls) {
   return { first: !!o.first, second: !!o.second, third: !!o.third };
 }
 function _schedPerson(p) { return (p && (p.fullName || p.name)) || null; }
+
+// v7.59.0: one game's glance for Multi view (see mode=glance). `ab` is the
+// at-bat in progress — its pitches with the plot and call of each; `last` is
+// the newest finished play, trimmed to what a tile shows (the result, who,
+// the hit's exit velo / angle / distance, the pitch it came on).
+function _glanceOf(pbp, ls) {
+  if (!pbp && !ls) return null;
+  var out = { ab: null, last: null, balls: null, strikes: null, outs: null, bases: null, inning: null, inningState: null };
+  if (ls) {
+    out.balls = ls.balls != null ? ls.balls : null; out.strikes = ls.strikes != null ? ls.strikes : null; out.outs = ls.outs != null ? ls.outs : null;
+    out.bases = _schedBases(ls); out.inning = ls.currentInning || null; out.inningState = ls.inningState || null;
+    out.batter = _schedPerson(ls.offense && ls.offense.batter); out.pitcher = _schedPerson(ls.defense && ls.defense.pitcher);
+  }
+  var cp = pbp && pbp.currentPlay;
+  if (cp && cp.matchup && cp.matchup.batter && !(cp.about && cp.about.isComplete)) {
+    var dk = _droppedK(cp), lastPd = null;
+    var pitches = (cp.playEvents || []).filter(function (e) { return e && e.isPitch && e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX != null && e.pitchData.coordinates.pZ != null; }).map(function (e) {
+      lastPd = e.pitchData;
+      var d = e.details || {};
+      return { px: Math.round(e.pitchData.coordinates.pX * 100) / 100, pz: Math.round(e.pitchData.coordinates.pZ * 100) / 100, call: _callText(e, cp, dk),
+        code: (d.type && d.type.code) || null, type: (d.type && d.type.description) || null, mph: e.pitchData.startSpeed != null ? Math.round(e.pitchData.startSpeed * 10) / 10 : null };
+    });
+    out.ab = { atBatIndex: cp.about && cp.about.atBatIndex != null ? cp.about.atBatIndex : null, batter: cp.matchup.batter.fullName || null,
+      pitcher: (cp.matchup.pitcher && cp.matchup.pitcher.fullName) || null, batSide: (cp.matchup.batSide && cp.matchup.batSide.code) || null,
+      zoneTop: lastPd && lastPd.strikeZoneTop != null ? lastPd.strikeZoneTop : 3.5, zoneBottom: lastPd && lastPd.strikeZoneBottom != null ? lastPd.strikeZoneBottom : 1.5, pitches: pitches };
+  }
+  var lp = pbp ? _lastPlaySummary(pbp.allPlays || []) : null;
+  if (lp) {
+    var pp = lp.pitches && lp.pitches.length ? lp.pitches[lp.pitches.length - 1] : null;
+    out.last = { atBatIndex: lp.atBatIndex, inning: lp.inning, half: lp.half, event: lp.event, eventType: lp.eventType, description: lp.description, rbi: lp.rbi,
+      batter: lp.batter, pitcher: lp.pitcher, hit: lp.hit, hitPending: lp.hitPending, pitchCount: (lp.pitches || []).length,
+      lastPitch: pp ? { mph: pp.mph, type: pp.type, code: pp.code, call: pp.call } : null, fielders: lp.fielders || null };
+  }
+  return out;
+}
 
 // v7.49.0: a game knocked off its day. `postponed` is the rained-out row
 // itself; `rescheduleDate` is when that game is now played (if MLB has set

@@ -113,6 +113,24 @@ module.exports = async function handler(req, res) {
       res.status(200).json(model);
       return;
     }
+    // GET /api/espn?league=nba|wnba&mode=glance&ids=a,b  (v7.59.0)
+    // Multi view's basketball tiles: who has the ball, the shot clock the
+    // play-by-play implies, the run, team fouls and timeouts, and the last
+    // play — from the same summary the court reads, cut down to a few lines.
+    if (mode === 'glance') {
+      const ids = String(req.query.ids || '').split(',').map(function (s) { return s.trim(); }).filter(function (s) { return /^\d+$/.test(s); }).slice(0, 4);
+      const games = {};
+      await Promise.all(ids.map(async function (id) {
+        try {
+          const sr = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/summary?event=' + encodeURIComponent(id));
+          const d = sr.ok ? await sr.json() : null;
+          games[id] = d ? _bbGlance(d, league) : null;
+        } catch (e) { games[id] = null; }
+      }));
+      res.setHeader('Cache-Control', 's-maxage=8, stale-while-revalidate=8');
+      res.status(200).json({ games: games });
+      return;
+    }
     if (mode === 'pregame') {
       const eventId = req.query.eventId;
       if (!eventId) { res.status(400).json({ error: 'Missing eventId' }); return; }
@@ -279,7 +297,8 @@ function summarizeEvent(event) {
     seriesSummary: (parts.comp.series && parts.comp.series.summary) || null,
     // v7.38.0: where a live game stands (down & distance, the spot, the last
     // play), for Multi view's tiles — null whenever ESPN doesn't send it
-    sit: _eventSit(parts)
+    sit: _eventSit(parts),
+    goals: _eventGoals(parts) // v7.59.0: soccer only
   };
 }
 function _eventSit(parts) {
@@ -295,9 +314,29 @@ function _eventSit(parts) {
       dd: s.shortDownDistanceText || null,
       spot: s.possessionText || null,
       poss: poss,
-      last: (s.lastPlay && s.lastPlay.text) || null
+      last: (s.lastPlay && s.lastPlay.text) || null,
+      // v7.59.0: the red zone and the timeouts left, for Multi view's football tiles
+      rz: s.isRedZone === true ? true : null,
+      toA: s.awayTimeouts != null ? Number(s.awayTimeouts) : null,
+      toH: s.homeTimeouts != null ? Number(s.homeTimeouts) : null
     };
     return (out.dd || out.spot || out.poss || out.last) ? out : null;
+  } catch (e) { return null; }
+}
+// v7.59.0: a soccer game's goals and cards straight off the scoreboard (the
+// competition's `details`), newest last, for Multi view's tiles: who, when,
+// which side. Null for every other sport.
+function _eventGoals(parts) {
+  try {
+    var det = parts.comp && parts.comp.details;
+    if (!det || !det.length) return null;
+    var side = function (d) { var id = d.team && String(d.team.id); return id === String(parts.home.id) || id === String(parts.home.team && parts.home.team.id) ? 'h' : (id === String(parts.away.id) || id === String(parts.away.team && parts.away.team.id) ? 'a' : null); };
+    var out = det.filter(function (d) { return d && (d.scoringPlay || d.redCard || d.yellowCard); }).map(function (d) {
+      var who = d.athletesInvolved && d.athletesInvolved[0] && (d.athletesInvolved[0].displayName || d.athletesInvolved[0].shortName);
+      return { k: d.scoringPlay ? (d.ownGoal ? 'og' : d.penaltyKick ? 'pk' : 'goal') : (d.redCard ? 'red' : 'yellow'),
+        who: who ? _lastName(who) : null, t: (d.clock && d.clock.displayValue) || null, s: side(d) };
+    });
+    return out.length ? out : null;
   } catch (e) { return null; }
 }
 
@@ -1535,6 +1574,23 @@ function _bbAnalyze(data, away, home) {
 // v7.53.0: the run in progress — unanswered points by one side since the
 // other last scored (8+ counts), or a lopsided stretch (10+ while the other
 // side scored once). `since` is the clock of the run's first basket.
+// v7.59.0: one basketball game's glance for Multi view (see mode=glance)
+function _bbGlance(data, league) {
+  if (!BASKETBALL_LEAGUES[league]) return null;
+  var header = data.header || {}, comp = (header.competitions && header.competitions[0]) || {};
+  var cs = comp.competitors || [];
+  var awayC = cs.filter(function (c) { return c.homeAway === 'away'; })[0] || {}, homeC = cs.filter(function (c) { return c.homeAway === 'home'; })[0] || {};
+  var away = _gcSide(awayC), home = _gcSide(homeC);
+  var court = _bbCourt(data, away, home, league);
+  var raw = (data.plays || []).filter(function (p) { return p && p.text; });
+  var scoring = raw.filter(function (p) { return p.scoringPlay && p.awayScore != null && p.homeScore != null; });
+  var run = null;
+  try { run = _bbRun(scoring); } catch (e) {}
+  var st = comp.status || {};
+  return { poss: court.poss, sc: court.sc, periodSecs: court.periodSecs, period: st.period || null, clock: st.displayClock || null,
+    last: court.last ? { text: court.last.text, side: court.last.side, made: court.last.made, pts: court.last.pts, ft: court.last.ft, who: court.last.who } : null,
+    run: run ? { side: run.side, pts: run.pts, opp: run.opp } : null, fouls: court.fouls, timeouts: court.timeouts, ft: court.ft || null };
+}
 function _bbRun(scoring) {
   if (!scoring.length) return null;
   var n = scoring.length, last = scoring[n - 1];

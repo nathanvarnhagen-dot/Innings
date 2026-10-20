@@ -20,6 +20,31 @@ var BASE = 'https://api-web.nhle.com/v1';
 module.exports = async function handler(req, res) {
   var mode = req.query.mode;
   var gameId = req.query.gameId;
+  // GET /api/nhl?mode=schedule&date=YYYY-MM-DD  (v7.59.0)
+  // The day's games in the same shape /api/espn?mode=schedule hands the app
+  // (state, statusDetail, abbreviations, scores), from the league's own
+  // score page, plus `sit` for a live game: shots on goal, the power play
+  // in progress and the last goal — for Multi view's hockey tiles.
+  if (mode === 'schedule') {
+    var date = String(req.query.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { res.status(400).json({ error: 'Missing date (YYYY-MM-DD)' }); return; }
+    try {
+      var sc = await _get(BASE + '/score/' + date);
+      var rows = ((sc && sc.games) || []).filter(function (g) { return g && g.id != null && String(g.gameDate || date) === date; });
+      var games = rows.map(_schedRow);
+      // a live game's power play comes from its landing page (one call per live game)
+      var liveIdx = [];
+      games.forEach(function (g, i) { if (g.state === 'in') liveIdx.push(i); });
+      await Promise.all(liveIdx.slice(0, 6).map(async function (i) {
+        var land = await _get(BASE + '/gamecenter/' + encodeURIComponent(games[i].gamePk) + '/landing');
+        if (land) _schedLanding(games[i], land, rows[i]);
+      }));
+      var anyLive = games.some(function (g) { return g.state === 'in'; });
+      res.setHeader('Cache-Control', anyLive ? 's-maxage=15, stale-while-revalidate=15' : 's-maxage=300, stale-while-revalidate');
+      res.status(200).json({ games: games });
+    } catch (e) { res.status(200).json({ games: [] }); }
+    return;
+  }
   if (!gameId) { res.status(400).json({ error: 'Missing gameId' }); return; }
   try {
     if (mode === 'gamecast') {
@@ -313,4 +338,60 @@ function summarize(landing, box, rail, gameId) {
     model.parseError = String(e && e.message || e);
   }
   return model;
+}
+
+// ── v7.59.0: the schedule row ──
+// the score page names teams by nickname only ("Ducks"); the app keys
+// venues and colors by the full name, so the city comes from here
+var _NHL_PLACE = { ANA: 'Anaheim', BOS: 'Boston', BUF: 'Buffalo', CGY: 'Calgary', CAR: 'Carolina', CHI: 'Chicago', COL: 'Colorado', CBJ: 'Columbus', DAL: 'Dallas', DET: 'Detroit', EDM: 'Edmonton', FLA: 'Florida', LAK: 'Los Angeles', MIN: 'Minnesota', MTL: 'Montréal', NSH: 'Nashville', NJD: 'New Jersey', NYI: 'New York', NYR: 'New York', OTT: 'Ottawa', PHI: 'Philadelphia', PIT: 'Pittsburgh', SJS: 'San Jose', SEA: 'Seattle', STL: 'St. Louis', TBL: 'Tampa Bay', TOR: 'Toronto', UTA: 'Utah', VAN: 'Vancouver', VGK: 'Vegas', WSH: 'Washington', WPG: 'Winnipeg' };
+function _schedName(t) {
+  if (!t) return null;
+  var place = _d(t.placeName) || _NHL_PLACE[t.abbrev] || '', nm = _d(t.commonName) || _d(t.name);
+  if (!nm) return t.abbrev || null;
+  return place && nm.indexOf(place) !== 0 ? (place + ' ' + nm) : nm;
+}
+function _schedState(g) {
+  var st = String(g.gameState || '').toUpperCase();
+  if (st === 'LIVE' || st === 'CRIT') return 'in';
+  if (st === 'OFF' || st === 'FINAL') return 'post';
+  return 'pre';
+}
+function _schedDetail(g, state) {
+  var pd = g.periodDescriptor || {}, ck = g.clock || {};
+  if (state === 'post') return pd.periodType === 'SO' ? 'FINAL/SO' : (pd.periodType === 'OT' || (pd.number || 0) > 3) ? 'FINAL/OT' : 'FINAL';
+  if (state !== 'in') return null;
+  var tag = _periodTag(pd);
+  if (ck.inIntermission) return 'END ' + tag;
+  return tag + ' ' + _clock(ck.timeRemaining);
+}
+function _schedRow(g) {
+  var state = _schedState(g), a = g.awayTeam || {}, h = g.homeTeam || {};
+  var off = /PPD|POSTPONED|CNCL|CANCEL|SUSP/i.test(String(g.gameScheduleState || ''));
+  var status = state === 'post' ? 'Final' : state === 'in' ? 'In Progress' : off ? 'Postponed' : 'Scheduled';
+  var goals = (g.goals || []);
+  var last = goals.length ? goals[goals.length - 1] : null;
+  var row = {
+    gamePk: g.id, status: status, state: off && state !== 'in' ? 'pre' : state, statusDetail: _schedDetail(g, state),
+    away: _schedName(a), home: _schedName(h), awayAbbr: a.abbrev || null, homeAbbr: h.abbrev || null,
+    awayScore: state === 'pre' ? null : (a.score != null ? a.score : null), homeScore: state === 'pre' ? null : (h.score != null ? h.score : null),
+    venue: _d(g.venue) || null, startTime: g.startTimeUTC || null, postponed: off || undefined,
+    sit: state === 'in' ? { sogA: a.sog != null ? a.sog : null, sogH: h.sog != null ? h.sog : null, pp: null,
+      last: last ? ((_d(last.name) || _lastName((_d(last.firstName) + ' ' + _d(last.lastName)).trim())) + ' · ' + (last.teamAbbrev && (last.teamAbbrev.default || last.teamAbbrev) || '') + ' · ' + _periodTag({ number: last.period, periodType: last.periodDescriptor && last.periodDescriptor.periodType }) + ' ' + _clock(last.timeInPeriod) + (last.strength && last.strength !== 'ev' ? ' · ' + String(last.strength).toUpperCase() : '')).replace(/ · $/, '') : null } : null
+  };
+  return row;
+}
+function _schedLanding(row, land, raw) {
+  var s = land.situation;
+  if (!s || !row.sit) return;
+  var side = null, abbr = null;
+  ['homeTeam', 'awayTeam'].forEach(function (k) {
+    var t = s[k], descs = (t && t.situationDescriptions) || [];
+    if (descs.some(function (d) { return /PP/i.test(d); })) { side = k === 'homeTeam' ? 'h' : 'a'; abbr = (t && t.abbrev) || null; }
+  });
+  if (side) row.sit.pp = { side: side, abbr: abbr, clock: _clock(s.timeRemaining || '') || null };
+  ['homeTeam', 'awayTeam'].forEach(function (k) {
+    var t = s[k], descs = (t && t.situationDescriptions) || [];
+    if (descs.some(function (d) { return /EN/i.test(d); })) row.sit.en = k === 'homeTeam' ? 'h' : 'a';
+  });
+  if (land.clock && land.clock.timeRemaining && row.state === 'in' && !land.clock.inIntermission) row.statusDetail = _periodTag(land.periodDescriptor || (raw && raw.periodDescriptor)) + ' ' + _clock(land.clock.timeRemaining);
 }

@@ -20,8 +20,20 @@
 // and batter for baseball (api/mlb.js) and down & distance + the last play
 // for football (api/espn.js). Whatever a feed doesn't send is left off.
 
-var MV_KEY = 'innings_multi_v1', MV_MAX = 4, MV_FLAG_MS = 90000, MV_TICK_MS = 20000;
-window._mv = window._mv || { st: null, sched: null, at: 0, loaded: false, loading: null, edit: false, prev: {}, flags: {}, timer: null, shown: [], also: [] };
+//
+// v7.59.0: every tile carries a glance panel built for its sport — the live
+// zone with the at-bat's pitches, count, outs and runners for baseball (a
+// hit or a homer takes the tile over in the batting team's colors for a
+// minute and a half); the field strip under the down & distance with the
+// first-down line, red zone and timeouts for football; the shot clock dial,
+// possession, run and fouls for basketball; the power play, shots on goal
+// and last goal for hockey; the match clock, last goal and cards for
+// soccer. Baseball and basketball need more than the schedule rows carry,
+// so the board asks /api/mlb?mode=glance and /api/espn?mode=glance for the
+// live games on it, on the same 20 s clock.
+
+var MV_KEY = 'innings_multi_v1', MV_MAX = 4, MV_FLAG_MS = 90000, MV_TICK_MS = 20000, MV_PA_MS = 90000;
+window._mv = window._mv || { st: null, sched: null, at: 0, loaded: false, loading: null, edit: false, prev: {}, flags: {}, timer: null, shown: [], also: [], glance: {}, pa: {}, paSeen: {}, glanceAt: 0, glancing: null };
 
 var MV_ICON = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="2" width="6.5" height="6.5" rx="2"/><rect x="11.5" y="2" width="6.5" height="6.5" rx="2"/><rect x="2" y="11.5" width="6.5" height="6.5" rx="2"/><rect x="11.5" y="11.5" width="6.5" height="6.5" rx="2"/></svg>';
 var MV_CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>';
@@ -124,8 +136,61 @@ function _mvLoad(force) {
     M.at = Date.now(); M.loaded = true; M.loading = null;
     multiIngest(M.sched);
     _mvRenderAll();
+    _mvGlanceLoad();
   }).catch(function (err) { M.loading = null; console.error('[multi view] load failed:', err); });
   return M.loading;
+}
+// ── v7.59.0: the glance for the live baseball and basketball tiles ──
+// Only for games on the board, only while the board is up (the screen or
+// Home's copy). A hit or a homer on a newly finished plate appearance flags
+// the tile for a takeover; the same at-bat never flags twice.
+function _mvGlanceLoad() {
+  var M = window._mv;
+  if (!window.fetch || !_mvActive()) return;
+  var board = _mvBoard().filter(function (e) { return e.g && e.phase === 'live'; });
+  var mlb = board.filter(function (e) { return e.sport === 'mlb'; }).map(function (e) { return String(e.gamePk); });
+  var bk = { nba: [], wnba: [] };
+  board.forEach(function (e) { if (bk[e.sport]) bk[e.sport].push(String(e.gamePk)); });
+  var calls = [];
+  if (mlb.length) calls.push(fetch('/api/mlb?mode=glance&pks=' + mlb.join(',')).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return { sport: 'mlb', games: (d && d.games) || {} }; }).catch(function () { return null; }));
+  ['nba', 'wnba'].forEach(function (lg) {
+    if (!bk[lg].length) return;
+    calls.push(fetch('/api/espn?league=' + lg + '&mode=glance&ids=' + bk[lg].join(',')).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return { sport: lg, games: (d && d.games) || {} }; }).catch(function () { return null; }));
+  });
+  if (!calls.length) return;
+  if (M.glancing) return;
+  M.glancing = Promise.all(calls).then(function (res) {
+    M.glancing = null;
+    var now = Date.now();
+    res.forEach(function (x) {
+      if (!x) return;
+      Object.keys(x.games).forEach(function (pk) {
+        var g = x.games[pk];
+        if (!g) return;
+        var key = _mvKey(x.sport, pk);
+        M.glance[key] = { at: now, g: g };
+        if (x.sport === 'mlb' && g.last && g.last.atBatIndex != null) {
+          var abi = String(g.last.atBatIndex), seen = M.paSeen[key];
+          // the first look at a game only notes where it stands — a hit from
+          // ten minutes ago shouldn't take the tile over when it's added
+          if (seen == null) M.paSeen[key] = abi;
+          else if (seen !== abi) {
+            M.paSeen[key] = abi;
+            if (_mvPaKind(g.last)) M.pa[key] = { at: now, last: g.last };
+          }
+        }
+      });
+    });
+    M.glanceAt = now;
+    _mvRenderAll();
+  }).catch(function () { M.glancing = null; });
+}
+function _mvGlance(key) { var x = window._mv.glance[key]; return x && Date.now() - x.at < 180000 ? x.g : null; }
+function _mvPa(key) { var f = window._mv.pa[key]; return f && Date.now() - f.at < MV_PA_MS ? f : null; }
+// hit, homer: the takeovers. (Outs, walks and strikeouts stay in the panel.)
+function _mvPaKind(lp) {
+  var t = (lp && lp.eventType) || '';
+  return t === 'home_run' ? 'hr' : /^(single|double|triple)$/.test(t) ? 'hit' : null;
 }
 // Every fresh set of scores passes through here (ours and Home's): a score
 // that went up since the last look flags that game for a minute and a half.
@@ -267,25 +332,138 @@ function _mvField(sit) {
 function _mvSitHtml(e, ca, ch, flag) {
   var sport = e.sport, g = e.g, ph = e.phase;
   if (!g) return '<span class="mv-sit tx"><small>LOADING</small></span>';
-  if (flag) return '<span class="mv-sit gold"><b>' + _mvEsc(_mvFlagWord(sport, flag)) + '</b><small>' + _mvEsc((flag.side === 'away' ? ca : ch).abbr) + ' · JUST NOW</small></span>';
+  var key = _mvKey(sport, e.gamePk), lead = g.awayScore != null && g.homeScore != null ? _mvLead(g.awayScore, g.homeScore, ca, ch) : '';
   if (ph === 'pre') return '<span class="mv-sit tx"><b>' + _mvEsc(_mvStatus(sport, g, ph)) + '</b><small>NOT STARTED</small></span>';
-  var lead = g.awayScore != null && g.homeScore != null ? _mvLead(g.awayScore, g.homeScore, ca, ch) : '';
   if (ph === 'post') return '<span class="mv-sit tx"><b>FINAL</b>' + (lead ? '<small>' + _mvEsc(lead) + '</small>' : '') + '</span>';
-  if (sport === 'mlb') {
-    if (g.inningState === 'Middle' || g.inningState === 'End') return '<span class="mv-sit tx"><b class="sm">BETWEEN INNINGS</b>' + (lead ? '<small>' + _mvEsc(lead) + '</small>' : '') + '</span>';
-    var count = g.balls != null && g.strikes != null ? g.balls + '-' + g.strikes : '';
-    var outs = g.outs != null ? g.outs + (Number(g.outs) === 1 ? ' OUT' : ' OUTS') : '';
-    if (!g.bases && !count && !outs) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b></span>';
-    return '<span class="mv-sit bb">' + (g.bases ? _mvBases(g.bases, 54, 40) : '') + '<span class="col"><b>' + _mvEsc(count) + '</b><small>' + _mvEsc(outs) + '</small></span></span>';
-  }
+  // baseball: a hit's takeover beats the run flag (it's the same moment)
+  if (sport === 'mlb') { var pa = _mvPa(key); if (pa) return _mvPaTakeoverHtml(e, pa.last, ca, ch); }
+  if (flag) return '<span class="mv-sit gold"><b>' + _mvEsc(_mvFlagWord(sport, flag)) + '</b><small>' + _mvEsc((flag.side === 'away' ? ca : ch).abbr) + ' · JUST NOW</small></span>';
+  if (sport === 'mlb') return _mvBaseballHtml(e, ca, ch, lead);
+  if (sport === 'nfl' || sport === 'cfb') return _mvFootballHtml(e, ca, ch, lead);
+  if (sport === 'nba' || sport === 'wnba') return _mvHoopsHtml(e, ca, ch, lead);
+  if (sport === 'nhl') return _mvHockeyHtml(e, ca, ch, lead);
+  if (sport === 'mls' || sport === 'nwsl') return _mvSoccerHtml(e, ca, ch, lead);
   var sit = g.sit;
-  if ((sport === 'nfl' || sport === 'cfb') && sit && sit.dd) {
-    var f = _mvField(sit), pc = sit.poss ? (sit.poss === ca.abbr ? ca : sit.poss === ch.abbr ? ch : null) : null;
-    var where = [sit.poss, sit.spot].filter(Boolean).join(' · ');
-    return '<span class="mv-sit fb"><b>' + _mvEsc(String(sit.dd).toUpperCase()) + '</b>' + (where ? '<small>' + _mvEsc(where) + '</small>' : '') +
-      (f ? '<span class="bar" role="img" aria-label="Ball on the ' + _mvEsc(sit.spot) + '"><i style="width:' + f.pct + '%;background:' + ((pc && pc.accent) || '#A89FE8') + '"></i>' + (f.mark != null ? '<u style="left:' + f.mark + '%"></u>' : '') + '</span>' : '') + '</span>';
-  }
   return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b>' + (sit && sit.poss ? '<small>' + _mvEsc(sit.poss) + ' BALL</small>' : '') + '</span>';
+}
+function _mvPips(cls, n, of) { var o = '<span class="' + cls + '">'; for (var i = 0; i < of; i++) o += '<i' + (i < n ? ' class="on"' : '') + '></i>'; return o + '</span>'; }
+// the little zone: the at-bat's pitches on a 52×68 plot, the last one ringed
+function _mvZoneSvg(ab) {
+  var top = ab.zoneTop || 3.5, bot = ab.zoneBottom || 1.5, zh = top - bot || 2;
+  // plate x: −0.83…0.83 ft is the zone → 12…40; pz: bot…top → 54…14
+  var X = function (px) { return 26 + (px / 0.83) * 14; }, Y = function (pz) { return 54 - ((pz - bot) / zh) * 40; };
+  var cls = function (call) {
+    var c = String(call || '').toLowerCase();
+    if (/in play/.test(c)) return 'ip'; if (/foul/.test(c)) return 'fl'; if (/swinging|tip/.test(c)) return 'sw'; if (/called/.test(c)) return 'ck'; if (/ball/.test(c)) return 'bl'; return 'ck';
+  };
+  var dots = (ab.pitches || []).map(function (p, i, arr) {
+    var x = Math.max(3, Math.min(49, X(p.px))), y = Math.max(3, Math.min(65, Y(p.pz))), last = i === arr.length - 1;
+    return '<circle class="' + cls(p.call) + (last ? ' last' : '') + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (last ? 4.2 : 3.2) + '"/>';
+  }).join('');
+  return '<svg class="mvz" viewBox="0 0 52 68" role="img" aria-label="' + (ab.pitches || []).length + ' pitches this at-bat"><rect x="12" y="14" width="28" height="40" rx="2"/><path d="M12 27.3h28M12 40.6h28M21.3 14v40M30.6 14v40"/>' + dots + '</svg>';
+}
+function _mvPitchWord(p) {
+  var t = String((p && p.type) || '').toLowerCase();
+  return { 'four-seam fastball': '4-seam', 'two-seam fastball': '2-seam', 'knuckle curve': 'knuckle curve' }[t] || t;
+}
+function _mvCallWord(call) {
+  var c = String(call || '').toLowerCase();
+  if (/in play/.test(c)) return 'in play'; if (/foul tip/.test(c)) return 'foul tip'; if (/foul/.test(c)) return 'foul'; if (/swinging/.test(c)) return 'swinging'; if (/called/.test(c)) return 'called'; if (/ball/.test(c)) return 'ball'; return '';
+}
+function _mvBaseballHtml(e, ca, ch, lead) {
+  var g = e.g, gl = _mvGlance(_mvKey('mlb', e.gamePk));
+  if (g.inningState === 'Middle' || g.inningState === 'End') return '<span class="mv-sit tx"><b class="sm">BETWEEN INNINGS</b>' + (lead ? '<small>' + _mvEsc(lead) + '</small>' : '') + '</span>';
+  var balls = gl && gl.balls != null ? gl.balls : g.balls, strikes = gl && gl.strikes != null ? gl.strikes : g.strikes, outs = gl && gl.outs != null ? gl.outs : g.outs;
+  var bases = (gl && gl.bases) || g.bases, ab = gl && gl.ab;
+  if (balls == null && strikes == null && !bases && !ab) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b></span>';
+  var who = ab ? [ab.batter ? _mvLast(ab.batter) : '', ab.pitcher ? _mvLast(ab.pitcher) : ''] : [g.batter ? _mvLast(g.batter) : '', g.pitcher ? _mvLast(g.pitcher) : ''];
+  var lp = ab && ab.pitches && ab.pitches.length ? ab.pitches[ab.pitches.length - 1] : null;
+  var pitchLine = lp && lp.mph != null ? '<span class="mvp"><b>' + _mvEsc(lp.mph.toFixed(0)) + '<small>MPH</small></b><span>' + _mvEsc([_mvPitchWord(lp), _mvCallWord(lp.call)].filter(Boolean).join(' · ')) + '</span></span>' : '';
+  return '<span class="mv-sit pn bb2">' + (ab ? _mvZoneSvg(ab) : _mvBases(bases, 52, 40)) +
+    '<span class="col">' +
+      '<span class="mvc">' + (balls != null ? '<em>B</em>' + _mvPips('b', Number(balls), 3) : '') + (strikes != null ? '<em>S</em>' + _mvPips('s', Number(strikes), 2) : '') + '</span>' +
+      '<span class="mvc">' + (outs != null ? '<em>OUT</em>' + _mvPips('o', Number(outs), 2) : '') + (ab && bases ? '<span class="mvbs">' + _mvBases(bases, 28, 21) + '</span>' : '') + '</span>' +
+      (who[0] || who[1] ? '<span class="mvw">' + _mvEsc(who[0]) + (who[0] && who[1] ? ' <small>vs</small> ' : '') + _mvEsc(who[1]) + '</span>' : '') +
+      pitchLine +
+    '</span></span>';
+}
+// the takeover: team colors, the result, who, the Statcast line and a
+// spray chart when the ball's landing spot is known
+function _mvPaTakeoverHtml(e, lp, ca, ch) {
+  var kind = _mvPaKind(lp), bat = lp.half === 'top' ? ca : ch;
+  var bg = bat.bg || '#3D3580', t2 = (bat.accent && typeof _gxLum === 'function' && Math.abs(_gxLum(bat.accent) - _gxLum(bg)) > .25) ? bat.accent : '#FFFFFF';
+  var title = typeof _paTitle === 'function' ? _paTitle(lp) : String(lp.event || '').toUpperCase();
+  var who = _mvLast(lp.batter);
+  var land = (typeof _paLanding === 'function' && lp.hit) ? (function () { try { return _paLanding(lp); } catch (x) { return null; } })() : null;
+  if (kind === 'hr') { var rbi = lp.rbi || 1; who += ' · ' + (rbi >= 4 ? 'Grand slam' : rbi === 1 ? 'Solo shot' : rbi + '-run shot'); }
+  else who += (lp.rbi ? ' · ' + lp.rbi + ' RBI' : '') + (land && typeof _paDir === 'function' ? ' · to ' + _paDir(land.ang) : '');
+  var h = lp.hit || {}, stx = [h.speed != null ? Math.round(h.speed) + '<small>MPH</small>' : null, h.angle != null ? h.angle + '<small>°</small>' : null, kind === 'hr' && h.distance != null ? h.distance + '<small>FT</small>' : null].filter(Boolean);
+  var spray = land ? '<svg class="mvsp" viewBox="30 0 440 386" aria-hidden="true"><path d="M 250 366 L 58 174 Q 250 20 442 174 Z" fill="rgba(0,0,0,.18)" stroke="rgba(255,255,255,.55)" stroke-width="6" stroke-linejoin="round"/><path d="M 250 366 L 330 286 L 250 206 L 170 286 Z" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.6)" stroke-width="4"/><line x1="250" y1="366" x2="' + land.x.toFixed(1) + '" y2="' + land.y.toFixed(1) + '" stroke="#fff" stroke-width="6" stroke-dasharray="12 12" opacity=".75"/><circle cx="' + land.x.toFixed(1) + '" cy="' + land.y.toFixed(1) + '" r="18" fill="#fff"/></svg>' : '';
+  var dark = typeof _fbxDark === 'function' ? _fbxDark(bg, .5) : '#1A1640';
+  return '<span class="mv-sit pn mvto' + (spray ? ' sp' : '') + '" style="--t1:' + bg + ';--t2:' + t2 + ';--tdark:' + dark + '"><span class="bgd"></span><span class="st"></span>' +
+    '<span class="ct"><span class="sm">' + _mvEsc(title) + '</span><span class="big">' + _mvEsc(String(bat.abbr || '')) + '</span><span class="who">' + _mvEsc(who) + '</span>' +
+    (stx.length ? '<span class="stx">' + stx.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span>' : '') + '</span>' + spray + '<span class="ln"></span></span>';
+}
+function _mvFootballHtml(e, ca, ch, lead) {
+  var g = e.g, sit = g.sit;
+  if (!sit || !sit.dd) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b>' + (sit && sit.poss ? '<small>' + _mvEsc(sit.poss) + ' BALL</small>' : '') + '</span>';
+  var f = _mvField(sit), pc = sit.poss ? (sit.poss === ca.abbr ? ca : sit.poss === ch.abbr ? ch : null) : null;
+  var where = [sit.poss, sit.spot].filter(Boolean).join(' · ');
+  var to = e.sport === 'nfl' && sit.toA != null && sit.toH != null ? _mvEsc(ca.abbr) + ' ' + sit.toA + ' · ' + _mvEsc(ch.abbr) + ' ' + sit.toH + ' TO' : '';
+  var foot = [sit.rz ? '<u class="rz">RED ZONE</u>' : '', to].filter(Boolean).join(' <s></s> ');
+  // the strip: the offense drives left → right; its own end zone on the left
+  var strip = f ? '<span class="fld" role="img" aria-label="Ball on the ' + _mvEsc(sit.spot) + '"><i class="ez l" style="background:' + ((pc && pc.accent) || '#A89FE8') + '"></i><i class="ez r" style="background:' + (((pc === ca ? ch : ca).accent) || '#A89FE8') + '"></i><i class="mid"></i>' +
+    (f.mark != null ? '<u style="left:' + (9 + f.mark * .82).toFixed(1) + '%"></u>' : '') + '<b style="left:' + (9 + f.pct * .82).toFixed(1) + '%;background:' + ((pc && pc.accent) || '#E8C766') + '"></b></span>' : '';
+  return '<span class="mv-sit pn fb2"><span class="dd"><b>' + _mvEsc(String(sit.dd).toUpperCase()) + '</b>' + (where ? '<small>' + _mvEsc(where) + '</small>' : '') + '</span>' + strip + (foot ? '<span class="ft">' + foot + '</span>' : '') + '</span>';
+}
+// the shot clock right now, from the glance's last implied reset and the
+// schedule row's clock (the same math the court uses)
+function _mvShotClock(gl, g) {
+  var sc = gl && gl.sc;
+  if (!sc || sc.at == null) return null;
+  var m = String(g.statusDetail || '').match(/^(\d{1,2}:\d{2}(?:\.\d)?|\d{1,2}(?:\.\d)?)\s*-\s*(\d)/i);
+  if (!m) return null;
+  var secs = /:/.test(m[1]) ? Number(m[1].split(':')[0]) * 60 + Number(m[1].split(':')[1]) : Number(m[1]);
+  var per = Number(m[2]), reset = sc.reset || 24, at = sc.at;
+  if (sc.period !== per) { reset = 24; at = per > 4 ? 300 : (gl.periodSecs || 720); }
+  var v = reset - (at - secs);
+  if (v > reset) v = reset; if (v > secs) v = secs; if (v < 0) v = 0;
+  return { v: v, reset: reset };
+}
+function _mvHoopsHtml(e, ca, ch, lead) {
+  var g = e.g, gl = _mvGlance(_mvKey(e.sport, e.gamePk));
+  if (!gl) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b>' + (g.sit && g.sit.poss ? '<small>' + _mvEsc(g.sit.poss) + ' BALL</small>' : '') + '</span>';
+  var pt = gl.poss === 'a' ? ca : gl.poss === 'h' ? ch : null, sc = _mvShotClock(gl, g);
+  var dial = '';
+  if (sc) {
+    var r = 21, C = 2 * Math.PI * r, frac = sc.reset ? sc.v / sc.reset : 0, hot = sc.v < 5;
+    dial = '<span class="dial' + (hot ? ' hot' : '') + '"><svg viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="' + r + '"/><circle class="arc" cx="25" cy="25" r="' + r + '" style="stroke:' + ((pt && pt.accent) || '#A89FE8') + ';stroke-dasharray:' + C.toFixed(1) + ';stroke-dashoffset:' + (C * (1 - frac)).toFixed(1) + '"/></svg><b>' + (hot ? sc.v.toFixed(1) : Math.ceil(sc.v)) + '<small>SHOT</small></b></span>';
+  }
+  var run = gl.run && gl.run.pts >= 8 ? (gl.run.side === 'a' ? ca : ch).abbr + ' ' + gl.run.pts + '–' + (gl.run.opp || 0) + ' run' : '';
+  var rows = [];
+  rows.push(pt ? '<span><em>' + _mvEsc(pt.abbr) + ' ball</em><b>' + _mvEsc(lead || 'TIED') + '</b></span>' : '<span><em>Score</em><b>' + _mvEsc(lead || 'TIED') + '</b></span>');
+  if (run) rows.push('<span><em>Run</em><b class="run">' + _mvEsc(run) + '</b></span>');
+  else if (gl.fouls) rows.push('<span><em>Fouls</em><b>' + _mvEsc(ca.abbr) + ' ' + gl.fouls.a + ' · ' + _mvEsc(ch.abbr) + ' ' + gl.fouls.h + '</b></span>');
+  if (gl.timeouts) rows.push('<span><em>TO used</em><b>' + gl.timeouts.a + ' · ' + gl.timeouts.h + '</b></span>');
+  return '<span class="mv-sit pn hp2">' + dial + '<span class="kv">' + rows.slice(0, 3).join('') + '</span></span>';
+}
+function _mvHockeyHtml(e, ca, ch, lead) {
+  var g = e.g, sit = g.sit;
+  if (!sit) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b></span>';
+  var pp = sit.pp ? '<span class="ppb"><i></i>' + _mvEsc((sit.pp.abbr || (sit.pp.side === 'a' ? ca.abbr : ch.abbr)) + (sit.pp.clock ? ' · ' + sit.pp.clock : '')) + '</span>' : (sit.en ? '<span class="ppb en">EMPTY NET · ' + _mvEsc(sit.en === 'a' ? ca.abbr : ch.abbr) + '</span>' : '');
+  var sogA = sit.sogA, sogH = sit.sogH, tot = (sogA || 0) + (sogH || 0);
+  var sog = sogA != null && sogH != null ? '<span class="sog"><em>SHOTS</em><span class="row"><span>' + sogA + '</span><span class="bar"><i style="width:' + (tot ? (sogA / tot * 100).toFixed(0) : 50) + '%;background:' + ca.accent + '"></i><i class="r" style="width:' + (tot ? (sogH / tot * 100).toFixed(0) : 50) + '%;background:' + ch.accent + '"></i></span><span>' + sogH + '</span></span></span>' : '';
+  return '<span class="mv-sit pn hk2"><span class="dd"><b>' + _mvEsc(sit.pp ? 'POWER PLAY' : lead || 'TIED') + '</b>' + pp + '</span>' + sog + '</span>';
+}
+function _mvSoccerHtml(e, ca, ch, lead) {
+  var g = e.g, d = String(g.statusDetail || g.status || ''), m = d.match(/^(\d{1,3})'(?:\s*\+\s*(\d+))?/) || d.match(/^(\d{1,3})\+(\d+)'/);
+  var clock = m ? '<b>' + m[1] + '<small>′' + (m[2] ? ' +' + m[2] : '') + '</small></b>' : '<b class="sm">' + _mvEsc(/half/i.test(d) ? 'HALFTIME' : d.toUpperCase() || 'LIVE') + '</b>';
+  var half = /half/i.test(d) && !m ? '' : (m && Number(m[1]) > 45 ? '2ND HALF' : m ? '1ST HALF' : '');
+  var evs = (g.goals || []).slice(-2).reverse().map(function (x) {
+    var t = x.k === 'yellow' ? '<i class="cd y"></i>' : x.k === 'red' ? '<i class="cd r"></i>' : '<i class="gl">⚽</i>';
+    return '<span class="ev">' + t + '<span>' + _mvEsc([x.who, x.s === 'a' ? ca.abbr : x.s === 'h' ? ch.abbr : '', x.t, x.k === 'pk' ? 'PK' : x.k === 'og' ? 'OG' : ''].filter(Boolean).join(' · ')) + '</span></span>';
+  });
+  return '<span class="mv-sit pn sc2"><span class="dd">' + clock + '<small>' + _mvEsc(half || lead) + '</small></span>' + (evs.length ? '<span class="evs">' + evs.join('') + '</span>' : (lead ? '<small class="ld">' + _mvEsc(lead) + '</small>' : '')) + '</span>';
 }
 // The one-line version, for the small tiles on Home
 function _mvSitLine(e, ca, ch, flag) {
@@ -315,6 +493,8 @@ function _mvNoteText(e) {
       return [g.batter ? _mvLast(g.batter) + ' at bat' : '', g.pitcher ? _mvLast(g.pitcher) + ' pitching' : ''].filter(Boolean).join(' · ');
     }
     if (g.sit && g.sit.last) return g.sit.last;
+    var gl = _mvGlance(_mvKey(e.sport, e.gamePk)); // v7.59.0: basketball's last play
+    if (gl && gl.last && gl.last.text) return gl.last.text;
   }
   return g.venue || '';
 }
@@ -391,7 +571,10 @@ function _mvShown() {
   if (typeof startWatchingList === 'function' && !window._watchingStarted) { try { startWatchingList(); } catch (e) {} }
   _mvRender();
   _mvLoad(M.at > 0);
+  _mvGlanceLoad();
   if (!M.timer) M.timer = setInterval(function () { if (!document.hidden && _mvActive()) _mvLoad(true); }, MV_TICK_MS);
+  // v7.59.0: a hit's takeover ends on its own clock, not the next poll
+  if (!M.paTimer) M.paTimer = setInterval(function () { var P = window._mv; if (!_mvActive() || document.hidden) return; var due = Object.keys(P.pa).some(function (k) { return P.pa[k] && Date.now() - P.pa[k].at >= MV_PA_MS && Date.now() - P.pa[k].at < MV_PA_MS + 5000; }); if (due) _mvRender(); }, 2000);
 }
 
 // ── opening and closing ──
