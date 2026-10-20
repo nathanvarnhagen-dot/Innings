@@ -51,14 +51,17 @@ module.exports = async function handler(req, res) {
       var parts = await Promise.all([
         _get(BASE + '/gamecenter/' + encodeURIComponent(gameId) + '/landing'),
         _get(BASE + '/gamecenter/' + encodeURIComponent(gameId) + '/boxscore'),
-        _get(BASE + '/gamecenter/' + encodeURIComponent(gameId) + '/right-rail')
+        _get(BASE + '/gamecenter/' + encodeURIComponent(gameId) + '/right-rail'),
+        _get(BASE + '/gamecenter/' + encodeURIComponent(gameId) + '/play-by-play') // v7.62.0
       ]);
       var model = summarize(parts[0] || {}, parts[1] || {}, parts[2] || {}, gameId);
+      try { model.pbp = _pbp(parts[3] || {}, model); } catch (e) { model.pbp = []; }
       if (req.query.debug) {
         model.debug = {
           landingKeys: Object.keys(parts[0] || {}),
           boxscoreKeys: Object.keys(parts[1] || {}),
           rightRailKeys: Object.keys(parts[2] || {}),
+          pbpKeys: Object.keys(parts[3] || {}),
           matchupKeys: parts[0] && parts[0].matchup ? Object.keys(parts[0].matchup) : null
         };
       }
@@ -197,6 +200,7 @@ function summarize(landing, box, rail, gameId) {
         var kind = tag.indexOf('OT') !== -1 ? 'overtime winner' : strength === 'pp' ? 'power-play goal' : strength === 'sh' ? 'shorthanded goal' : mod === 'empty-net' ? 'empty-net goal' : mod === 'penalty-shot' ? 'penalty-shot goal' : 'goal';
         var assists = (g.assists || []).map(function (x) { return _d(x.lastName) || _lastName(_d(x.name)); }).filter(Boolean);
         model.highlights.push({
+          id: g.eventId != null ? String(g.eventId) : '', // v7.62.0: same id as the goal's play-by-play row, so reactions match
           tag: tag, side: isHome ? 'h' : 'a', time: _clock(g.timeInPeriod),
           head: last + ' ' + kind, sub: assists.length ? 'Assists: ' + assists.join(', ') : 'Unassisted',
           as: g.awayScore != null ? g.awayScore : null, hs: g.homeScore != null ? g.homeScore : null
@@ -394,4 +398,67 @@ function _schedLanding(row, land, raw) {
     if (descs.some(function (d) { return /EN/i.test(d); })) row.sit.en = k === 'homeTeam' ? 'h' : 'a';
   });
   if (land.clock && land.clock.timeRemaining && row.state === 'in' && !land.clock.inIntermission) row.statusDetail = _periodTag(land.periodDescriptor || (raw && raw.periodDescriptor)) + ' ' + _clock(land.clock.timeRemaining);
+}
+
+// ── Play by play (v7.62.0) ─────────────────────────────────────────────
+// gamecenter/{id}/play-by-play: plays[] { eventId, periodDescriptor,
+// timeInPeriod, typeDescKey, sortOrder, details { eventOwnerTeamId, …PlayerId,
+// descKey, duration, reason, shotType, awayScore, homeScore } } and
+// rosterSpots[] { playerId, teamId, firstName, lastName, sweaterNumber }.
+// Newest first. Faceoffs are left out (there are sixty a game).
+// kind: goal | shot | miss | block | hit | pen | give | take | stop | period
+function _pbp(raw, model) {
+  var plays = Array.isArray(raw.plays) ? raw.plays : [];
+  if (!plays.length) return [];
+  var who = {};
+  (raw.rosterSpots || []).forEach(function (r) { if (r && r.playerId != null) who[r.playerId] = { last: _d(r.lastName) || _lastName(_d(r.firstName)), team: r.teamId }; });
+  var nm = function (id) { return id != null && who[id] ? who[id].last : null; };
+  var aId = model.away.id, hId = model.home.id;
+  var sideOf = function (teamId) { return teamId == null ? null : (String(teamId) === String(hId) ? 'h' : (String(teamId) === String(aId) ? 'a' : null)); };
+  var words = function (k) { return String(k || '').replace(/-/g, ' ').replace(/\bpp\b/g, 'power play'); };
+  var shotW = function (t) { return t ? ' (' + words(t) + ')' : ''; };
+  var ord = function (n) { return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th'; };
+  var out = [];
+  plays.slice().sort(function (x, y) { return (x.sortOrder || 0) - (y.sortOrder || 0); }).forEach(function (p) {
+    var k = p.typeDescKey || '', d = p.details || {}, pd = p.periodDescriptor || {};
+    var tag = _periodTag(pd), time = _clock(p.timeInPeriod), side = sideOf(d.eventOwnerTeamId), text = null, kind = null;
+    var pName = pd.periodType === 'OT' ? 'overtime' : pd.periodType === 'SO' ? 'the shootout' : 'the ' + ord(pd.number || 1) + ' period';
+    if (k === 'goal') {
+      var a = [nm(d.assist1PlayerId), nm(d.assist2PlayerId)].filter(Boolean);
+      kind = 'goal';
+      text = 'GOAL — ' + (nm(d.scoringPlayerId) || 'Unknown') + (d.scoringPlayerTotal ? ' (' + d.scoringPlayerTotal + ')' : '') + (d.shotType ? ', ' + words(d.shotType) + ' shot' : '') + (a.length ? ', assists: ' + a.join(', ') : ', unassisted');
+    } else if (k === 'shot-on-goal') {
+      kind = 'shot'; text = 'Shot on goal by ' + (nm(d.shootingPlayerId) || 'unknown') + shotW(d.shotType) + (nm(d.goalieInNetId) ? ', saved by ' + nm(d.goalieInNetId) : '');
+    } else if (k === 'missed-shot') {
+      kind = 'miss'; text = 'Missed shot by ' + (nm(d.shootingPlayerId) || 'unknown') + (d.reason ? ' — ' + words(d.reason) : '');
+    } else if (k === 'blocked-shot') {
+      // the event belongs to the blocking team
+      kind = 'block'; text = (nm(d.shootingPlayerId) ? nm(d.shootingPlayerId) + '’s shot' : 'Shot') + ' blocked' + (nm(d.blockingPlayerId) ? ' by ' + nm(d.blockingPlayerId) : '');
+    } else if (k === 'hit') {
+      kind = 'hit'; text = (nm(d.hittingPlayerId) || 'Unknown') + ' hit ' + (nm(d.hitteePlayerId) || 'an opponent');
+    } else if (k === 'penalty') {
+      kind = 'pen';
+      text = 'Penalty on ' + (nm(d.committedByPlayerId) || nm(d.servedByPlayerId) || 'the bench') + ' — ' + words(d.descKey || 'minor') + (d.duration ? ' (' + d.duration + ' min)' : '') + (nm(d.drawnByPlayerId) ? ', drawn by ' + nm(d.drawnByPlayerId) : '');
+    } else if (k === 'giveaway') {
+      kind = 'give'; text = 'Giveaway by ' + (nm(d.playerId) || 'unknown');
+    } else if (k === 'takeaway') {
+      kind = 'take'; text = 'Takeaway by ' + (nm(d.playerId) || 'unknown');
+    } else if (k === 'stoppage') {
+      if (/tv-timeout|period|game-end/.test(d.reason || '')) return;
+      kind = 'stop'; side = null; text = 'Stoppage' + (d.reason ? ' — ' + words(d.reason) : '');
+    } else if (k === 'delayed-penalty') {
+      kind = 'pen'; text = 'Delayed penalty';
+    } else if (k === 'period-start') {
+      kind = 'period'; side = null; text = 'Start of ' + pName;
+    } else if (k === 'period-end') {
+      kind = 'period'; side = null; text = 'End of ' + pName;
+    } else if (k === 'game-end') {
+      kind = 'period'; side = null; text = 'End of game';
+    } else return;
+    out.push({
+      id: p.eventId != null ? String(p.eventId) : '', tag: tag, time: time, side: side, kind: kind, text: text,
+      as: k === 'goal' && d.awayScore != null ? d.awayScore : null, hs: k === 'goal' && d.homeScore != null ? d.homeScore : null
+    });
+  });
+  return out.reverse().slice(0, 400);
 }

@@ -99,7 +99,8 @@ function _gxHighlightsListHtml(m, st, opts) {
     var isTop = i === 0, last = i === shown.length - 1;
     var chip = _gxChip(p, m);
     var sub = [p.time, p.sub].filter(Boolean).join(' · ');
-    h += '<div class="gh-hlrow gh-r' + Math.min(i + 1, 9) + (isTop ? ' gh-first' : '') + '">' +
+    var rp = _gxHlReply(m, p);
+    h += '<div class="gh-hlrow gh-r' + Math.min(i + 1, 9) + (isTop ? ' gh-first' : '') + '"' + rp.attrs + '>' +
       '<div style="width:34px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _gxTag(p, m) +
         (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
       '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-bottom:6px">' +
@@ -107,10 +108,90 @@ function _gxHighlightsListHtml(m, st, opts) {
           (isNew ? '<span class="gh-new">NEW</span>' : '<span class="gh-num" style="font-size:14.5px;white-space:nowrap;color:' + (isTop ? '#fff' : '#D9D4FA') + '">' + _escapeHtml(chip) + '</span>') + '</div>' +
         (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
         (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
-      '</div></div>';
+      '</div>' + rp.btn + '</div>';
   });
   if (plays.length > shown.length) h += '<div class="gh-hlrow gh-r9 gh-sub" style="padding-left:58px">+' + (plays.length - shown.length) + ' earlier</div>';
   return h + '</div>';
+}
+
+// v7.62.0: every highlight, in every sport, can be replied to (the arrow quotes
+// it into the chat) and reacted to (double tap) — same as a play-by-play row.
+// The play id is the feed's own when the highlight carries one (so a reaction
+// shows on both), otherwise one made from the highlight itself.
+function _gxHash(str) { var h = 5381; str = String(str); for (var i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; return h.toString(36); }
+var GX_REPLY_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>';
+function _gxReplyBtn(tag, text) {
+  return '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(tag) + '" data-text="' + _escapeHtml(text) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)">' + GX_REPLY_SVG + '</button>';
+}
+function _gxHlReply(m, p) {
+  var tag = (p.tag || '') + (p.time ? ' ' + p.time : '');
+  var text = p.text || [p.head, p.sub].filter(Boolean).join(' · ');
+  if (!text) return { attrs: '', btn: '' };
+  var id = p.id ? String(p.id) : 'h' + _gxHash([p.tag, p.time, p.head, p.as, p.hs].join('|'));
+  var playId = m.gameId != null ? m.gameId + '_' + id : null;
+  return {
+    // data-h*, not data-r*: the cheat sheet's play lookups read data-rtext, and these are copies
+    attrs: playId ? ' onclick="_playDoubleTap(this,\'' + _escapeHtml(playId) + '\',this.dataset.htag,this.dataset.htext)" data-htag="' + _escapeHtml(tag) + '" data-htext="' + _escapeHtml(text) + '"' : '',
+    btn: _gxReplyBtn(tag, text)
+  };
+}
+
+// ── Hockey play by play (v7.62.0) — bottom of the cheat sheet ──────────
+// From /api/nhlgame's pbp (api/nhl.js): newest first, every shot, hit,
+// penalty, giveaway / takeaway and stoppage. A filter on top, the first
+// 25 with Show all. Each row: arrow to reply, double tap to react.
+window._gxHk = window._gxHk || { f: 'all', all: false };
+var GX_HK_KIND = {
+  goal: ['GOAL', 'background:rgba(242,200,105,.18);color:#F2C869'], shot: ['SHOT', ''], miss: ['MISS', ''], block: ['BLK', ''],
+  hit: ['HIT', ''], pen: ['PEN', 'background:rgba(255,122,107,.16);color:#FF9A8E'], give: ['GIVE', ''], take: ['TAKE', ''], stop: ['STOP', '']
+};
+var GX_HK_FILTERS = [['all', 'All'], ['shots', 'Shots & goals'], ['hits', 'Hits'], ['pens', 'Penalties'], ['puck', 'Turnovers']];
+function _gxHkIn(f, k) {
+  if (f === 'all') return true;
+  if (f === 'shots') return /^(goal|shot|miss|block)$/.test(k);
+  if (f === 'hits') return k === 'hit';
+  if (f === 'pens') return k === 'pen';
+  if (f === 'puck') return k === 'give' || k === 'take';
+  return true;
+}
+function gxHkFilter(f) { window._gxHk.f = f; window._gxHk.all = false; _gxRerenderDetail(); }
+function gxHkMore() { window._gxHk.all = !window._gxHk.all; _gxRerenderDetail(); }
+function _gxHockeyPbpHtml(m) {
+  var all = m.pbp || [];
+  if (!all.length) return '';
+  var S = window._gxHk, f = S.f;
+  var real = all.filter(function (p) { return p.kind !== 'period'; });
+  var pool = f === 'all' ? all : all.filter(function (p) { return _gxHkIn(f, p.kind); });
+  var shown = S.all ? pool : pool.slice(0, 25);
+  var playIds = [];
+  var pills = '<div class="gx-hk-f" role="group" aria-label="Filter plays">' + GX_HK_FILTERS.map(function (x) {
+    var n = x[0] === 'all' ? real.length : real.filter(function (p) { return _gxHkIn(x[0], p.kind); }).length;
+    if (x[0] !== 'all' && !n) return '';
+    return '<button type="button" class="gx-hk-p' + (f === x[0] ? ' on' : '') + '" aria-pressed="' + (f === x[0]) + '" onclick="gxHkFilter(\'' + x[0] + '\')">' + _escapeHtml(x[1]) + ' <span>' + n + '</span></button>';
+  }).join('') + '</div>';
+  var rows = shown.map(function (p) {
+    if (p.kind === 'period') return '<div class="gx-hk-per">' + _escapeHtml(p.text) + '</div>';
+    var t = p.side === 'h' ? m.home : (p.side === 'a' ? m.away : null);
+    var tag = (p.tag || '') + (p.time ? ' ' + p.time : '');
+    var playId = (p.id && m.gameId != null) ? (m.gameId + '_' + p.id) : null;
+    if (playId) playIds.push(playId);
+    var kd = GX_HK_KIND[p.kind] || ['', ''];
+    var chip = p.kind === 'goal' ? _gxChip(p, m) : '';
+    var attrs = playId ? ' onclick="_playDoubleTap(this,\'' + playId + '\',this.dataset.rtag,this.dataset.rtext)" data-rtag="' + _escapeHtml(tag) + '" data-rtext="' + _escapeHtml(p.text) + '"' : '';
+    return '<div class="gh-feedrow gx-hk-row' + (p.kind === 'goal' ? ' goal' : '') + '" style="flex-wrap:wrap"' + attrs + '>' +
+      '<div style="width:46px;flex-shrink:0;display:flex;flex-direction:column;gap:2px">' +
+        '<span class="gh-tag" style="' + (t ? 'background:' + _ghHexAlpha(t.colors.accent, .2) + ';color:' + t.colors.accent : 'background:rgba(255,255,255,.08);color:#D9D4FA') + ';align-self:flex-start">' + _escapeHtml(t ? t.abbr : (p.tag || '')) + '</span>' +
+        '<span style="font-size:10.5px;color:#9C95D0">' + _escapeHtml(tag) + '</span></div>' +
+      '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">' +
+        (kd[0] ? '<span class="gx-hk-k" style="' + kd[1] + '">' + kd[0] + '</span>' : '') +
+        '<span style="font-size:12.5px;line-height:1.45;color:' + (p.kind === 'goal' ? '#fff;font-weight:700' : '#F5F3FF') + '">' + _escapeHtml(p.text) + '</span></div>' +
+      (chip ? '<span class="gh-num" style="font-size:13px;white-space:nowrap">' + _escapeHtml(chip) + '</span>' : '') +
+      _gxReplyBtn(tag, p.text) +
+      (playId ? '<div id="play-react-' + _escapeHtml(playId) + '" style="flex-basis:100%"></div>' : '') + '</div>';
+  }).join('');
+  if (playIds.length && typeof _loadPlayReactions === 'function') setTimeout(function () { _loadPlayReactions(playIds); }, 0);
+  var more = pool.length > 25 ? '<button onclick="gxHkMore()" class="gx-hk-more">' + (S.all ? 'Show fewer' : 'Show all ' + pool.length + ' plays') + '</button>' : '';
+  return _gxCard('Play by play', real.length + ' plays · newest first', pills + (rows || '<div class="gh-sub" style="padding:10px 0">Nothing like that yet.</div>') + more, .55);
 }
 
 // ── Comparison rows with names (season / game leaders) ─────────────────
@@ -816,11 +897,14 @@ function _gxDetailHtml(m) {
       if (m.leaders && m.leaders.length) body += _gxLeaderCompareHtml(m, m.leaders, .5);
       if (m.teamStats && m.teamStats.length) body += '<div style="margin-top:10px">' + _gxStatBarsHtml(m, m.teamStats.filter(function (r) { return r[0] !== 'Shots'; }), .6) + '</div>';
       if (body) out += _gxCard('Shots & goalies', m.away.sog != null ? 'SOG ' + m.away.sog + '–' + m.home.sog : '', body, .4);
+      out += _gxHockeyPbpHtml(m); // v7.62.0
     } else if (m.sport === 'soccer') {
       if (m.teamStats && m.teamStats.length) out += _gxCard('Match stats', '', _gxStatBarsHtml(m, m.teamStats.filter(function (r) { return r[0] !== 'Possession'; }), .5), .4);
     }
   } else if (m.phase === 'final' && m.sport === 'basketball') {
     out += _gxFeedHtml(m);
+  } else if (m.phase === 'final' && m.sport === 'hockey') {
+    out += _gxHockeyPbpHtml(m); // v7.62.0
   }
   // The box score has its own Box tab on the game page (v7.5.0, js/games/watch-listen.js)
   return out ? '<div class="gh-detail">' + out + '</div>' : '';

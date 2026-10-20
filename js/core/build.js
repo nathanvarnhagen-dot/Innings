@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.61.1-cross-game-play-taps';
+window.INNINGS_BUILD = 'v7.62.0-hockey-pbp-highlight-replies';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

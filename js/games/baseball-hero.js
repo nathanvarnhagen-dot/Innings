@@ -903,7 +903,13 @@ function _ghHighlightsListHtml(m, plays, st, opts) {
     var last = i === shown.length - 1;
     var sub = [p.distance && p.eventType === 'home_run' ? p.distance + ' ft' : '', p.text || ''].filter(Boolean).join(' · ');
     var chip = _ghScoreChip(p, m.away.abbr, m.home.abbr);
-    h += '<div class="gh-hlrow gh-r' + Math.min(i + 1, 9) + (isTop ? ' gh-first' : '') + '">' +
+    // v7.62.0: reply to it (arrow) or react to it (double tap) right from Highlights —
+    // the same play id as its play-by-play row, so the reactions are shared
+    var g0 = window._activeBrowseGame, rTag = (p.half === 'top' ? 'T' : 'B') + (p.inning || ''), rText = p.text || '';
+    var rId = g0 && g0.gamePk != null && p.atBatIndex != null ? g0.gamePk + '_' + p.atBatIndex : null;
+    var rAttrs = rId && rText ? ' onclick="_playDoubleTap(this,\'' + _escapeHtml(rId) + '\',this.dataset.htag,this.dataset.htext)" data-htag="' + _escapeHtml(rTag) + '" data-htext="' + _escapeHtml(rText) + '"' : '';
+    var rBtn = rText ? '<button class="gh-reply" aria-label="Reply to this play" data-tag="' + _escapeHtml(rTag) + '" data-text="' + _escapeHtml(rText) + '" onclick="event.stopPropagation();_replyToPlay(this.dataset.tag,this.dataset.text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></button>' : '';
+    h += '<div class="gh-hlrow gh-r' + Math.min(i + 1, 9) + (isTop ? ' gh-first' : '') + '"' + rAttrs + '>' +
       '<div style="width:32px;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">' + _ghInningTag(p.half, p.inning, m) +
         (!isTop && !last ? '<span style="flex:1;width:2px;background:rgba(168,159,232,.18);border-radius:1px"></span>' : '') + '</div>' +
       '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-bottom:6px">' +
@@ -912,7 +918,7 @@ function _ghHighlightsListHtml(m, plays, st, opts) {
         (isNew && chip ? '<span class="gh-num" style="font-size:14.5px;color:#fff">' + _escapeHtml(chip) + '</span>' : '') +
         (sub ? '<span class="gh-sub gh-clamp" style="line-height:1.4">' + _escapeHtml(sub) + '</span>' : '') +
         (isTop && p.eventType === 'home_run' ? '<div style="position:relative;width:160px;height:26px;margin-top:4px"><svg width="160" height="26" viewBox="0 0 160 26" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M4 22 Q 80 -10 156 16" fill="none" stroke="#A89FE8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/></svg><span class="gh-fly"></span></div>' : '') +
-      '</div></div>';
+      '</div>' + rBtn + '</div>';
   });
   if (plays.length > shown.length) h += '<div class="gh-hlrow gh-r9 gh-sub" style="padding-left:56px">+' + (plays.length - shown.length) + ' earlier</div>';
   return h + '</div>';

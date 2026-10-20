@@ -590,3 +590,19 @@
   96%{opacity:1;transform:scale(1) translateY(0)}
   100%{opacity:0;transform:scale(.95) translateY(-3px)}
 }
+
+/* ═══ v7.62.0 — reply / react from Highlights; hockey play by play ═══ */
+.gh-hlrow[data-htext]{cursor:pointer}
+.gh-hlrow .gh-reply{flex-shrink:0;align-self:flex-start}
+.gx-hk-f{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:10px -16px 6px;padding:0 16px}
+.gx-hk-f::-webkit-scrollbar{display:none}
+.gx-hk-p{flex:none;min-height:34px;padding:0 12px;border-radius:10px;border:1px solid rgba(168,159,232,.28);background:rgba(168,159,232,.08);color:#E9E5FF;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.gx-hk-p span{color:#9C95D0;font-weight:600;margin-left:2px}
+.gx-hk-p.on{background:#A89FE8;border-color:#A89FE8;color:#1A1640}
+.gx-hk-p.on span{color:#3D3580}
+.gx-hk-p:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.gx-hk-row{cursor:pointer}
+.gx-hk-row.goal{margin:2px -10px;padding:10px;border-radius:12px;background:rgba(242,200,105,.07);border-top-color:transparent}
+.gx-hk-k{align-self:flex-start;font-size:9.5px;font-weight:800;letter-spacing:.1em;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.07);color:#B9B3E6}
+.gx-hk-per{padding:10px 0 6px;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9C95D0;border-top:.5px solid rgba(255,255,255,.07)}
+.gx-hk-more{width:100%;margin-top:8px;height:40px;border-radius:12px;border:1px solid rgba(168,159,232,.22);background:transparent;color:#C9C2F5;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer}

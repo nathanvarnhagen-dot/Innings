@@ -1548,7 +1548,7 @@ function _bbAnalyze(data, away, home) {
       return {
         tag: _gcPeriodTag('basketball', p.period && p.period.number), side: sideOf(p),
         time: (p.clock && p.clock.displayValue) || '', head: (shooter ? shooter + ' ' : '') + _bbShot(p.text),
-        sub: m.reason, as: Number(p.awayScore), hs: Number(p.homeScore), id: String(p.id || '')
+        sub: m.reason, as: Number(p.awayScore), hs: Number(p.homeScore), id: String(p.id || ''), text: p.text || '' // v7.62.0
       };
     });
   // Every scoring play + block, newest first
@@ -1764,7 +1764,8 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
         return {
           tag: _gcPeriodTag(sport, p.period && p.period.number), side: id === String(home.id) ? 'h' : 'a',
           time: (p.clock && p.clock.displayValue) || '', head: _fbHead(p), sub: p.text || '',
-          as: _num(p.awayScore), hs: _num(p.homeScore)
+          as: _num(p.awayScore), hs: _num(p.homeScore),
+          id: p.id != null ? String(p.id) : '', text: p.text || '' // v7.62.0: reply to it / react to it from Highlights
         };
       });
       model.leaders = _gcLeaders(data, away, home, [{ name: 'passingYards', label: 'PASS' }, { name: 'rushingYards', label: 'RUSH' }, { name: 'receivingYards', label: 'REC' }]);
