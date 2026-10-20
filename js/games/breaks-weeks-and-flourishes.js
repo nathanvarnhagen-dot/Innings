@@ -678,6 +678,12 @@ function _gsPhaseLoad() {
     Object.keys(lg).forEach(function (k) { if (take(k, lg[k])) any = true; });
     if (any) paint();
   });
+  // v7.65.0: tennis, golf and F1 lines come from /api/events (js/games/field-sports.js)
+  var evs = json('/api/events?mode=phases').then(function (r) {
+    var lg = (r && r.leagues) || {}, any = false;
+    Object.keys(lg).forEach(function (k) { window._fsLive = window._fsLive || {}; window._fsLive[k] = Number(lg[k].live) || 0; if (take(k, lg[k])) any = true; });
+    if (any) paint();
+  });
   var done = function () {
     P.loading = false;
     if (!got) return;
@@ -686,12 +692,12 @@ function _gsPhaseLoad() {
     P.at = got >= want ? Date.now() : Date.now() - _gsPhaseTtl(P) + 60e3;
     try { localStorage.setItem(GS_PHASE_KEY, JSON.stringify({ at: P.at, by: P.by })); } catch (e) {}
   };
-  Promise.all([mlb, rest]).then(done, function (err) { console.error('[league phase] failed:', err); done(); });
+  Promise.all([mlb, rest, evs]).then(done, function (err) { console.error('[league phase] failed:', err); done(); });
 }
 function _gsPhasePaint() {
   var P = _gsPhaseState();
   _gsDraw();
-  GAMES_SPORTS.forEach(function (s) {
+  GAMES_SPORTS.concat(window._fsTiles || []).forEach(function (s) {
     var el = document.getElementById('gsp-ph-' + s.key);
     if (!el || !s.live) return;
     var p = P.by[s.key];
@@ -708,7 +714,9 @@ function gamesPickerLiveSync() {
   if (_gsDraw()) { _gsPhasePaint(); return; }
   var counts = {};
   _mvAll().forEach(function (x) { if (_mvIsLive(x.sport, x.g)) counts[x.sport] = (counts[x.sport] || 0) + 1; });
-  GAMES_SPORTS.forEach(function (s) {
+  // v7.65.0: tennis matches, a golf round, an F1 session (counted by /api/events)
+  Object.keys(window._fsLive || {}).forEach(function (k) { counts[k] = (counts[k] || 0) + (window._fsLive[k] || 0); });
+  GAMES_SPORTS.concat(window._fsTiles || []).forEach(function (s) {
     var el = document.getElementById('gsp-lv-' + s.key);
     if (!el) return;
     var n = counts[s.key] || 0;
@@ -918,7 +926,8 @@ function _gsDraw() {
     try { cardHtml += _gsCardHtml(s, list); inCard[s.key] = true; } catch (e) { console.error('[playoff card] ' + s.key + ':', e); }
   });
   // v7.38.0: Multi view sits first, left of MLB (js/games/multi-view.js)
-  var gridHtml = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.filter(function (s) { return !inCard[s.key]; }).map(function (s) {
+  // v7.65.0: tennis, golf and F1 follow the team leagues (js/games/field-sports.js)
+  var gridHtml = (typeof multiPickTileHtml === 'function' ? multiPickTileHtml() : '') + GAMES_SPORTS.concat(window._fsTiles || []).filter(function (s) { return !inCard[s.key]; }).map(function (s) {
     return '<button class="gsp' + (s.live ? '' : ' soon') + '" onclick="pickGamesSport(\'' + s.key + '\')">' +
       '<span class="em" aria-hidden="true">' + s.emoji + '</span>' +
       '<span class="nm">' + _escapeHtml(s.name) + '</span>' +
