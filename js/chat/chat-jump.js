@@ -10,21 +10,33 @@
 //     messages came in since you left the bottom; taps down to the newest
 // The rail at the top of the chat already does all this when you're at the
 // top, so the floating row only shows once that's scrolled away.
-window._gcj = window._gcj || { open: false, base: null, raf: 0, bound: null };
+window._gcj = window._gcj || { open: false, base: null, bound: null, moving: false, t: 0, top: '', bot: '' };
+// v7.64.1: no flicker. The pills live in their own layer (fixed, over the
+// chat — not inside the scrolling list, where iPhone redraws them mid-scroll),
+// fade out the moment the chat starts moving, and fade back in once it has
+// been still for a beat. Their contents are only rewritten when something
+// actually changed, so nothing re-animates on its own.
+var GCJ_STILL_MS = 260;
 var GCJ_UP = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 var GCJ_DOWN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
 var GCJ_CHEV = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 function _gcjEsc(s) { return typeof _escapeHtml === 'function' ? _escapeHtml(s == null ? '' : String(s)) : String(s == null ? '' : s); }
 function _gcjPanel() { return document.getElementById('game-chat-panel'); }
+function _gcjShowing(p) {
+  var scr = document.getElementById('screen-game');
+  return !!(p && scr && scr.classList.contains('active') && p.style.display !== 'none' && p.offsetParent !== null && !document.hidden);
+}
 function _gcjEls() {
   var p = _gcjPanel();
   if (!p) return null;
   var top = document.getElementById('gcj-top'), bot = document.getElementById('gcj-bot');
-  if (!top) { top = document.createElement('div'); top.id = 'gcj-top'; top.className = 'gcj-top'; p.insertBefore(top, p.firstChild); }
-  else if (top.parentNode !== p) p.insertBefore(top, p.firstChild);
-  if (!bot) { bot = document.createElement('div'); bot.id = 'gcj-bot'; bot.className = 'gcj-bot'; }
-  if (bot.parentNode !== p || bot !== p.lastElementChild) p.appendChild(bot); // always last, so it rides the bottom
-  if (window._gcj.bound !== p) { window._gcj.bound = p; p.addEventListener('scroll', _gcjOnScroll, { passive: true }); }
+  if (!top) { top = document.createElement('div'); top.id = 'gcj-top'; top.className = 'gcj-top'; document.body.appendChild(top); }
+  if (!bot) { bot = document.createElement('div'); bot.id = 'gcj-bot'; bot.className = 'gcj-bot'; document.body.appendChild(bot); }
+  if (window._gcj.bound !== p) {
+    window._gcj.bound = p;
+    p.addEventListener('scroll', _gcjOnScroll, { passive: true });
+    p.addEventListener('touchmove', _gcjOnScroll, { passive: true });
+  }
   return { p: p, top: top, bot: bot };
 }
 function _gcjMsgCount() {
@@ -34,10 +46,32 @@ function _gcjMsgCount() {
   Array.prototype.forEach.call(box.children, function (el) { if (!el.classList.contains('gc-sep')) n++; });
   return n;
 }
+// moving: fade out now; still for a beat: fade back in, then update
 function _gcjOnScroll() {
   var J = window._gcj;
-  if (J.raf) return;
-  J.raf = (window.requestAnimationFrame || setTimeout)(function () { J.raf = 0; _gcjPaint(); });
+  if (!J.moving) {
+    J.moving = true;
+    if (J.open) J.open = false;
+    document.documentElement.classList.add('gcj-moving');
+  }
+  clearTimeout(J.t);
+  J.t = setTimeout(function () {
+    J.moving = false;
+    _gcjPaint();
+    document.documentElement.classList.remove('gcj-moving');
+  }, GCJ_STILL_MS);
+}
+function _gcjSet(el, key, html) {
+  var J = window._gcj;
+  if (J[key] === html) return;
+  J[key] = html;
+  el.innerHTML = html;
+}
+// lay the two layers over the chat as it sits on screen right now
+function _gcjPlace(E) {
+  var r = E.p.getBoundingClientRect();
+  E.top.style.cssText = 'left:' + Math.round(r.left) + 'px;width:' + Math.round(r.width) + 'px;top:' + Math.round(r.top + 8) + 'px';
+  E.bot.style.cssText = 'left:' + Math.round(r.left) + 'px;width:' + Math.round(r.width) + 'px;top:' + Math.round(r.bottom - 12) + 'px';
 }
 // the games in this chat, for the button and its list
 function _gcjGames() {
@@ -50,13 +84,18 @@ function _gcjGames() {
 function _gcjPaint() {
   var E = _gcjEls(), J = window._gcj;
   if (!E) return;
-  var p = E.p, fromBottom = p.scrollHeight - p.scrollTop - p.clientHeight;
-  var rail = document.getElementById('mgc'), railGone = !rail || rail.style.display === 'none' || rail.getBoundingClientRect().bottom < p.getBoundingClientRect().top + 8;
+  var p = E.p;
+  if (!_gcjShowing(p)) { _gcjSet(E.top, 'top', ''); _gcjSet(E.bot, 'bot', ''); J.open = false; return; }
+  if (J.moving) return; // it's hidden while moving; paint again once it's still
+  _gcjPlace(E);
+  var fromBottom = p.scrollHeight - p.scrollTop - p.clientHeight;
+  var rail = document.getElementById('mgc'), pr = p.getBoundingClientRect();
+  var railGone = !rail || rail.style.display === 'none' || !rail.offsetParent || rail.getBoundingClientRect().bottom < pr.top + 8;
   var long = p.scrollHeight > p.clientHeight * 1.6;
   var showTop = long && p.scrollTop > 320 && railGone;
   var G = _gcjGames();
-  if (!showTop && !(J.open && G)) { E.top.innerHTML = ''; J.open = false; }
-  else {
+  var topHtml = '';
+  if (showTop || (J.open && G)) {
     var games = '';
     if (G) {
       var dots = G.list.slice(0, 4).map(function (I, i) { return '<i style="background:' + _gcjEsc(I.ca.accent || I.ca.bg || '#A89FE8') + (i ? ';margin-left:-4px' : '') + '"></i>'; }).join('');
@@ -73,14 +112,15 @@ function _gcjPaint() {
           '<span class="gcj-go">' + (here ? 'HERE' : 'GO') + '</span></button>';
       }).join('') + '</div>';
     }
-    E.top.innerHTML = '<div class="gcj-row1">' + (showTop ? '<button type="button" class="gcj-pill" onclick="gcjTop()">' + GCJ_UP + 'Top of chat</button>' : '') + games + '</div>' + list;
+    topHtml = '<div class="gcj-row1">' + (showTop ? '<button type="button" class="gcj-pill" onclick="gcjTop()">' + GCJ_UP + 'Top of chat</button>' : '') + games + '</div>' + list;
   }
+  _gcjSet(E.top, 'top', topHtml);
   // Latest
   var count = _gcjMsgCount();
   if (fromBottom < 180) J.base = null;
   else if (J.base == null) J.base = count;
   var fresh = J.base != null ? Math.max(0, count - J.base) : 0;
-  E.bot.innerHTML = fromBottom > 300 ? '<button type="button" class="gcj-pill gcj-latest' + (fresh ? ' new' : '') + '" onclick="gcjLatest()">' + GCJ_DOWN + 'Latest' + (fresh ? ' · ' + fresh + ' new' : '') + '</button>' : '';
+  _gcjSet(E.bot, 'bot', fromBottom > 300 ? '<button type="button" class="gcj-pill gcj-latest' + (fresh ? ' new' : '') + '" onclick="gcjLatest()">' + GCJ_DOWN + 'Latest' + (fresh ? ' · ' + fresh + ' new' : '') + '</button>' : '');
 }
 function _gcjSmooth(p, to) { try { p.scrollTo({ top: to, behavior: 'smooth' }); } catch (e) { p.scrollTop = to; } }
 function gcjTop() { var p = _gcjPanel(); window._gcj.open = false; if (p) _gcjSmooth(p, 0); }
@@ -108,6 +148,12 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && wi
     var f = window[name];
     if (typeof f !== 'function') return;
     window[name] = function () { var r = f.apply(this, arguments); try { _gcjPaint(); setTimeout(_gcjPaint, 700); } catch (e) { console.error('[chat jump]', e); } return r; };
+  });
+  window.addEventListener('resize', function () { try { _gcjPaint(); } catch (e) {} });
+  ['gameDetailTab', 'nav'].forEach(function (name) {
+    var f = window[name];
+    if (typeof f !== 'function') return;
+    window[name] = function () { var r = f.apply(this, arguments); setTimeout(function () { try { _gcjPaint(); } catch (e) {} }, 0); return r; };
   });
   // a new game on screen starts fresh
   if (typeof _showGameScreen === 'function') {

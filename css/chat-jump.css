@@ -1,14 +1,19 @@
 /* ══ TOP / LATEST PILLS + GAMES BUTTON (v7.64.0) — js/chat/chat-jump.js ══ */
-.gcj-top{position:sticky;top:0;height:0;margin-bottom:-10px;z-index:30;overflow:visible;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif}
-.gcj-bot{position:sticky;bottom:0;height:0;margin-top:-10px;z-index:30;overflow:visible;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif}
+.gcj-top,.gcj-bot{position:fixed;z-index:60;height:0;overflow:visible;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;opacity:1;transform:none;transition:opacity .22s ease,transform .22s ease}
+/* v7.64.1: gone while the chat moves, back once it's still */
+html.gcj-moving .gcj-top,html.gcj-moving .gcj-bot{opacity:0;transition:opacity .12s ease,transform .12s ease}
+html.gcj-moving .gcj-top{transform:translateY(-6px)}
+html.gcj-moving .gcj-bot{transform:translateY(6px)}
+html.gcj-moving .gcj-pill,html.gcj-moving .gcj-list{pointer-events:none}
+.gcj-bot .gcj-latest{right:16px}
 .gcj-row1{position:absolute;top:4px;left:0;right:0;display:flex;justify-content:center;gap:8px;pointer-events:none}
-.gcj-pill{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px 0 11px;border-radius:19px;border:1px solid rgba(168,159,232,.4);background:rgba(23,18,46,.94);box-shadow:0 6px 20px rgba(0,0,0,.45);color:#E9E5FF;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;animation:gcjIn .22s ease-out both}
+.gcj-pill{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px 0 11px;border-radius:19px;border:1px solid rgba(168,159,232,.4);background:rgba(23,18,46,.94);box-shadow:0 6px 20px rgba(0,0,0,.45);color:#E9E5FF;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .gcj-pill:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
 .gcj-g{padding:0 12px 0 10px}
 .gcj-g.on{border:1.5px solid #A89FE8;background:rgba(61,53,128,.96);color:#fff}
 .gcj-dots{display:inline-flex}
 .gcj-dots i{width:12px;height:12px;border-radius:6px;box-shadow:0 0 0 2px #241D49}
-.gcj-latest{position:absolute;right:0;bottom:12px;border:0;background:#A89FE8;color:#1A1640;font-weight:800;font-size:13px}
+.gcj-latest{position:absolute;right:16px;bottom:0;border:0;background:#A89FE8;color:#1A1640;font-weight:800;font-size:13px}
 .gcj-latest.new{box-shadow:0 0 0 3px rgba(168,159,232,.3),0 6px 20px rgba(0,0,0,.45)}
 .gcj-list{position:absolute;top:50px;left:50%;transform:translateX(-50%);width:252px;max-width:calc(100% - 8px);padding:6px;border-radius:16px;background:#1E1840;border:1px solid rgba(168,159,232,.3);box-shadow:0 12px 32px rgba(0,0,0,.55);display:flex;flex-direction:column;box-sizing:border-box;animation:gcjIn .18s ease-out both}
 .gcj-row{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 10px;border:0;border-radius:11px;background:transparent;color:#F1EEFF;font-family:inherit;text-align:left;cursor:pointer}
@@ -25,10 +30,11 @@
 @keyframes gcjIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .gcj-list{animation-name:gcjInL}
 @keyframes gcjInL{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
-@media (prefers-reduced-motion: reduce){.gcj-pill,.gcj-list{animation:none}}
+@media (prefers-reduced-motion: reduce){.gcj-list{animation:none}.gcj-top,.gcj-bot,html.gcj-moving .gcj-top,html.gcj-moving .gcj-bot{transition:none;transform:none}}
 
 /* ══ NO ZOOM (v7.64.0) — js/core/no-zoom.js ══
    pinch and double-tap zoom crashed the page on iPhone; and iOS zooms the
    page by itself when a text box under 16px is tapped, so those get 16px */
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @supports (-webkit-touch-callout:none){input,textarea,select{font-size:max(16px,1em)!important}}
+.gcj-list{pointer-events:auto}
