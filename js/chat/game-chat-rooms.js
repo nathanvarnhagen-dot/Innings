@@ -549,10 +549,20 @@ function _gcrPaint() {
   scr.classList.toggle('gcr-nochat', !S.locked && !mine);
   // not in it: the chats going, Ask in, or start your own
   if (S.locked) {
-    E.lock.innerHTML = '<div class="gcr-hd">Chats on this game</div>' + S.friendRooms.map(function (R) { return _gcrRoomCard(R, me); }).join('') +
-      '<div class="gcr-or"><i></i>or<i></i></div>' +
+    // v7.58.0: the chats themselves are tiles in the rail above (game-chat-top.js);
+    // here: where you're waiting, with Cancel, then start your own
+    var waits = S.friendRooms.filter(function (R) { return R.asks && R.asks[me]; }).map(function (R) {
+      var rid = esc(R.id), modName = _gcrFirst(R.members[_gcrModOf(R)]), name = R.crewName || modName + '’s chat';
+      return _gcrInviteFor(R, S.key, me)
+        ? '<div class="gcr-wait" role="status"><b>Almost in.</b> You’re invited to ' + esc(name) + ', so you’ll be let in as soon as ' + esc(modName) + '’s app has this game open.' +
+          '<div><button type="button" class="gcr-sec" onclick="gcrCancel(\'' + rid + '\')">Cancel</button></div></div>'
+        : '<div class="gcr-wait" role="status"><b>Waiting on ' + esc(modName) + '.</b> ' + esc(modName) + ' runs ' + (R.crewName ? esc(R.crewName) : 'this chat') + '. If you’re let in, you’ll see it from then on, not what was said before.' +
+          '<div><button type="button" class="gcr-sec" onclick="gcrCancel(\'' + rid + '\')">Cancel request</button></div></div>';
+    });
+    E.lock.innerHTML = waits.join('') +
+      (waits.length ? '' : '<div class="gcr-ws gcr-pick">Ask into a chat above, or start your own.</div>') +
       '<button type="button" class="gcr-own" onclick="gcrOwn()"' + (S.st.starting ? ' disabled' : '') + '>' + (S.st.starting ? 'Starting…' : 'Start your own chat') + '</button>' +
-      '<div class="gcr-ws">You’d run it. Their chat keeps going on its own.</div>';
+      '<div class="gcr-ws">You’d run it. Their chats keep going on their own.</div>';
   } else if (mine && Object.keys(mine.members).length === 1 && S.friendRooms.length) {
     // your chat's just you: the others going on this game, a tap away
     E.lock.innerHTML = '<div class="gcr-also">' + S.friendRooms.map(function (R) {
@@ -730,14 +740,26 @@ function gcrStart() {
   if (st.starting) return;
   st.starting = true; st.own = true;
   _gcrPaint();
-  var p = v && v.mode === 'rooms' ? _gcrNewRoom(key) : _gcrPostOld({ act: 'start' });
-  Promise.resolve(p).then(function () {
+  var rooms = !!(v && v.mode === 'rooms'), game = window._activeBrowseGame;
+  var p = rooms ? _gcrNewRoom(key) : _gcrPostOld({ act: 'start' });
+  Promise.resolve(p).then(function (rid) {
     st.starting = false;
+    _gcrAlertStarted(key, rooms ? rid : null, game);
     if (typeof ib_toast === 'function') ib_toast('Your chat · you decide who gets in');
     var f = document.getElementById('game-chat-field'); if (f) setTimeout(function () { try { f.focus(); } catch (e) {} }, 50);
   }, function (err) { st.starting = false; st.own = false; _gcrPaint(); _gcrFail(err); });
 }
 function gcrOwn() { gcrStart(); }
+// v7.58.0: starting a chat tells every friend, once per game from this phone
+// (leave and start again on the same game and nobody's pinged twice)
+function _gcrAlertStarted(key, rid, game) {
+  var friends = (window._myFriendUids || []).filter(function (u) { return u && u !== _gcrMe(); }), lk = 'innings_gcr_started_' + key;
+  if (!friends.length || !game) return;
+  try { if (localStorage.getItem(lk)) return; localStorage.setItem(lk, String(Date.now())); } catch (e) {}
+  var label = game.away && game.home ? game.away + ' @ ' + game.home : 'a game';
+  // a batch takes 500 writes
+  for (var i = 0; i < friends.length; i += 450) _gcrNotify(friends.slice(i, i + 450), 'game_chat_started', label, rid ? { roomId: rid } : null, game);
+}
 
 // ── hooks
 (function () {

@@ -176,6 +176,7 @@ function loadNotifications() {
       else if (n.type === 'game_chat_approved') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> let you into the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'game_chat_mention') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> ' + (n.invite ? 'invited you to the ' : 'mentioned you in the ') + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'game_chat_crew') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started ' + _escapeHtml(n.crewName || 'the crew') + ' for ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' · tap to join'; // v7.44.0
+      else if (n.type === 'game_chat_started') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> started a chat on ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'a game') + ' · tap to ask in'; // v7.58.0
       else if (n.type === 'crew_added') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> added you to the crew ' + _escapeHtml(n.crewName || ''); // v7.44.0
       else if (n.type === 'game_chat_message') label = '<b>' + _escapeHtml(n.fromName || 'Someone') + '</b> posted in the ' + _escapeHtml((n.away && n.home) ? (n.away + ' @ ' + n.home) : 'game') + ' chat';
       else if (n.type === 'on_this_day') label = '<b>' + (n.yearsAgo > 1 ? n.yearsAgo + ' years' : 'One year') + ' ago today</b> — look back at it';
@@ -226,9 +227,9 @@ function notifTap(notifId) {
   } else if (n.type === 'crew_added') { // v7.44.0
     nav('friends');
     setTimeout(function(){ if (typeof crwOpen === 'function' && n.crewId) crwOpen(n.crewId); }, 400);
-  } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved' || n.type === 'game_chat_crew') && n.gamePk) {
+  } else if ((n.type === 'game_watch_joined' || n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved' || n.type === 'game_chat_crew' || n.type === 'game_chat_started') && n.gamePk) {
     if (typeof openGameScreen === 'function') openGameScreen(n.gamePk, n.away, n.home, n.sport || 'mlb');
-    if (n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved' || n.type === 'game_chat_crew') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
+    if (n.type === 'game_chat_message' || n.type === 'game_chat_mention' || n.type === 'game_chat_request' || n.type === 'game_chat_approved' || n.type === 'game_chat_crew' || n.type === 'game_chat_started') { setTimeout(function(){ if (typeof gameDetailTab === 'function') gameDetailTab('chat'); }, 0); }
   }
 }
 
