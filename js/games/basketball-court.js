@@ -468,7 +468,69 @@ function _bkxPanelHtml(m, st) {
 function _bkxStripHtml(m, runHtml) {
   var st = _bkxTrack(m);
   setTimeout(_bkxStartTick, 0);
-  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxCourtHtml(m, st) + _bkxPanelHtml(m, st) + (runHtml || '') + _bkxBoardHtml(m) + '</div>';
+  // v7.66.0: team fouls + bonus over the floor, foul trouble under the panel
+  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxFoulsHtml(m) + _bkxCourtHtml(m, st) + _bkxPanelHtml(m, st) + (runHtml || '') + _bkxTroubleHtml(m) + _bkxBoardHtml(m) + '</div>';
+}
+
+// ── v7.66.0: TEAM FOULS — this period's team fouls for each side as five
+// pips (the fifth puts the other team in the bonus), what that means in
+// words, and timeouts. NBA/WNBA: 4 fouls to give a quarter, the 5th is FTs.
+function _bkxFoulsHtml(m) {
+  var c = m.court || {};
+  if (m.phase !== 'live' || !c.fouls || c.foulsPeriod !== m.period) return '';
+  var side = function (t, sd) {
+    var o = _bkxTeam(m, _bkxOther(sd)), n = c.fouls[sd] || 0, used = c.timeouts ? c.timeouts[sd] : null;
+    var pips = '';
+    for (var i = 0; i < 5; i++) pips += '<i' + (i < n ? (i === 4 ? ' class="pen"' : ' class="on"') : '') + '></i>';
+    var bonus = n >= 5;
+    var msg = bonus ? (o ? o.abbr : 'Opponent') + ' in the bonus' : n === 4 ? 'Next foul is FTs' : (4 - n) + ' to give';
+    // NBA: 7 timeouts in regulation; elsewhere (WNBA, OT) just count what's been used
+    var to = '';
+    if (used != null) {
+      if (m.league === 'nba' && m.period <= 4) {
+        var left = Math.max(0, 7 - used), tp = '';
+        for (var j = 0; j < 7; j++) tp += '<i' + (j < left ? ' class="on"' : '') + '></i>';
+        to = '<div class="bkf-to"><span>TO LEFT</span><span class="bkf-tp" role="img" aria-label="' + left + ' timeouts left">' + tp + '</span></div>';
+      } else to = '<div class="bkf-to"><span>TO USED</span><b>' + used + '</b></div>';
+    }
+    return '<div class="bkf-t' + (bonus ? ' bonus' : '') + '" style="--ta:' + t.colors.accent + '">' +
+      '<div class="bkf-hd"><span>' + _escapeHtml(t.abbr) + ' FOULS</span><b>' + n + '</b></div>' +
+      '<div class="bkf-p" role="img" aria-label="' + n + ' team fouls this period">' + pips + '</div>' +
+      '<div class="bkf-m">' + _escapeHtml(msg.toUpperCase()) + '</div>' + to + '</div>';
+  };
+  return '<div class="bkf">' + side(m.away, 'a') + side(m.home, 'h') + '</div>';
+}
+
+// ── v7.66.0: FOUL TROUBLE — anyone carrying more fouls than the quarter
+// allows (2 in Q1, 3 in Q2, 4 in Q3, 5 in Q4/OT), plus anyone fouled out.
+// Six fouls is out in both the NBA and WNBA. Hidden when nobody qualifies.
+function _bkxTroubleHtml(m) {
+  if (m.phase !== 'live' || !m.box || !m.period) return '';
+  var cut = Math.min(5, m.period + 1), list = [];
+  ['a', 'h'].forEach(function (sd) {
+    var box = m.box[sd === 'h' ? 'home' : 'away'], t = _bkxTeam(m, sd);
+    if (!box || !t) return;
+    var seen = {};
+    (box.sections || []).forEach(function (sec) {
+      (sec.rows || []).forEach(function (r) {
+        if (r.dnp || r.pf == null || seen[r.id]) return;
+        seen[r.id] = 1;
+        if (Number(r.pf) >= cut) list.push({ r: r, t: t, pf: Number(r.pf) });
+      });
+    });
+  });
+  if (!list.length) return '';
+  list.sort(function (x, y) { return y.pf - x.pf; });
+  var pt = m.period <= 4 ? 'Q' + m.period : 'OT';
+  var rows = list.slice(0, 4).map(function (x) {
+    var r = x.r, out = x.pf >= 6, pips = '';
+    for (var i = 0; i < 6; i++) pips += '<i' + (i < x.pf ? ' class="' + (x.pf >= 5 ? 'hot' : 'on') + '"' : '') + '></i>';
+    var st = out ? 'Fouled out' : (r.on === 1 ? 'On the floor' : r.on === 0 ? 'On the bench' : '');
+    return '<div class="bkt-r' + (out ? ' out' : '') + '"><span class="bkt-av" style="background:' + x.t.colors.bg + '">' + _escapeHtml(x.t.abbr) + '</span>' +
+      '<span class="bkt-n"><span class="bkt-nm">' + _gxPlayerLink(r.name, r.id, m.league, 'text-decoration:none;color:inherit') + '</span>' + (st ? '<span class="bkt-st' + (x.pf >= 5 ? ' hot' : '') + '">' + st + (x.pf === 5 ? ' \u00b7 one from fouling out' : '') + '</span>' : '') + '</span>' +
+      '<span class="bkt-pf"><b>' + x.pf + '<small>PF</small></b><span class="bkt-pp" role="img" aria-label="' + x.pf + ' of 6 fouls">' + pips + '</span></span></div>';
+  }).join('');
+  return '<div class="bkt"><div class="bkt-hd"><span>FOUL TROUBLE</span><span>' + cut + '+ fouls in ' + pt + ' \u00b7 6 to foul out</span></div>' + rows + '</div>';
 }
 
 // ── v7.55.0: TIMEOUT — a card over the floor in the colors of the team that
