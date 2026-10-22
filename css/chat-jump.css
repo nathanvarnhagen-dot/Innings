@@ -38,3 +38,17 @@ html.gcj-moving .gcj-pill,html.gcj-moving .gcj-list{pointer-events:none}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @supports (-webkit-touch-callout:none){input,textarea,select{font-size:max(16px,1em)!important}}
 .gcj-list{pointer-events:auto}
+
+/* ═══ TYPING DOTS (v7.67.0) — a dots bubble where their message will land ═══ */
+#gc-typing .gty{align-items:flex-end;margin-top:10px;animation:gtyIn .22s ease-out both}
+.gty-avs{display:flex;flex-shrink:0}
+.gty-av{border:2px solid var(--bg,#0B0A1E);box-sizing:border-box}
+.gty-c0{background:#E9E5FF;color:#2A2160}.gty-c1{background:#F2C869;color:#1A1640}.gty-c2{background:#A89FE8;color:#1A1640}
+.gty-col{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.gty-nm{font-size:12px;font-weight:600;color:#9C95D0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.gty-b{display:inline-flex;align-items:center;gap:4px;padding:11px 14px;border-radius:18px 18px 18px 6px;background:#1E1A42;border:1px solid rgba(168,159,232,.16)}
+.gty-b i{width:7px;height:7px;border-radius:50%;background:#C9C2F5;animation:gtyDot 1.2s ease-in-out infinite}
+.gty-b i:nth-child(2){animation-delay:.18s}.gty-b i:nth-child(3){animation-delay:.36s}
+@keyframes gtyDot{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@keyframes gtyIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.gty-b i,#gc-typing .gty{animation:none;opacity:.85}}
