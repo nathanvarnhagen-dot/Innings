@@ -278,10 +278,11 @@ function _paKdpLine(lp) {
   var nm = r.name ? (typeof _ghLastName === 'function' ? _ghLastName(r.name) : r.name) : 'Runner';
   return nm + ' cut down at ' + (typeof _paBaseLabel === 'function' ? _paBaseLabel(r.outBase) : r.outBase);
 }
+function _paKLooking(lp) { var ps = (lp && lp.pitches) || [], l = ps[ps.length - 1]; return !!(l && /called/i.test(l.call || '')); }
 function _paTitle(lp) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
   // strike him out, throw him out: one pitch, two outs
-  if (t === 'strikeout_double_play' && _paKdpRunner(lp)) return 'STRUCK OUT, GUNNED DOWN';
+  if (t === 'strikeout_double_play' && _paKdpRunner(lp)) return 'STRIKE \u2019EM OUT, THROW \u2019EM OUT';
   var map = { single: 'SINGLE', double: 'DOUBLE', triple: 'TRIPLE', home_run: 'HOME RUN', strikeout: 'STRIKEOUT', strikeout_double_play: 'STRIKEOUT DOUBLE PLAY', walk: 'WALK', intent_walk: 'INTENTIONAL WALK', hit_by_pitch: 'HIT BY PITCH',
     grounded_into_double_play: 'DOUBLE PLAY', double_play: 'DOUBLE PLAY', triple_play: 'TRIPLE PLAY', force_out: 'FORCE OUT', fielders_choice: 'FIELDER\u2019S CHOICE', fielders_choice_out: 'FIELDER\u2019S CHOICE',
     sac_fly: 'SAC FLY', sac_bunt: 'SAC BUNT', field_error: 'ERROR', catcher_interf: 'CATCHER\u2019S INTERFERENCE' };
@@ -696,7 +697,7 @@ function _paOverlayHtml() {
   pv = pv.replace(/<\/svg>$/, groups + '</svg>');
   var out = '<div class="pa" style="position:absolute;inset:0;background:#120E2B;z-index:3;' + (s.keep || hold ? '' : anim('paOut', .5, END, 'ease')) + '">';
   out += '<div style="position:absolute;inset:0;' + (showField ? anim('paOut', .5, PA.SW, null, Es) : '') + '">' + pv + callout +
-    (showField ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">' + (walkish ? ({ hit_by_pitch: 'Hit by pitch', intent_walk: 'Intentional walk', catcher_interf: 'Interference' }[lp.eventType] || 'Ball four') : 'In play') + '</div>' : '') + '</div>';
+    (showField ? '<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(168,159,232,.16);border:1px solid rgba(168,159,232,.4);color:#D9D4FA;font-size:11px;font-weight:700;' + anim('paIn', .3, 1.2, null, Es) + '">' + (walkish ? ({ hit_by_pitch: 'Hit by pitch', intent_walk: 'Intentional walk', catcher_interf: 'Interference' }[lp.eventType] || 'Ball four') : lp.eventType === 'strikeout_double_play' && !lp.droppedK ? 'Strike three' : 'In play') + '</div>' : '') + '</div>';
   if (s.seq && typeof _paActScenesHtml === 'function') out += _paActScenesHtml(lp, s, box, GAP);
   if (showField) out += '<div style="position:absolute;inset:0;' + anim('paIn', .5, PA.SW, null, Es) + '">' + _paFieldSvg(lp, land, Es) + '</div>';
   // title at the top
@@ -772,6 +773,11 @@ function _paFieldSvg(lp, land, E) {
   // backstop; he chases it and throws to first (or the batter makes it).
   var droppedK = !!lp.droppedK;
   if (droppedK) first = [212, 381];
+  // v7.70.0: strike 'em out, throw 'em out — strike three into the catcher's
+  // mitt (a K over the batter), then his throw to the bag the runner was going for
+  var kdp = t === 'strikeout_double_play' && !droppedK;
+  if (kdp && !runners.some(function (r) { return r.batter; })) runners = runners.concat([{ batter: true, out: true, outBase: null }]); // the K still shows
+  if (kdp) { first = PA_F['2']; if (fl[0] !== '2') fl = ['2'].concat(fl.filter(function (c) { return c !== '2'; })); }
   var groundOut = /ground|bunt_grounder/.test(tr) && land && Math.hypot(land.x - PA_H[0], land.y - PA_H[1]) > 150;
   // v5.94.0: a grounder an infielder fields. The hit coordinates are often
   // where the ball first hit the dirt, not where he got it — so the ball
@@ -787,7 +793,7 @@ function _paFieldSvg(lp, land, E) {
     first = [PA_H[0] + reach * Math.sin(gAng), PA_H[1] - reach * Math.cos(gAng)];
     bounceAt = Math.max(.25, Math.min(.8, bR / reach));
   }
-  var flight = droppedK ? .55 : hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
+  var flight = kdp ? .2 : droppedK ? .55 : hr ? 1.8 : caught ? (tr === 'line_drive' ? .9 : 1.6) : groundOut ? 1.4 : tr === 'ground_ball' ? .9 : 1.1;
   // v7.43.0: a ball in the air flies for as long as its launch says — a
   // pop-up hangs, a line drive is there in a blink (Statcast hang time
   // from exit velo + launch angle, at the square's pace)
@@ -808,7 +814,7 @@ function _paFieldSvg(lp, land, E) {
   var retrieve = dropped && anyOut ? .9 : 0;
   var tThrow = t1 + retrieve;
   // throws: lead runner first, to each base where someone was put out
-  var outs = runners.filter(function (r) { return r.out && r.outBase && !(caught && r.batter); });
+  var outs = runners.filter(function (r) { return r.out && r.outBase && !(caught && r.batter) && !(kdp && r.batter); });
   outs.sort(function (a, b) { var o = { '3B': 3, '2B': 2, '1B': 1 }; return (o[b.start] || 0) - (o[a.start] || 0); });
   var throwPts = [first], tt = tThrow, outTimes = {};
   outs.forEach(function (r) {
@@ -906,6 +912,14 @@ function _paFieldSvg(lp, land, E) {
   var runStart = caught ? t1 : T0 + .25;
   var lastScore = 0, allDone = 0; // v7.11.2: allDone = last runner to finish
   runners.forEach(function (r) {
+    // the batter on a strikeout double play doesn't run: he stands in, and the K lands on him
+    if (kdp && r.batter) {
+      var kx = PA_H[0] - 24, ky = PA_H[1] - 4;
+      g += '<circle cx="' + kx + '" cy="' + ky + '" r="9" fill="#FFFFFF" stroke="#A89FE8" stroke-width="2.5" style="animation:paIn .2s linear ' + _paSec(PA.SW + .3, E) + ' both,paOut .3s linear ' + _paSec(T0 + 1.6, E) + ' forwards"/>';
+      g += '<text x="' + kx + '" y="' + (ky - 16) + '" text-anchor="middle" font-size="40" font-weight="900" font-style="italic" fill="#FF7A6B" stroke="#120E2B" stroke-width="3" paint-order="stroke"' + (_paKLooking(lp) ? ' transform="translate(' + (2 * kx) + ' 0) scale(-1 1)"' : '') + ' style="transform-box:fill-box;transform-origin:center;animation:paKPop .35s cubic-bezier(.2,1.6,.4,1) ' + _paSec(T0, E) + ' both">K</text>';
+      allDone = Math.max(allDone, T0 + .4);
+      return;
+    }
     var from = r.batter ? 'H' : r.start;
     if (!from) return;
     var to = r.out ? r.outBase : r.end;

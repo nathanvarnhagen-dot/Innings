@@ -196,3 +196,6 @@ button.gst-pc+button.gst-pc{border-left:.5px solid rgba(255,255,255,.07)}
 .gst-mws.heat .gst-mw.v{animation:gstHeatWheel 1.2s ease-out var(--hd,0s) both}
 .gst-mws.heat .gst-mw.v .gst-ms i{animation:gstHeatDigit 1.2s ease-out var(--hd,0s) both}
 @media (prefers-reduced-motion: reduce){.gst-heat{display:none}.gst-mws.heat .gst-mw.v,.gst-mws.heat .gst-mw.v .gst-ms i{animation:none}}
+/* v7.70.0: strike 'em out, throw 'em out — the K lands on the batter */
+@keyframes paKPop{0%{opacity:0;transform:scale(2.2)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){@keyframes paKPop{from{opacity:0}to{opacity:1}}}
