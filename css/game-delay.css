@@ -98,3 +98,35 @@
 @keyframes gdlRing{from{transform:scale(1);opacity:1}to{transform:scale(1.35);opacity:0}}
 @keyframes gdlSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.gdl-box,.gdl-cal,.gdl-live.tick .gdl-ct b,.gdl-lvl i,.gdl-ball,.gdl-pi{animation:none}.gdl-now::after{animation:none;opacity:0}.gdl-spin{animation-duration:2.4s}.gdl-sw,.gdl-sw i{transition:none}}
+/* ═══ MATCH MY TV STRIP (v7.68.0) — the count you see, then Ball / Strike on
+   the next two pitches. One short card under the delay options. ═══ */
+.gdl-sx{margin-top:10px;padding:12px;border-radius:16px;background:#17132F;border:1px solid rgba(168,159,232,.2);display:flex;flex-direction:column;gap:10px;animation:gdlIn .28s ease both}
+.gdl-sx-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px;font-size:13px;font-weight:700;color:#C9C2F5}
+.gdl-sx-r{height:32px;padding:0 10px;margin-right:-6px;border:0;background:none;color:#A89FE8;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.gdl-sx-row{display:flex;align-items:center;gap:6px}
+.gdl-sx-k{width:16px;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800}
+.gdl-sx-k.b{color:#7BE3A6}.gdl-sx-k.s{color:#F2D98A}
+.gdl-sx-c{flex:1;min-width:0;height:44px;padding:0;border-radius:10px;border:1px solid rgba(168,159,232,.18);background:rgba(255,255,255,.04);color:#E9E5FF;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;cursor:pointer}
+.gdl-sx-c.b.on{background:#7BE3A6;border-color:#7BE3A6;color:#1A1640}
+.gdl-sx-c.s.on{background:#F2D98A;border-color:#F2D98A;color:#1A1640}
+.gdl-sx-go{flex:1.6;min-width:0;height:44px;padding:0 14px;border:0;border-radius:10px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.gdl-sx-call{display:flex;gap:6px;height:56px}
+.gdl-sx-cnt{width:64px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(13,8,32,.6);font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:#fff}
+.gdl-sx-bt{flex:1;min-width:0;border:0;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.06em;cursor:pointer;transition:transform .1s ease}
+.gdl-sx-bt.b{background:rgba(123,227,166,.16);color:#7BE3A6}
+.gdl-sx-bt.s{background:rgba(242,217,138,.16);color:#F2D98A}
+.gdl-sx-bt:active,.gdl-sx-f:active{transform:scale(.96)}
+.gdl-sx-f{width:52px;flex-shrink:0;border-radius:12px;border:1px solid rgba(168,159,232,.3);background:none;color:#C9C2F5;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.gdl-sx-ms{display:flex;align-items:center;gap:10px;height:56px;padding:0 12px;border-radius:12px;background:rgba(13,8,32,.6);font-size:13px;color:#C9C2F5}
+.gdl-sx-ms .gdl-spin{width:20px;height:20px;flex-shrink:0}
+.gdl-sx-ok{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-radius:12px;background:rgba(168,159,232,.12)}
+.gdl-sx-ok i{width:10px;height:10px;flex-shrink:0;border-radius:50%;background:#7BE3A6}
+.gdl-sx-ok b{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:800;color:#fff}
+.gdl-sx-ok span{font-size:13px;line-height:1.3;color:#C9C2F5}
+.gdl-sx-bad{border-color:rgba(255,138,142,.3)}
+.gdl-sx-msg{font-size:13px;line-height:1.4;color:#D9D4FA}
+.gdl-sx-two{display:flex;align-items:center;gap:8px}
+.gdl-sx-c:focus-visible,.gdl-sx-go:focus-visible,.gdl-sx-bt:focus-visible,.gdl-sx-f:focus-visible,.gdl-sx-r:focus-visible{outline:2px solid #F2D98A;outline-offset:2px}
+/* while you're calling pitches, the app's view (which runs ahead) steps back */
+.gdl-live.held{opacity:.4;filter:blur(3px);pointer-events:none;transition:opacity .25s ease,filter .25s ease}
+@media (prefers-reduced-motion:reduce){.gdl-sx{animation:none}.gdl-sx-bt,.gdl-live.held{transition:none}}

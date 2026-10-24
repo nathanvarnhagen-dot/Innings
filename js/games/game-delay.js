@@ -12,6 +12,10 @@
 //   those two pitches reaching the app, which says how far behind your TV
 //   runs. (Two taps, not one: one tap can't tell which pitch you saw
 //   without showing you pitches you haven't seen yet.)
+// · v7.68.0: Match my TV starts from the count you see. Set the balls and
+//   strikes on your TV, then call the next two pitches Ball / Strike / Foul
+//   the moment they happen. The count says which pitch of which at-bat your
+//   TV is on; the taps say when. (Timing alone is still the fallback.)
 // · Hold chat and alerts too: friends' messages wait the same N seconds
 //   (yours never do), and alert previews for this game's chat stay hidden.
 // MLB games. The setting is per device and sticks from game to game.
@@ -49,7 +53,7 @@ function _gdlTake(pk, box) {
   var g = window._gdl, now = Date.now(), last = g.buf[g.buf.length - 1];
   // a different game, or back after time away (refreshes stop off screen): start fresh
   var fresh = g.pk !== pk || (last && now - last.t > 20000);
-  if (g.pk !== pk) { g.arr = {}; g.cal = null; g.caughtAt = 0; }
+  if (g.pk !== pk) { g.arr = {}; g.pl = {}; g.cal = null; g.caughtAt = 0; }
   if (fresh) { g.pk = pk; g.buf = []; g.shownAt = 0; }
   g.buf.push({ t: now, box: box });
   if (g.buf.length > 90) g.buf = g.buf.slice(-90);
@@ -58,6 +62,9 @@ function _gdlTake(pk, box) {
   var note = function (abi, list) {
     if (abi == null) return;
     (list || []).forEach(function (p, i) { var k = abi + ':' + (p && p.num != null ? p.num : i + 1); if (!(k in g.arr)) g.arr[k] = fresh ? -1 : now; });
+    // v7.68.0: each at-bat's pitches, so Match my TV can find the count you saw
+    g.pl = g.pl || {};
+    if (list && list.length && (!g.pl[abi] || g.pl[abi].length <= list.length)) g.pl[abi] = list;
   };
   var ps = box && box.pitchSequence, lp = box && box.lastPlay;
   if (ps) note(ps.atBatIndex, ps.pitches);
@@ -265,9 +272,10 @@ function _gdlRow() {
     opt(0, 'Off') + opt(5, '5s') + opt(15, '15s') + opt(30, '30s') + opt('custom', S.pick === 'custom' ? '<span id="gdl-chip">' + S.custom + 's</span>' : 'Custom') + '</div></div>';
   // v7.27.1: the count as the app shows it, right here — the dropdown covers the square,
   // and this is what you line up against your TV
-  if (live) h += '<div class="gdl-live" id="gdl-live">' + _gdlLiveInner() + '</div>';
-  if (c) h += _gdlCalHtml(c);
-  else if (S.pick === 'custom') {
+  if (live || c) h += _gdlStripHtml(c);
+  var held = c && (c.step === 'listen' || c.step === 'measure');
+  if (live) h += '<div class="gdl-live' + (held ? ' held' : '') + '" id="gdl-live">' + _gdlLiveInner() + '</div>';
+  if (!c && S.pick === 'custom') {
     h += '<div class="gdl-box">' +
       '<div class="gdl-dial"><button type="button" class="gdl-stp" aria-label="One second less" onclick="gdlStep(-1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>' +
         '<div class="gdl-mid"><span class="gdl-val"><b id="gdl-val">' + S.custom + '</b><small>sec</small></span>' +
@@ -276,13 +284,47 @@ function _gdlRow() {
       '<button type="button" class="gdl-mt" onclick="gdlMatchStart()"' + (live ? '' : ' disabled') + '>' + GDL_TV + 'Match my TV</button>' +
       '<div class="gdl-note">' + (live ? (S.matched ? 'Matched to your TV. Run it again if you switch channels or apps.' : 'Streaming apps run 20–60 seconds behind. Let Innings measure yours.') : 'Match my TV works once the game’s on.') + '</div></div>';
   }
-  if (!c) {
+  if (!held) {
     h += '<div class="gdl-tip">' + GDL_TV + '<span>' + E(_gdlTip()) + '</span></div>';
     if (on) h += '<div class="gdl-hold"><div class="gdl-hw"><div class="gdl-ht" id="gdl-hold-l">Hold chat and alerts too</div><div class="gdl-hs">So a friend who’s ahead can’t spoil it</div></div>' +
       '<button type="button" class="gdl-sw' + (S.hold ? ' on' : '') + '" role="switch" aria-checked="' + !!S.hold + '" aria-labelledby="gdl-hold-l" onclick="gdlHold()"><i></i></button></div>';
     if (on && live) h += '<button type="button" class="gdl-cu" onclick="gdlCatchUpBtn()">' + GDL_CLOCK.replace('width="12" height="12"', 'width="15" height="15"') + 'Catch up to live</button>';
   }
   el.innerHTML = h;
+}
+// ── Match my TV, as one strip (v7.68.0): the count you see → call two pitches → matched
+function _gdlStripHtml(c) {
+  var S = window._gdlSet, g = window._gdl, E = _escapeHtml;
+  var redo = '<button type="button" class="gdl-sx-r" onclick="gdlMatchStart()">Redo</button>';
+  var head = function (t, r) { return '<div class="gdl-sx-h"><span>' + t + '</span>' + (r ? redo : '') + '</div>'; };
+  if (!c) {
+    if (S.matched && S.pick === 'custom') {
+      return '<div class="gdl-sx">' + head('Delay · matched', 1) + '<div class="gdl-sx-ok"><i></i><b>' + S.custom + 's</b><span>behind live · matched to your TV</span></div></div>';
+    }
+    var pre = g.pre || (g.pre = { b: 0, s: 0 });
+    var chips = function (k, max, cls) {
+      var o = '';
+      for (var i = 0; i <= max; i++) o += '<button type="button" class="gdl-sx-c ' + cls + (pre[k] === i ? ' on' : '') + '" aria-pressed="' + (pre[k] === i) + '" aria-label="' + i + (k === 'b' ? ' balls' : ' strikes') + '" onclick="gdlPre(\'' + k + '\',' + i + ')">' + i + '</button>';
+      return o;
+    };
+    return '<div class="gdl-sx">' + head('Match my TV · the count you see', 0) +
+      '<div class="gdl-sx-row"><span class="gdl-sx-k b">B</span>' + chips('b', 3, 'b') + '</div>' +
+      '<div class="gdl-sx-row"><span class="gdl-sx-k s">S</span>' + chips('s', 2, 's') + '<button type="button" class="gdl-sx-go" onclick="gdlMatchGo()">Go</button></div></div>';
+  }
+  if (c.step === 'listen') {
+    return '<div class="gdl-sx">' + head('Call pitch ' + (c.taps.length + 1) + ' of 2 as it happens', 1) +
+      '<div class="gdl-sx-call"><span class="gdl-sx-cnt" aria-live="polite" aria-label="Your TV: ' + c.b + ' balls, ' + c.s + ' strikes">' + c.b + '-' + c.s + '</span>' +
+      '<button type="button" class="gdl-sx-bt b" onclick="gdlMatchCall(\'B\')">BALL</button>' +
+      '<button type="button" class="gdl-sx-bt s" onclick="gdlMatchCall(\'S\')">STRIKE</button>' +
+      '<button type="button" class="gdl-sx-f" onclick="gdlMatchCall(\'F\')">Foul</button></div></div>';
+  }
+  if (c.step === 'measure') return '<div class="gdl-sx" role="status">' + head('Finding ' + c.b0 + '-' + c.s0 + ' in this game…', 1) + '<div class="gdl-sx-ms"><span class="gdl-spin" aria-hidden="true"></span><span>Lining your calls up with the pitches</span></div></div>';
+  if (c.step === 'done') {
+    if (c.sec <= 0) return '<div class="gdl-sx" role="status">' + head('Delay · matched', 1) + '<div class="gdl-sx-ok"><i></i><b>0s</b><span>Your TV is even with the app, so the delay’s off</span></div></div>';
+    return '<div class="gdl-sx" role="status">' + head('Delay · matched', 1) + '<div class="gdl-sx-ok"><i></i><b>' + c.sec + 's</b><span>behind live · in sync with your TV at ' + c.b + '-' + c.s + '</span></div></div>';
+  }
+  return '<div class="gdl-sx gdl-sx-bad" role="status">' + head('Couldn’t line those up', 0) + '<div class="gdl-sx-msg">' + E(c.msg || 'Try again on the next two pitches.') + '</div>' +
+    '<div class="gdl-sx-two"><button type="button" class="gdl-sx-go" onclick="gdlMatchStart()">Try again</button><button type="button" class="gdl-x" onclick="gdlMatchCancel()">Cancel</button></div></div>';
 }
 function _gdlCalHtml(c) {
   if (c.step === 'listen') {
@@ -342,13 +384,45 @@ function gdlCatchUpBtn() {
 
 // ── Match my TV
 function _gdlHaptic() { if (typeof window._msHaptic === 'function') window._msHaptic(); }
+// back to the first step: set the count you see
 function gdlMatchStart() {
   if (!_gdlLive()) { if (typeof ib_toast === 'function') ib_toast('Match my TV works once the game’s on'); return; }
   clearInterval(window._gdlCalI);
-  window._gdl.cal = { step: 'listen', taps: [], at: Date.now() };
+  window._gdl.cal = null;
+  window._gdl.pre = { b: 0, s: 0 };
+  window._gdlSet.matched = false; _gdlSave();
   _gdlRepoll();
   _gdlRow();
-  var b = document.querySelector('#gsbd-delay .gdl-now'); if (b) try { b.focus({ preventScroll: true }); } catch (e) {}
+  var b = document.querySelector('#gsbd-delay .gdl-sx-c'); if (b) try { b.focus({ preventScroll: true }); b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+}
+function gdlPre(k, v) { var g = window._gdl; g.pre = g.pre || { b: 0, s: 0 }; g.pre[k] = v; _gdlRow(); }
+function gdlMatchGo() {
+  if (!_gdlLive()) { if (typeof ib_toast === 'function') ib_toast('Match my TV works once the game’s on'); return; }
+  var pre = window._gdl.pre || { b: 0, s: 0 };
+  clearInterval(window._gdlCalI);
+  window._gdl.cal = { step: 'listen', taps: [], at: Date.now(), b0: pre.b, s0: pre.s, b: pre.b, s: pre.s };
+  _gdlRepoll();
+  _gdlRow();
+  var b = document.querySelector('#gsbd-delay .gdl-sx-bt'); if (b) try { b.focus({ preventScroll: true }); } catch (e) {}
+}
+// a call on your TV: when (now) and what (ball / strike / foul)
+function gdlMatchCall(k) {
+  var c = window._gdl.cal;
+  if (!c || c.step !== 'listen') return;
+  var now = Date.now();
+  if (c.taps.length && now - c.taps[0].t > 90000) { c.taps = []; c.b = c.b0; c.s = c.s0; } // way too long between: start over from this one
+  c.taps.push({ t: now, k: k });
+  if (k === 'B') c.b = Math.min(3, c.b + 1); else if (k === 'S') c.s = Math.min(2, c.s + 1); else if (c.s < 2) c.s++;
+  _gdlHaptic();
+  if (c.taps.length >= 2) {
+    c.step = 'measure';
+    c.until = now + 15000; // if your TV is ahead of the app, those pitches haven't come in yet
+    clearInterval(window._gdlCalI);
+    window._gdlCalI = setInterval(_gdlCalTry, 1000);
+    _gdlCalTry();
+  }
+  _gdlRow();
+  var b = document.querySelector('#gsbd-delay .gdl-sx-bt'); if (b) try { b.focus({ preventScroll: true }); } catch (e) {}
 }
 function gdlMatchCancel() {
   clearInterval(window._gdlCalI);
@@ -361,8 +435,8 @@ function gdlMatchTap() {
   if (!c || c.step !== 'listen') return;
   var now = Date.now();
   // a second tap more than 90s after the first: start over from this one
-  if (c.taps.length && now - c.taps[0] > 90000) c.taps = [];
-  c.taps.push(now);
+  if (c.taps.length && now - c.taps[0].t > 90000) c.taps = [];
+  c.taps.push({ t: now, k: '' });
   _gdlHaptic();
   if (c.taps.length >= 2) {
     c.step = 'measure';
@@ -376,6 +450,7 @@ function gdlMatchTap() {
 }
 // The two taps are two pitches in a row on your TV. Find the two pitches in
 // a row whose arrival here is spaced the same way; the offset is your TV.
+function _gdlWord(k) { return k === 'B' ? 'ball' : k === 'F' ? 'foul' : 'strike'; }
 function _gdlCalSolve(t1, t2, arr) {
   var list = Object.keys(arr).map(function (k) { return { k: k, a: arr[k] }; })
     .filter(function (x) { return x.a > 0 && x.a >= t1 - 150000 && x.a <= t2 + 20000; })
@@ -391,12 +466,58 @@ function _gdlCalSolve(t1, t2, arr) {
   }
   return { best: best, second: second };
 }
+// v7.68.0: the count you saw and your two calls point at exact pitches: the pitch
+// thrown at that count (in any at-bat here) whose call and the next one's match yours
+function _gdlKind(call) {
+  var c = String(call || '').toLowerCase();
+  if (!c) return '';
+  if (c.indexOf('in play') !== -1 || c.indexOf('hit by pitch') !== -1) return 'play';
+  if (c.indexOf('foul') !== -1) return c.indexOf('tip') !== -1 ? 'tip' : 'foul';
+  if (c.indexOf('ball') !== -1 || c.indexOf('pitchout') !== -1) return 'ball';
+  return 'strike';
+}
+function _gdlCallFits(k, kind) {
+  if (!k) return true;
+  if (k === 'B') return kind === 'ball';
+  if (k === 'F') return kind === 'foul' || kind === 'tip';
+  return kind === 'strike' || kind === 'tip' || kind === 'foul'; // a foul you called a strike still counts as one
+}
+function _gdlCalSolveCount(c) {
+  var g = window._gdl, out = { best: null, waiting: false, n: 0 };
+  var t1 = c.taps[0].t, t2 = c.taps[1].t, want = t2 - t1;
+  Object.keys(g.pl || {}).forEach(function (abi) {
+    var ps = (g.pl[abi] || []).filter(function (p) { return p && p.call; });
+    for (var i = 0; i < ps.length; i++) {
+      var before = _gdlCountFrom(ps.slice(0, i), {});
+      if (before.balls !== c.b0 || before.strikes !== c.s0) continue;
+      if (!_gdlCallFits(c.taps[0].k, _gdlKind(ps[i].call))) continue;
+      if (i + 1 >= ps.length) { if (_gdlKind(ps[i].call) !== 'play') out.waiting = true; continue; } // the second one hasn't come in yet
+      if (!_gdlCallFits(c.taps[1].k, _gdlKind(ps[i + 1].call))) continue;
+      var key = function (j) { return abi + ':' + (ps[j].num != null ? ps[j].num : j + 1); };
+      var a1 = g.arr[key(i)], a2 = g.arr[key(i + 1)], lags = [];
+      if (a1 > 0) lags.push(t1 - a1);
+      if (a2 > 0) lags.push(t2 - a2);
+      if (!lags.length) continue; // both were here before you opened the game: no arrival time
+      var lag = lags.reduce(function (x, y) { return x + y; }, 0) / lags.length;
+      if (lag < -20000 || lag > 150000) continue;
+      var err = a1 > 0 && a2 > 0 ? Math.abs((a2 - a1) - want) : 2500;
+      out.n++;
+      if (!out.best || err < out.best.err - 1500 || (Math.abs(err - out.best.err) <= 1500 && (a2 || a1) > out.best.at)) out.best = { lag: lag, err: err, at: a2 || a1 };
+    }
+  });
+  return out;
+}
 function _gdlCalTry() {
   var c = window._gdl.cal;
   if (!c || c.step !== 'measure') { clearInterval(window._gdlCalI); return; }
-  var r = _gdlCalSolve(c.taps[0], c.taps[1], window._gdl.arr), b = r.best, s = r.second;
+  var t1 = c.taps[0].t, t2 = c.taps[1].t;
+  var rc = c.b0 != null ? _gdlCalSolveCount(c) : { best: null };
+  var r = _gdlCalSolve(t1, t2, window._gdl.arr), b = r.best, s = r.second;
   var ok = b && b.err <= 4500 && (!s || s.err - b.err > 1500 || Math.abs(s.lag - b.lag) < 3000);
-  if (ok) {
+  var useCount = rc.best && rc.best.err <= 6000;
+  // the count found it; or, once the wait's over, timing alone did
+  if (useCount || (ok && (c.b0 == null || Date.now() > c.until))) {
+    if (useCount) b = rc.best;
     clearInterval(window._gdlCalI);
     var lag = Math.max(0, Math.round(b.lag / 1000)), sec = lag >= 1 ? Math.min(120, lag + 2) : 0;
     var S = window._gdlSet;
@@ -410,7 +531,8 @@ function _gdlCalTry() {
   if (Date.now() > c.until) {
     clearInterval(window._gdlCalI);
     c.step = 'fail';
-    c.msg = b && b.err <= 9000 ? 'Close, but not sure. Try again on the next two pitches, tapping right as the ball pops the mitt.' : 'Try again on the next two pitches in a row (not a pickoff or a mound visit).';
+    c.msg = c.b0 != null && !rc.n ? 'Couldn’t find ' + c.b0 + '-' + c.s0 + ' then a ' + _gdlWord(c.taps[0].k) + ' and a ' + _gdlWord(c.taps[1].k) + ' in this game yet. Check the count on your TV and try the next two.'
+      : b && b.err <= 9000 ? 'Close, but not sure. Try again on the next two pitches, tapping right as the ball pops the mitt.' : 'Try again on the next two pitches in a row (not a pickoff or a mound visit).';
     _gdlRow();
   }
 }
