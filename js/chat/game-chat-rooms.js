@@ -376,8 +376,22 @@ function _gcrListenRoom(key, rid, since) {
     var arr = [];
     snap.forEach(function (doc) { arr.push(Object.assign({ _id: doc.id, _col: 'gameChatRooms/' + rid + '/messages' }, doc.data())); });
     st.rmsgs[rid] = arr;
+    if (st.retry) delete st.retry[tag];
     _gcrPublish(key);
   }, function (err) {
+    // v7.67.1: a brand-new chat's room doc can still be on its way to the server when this
+    // listener opens, so the rules' membership lookup finds nothing and refuses. Try again
+    // quietly (0.8s, 1.6s, 3.2s) before saying anything.
+    var code = err && err.code;
+    st.retry = st.retry || {};
+    var n = st.retry[tag] || 0;
+    if (code === 'permission-denied' && n < 3) {
+      st.retry[tag] = n + 1;
+      console.info('[game chat] room messages refused, retrying (' + (n + 1) + '/3) — room may not be on the server yet');
+      if (st.listenRid === tag) { st.listenRid = null; st.runsub = null; }
+      setTimeout(function () { if (!st.listenRid) _gcrListenRoom(key, rid, since); }, 800 * Math.pow(2, n));
+      return;
+    }
     console.error('[game chat] room messages', err);
     // v7.46.3: say so on screen — a read that's refused looks exactly like "nothing happens"
     _gcrSay('Chat can’t load (room messages) — ' + ((err && err.code) || err) + ' · ' + ((err && err.message) || '').slice(0, 120));
