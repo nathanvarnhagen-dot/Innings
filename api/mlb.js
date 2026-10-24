@@ -1651,7 +1651,7 @@ function _playAnimSummary(p, prev) {
     var id = r.details && r.details.runner && r.details.runner.id;
     var mv = r.movement || {};
     if (id == null) return;
-    if (!byRunner[id]) { byRunner[id] = { start: mv.start || null, end: mv.end || null, out: !!mv.isOut, outBase: mv.outBase || null, batter: !!(p.matchup && p.matchup.batter && p.matchup.batter.id === id) }; order.push(id); }
+    if (!byRunner[id]) { byRunner[id] = { start: mv.start || null, end: mv.end || null, out: !!mv.isOut, outBase: mv.outBase || null, batter: !!(p.matchup && p.matchup.batter && p.matchup.batter.id === id), name: (r.details.runner.fullName) || null }; order.push(id); }
     else { byRunner[id].end = mv.end || null; if (mv.isOut) { byRunner[id].out = true; byRunner[id].outBase = mv.outBase || byRunner[id].outBase; } }
     (r.credits || []).forEach(function (c) {
       var code = c.position && c.position.code;

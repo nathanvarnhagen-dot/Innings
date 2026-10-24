@@ -265,8 +265,23 @@ function _paLanding(lp) {
 function _paDir(deg) {
   if (deg < -30) return 'left'; if (deg < -12) return 'left-center'; if (deg <= 12) return 'center'; if (deg <= 30) return 'right-center'; return 'right';
 }
+// v7.69.0: on a strikeout double play, the runner thrown out on the same pitch
+function _paKdpRunner(lp) {
+  if (!lp || lp.eventType !== 'strikeout_double_play') return null;
+  var hit = null;
+  (lp.runners || []).forEach(function (r) { if (!hit && r && r.out && r.outBase && !r.batter && (!r.name || r.name !== lp.batter)) hit = r; });
+  return hit;
+}
+function _paKdpLine(lp) {
+  var r = _paKdpRunner(lp);
+  if (!r) return '';
+  var nm = r.name ? (typeof _ghLastName === 'function' ? _ghLastName(r.name) : r.name) : 'Runner';
+  return nm + ' cut down at ' + (typeof _paBaseLabel === 'function' ? _paBaseLabel(r.outBase) : r.outBase);
+}
 function _paTitle(lp) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
+  // strike him out, throw him out: one pitch, two outs
+  if (t === 'strikeout_double_play' && _paKdpRunner(lp)) return 'STRUCK OUT, GUNNED DOWN';
   var map = { single: 'SINGLE', double: 'DOUBLE', triple: 'TRIPLE', home_run: 'HOME RUN', strikeout: 'STRIKEOUT', strikeout_double_play: 'STRIKEOUT DOUBLE PLAY', walk: 'WALK', intent_walk: 'INTENTIONAL WALK', hit_by_pitch: 'HIT BY PITCH',
     grounded_into_double_play: 'DOUBLE PLAY', double_play: 'DOUBLE PLAY', triple_play: 'TRIPLE PLAY', force_out: 'FORCE OUT', fielders_choice: 'FIELDER\u2019S CHOICE', fielders_choice_out: 'FIELDER\u2019S CHOICE',
     sac_fly: 'SAC FLY', sac_bunt: 'SAC BUNT', field_error: 'ERROR', catcher_interf: 'CATCHER\u2019S INTERFERENCE' };
@@ -346,6 +361,7 @@ function _paNote2(lp, box, land) {
   if (t === 'strikeout' || t === 'strikeout_double_play') {
     var last = (lp.pitches || [])[lp.pitches.length - 1];
     bits.push(last && /called/i.test(last.call || '') ? '\u24C0K looking' : 'K swinging'); // marker → mirrored K when drawn
+    if (t === 'strikeout_double_play' && _paKdpLine(lp)) bits.push(_paKdpLine(lp) + (f.length > 1 ? ' (' + f.join('-') + ')' : '')); // v7.69.0
     if (lp.droppedK === 'out') bits.push('Dropped third strike' + (f.length > 1 ? ' \u00b7 ' + f.join('-') : ''));
     else if (lp.droppedK === 'safe') bits.push('Reached on dropped third strike');
     var kn = _paKCountText(lp, box); // v7.14.1
