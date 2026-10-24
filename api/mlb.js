@@ -30,6 +30,7 @@ module.exports = async function handler(req, res) {
       const spLines = await _probableLines(spIds, String(date).slice(0, 4));
       (data.dates || []).forEach(function (d) {
         (d.games || []).forEach(function (g) {
+          _mlbEndEarly(g.status, g.linescore); // v7.71.0
           var sp = {};
           ['away', 'home'].forEach(function (k) { var pp = g.teams && g.teams[k] && g.teams[k].probablePitcher; if (pp && pp.id) sp[k + 'Probable'] = Object.assign({ id: pp.id, name: pp.fullName || null }, spLines[pp.id] || {}); });
           games.push(Object.assign(sp, {
@@ -388,6 +389,7 @@ function summarize(data, gamePk, wantAllPlays) {
   _gameType = (gameData.game && gameData.game.type) || null; // v6.7.1: R regular, S spring, F/D/L/W postseason
   var decisions = liveData.decisions || {};
   var boxTeams = (liveData.boxscore && liveData.boxscore.teams) || {};
+  _mlbEndEarly(gameData.status, linescore); // v7.71.0
   var abstractState = (gameData.status && gameData.status.abstractGameState) || null;
 
   var innings = (linescore.innings || []).map(function (inn) {
@@ -797,6 +799,21 @@ function _extractTeamBoxScore(teamData) {
 // Season W-L (or save count) for a decision pitcher, read from the same
 // boxscore.teams.<side>.players seasonStats this file already trusts for
 // pitchers. rec stays null rather than guessing if the stat is missing.
+// v7.71.0: home team ahead once the top of the 9th (or any extra inning) is
+// over — the game's over, there's no bottom half. MLB's feed can keep it
+// Live for a minute or more; call it Final as soon as the half ends.
+function _mlbEndEarly(st, ls) {
+  if (!st || !ls || st.abstractGameState !== 'Live') return false;
+  if (ls.inningState !== 'Middle') return false;
+  var sched = ls.scheduledInnings || 9, inn = ls.currentInning || 0;
+  var t = ls.teams || {}, h = t.home && t.home.runs, a = t.away && t.away.runs;
+  if (inn < sched || h == null || a == null || !(h > a)) return false;
+  st.abstractGameState = 'Final';
+  st.detailedState = 'Final';
+  st.codedGameState = 'F';
+  st.endedEarly = true;
+  return true;
+}
 function _decisionPerson(person, boxTeams, kind) {
   if (!person || !person.id) return null;
   var pid = 'ID' + person.id;
