@@ -326,7 +326,7 @@ function _gdlStripHtml(c) {
     };
     return '<div class="gdl-sx">' + head('Match my TV · the count you see', 0) +
       '<div class="gdl-sx-row"><span class="gdl-sx-k b">B</span>' + chips('b', 3, 'b') + '</div>' +
-      '<div class="gdl-sx-row"><span class="gdl-sx-k s">S</span>' + chips('s', 2, 's') + '<button type="button" class="gdl-sx-go" onclick="gdlMatchGo()">Go</button></div></div>';
+      '<div class="gdl-sx-row"><span class="gdl-sx-k s">S</span>' + chips('s', 2, 's') + '<button type="button" class="gdl-sx-go" onclick="gdlMatchGo()">That’s my count</button></div></div>';
   }
   if (c.step === 'listen') {
     return '<div class="gdl-sx">' + head('Call pitch ' + (c.taps.length + 1) + ' of 2 as it happens', 1) +

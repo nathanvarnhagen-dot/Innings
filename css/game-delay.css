@@ -109,7 +109,7 @@
 .gdl-sx-c{flex:1;min-width:0;height:44px;padding:0;border-radius:10px;border:1px solid rgba(168,159,232,.18);background:rgba(255,255,255,.04);color:#E9E5FF;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;cursor:pointer}
 .gdl-sx-c.b.on{background:#7BE3A6;border-color:#7BE3A6;color:#1A1640}
 .gdl-sx-c.s.on{background:#F2D98A;border-color:#F2D98A;color:#1A1640}
-.gdl-sx-go{flex:1.6;min-width:0;height:44px;padding:0 14px;border:0;border-radius:10px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.gdl-sx-go{flex:2.4;min-width:0;height:44px;padding:0 14px;border:0;border-radius:10px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
 .gdl-sx-call{display:flex;gap:6px;height:56px}
 .gdl-sx-cnt{width:64px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(13,8,32,.6);font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:#fff}
 .gdl-sx-bt{flex:1;min-width:0;border:0;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.06em;cursor:pointer;transition:transform .1s ease}
