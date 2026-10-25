@@ -550,7 +550,8 @@ function _patHoldInfo(lp, box) {
   // under the batter: where it went and the score after it
   var sub = [];
   var land = typeof _paLanding === 'function' ? _paLanding(lp) : null;
-  if (land && lp.hit && typeof _paDir === 'function') sub.push('To ' + _paDir(land.ang));
+  if (typeof _paProdLine === 'function' && _paProdLine(lp)) sub.push(_paProdLine(lp)); // v7.72.0: who it moved up
+  else if (land && lp.hit && typeof _paDir === 'function') sub.push('To ' + _paDir(land.ang));
   else if (tier.kind === 'k' && typeof _paKdpLine === 'function' && _paKdpLine(lp)) sub.push(_paKdpLine(lp)); // v7.69.0: the runner thrown out on the same pitch
   else if ((tier.kind === 'k' || tier.kind === 'walk') && (lp.pitches || []).length && tier.kind !== 'walk') sub.push((lp.pitches || []).length + '-pitch at-bat');
   var aA = box.awayAbbr || _ghAbbrFallback(box.away || ''), hA = box.homeAbbr || _ghAbbrFallback(box.home || '');

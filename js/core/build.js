@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.71.0-home-ahead-after-top-9-final';
+window.INNINGS_BUILD = 'v7.72.0-productive-out';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

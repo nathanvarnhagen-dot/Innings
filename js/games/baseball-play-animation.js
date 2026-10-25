@@ -278,10 +278,28 @@ function _paKdpLine(lp) {
   var nm = r.name ? (typeof _ghLastName === 'function' ? _ghLastName(r.name) : r.name) : 'Runner';
   return nm + ' cut down at ' + (typeof _paBaseLabel === 'function' ? _paBaseLabel(r.outBase) : r.outBase);
 }
+// v7.72.0: a productive out — the batter's the only out, and it moved a runner
+// up (or brought one in). Sac flies and bunts keep their own names.
+function _paProductive(lp) {
+  var t = (lp && lp.eventType) || '';
+  if (!/^(field_out|force_out|fielders_choice_out)$/.test(t)) return null;
+  var rs = lp.runners || [], ord = { '1B': 1, '2B': 2, '3B': 3, score: 4 };
+  var outs = rs.filter(function (r) { return r.out; });
+  if (outs.length !== 1 || !outs[0].batter) return null;
+  var up = rs.filter(function (r) { return !r.batter && !r.out && r.start && r.end && (ord[r.end] || 0) > (ord[r.start] || 0); });
+  return up.length ? up : null;
+}
+function _paProdLine(lp) {
+  var up = _paProductive(lp);
+  if (!up) return '';
+  var nm = function (r) { return r.name ? (typeof _ghLastName === 'function' ? _ghLastName(r.name) : String(r.name).split(' ').slice(-1)[0]) : 'Runner'; };
+  return up.map(function (r) { return r.end === 'score' ? nm(r) + ' scores' : nm(r) + ' to ' + _paBaseLabel(r.end); }).join(' · ');
+}
 function _paKLooking(lp) { var ps = (lp && lp.pitches) || [], l = ps[ps.length - 1]; return !!(l && /called/i.test(l.call || '')); }
 function _paTitle(lp) {
   var t = lp.eventType || '', tr = (lp.hit && lp.hit.trajectory) || '';
   // strike him out, throw him out: one pitch, two outs
+  if (_paProductive(lp)) return 'PRODUCTIVE OUT';
   if (t === 'strikeout_double_play' && _paKdpRunner(lp)) return 'STRIKE \u2019EM OUT, THROW \u2019EM OUT';
   var map = { single: 'SINGLE', double: 'DOUBLE', triple: 'TRIPLE', home_run: 'HOME RUN', strikeout: 'STRIKEOUT', strikeout_double_play: 'STRIKEOUT DOUBLE PLAY', walk: 'WALK', intent_walk: 'INTENTIONAL WALK', hit_by_pitch: 'HIT BY PITCH',
     grounded_into_double_play: 'DOUBLE PLAY', double_play: 'DOUBLE PLAY', triple_play: 'TRIPLE PLAY', force_out: 'FORCE OUT', fielders_choice: 'FIELDER\u2019S CHOICE', fielders_choice_out: 'FIELDER\u2019S CHOICE',
@@ -378,6 +396,7 @@ function _paNote2(lp, box, land) {
   }
   else if (t !== 'strikeout' && t !== 'strikeout_double_play' && _paScoreMark(lp)) bits.push(_paScoreMark(lp)); // v7.21.1: scorebook marks
   else if (f.length > 1) bits.push(f.join('-'));
+  if (_paProdLine(lp) && !scoreNote) bits.push(_paProdLine(lp)); // v7.72.0
   if (scoreNote) bits.push(scoreNote);
   if (outsNote) bits.push(outsNote);
   return bits.join(' · ');
