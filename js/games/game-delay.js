@@ -316,7 +316,8 @@ function _gdlStripHtml(c) {
       '<div class="gdl-sx-call"><span class="gdl-sx-cnt" aria-live="polite" aria-label="Your TV: ' + c.b + ' balls, ' + c.s + ' strikes">' + c.b + '-' + c.s + '</span>' +
       '<button type="button" class="gdl-sx-bt b" onclick="gdlMatchCall(\'B\')">BALL</button>' +
       '<button type="button" class="gdl-sx-bt s" onclick="gdlMatchCall(\'S\')">STRIKE</button>' +
-      '<button type="button" class="gdl-sx-f" onclick="gdlMatchCall(\'F\')">Foul</button></div></div>';
+      '</div><div class="gdl-sx-two2"><button type="button" class="gdl-sx-f" onclick="gdlMatchCall(\'F\')">Foul</button>' +
+      '<button type="button" class="gdl-sx-f" onclick="gdlMatchCall(\'P\')">In play</button></div></div>';
   }
   if (c.step === 'measure') return '<div class="gdl-sx" role="status">' + head('Finding ' + c.b0 + '-' + c.s0 + ' in this game…', 1) + '<div class="gdl-sx-ms"><span class="gdl-spin" aria-hidden="true"></span><span>Lining your calls up with the pitches</span></div></div>';
   if (c.step === 'done') {
@@ -412,9 +413,9 @@ function gdlMatchCall(k) {
   var now = Date.now();
   if (c.taps.length && now - c.taps[0].t > 90000) { c.taps = []; c.b = c.b0; c.s = c.s0; } // way too long between: start over from this one
   c.taps.push({ t: now, k: k });
-  if (k === 'B') c.b = Math.min(3, c.b + 1); else if (k === 'S') c.s = Math.min(2, c.s + 1); else if (c.s < 2) c.s++;
+  if (k === 'B') c.b = Math.min(3, c.b + 1); else if (k === 'S') c.s = Math.min(2, c.s + 1); else if (k === 'F' && c.s < 2) c.s++;
   _gdlHaptic();
-  if (c.taps.length >= 2) {
+  if (c.taps.length >= 2 || k === 'P') { // v7.73.0: in play ends the at-bat, so that's the last call
     c.step = 'measure';
     c.until = now + 15000; // if your TV is ahead of the app, those pitches haven't come in yet
     clearInterval(window._gdlCalI);
@@ -450,7 +451,7 @@ function gdlMatchTap() {
 }
 // The two taps are two pitches in a row on your TV. Find the two pitches in
 // a row whose arrival here is spaced the same way; the offset is your TV.
-function _gdlWord(k) { return k === 'B' ? 'ball' : k === 'F' ? 'foul' : 'strike'; }
+function _gdlWord(k) { return k === 'B' ? 'ball' : k === 'F' ? 'foul' : k === 'P' ? 'ball in play' : 'strike'; }
 function _gdlCalSolve(t1, t2, arr) {
   var list = Object.keys(arr).map(function (k) { return { k: k, a: arr[k] }; })
     .filter(function (x) { return x.a > 0 && x.a >= t1 - 150000 && x.a <= t2 + 20000; })
@@ -479,22 +480,26 @@ function _gdlKind(call) {
 function _gdlCallFits(k, kind) {
   if (!k) return true;
   if (k === 'B') return kind === 'ball';
+  if (k === 'P') return kind === 'play';
   if (k === 'F') return kind === 'foul' || kind === 'tip';
   return kind === 'strike' || kind === 'tip' || kind === 'foul'; // a foul you called a strike still counts as one
 }
 function _gdlCalSolveCount(c) {
   var g = window._gdl, out = { best: null, waiting: false, n: 0 };
-  var t1 = c.taps[0].t, t2 = c.taps[1].t, want = t2 - t1;
+  var two = c.taps.length > 1, t1 = c.taps[0].t, t2 = two ? c.taps[1].t : t1, want = t2 - t1;
   Object.keys(g.pl || {}).forEach(function (abi) {
     var ps = (g.pl[abi] || []).filter(function (p) { return p && p.call; });
     for (var i = 0; i < ps.length; i++) {
       var before = _gdlCountFrom(ps.slice(0, i), {});
       if (before.balls !== c.b0 || before.strikes !== c.s0) continue;
       if (!_gdlCallFits(c.taps[0].k, _gdlKind(ps[i].call))) continue;
-      if (i + 1 >= ps.length) { if (_gdlKind(ps[i].call) !== 'play') out.waiting = true; continue; } // the second one hasn't come in yet
-      if (!_gdlCallFits(c.taps[1].k, _gdlKind(ps[i + 1].call))) continue;
       var key = function (j) { return abi + ':' + (ps[j].num != null ? ps[j].num : j + 1); };
-      var a1 = g.arr[key(i)], a2 = g.arr[key(i + 1)], lags = [];
+      var a1 = g.arr[key(i)], a2 = 0, lags = [];
+      if (two) {
+        if (i + 1 >= ps.length) { if (_gdlKind(ps[i].call) !== 'play') out.waiting = true; continue; } // the second one hasn't come in yet
+        if (!_gdlCallFits(c.taps[1].k, _gdlKind(ps[i + 1].call))) continue;
+        a2 = g.arr[key(i + 1)];
+      }
       if (a1 > 0) lags.push(t1 - a1);
       if (a2 > 0) lags.push(t2 - a2);
       if (!lags.length) continue; // both were here before you opened the game: no arrival time
@@ -510,9 +515,9 @@ function _gdlCalSolveCount(c) {
 function _gdlCalTry() {
   var c = window._gdl.cal;
   if (!c || c.step !== 'measure') { clearInterval(window._gdlCalI); return; }
-  var t1 = c.taps[0].t, t2 = c.taps[1].t;
+  var t1 = c.taps[0].t, t2 = c.taps.length > 1 ? c.taps[1].t : null;
   var rc = c.b0 != null ? _gdlCalSolveCount(c) : { best: null };
-  var r = _gdlCalSolve(t1, t2, window._gdl.arr), b = r.best, s = r.second;
+  var r = t2 != null ? _gdlCalSolve(t1, t2, window._gdl.arr) : { best: null, second: null }, b = r.best, s = r.second;
   var ok = b && b.err <= 4500 && (!s || s.err - b.err > 1500 || Math.abs(s.lag - b.lag) < 3000);
   var useCount = rc.best && rc.best.err <= 6000;
   // the count found it; or, once the wait's over, timing alone did
@@ -531,7 +536,7 @@ function _gdlCalTry() {
   if (Date.now() > c.until) {
     clearInterval(window._gdlCalI);
     c.step = 'fail';
-    c.msg = c.b0 != null && !rc.n ? 'Couldn’t find ' + c.b0 + '-' + c.s0 + ' then a ' + _gdlWord(c.taps[0].k) + ' and a ' + _gdlWord(c.taps[1].k) + ' in this game yet. Check the count on your TV and try the next two.'
+    c.msg = c.b0 != null && !rc.n ? 'Couldn’t find ' + c.b0 + '-' + c.s0 + ' then ' + c.taps.map(function (x) { return 'a ' + _gdlWord(x.k); }).join(' and ') + ' in this game yet. Check the count on your TV and try the next two.'
       : b && b.err <= 9000 ? 'Close, but not sure. Try again on the next two pitches, tapping right as the ball pops the mitt.' : 'Try again on the next two pitches in a row (not a pickoff or a mound visit).';
     _gdlRow();
   }

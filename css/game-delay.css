@@ -116,7 +116,8 @@
 .gdl-sx-bt.b{background:rgba(123,227,166,.16);color:#7BE3A6}
 .gdl-sx-bt.s{background:rgba(242,217,138,.16);color:#F2D98A}
 .gdl-sx-bt:active,.gdl-sx-f:active{transform:scale(.96)}
-.gdl-sx-f{width:52px;flex-shrink:0;border-radius:12px;border:1px solid rgba(168,159,232,.3);background:none;color:#C9C2F5;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.gdl-sx-two2{display:flex;gap:6px}
+.gdl-sx-f{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid rgba(168,159,232,.3);background:none;color:#C9C2F5;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .gdl-sx-ms{display:flex;align-items:center;gap:10px;height:56px;padding:0 12px;border-radius:12px;background:rgba(13,8,32,.6);font-size:13px;color:#C9C2F5}
 .gdl-sx-ms .gdl-spin{width:20px;height:20px;flex-shrink:0}
 .gdl-sx-ok{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-radius:12px;background:rgba(168,159,232,.12)}
