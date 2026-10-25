@@ -242,10 +242,21 @@ function _gdlPaintLive() {
   var h = _gdlLiveInner();
   if (el.innerHTML === h) return;
   var key = window._gdl.liveKey, was = el.getAttribute('data-k');
+  // v7.74.0: same pitch as last paint (the once-a-second "ago" tick, or a refresh
+  // with nothing new): change only the text that changed. Rebuilding the panel
+  // restarted the pitch card's fade-in every second, so the mph blinked out and back.
+  if (key === was && el.firstChild) {
+    var tmp = document.createElement('div'); tmp.innerHTML = h;
+    var sel = '.gdl-lr em, .gdl-ct b, .gdl-lvl', na = tmp.querySelectorAll(sel), oa = el.querySelectorAll(sel);
+    var same = na.length === oa.length && tmp.querySelectorAll('.gdl-pi').length === el.querySelectorAll('.gdl-pi').length && tmp.querySelectorAll('.gdl-lr').length === el.querySelectorAll('.gdl-lr').length;
+    if (same) { na.forEach(function (n, i) { if (oa[i].innerHTML !== n.innerHTML) oa[i].innerHTML = n.innerHTML; }); return; }
+    el.innerHTML = h;
+    el.querySelectorAll('.gdl-ball, .gdl-pi').forEach(function (b) { b.style.animation = 'none'; }); // no new pitch: don't fly or fade again
+    return;
+  }
   el.innerHTML = h;
   el.setAttribute('data-k', key || '');
   if (key !== was) { el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); } // a beat when a pitch lands, to line up with the TV
-  else el.querySelectorAll('.gdl-ball').forEach(function (b) { b.style.animation = 'none'; }); // only the "ago" numbers changed: don't fly again
 }
 // the "ago" numbers keep counting while the panel's open
 setInterval(function () { if (window._gshDropOn) try { _gdlPaintLive(); } catch (e) {} }, 1000);
@@ -290,7 +301,13 @@ function _gdlRow() {
       '<button type="button" class="gdl-sw' + (S.hold ? ' on' : '') + '" role="switch" aria-checked="' + !!S.hold + '" aria-labelledby="gdl-hold-l" onclick="gdlHold()"><i></i></button></div>';
     if (on && live) h += '<button type="button" class="gdl-cu" onclick="gdlCatchUpBtn()">' + GDL_CLOCK.replace('width="12" height="12"', 'width="15" height="15"') + 'Catch up to live</button>';
   }
+  // v7.74.0: keep the live panel itself across a rebuild when it's the same pitch, so
+  // its card doesn't fade back in on every refresh
+  var oldLive = document.getElementById('gdl-live'), oldK = oldLive && oldLive.getAttribute('data-k');
   el.innerHTML = h;
+  var newLive = document.getElementById('gdl-live');
+  if (oldLive && newLive && oldK != null && oldK === (window._gdl.liveKey || '')) { oldLive.className = newLive.className; newLive.parentNode.replaceChild(oldLive, newLive); try { _gdlPaintLive(); } catch (e) {} }
+  else if (newLive) newLive.setAttribute('data-k', window._gdl.liveKey || '');
 }
 // ── Match my TV, as one strip (v7.68.0): the count you see → call two pitches → matched
 function _gdlStripHtml(c) {
