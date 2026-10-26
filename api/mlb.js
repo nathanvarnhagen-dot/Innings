@@ -397,6 +397,40 @@ module.exports = async function handler(req, res) {
       const q = String(req.query.q || '').trim();
       if (q.length < 2) { res.status(200).json({ players: [] }); return; }
       const all = req.query.all === '1'; // v7.78.0: retired players too (compare picker)
+      // v7.78.1: MLB's name search only covers recent players, so for the
+      // compare picker every MLB player ever is searched in data/mlb-players.json
+      // (static, read once per instance), then MLB fills in position / Hall of Fame.
+      if (all) {
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const [reg, live] = await Promise.all([
+          _cmpRegisterSearch(q, host).catch(() => []),
+          _tpGetJson('https://statsapi.mlb.com/api/v1/people/search?names=' + encodeURIComponent(q) + '&sportIds=1&hydrate=currentTeam')
+        ]);
+        const ids = [], seen = {};
+        const add = id => { id = String(id); if (!seen[id] && ids.length < 20) { seen[id] = 1; ids.push(id); } };
+        reg.forEach(r => add(r[0]));
+        ((live && live.people) || []).forEach(p => { if (p && p.mlbDebutDate) add(p.id); });
+        if (!ids.length) { res.setHeader('Cache-Control', 's-maxage=600'); res.status(200).json({ players: [] }); return; }
+        const pj = await _tpGetJson(_CMP_API + '/people?personIds=' + ids.join(',') + '&hydrate=currentTeam,awards');
+        const byId = {};
+        ((pj && pj.people) || []).forEach(p => { byId[String(p.id)] = p; });
+        const regById = {}; reg.forEach(r => { regById[String(r[0])] = r; });
+        const players = ids.map(id => {
+          const p = byId[id], r = regById[id];
+          if (!p && !r) return null;
+          const active = p ? p.active !== false : false, t = (p && p.currentTeam) || {};
+          return {
+            id: +id, name: (p && p.fullName) || r[1], pos: (p && p.primaryPosition && p.primaryPosition.abbreviation) || null,
+            team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, league: 'mlb', active: active,
+            first: p && p.mlbDebutDate ? +String(p.mlbDebutDate).slice(0, 4) : (r ? r[2] : null),
+            last: active ? null : (p && p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : (r ? r[3] : null)),
+            hof: !!(p && (p.awards || []).some(a => /hall of fame/i.test(a.name || '') || a.id === 'MLBHOF'))
+          };
+        }).filter(Boolean);
+        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+        res.status(200).json({ players: players });
+        return;
+      }
       const data = await _tpGetJson('https://statsapi.mlb.com/api/v1/people/search?names=' + encodeURIComponent(q) + '&sportIds=1' + (all ? '&hydrate=currentTeam,awards' : '&active=true&hydrate=currentTeam'));
       if (!data) { res.status(502).json({ error: 'MLB search failed', players: [] }); return; }
       const players = (data.people || []).filter(function (p) { return p && p.fullName && (all ? !!p.mlbDebutDate : p.active !== false); }).slice(0, 20).map(function (p) {
@@ -1025,6 +1059,53 @@ async function _regSeason(ids, season) {
   }
   return out;
 }
+// ── v7.78.1: every MLB player ever, for the compare picker's search ──
+// data/mlb-players.json is a static file (Chadwick Bureau register, see
+// data/README.md), fetched from this deployment once per instance — not
+// require()'d, since files loaded that way weren't found on Vercel before.
+let _CMP_REG = null;
+function _cmpFold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+async function _cmpRegister(host) {
+  if (_CMP_REG && _CMP_REG.list) return _CMP_REG.list;
+  if (_CMP_REG && _CMP_REG.p) return _CMP_REG.p;
+  const p = (async () => {
+    const r = await fetch('https://' + host + '/data/mlb-players.json');
+    if (!r.ok) throw new Error('register HTTP ' + r.status);
+    const rows = await r.json();
+    const list = rows.map(x => ({ r: x, f: _cmpFold(x[1]) }));
+    _CMP_REG = { list: list };
+    return list;
+  })();
+  _CMP_REG = { p: p };
+  try { return await p; } catch (e) { _CMP_REG = null; throw e; }
+}
+// Every word typed must start a word of the name ("jeff k" → Jeff Kent).
+// Exact words beat prefixes, a last-name hit beats a first-name hit, and
+// longer careers rank first among equals (so Jeff Kent tops the Kents).
+async function _cmpRegisterSearch(q, host) {
+  const qt = _cmpFold(q).split(' ').filter(Boolean);
+  if (!qt.length || !host) return [];
+  const list = await _cmpRegister(host);
+  const hits = [];
+  list.forEach(e => {
+    const nt = e.f.split(' ');
+    let score = 0;
+    for (let i = 0; i < qt.length; i++) {
+      let best = 0;
+      nt.forEach((w, j) => {
+        if (w === qt[i]) best = Math.max(best, j === nt.length - 1 || (j === nt.length - 2 && /^(jr|sr|ii|iii|iv)$/.test(nt[nt.length - 1])) ? 4 : 3);
+        else if (w.indexOf(qt[i]) === 0) best = Math.max(best, 1);
+      });
+      if (!best) return;
+      score += best;
+    }
+    if (e.f === qt.join(' ')) score += 10;
+    hits.push({ e: e, s: score * 1000 + Math.min(e.r[3] - e.r[2], 30) * 10 + (e.r[3] >= 2020 ? 5 : 0) });
+  });
+  hits.sort((a, b) => b.s - a.s);
+  return hits.slice(0, 20).map(h => h.e.r);
+}
+
 // ── v7.76.0 / v7.78.0: compare two players ───────────────────────────
 // Hitters or pitchers, active or retired. League numbers per season feed
 // OPS+ = 100 × (OBP/lgOBP + SLG/lgSLG − 1) and ERA+ = 100 × lgERA/ERA

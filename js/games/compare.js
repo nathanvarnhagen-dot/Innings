@@ -230,7 +230,8 @@ function _cmpSearch(q) {
         if (String(p.id) === base.id) return false;
         return pit ? (p.pos === 'P' || p.pos === 'TWP') : p.pos !== 'P';
       }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: _cmpTeam(p.teamId, p.team), active: p.active !== false, hof: !!p.hof, first: p.first, last: p.last }; });
-      res.innerHTML = ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB ' + (pit ? 'pitcher' : 'hitter') + ' by that name.</div>';
+      res.innerHTML = (ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB ' + (pit ? 'pitcher' : 'hitter') + ' by that name.</div>') +
+        '<div class="cmp-credit">Every MLB player ever, from the Chadwick Baseball Bureau register.</div>';
     }).catch(function () { res.innerHTML = '<div class="cmp-pk-empty">Couldn’t search right now. Try again in a moment.</div>'; });
   }, 250);
 }

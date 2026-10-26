@@ -27,6 +27,7 @@
 .cmp-pn{min-width:0;display:flex;flex-direction:column}
 .cmp-pn b{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cmp-pn small{font-size:11px;font-weight:600;color:#9C95D0}
+.cmp-credit{font-size:11px;color:#8A82D6;padding:6px 4px 0;line-height:1.4}
 .cmp-pk-empty{font-size:12.5px;color:#9C95D0;padding:14px 4px}
 
 /* compare screen */

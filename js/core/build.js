@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.78.0-compare-pitchers-retired-by-age';
+window.INNINGS_BUILD = 'v7.78.1-search-every-player';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
