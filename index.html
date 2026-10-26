@@ -47,7 +47,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Instrument+Serif&display=swap">
-<link rel="stylesheet" href="css/base.css?v=7.50.1">
+<link rel="stylesheet" href="css/base.css?v=7.75.1">
 <link rel="stylesheet" href="css/immersive.css?v=7.50.1">
 <link rel="stylesheet" href="css/games.css?v=7.50.1">
 <link rel="stylesheet" href="css/recaps.css?v=7.50.1">
@@ -130,7 +130,7 @@
   </div>
 </div>
 
-<!-- ═══ WELCOME HOME SPLASH (after welcome-intro completes or is dismissed) ═══ -->
+<!-- ═══ WELCOME HOME SPLASH (a brand-new user's first landing on the feed) ═══ -->
 <div id="welcome-home-splash">
   <div class="wh-plate"></div>
   <div class="wh-text">Welcome home</div>
@@ -242,81 +242,6 @@
   </div>
 </div>
 
-<!-- ═══ WELCOME MESSAGE (FOUNDER INTRO) ═══ -->
-<div class="screen" id="screen-welcome-intro" style="background:#1A0A2E;display:flex;flex-direction:column">
-
-  <div style="position:absolute;top:0;left:0;right:0;z-index:20;padding:52px 24px 0;display:flex;flex-direction:column;align-items:center;gap:18px">
-    <div style="width:52px;height:52px;border-radius:15px;background:var(--indigo-deep);border:2px solid rgba(168,159,232,0.3);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.35)">
-      <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-1.5px">I<span style="color:#A89FE8">N</span></span>
-    </div>
-    <div id="wi-dots" style="display:flex;gap:6px">
-      <div style="width:18px;height:6px;border-radius:3px;background:#A89FE8;transition:all .35s ease"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all .35s ease"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all .35s ease"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all .35s ease"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);transition:all .35s ease"></div>
-    </div>
-  </div>
-
-  <div style="position:absolute;inset:0;overflow:hidden">
-    <div id="wi-track" style="display:flex;width:500%;height:100%;transition:transform 0.45s cubic-bezier(.65,0,.35,1)">
-
-      <div style="width:20%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) rotate(-8deg);font-size:340px;line-height:1;opacity:0.07" aria-hidden="true">&#128156;</div>
-        <div style="padding-top:70px;position:relative;z-index:1">
-          <div style="font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A89FE8;margin-bottom:16px;opacity:0.85">A note from Nate</div>
-          <div style="font-size:24px;line-height:1.5;color:rgba(255,255,255,0.94)">Thank you for trying out Innings, it means so much that you're willing to try this with some of your time. I've been working to create a better event planner &mdash; becoming a way to save the innings we share along the way <span style="color:rgba(255,255,255,0.55)">(corniness inbound)</span>.</div>
-        </div>
-      </div>
-
-      <div style="width:20%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) rotate(-8deg);width:340px" aria-hidden="true"><img src="/img/butterfly.webp" style="width:340px;height:auto;display:block" alt=""/></div>
-        <div style="padding-top:70px;position:relative;z-index:1">
-          <div style="font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A89FE8;margin-bottom:16px;opacity:0.85">Where things stand</div>
-          <div style="font-size:24px;line-height:1.5;color:rgba(255,255,255,0.94)">Innings has a lot of bugs, and many areas aren't nearly fleshed out enough. But I've spent the most time on the idea of an <b style="color:#fff;font-weight:700">Outside Lands group</b> as an MVP.</div>
-        </div>
-      </div>
-
-      <div style="width:20%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) rotate(-8deg);font-size:340px;line-height:1;opacity:0.07" aria-hidden="true">&#127914;</div>
-        <div style="padding-top:70px;position:relative;z-index:1">
-          <div id="wi-lead-icon-2" class="wi-lead-icon">&#127914;</div>
-          <div style="font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A89FE8;margin-bottom:16px;opacity:0.85">The OSL group</div>
-          <div style="font-size:24px;line-height:1.5;color:rgba(255,255,255,0.94)">The goal of the OSL group is an easier way to look at what your festival looks like, the ability to see what artists and stages your friends will be at, and a way to help friends <span style="color:rgba(255,255,255,0.55)">(like me &#128587;)</span> hear your favorite songs by each artist &mdash; a tap away from Spotify and Apple Music.</div>
-        </div>
-      </div>
-
-      <div style="width:20%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) rotate(-8deg);font-size:340px;line-height:1;opacity:0.07" aria-hidden="true">&#128066;</div>
-        <div style="padding-top:70px;position:relative;z-index:1">
-          <div id="wi-lead-icon-3" class="wi-lead-icon">&#128066;</div>
-          <div style="font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A89FE8;margin-bottom:16px;opacity:0.85">Before you dive in</div>
-          <div style="font-size:24px;line-height:1.5;color:rgba(255,255,255,0.94)">You'll have to reload the page often, there'll be various bugs, and this is nowhere close to perfect. My question to you is: <b style="color:#fff;font-weight:700">do you see any value in this?</b> If the answer is no, please tell me &mdash; and if there's even one feature you liked, I'd appreciate hearing that too. Tell me the good, the bad, and the ugly.</div>
-        </div>
-      </div>
-
-      <div style="width:20%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) rotate(-8deg);font-size:340px;line-height:1;opacity:0.07" aria-hidden="true">&#9918;</div>
-        <div style="padding-top:70px;position:relative;z-index:1">
-          <div style="font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A89FE8;margin-bottom:16px;opacity:0.85">One inning at a time</div>
-          <div style="font-size:24px;line-height:1.5;color:rgba(255,255,255,0.94)">As anyone that knows me knows, I spend too much time worried about one inning at a time, only to forget it once the next one starts. I want to remember the innings that came along the way.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <div id="wi-tap-prev" onclick="wiPrev()" style="position:absolute;top:150px;bottom:120px;left:0;width:30%;z-index:10"></div>
-  <div id="wi-tap-next" onclick="wiNext()" style="position:absolute;top:150px;bottom:120px;right:0;width:70%;z-index:10"></div>
-
-  <div style="position:absolute;bottom:0;left:0;right:0;z-index:20;padding:0 24px env(safe-area-inset-bottom,44px);display:flex;flex-direction:column;gap:12px">
-    <div id="wi-hint" style="text-align:center;font-size:11px;color:rgba(255,255,255,0.28);font-weight:600">tap or swipe to continue</div>
-    <button id="wi-cta" onclick="wiComplete()" style="width:100%;background:#A89FE8;color:var(--indigo-deep);border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity 0.3s ease, transform 0.3s ease">Let's play ball</button>
-  </div>
-
-</div>
-
-<!-- ═══ CREATE MOMENT ═══ -->
 <div class="screen" id="screen-create-group" style="background:var(--bg)">
   <div class="status-light"></div>
   <div style="background:var(--card);padding:4px 24px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--rule);flex-shrink:0">
@@ -4254,10 +4179,10 @@
     </div>
   </div>
 </div>
-<script src="js/core/build.js?v=7.75.0"></script>
+<script src="js/core/build.js?v=7.75.1"></script>
 <script src="js/core/no-zoom.js?v=7.64.0"></script>
 <script src="js/core/native-bridge.js?v=7.50.1"></script>
-<script src="js/core/navigation.js?v=7.50.1"></script>
+<script src="js/core/navigation.js?v=7.75.1"></script>
 
 <script src="js/core/welcome-canvas.js?v=7.50.1"></script>
 
@@ -4271,7 +4196,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="js/core/firebase-and-auth.js?v=7.50.1"></script>
+<script src="js/core/firebase-and-auth.js?v=7.75.1"></script>
 
 <script src="js/social/invite-text.js?v=7.50.1"></script>
 

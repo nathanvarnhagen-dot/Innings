@@ -231,7 +231,7 @@ window.saveProfile = function() {
     ib_setProfileDisplay(name);
     if (typeof consumePendingInviteLinks === 'function') consumePendingInviteLinks(user, name);
     if (typeof innings_initNativePush === 'function') innings_initNativePush(user);
-    playLoginSplash(function(){ nav('welcome-intro'); wiRender(); });
+    playLoginSplash(function(){ _firstLandingToFeed(user); });
   }).catch(function(err) {
     console.error('Save error:', err);
     ib_toast('Error saving — try again');
@@ -239,65 +239,17 @@ window.saveProfile = function() {
   });
 };
 
-// ── WELCOME INTRO (founder message) ──
-var wiIdx = 0;
-var wiTotal = 5;
-
-function wiRender(){
-  wiIdx = 0;
-  wiUpdate();
-}
-
-function wiUpdate(){
-  var track = document.getElementById('wi-track');
-  if (!track) return;
-  track.style.transform = 'translateX(-' + (wiIdx * (100/wiTotal)) + '%)';
-  var dots = document.querySelectorAll('#wi-dots > div');
-  dots.forEach(function(d,i){
-    if (i === wiIdx) { d.style.background = '#A89FE8'; d.style.width = '18px'; d.style.borderRadius = '3px'; }
-    else { d.style.background = 'rgba(255,255,255,0.2)'; d.style.width = '6px'; d.style.borderRadius = '50%'; }
-  });
-  var last = wiIdx === wiTotal - 1;
-  var cta = document.getElementById('wi-cta');
-  var hint = document.getElementById('wi-hint');
-  if (cta) {
-    cta.style.opacity = last ? '1' : '0';
-    cta.style.pointerEvents = last ? 'auto' : 'none';
-    cta.style.transform = last ? 'translateY(0)' : 'translateY(8px)';
-  }
-  if (hint) hint.style.opacity = last ? '0' : '1';
-  var leadIcons = document.querySelectorAll('.wi-lead-icon');
-  leadIcons.forEach(function(el){ el.classList.remove('in'); });
-  var activeIcon = document.getElementById('wi-lead-icon-' + wiIdx);
-  if (activeIcon) { setTimeout(function(){ activeIcon.classList.add('in'); }, 520); }
-}
-
-function wiNext(){ if (wiIdx < wiTotal - 1) { wiIdx++; wiUpdate(); } }
-function wiPrev(){ if (wiIdx > 0) { wiIdx--; wiUpdate(); } }
-
-function wiComplete(){
-  var cta = document.getElementById('wi-cta');
-  if (cta) { cta.textContent = 'Loading…'; cta.style.opacity = '0.6'; }
-  var user = auth.currentUser;
-  if (user) {
+// ── FIRST LANDING (v7.75.1) ──
+// The old founder intro (thank-you note, bugs, OSL group) was retired —
+// new users go straight to the feed. welcomeIntroDone is still saved so
+// any older build a friend has open never shows them the old note.
+function _firstLandingToFeed(user){
+  if (user && window.db) {
     db.collection('users').doc(user.uid).set({ welcomeIntroDone: true }, { merge: true })
       .catch(function(e){ console.error('welcomeIntroDone save error:', e); });
   }
   playWelcomeHomeSplash(function(){ nav('feed'); });
 }
-
-(function(){
-  var startX = null;
-  var screenEl = document.getElementById('screen-welcome-intro');
-  if (!screenEl) return;
-  screenEl.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; });
-  screenEl.addEventListener('touchend', function(e){
-    if (startX === null) return;
-    var dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 40) { if (dx < 0) wiNext(); else wiPrev(); }
-    startX = null;
-  });
-})();
 
 // ── AUTH STATE ──
 auth.onAuthStateChanged(function(user) { var _self = this, _args = arguments; _afterAppLoaded(function () { (function(user) {
@@ -323,7 +275,7 @@ auth.onAuthStateChanged(function(user) { var _self = this, _args = arguments; _a
         if (pdata.welcomeIntroDone) {
           playLoginSplash(function(){ nav('feed'); });
         } else {
-          playLoginSplash(function(){ nav('welcome-intro'); wiRender(); });
+          playLoginSplash(function(){ _firstLandingToFeed(user); });
         }
       } else {
         ib_showStep('ob-name-step');

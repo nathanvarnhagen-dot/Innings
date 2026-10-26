@@ -169,7 +169,7 @@ function playLoginSplash(cb){
   }, 1100);
 }
 // Plays the home-plate splash that grows and opens up, then calls cb
-// (used after finishing or dismissing the welcome-intro screen)
+// (used on a brand-new user's first landing on the feed)
 function playWelcomeHomeSplash(cb){
   var el = document.getElementById('welcome-home-splash');
   if(!el){ if(cb) cb(); return; }

@@ -55,8 +55,6 @@ html,body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'S
 .wh-text{font-size:20px;font-weight:800;color:white;letter-spacing:-0.3px;opacity:0;transform:translateY(6px);transition:opacity 0.4s ease 0.25s,transform 0.4s ease 0.25s}
 #welcome-home-splash.show .wh-text{opacity:1;transform:translateY(0)}
 #welcome-home-splash.grow .wh-text{opacity:0;transition:opacity 0.3s ease}
-.wi-lead-icon{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:18px;transform:scale(0.4);opacity:0;transition:transform 0.4s cubic-bezier(.34,1.56,.64,1),opacity 0.3s ease}
-.wi-lead-icon.in{transform:scale(1);opacity:1}
 
 @keyframes bannerCardPress{
   0%{transform:scale(1);opacity:1}
