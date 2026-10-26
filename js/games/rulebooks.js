@@ -232,7 +232,8 @@ function _isPlayerSearch(q) {
   var get = function (url) {
     return fetch(url).then(function (r) { return r.json(); }).catch(function (err) { console.error('[search:players] ' + url, err); return { players: [], failed: true }; });
   };
-  return Promise.all([get('/api/mlb?mode=search&q=' + enc), get('/api/espn?mode=search&q=' + enc)]).then(function (res) {
+  // v7.78.2: all=1 — every MLB player ever, retired included (MLB's own name search only covers recent players)
+  return Promise.all([get('/api/mlb?mode=search&all=1&q=' + enc), get('/api/espn?mode=search&q=' + enc)]).then(function (res) {
     var mlb = (res[0] && res[0].players) || [];
     var other = ((res[1] && res[1].players) || []).filter(function (p) { return p.league !== 'mlb'; });
     return { players: _isRankPlayers(mlb.concat(other), q), failed: !!(res[0].failed && res[1].failed) };
@@ -355,7 +356,7 @@ function _isRender() {
     if (s.loading && !s.players.length) html += '<div class="rb-empty">Searching…</div>';
     else if (!s.players.length) html += '<div class="rb-empty">' + (s.err ? 'Player search is unavailable right now.' : 'No players match.') + '</div>';
     else html += '<div class="rb-list">' + s.players.slice(0, cap).map(function (p) {
-      var sub = [p.pos, p.team, _rbSportName(p.league)].filter(Boolean).join(' · ');
+      var sub = [p.pos, p.active === false ? (p.hof ? 'Hall of Fame' : 'Retired') + (p.first ? ' · ' + p.first + '–' + (p.last || '') : '') : p.team, _rbSportName(p.league)].filter(Boolean).join(' · ');
       return '<button class="is-row" data-n="' + _escapeHtml(p.name) + '" data-id="' + _escapeHtml(String(p.id == null ? '' : p.id)) + '" data-l="' + _escapeHtml(p.league) + '" onclick="openPlayerLinkSheet(this.dataset.n,this.dataset.id||null,this.dataset.l)">' +
         '<span class="is-av">' + _escapeHtml(_initials(p.name)) + '</span>' +
         '<span class="is-txt"><b>' + _escapeHtml(p.name) + '</b><span>' + _escapeHtml(sub) + '</span></span>' + _isMemBadge(_isPlayerMemCount(p)) + '</button>';

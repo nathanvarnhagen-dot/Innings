@@ -95,7 +95,9 @@
 .cmp-seg:only-child{flex:1}
 .cmp-chart{padding-bottom:10px}
 .cmp-dash{color:#8A82D6;letter-spacing:.08em}
-.cmp-mini{margin-top:6px}
+.cmp-chartopts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cmp-chartopts .cmp-seg{flex:1 1 140px}
+.cmp-mini{margin-top:0}
 .cmp-mini button{min-height:32px;font-size:11.5px}
 .cmp-ages{display:flex;align-items:center;gap:8px}
 .cmp-ages .cmp-eb{margin:0;white-space:nowrap}

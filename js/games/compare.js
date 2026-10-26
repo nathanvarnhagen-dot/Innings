@@ -25,6 +25,7 @@ window._sav = window._sav || { pending: {} };
 window._sav.cmp = window._sav.cmp || {};
 window._sav.player = window._sav.player || {};
 window._sav.hof = window._sav.hof || {};
+window._sav.cmpkind = window._sav.cmpkind || {};
 window._cmp = window._cmp || null;
 
 var CMP_COL = { a: '#A89FE8', b: '#F2C869' };
@@ -87,8 +88,14 @@ function _cmpSheetFill(id) {
   }
   if (!id || window._savSheetId !== String(id)) { host.innerHTML = ''; return; }
   var d = typeof _savSeasonData === 'function' ? _savSeasonData(id, function () { if (window._savSheetId === String(id)) _cmpSheetFill(id); }) : null;
-  var kind = _cmpKindOf(d);
-  if (window._cmpSheet && window._cmpSheet.id === String(id)) { window._cmpSheet.kind = kind; window._cmpSheet.pos = d && d.pos || null; }
+  var kind = _cmpKindOf(d), pos = d && d.pos || null;
+  // v7.78.2: a retired player has no season line — his career data says what he was
+  var se = window._sav.season && window._sav.season[String(id)];
+  if (!kind && se && (se.failed || (se.data && se.data.error))) {
+    var c = _savGet('cmpkind', String(id), '/api/mlb?mode=compare&group=hitting&id=' + encodeURIComponent(id), 24 * 3600e3, function () { if (window._savSheetId === String(id)) _cmpSheetFill(id); });
+    if (c && c.pos) { pos = c.pos; kind = c.pos === 'P' ? 'pit' : 'bat'; }
+  }
+  if (window._cmpSheet && window._cmpSheet.id === String(id)) { window._cmpSheet.kind = kind; window._cmpSheet.pos = pos; }
   host.innerHTML = kind ? '<button type="button" class="cmp-open" onclick="cmpPick()">' + CMP_ICON + 'Compare with another ' + (kind === 'pit' ? 'pitcher' : 'hitter') + '</button>' : '';
 }
 (function () {
@@ -184,7 +191,7 @@ function cmpPick() {
   if (!s) return;
   var d = typeof _savSeasonData === 'function' ? _savSeasonData(s.id) : null;
   var kind = s.kind || _cmpKindOf(d) || 'bat';
-  var base = { id: s.id, name: s.name, pos: (d && d.pos) || s.pos || null, kind: kind };
+  var base = { id: s.id, name: s.name, pos: (d && !d.error && d.pos) || s.pos || null, kind: kind };
   window._cmpBase = base;
   window._cmpPickList = _cmpPickGroups(base);
   var el = document.getElementById('cmp-pick');
@@ -287,6 +294,7 @@ function cmpSet(k, v) {
   if (k === 'age') v = +v;
   S[k] = v;
   if (k === 'view' && v === 'sc') S.range = 'season';
+  if (k === 'align') S.age = null;
   _cmpRender();
 }
 
@@ -383,13 +391,22 @@ function _cmpScRows(SA, SB, kind) {
     return r;
   }).filter(function (r) { return r.a != null || r.b != null; });
 }
-// By age: ages both players reached, newest last
-function _cmpCommonAges(A, B) {
-  var a = A && A.ages ? Object.keys(A.ages).map(Number) : [], b = B && B.ages ? B.ages : {};
-  return a.filter(function (x) { return b[x]; }).sort(function (x, y) { return x - y; });
+// By age / by career year. A player's series maps x (an age, or which
+// season of his career) to his career so far. Before he debuted he has
+// nothing yet (zeros, "—" for rates); a skipped season carries the last one.
+var CMP_ZERO = { g: 0, gs: 0, pa: 0, h: 0, hr: 0, rbi: 0, w: 0, l: 0, sv: 0, ip: '0.0', k: 0, avg: null, obp: null, slg: null, opsPlus: null, era: null, whip: null, eraPlus: null, gg: 0, pre: true };
+function _cmpSeries(D, align) {
+  var ages = D && D.ages ? Object.keys(D.ages).map(Number).sort(function (x, y) { return x - y; }) : [];
+  if (!ages.length) return null;
+  var map = {};
+  if (align === 'year') ages.forEach(function (a, i) { map[i + 1] = D.ages[a]; });
+  else ages.forEach(function (a) { map[a] = D.ages[a]; });
+  var xs = Object.keys(map).map(Number).sort(function (x, y) { return x - y; });
+  return { xs: xs, first: xs[0], last: xs[xs.length - 1], debutAge: ages[0],
+    at: function (x) { if (x < xs[0]) return CMP_ZERO; var best = null; xs.forEach(function (k) { if (k <= x) best = map[k]; }); return best; } };
 }
-function _cmpAgeRows(A, B, age, kind) {
-  var la = A.ages[age], lb = B.ages[age];
+function _cmpAgeRows(sa, sb, x, kind) {
+  var la = sa.at(x), lb = sb.at(x);
   return CMP_AGE[kind].filter(function (d) {
     if (d[1] === 'gg') return (la.gg || 0) + (lb.gg || 0) > 0;
     if (d[1] === 'sv') return (la.sv || 0) + (lb.sv || 0) >= 20;
@@ -397,18 +414,17 @@ function _cmpAgeRows(A, B, age, kind) {
   }).map(function (d) { return _cmpH2HRow(d[0], d[1], _cmpVal(la, d[1]), _cmpVal(lb, d[1]), !!d[2], !!d[3]); });
 }
 function _cmpMetricVal(line, m) { if (!line) return null; return m === 'ip' ? _cmpNumOf('ip', line.ip) : line[m]; }
-function _cmpChartHtml(A, B, age, kind, metric, nmA, nmB) {
-  var ka = Object.keys(A.ages).map(Number).sort(function (x, y) { return x - y; }), kb = Object.keys(B.ages).map(Number).sort(function (x, y) { return x - y; });
-  var lo = Math.min(ka[0], kb[0]), hi = Math.max(ka[ka.length - 1], kb[kb.length - 1]);
+function _cmpChartHtml(sa, sb, x, metric, nmA, nmB, align) {
+  var lo = Math.min(sa.first, sb.first), hi = Math.max(sa.last, sb.last);
   var max = 0;
-  ka.forEach(function (x) { max = Math.max(max, _cmpMetricVal(A.ages[x], metric) || 0); });
-  kb.forEach(function (x) { max = Math.max(max, _cmpMetricVal(B.ages[x], metric) || 0); });
+  sa.xs.forEach(function (k) { max = Math.max(max, _cmpMetricVal(sa.at(k), metric) || 0); });
+  sb.xs.forEach(function (k) { max = Math.max(max, _cmpMetricVal(sb.at(k), metric) || 0); });
   var step = Math.pow(10, Math.floor(Math.log10(Math.max(max, 1)))), top = Math.ceil(Math.max(max, 1) / step) * step;
   var W = 334, H = 132, L = 30, R = 326, T = 6, Bt = 114;
-  var X = function (x) { return L + (hi === lo ? 0 : (x - lo) / (hi - lo)) * (R - L); }, Y = function (v) { return Bt - (v || 0) / top * (Bt - T); };
-  var path = function (D, keys, from, to) {
+  var X = function (v) { return L + (hi === lo ? 0 : (v - lo) / (hi - lo)) * (R - L); }, Y = function (v) { return Bt - (v || 0) / top * (Bt - T); };
+  var path = function (s, from, to) {
     var d = '';
-    keys.forEach(function (x) { if (x >= from && x <= to) d += (d ? ' L ' : 'M ') + X(x).toFixed(1) + ' ' + Y(_cmpMetricVal(D.ages[x], metric)).toFixed(1); });
+    s.xs.forEach(function (k) { if (k >= from && k <= to) d += (d ? ' L ' : 'M ') + X(k).toFixed(1) + ' ' + Y(_cmpMetricVal(s.at(k), metric)).toFixed(1); });
     return d;
   };
   var grid = [0, .5, 1].map(function (f) {
@@ -417,29 +433,37 @@ function _cmpChartHtml(A, B, age, kind, metric, nmA, nmB) {
       '<text x="' + (L - 6) + '" y="' + (+y + 3) + '" fill="#8A82D6" font-size="9" font-weight="700" text-anchor="end">' + _cmpE(_cmpNum(Math.round(v))) + '</text>';
   }).join('');
   var ticks = [], tstep = hi - lo > 12 ? 5 : hi - lo > 6 ? 2 : 1;
-  for (var t = Math.ceil(lo / tstep) * tstep; t <= hi; t += tstep) ticks.push('<text x="' + X(t).toFixed(1) + '" y="129" fill="#8A82D6" font-size="9" font-weight="700" text-anchor="middle">' + t + '</text>');
-  var sx = X(age).toFixed(1), ay = Y(_cmpMetricVal(A.ages[age], metric)), by = Y(_cmpMetricVal(B.ages[age], metric));
-  var label = 'Career ' + metric + ' by age. Through ' + age + ': ' + nmA + ' ' + _cmpNum(_cmpMetricVal(A.ages[age], metric) || 0) + ', ' + nmB + ' ' + _cmpNum(_cmpMetricVal(B.ages[age], metric) || 0) + '.';
+  for (var t = Math.ceil(lo / tstep) * tstep; t <= hi; t += tstep) ticks.push('<text x="' + X(t).toFixed(1) + '" y="129" fill="#8A82D6" font-size="9" font-weight="700" text-anchor="middle">' + (align === 'year' ? 'Yr ' : '') + t + '</text>');
+  var sx = X(x).toFixed(1), va = _cmpMetricVal(sa.at(x), metric) || 0, vb = _cmpMetricVal(sb.at(x), metric) || 0, ay = Y(va), by = Y(vb);
+  var label = 'Career ' + metric + ' by ' + (align === 'year' ? 'season of career' : 'age') + '. Through ' + (align === 'year' ? 'year ' : 'age ') + x + ': ' + nmA + ' ' + _cmpNum(va) + ', ' + nmB + ' ' + _cmpNum(vb) + '.';
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + _cmpE(label) + '" style="display:block">' + grid + ticks.join('') +
     '<line x1="' + sx + '" y1="4" x2="' + sx + '" y2="' + Bt + '" stroke="rgba(255,255,255,.35)" stroke-width="1" stroke-dasharray="3 3"/>' +
-    '<path d="' + path(B, kb, age, 99) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
-    '<path d="' + path(A, ka, age, 99) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
-    '<path d="' + path(B, kb, 0, age) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2.5" stroke-linejoin="round"/>' +
-    '<path d="' + path(A, ka, 0, age) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="' + path(sb, x, 999) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
+    '<path d="' + path(sa, x, 999) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
+    '<path d="' + path(sb, 0, x) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="' + path(sa, 0, x) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2.5" stroke-linejoin="round"/>' +
     '<rect x="' + (+sx - 4.5).toFixed(1) + '" y="' + (by - 4.5).toFixed(1) + '" width="9" height="9" rx="2" fill="' + CMP_COL.b + '" stroke="#140F33" stroke-width="2" transform="rotate(45 ' + sx + ' ' + by.toFixed(1) + ')"/>' +
     '<circle cx="' + sx + '" cy="' + ay.toFixed(1) + '" r="5" fill="' + CMP_COL.a + '" stroke="#140F33" stroke-width="2"/></svg>';
 }
-function _cmpPace(A, B, age, metric, nmA, nmB, word) {
-  var va = _cmpMetricVal(A.ages[age], metric) || 0, vb = _cmpMetricVal(B.ages[age], metric) || 0;
-  var lastA = Math.max.apply(null, Object.keys(A.ages).map(Number)), lastB = Math.max.apply(null, Object.keys(B.ages).map(Number));
+// "Through 22, Chourio already has 412 hits. Kent hadn't reached the majors
+// yet: he debuted at 24 and finished with 2,461."
+function _cmpPace(sa, sb, A, B, x, metric, nmA, nmB, word, align) {
   var fmt = function (n) { return metric === 'ip' ? _cmpNum(Math.round(n)) : _cmpNum(n); };
-  var diff = va - vb, s = 'Through ' + age + ', ';
-  s += Math.abs(diff) < (metric === 'ip' ? 1 : 1) ? nmA + ' and ' + nmB + ' are even in ' + word + '.' : nmA + (diff > 0 ? ' leads ' : ' trails ') + nmB + ' by ' + fmt(Math.abs(diff)) + ' ' + word + '.';
-  var more = function (D, last, nm, active) {
-    var add = (_cmpMetricVal(D.ages[last], metric) || 0) - (_cmpMetricVal(D.ages[age], metric) || 0);
-    return last > age ? ' ' + nm + ' added ' + fmt(Math.max(0, add)) + ' more after ' + age + (active ? ' so far.' : '.') : '';
+  var la = sa.at(x), lb = sb.at(x), va = _cmpMetricVal(la, metric) || 0, vb = _cmpMetricVal(lb, metric) || 0;
+  var when = align === 'year' ? 'Through ' + x + (x === 1 ? ' season, ' : ' seasons, ') : 'Through age ' + x + ', ';
+  var after = align === 'year' ? ' after season ' + x : ' after ' + x;
+  var endOf = function (D, s) { return _cmpMetricVal(s.at(s.last), metric) || 0; };
+  var finish = function (D, s, nm) { return D.active === false ? ' and finished with ' + fmt(endOf(D, s)) : ' and has ' + fmt(endOf(D, s)) + ' so far'; };
+  if (la.pre || lb.pre) {
+    var ahead = la.pre ? { nm: nmB, v: vb } : { nm: nmA, v: va }, behind = la.pre ? { nm: nmA, s: sa, D: A } : { nm: nmB, s: sb, D: B };
+    return when + ahead.nm + ' already has ' + fmt(ahead.v) + ' ' + word + '. ' + behind.nm + ' hadn’t reached the majors yet: he debuted at ' + behind.s.debutAge + finish(behind.D, behind.s, behind.nm) + '.';
+  }
+  var diff = va - vb, s = when + (Math.abs(diff) < 1 ? nmA + ' and ' + nmB + ' are even in ' + word + '.' : nmA + (diff > 0 ? ' leads ' : ' trails ') + nmB + ' by ' + fmt(Math.abs(diff)) + ' ' + word + '.');
+  var more = function (D, sr, nm) {
+    if (sr.last <= x) return '';
+    return ' ' + nm + ' added ' + fmt(Math.max(0, endOf(D, sr) - (_cmpMetricVal(sr.at(x), metric) || 0))) + ' more' + after + (D.active === false ? '.' : ' so far.');
   };
-  return s + more(B, lastB, nmB, B.active !== false) + (lastA > age ? more(A, lastA, nmA, A.active !== false) : '');
+  return s + more(B, sb, nmB) + more(A, sa, nmA);
 }
 function _cmpSideHtml(r, side) {
   var v = side === 'a' ? r.a : r.b, w = side === 'a' ? r.aw : r.bw;
@@ -499,21 +523,26 @@ function _cmpRender() {
     hdL = 'PCTL VS MLB · ' + yr; key = pctKey; label = yr + ' Statcast';
   } else if (view === 'age') {
     if (A && B) {
-      var common = _cmpCommonAges(A, B);
+      var align = S.align === 'year' ? 'year' : 'age';
+      var sa = _cmpSeries(A, align), sb = _cmpSeries(B, align);
       if (!A.ages || !B.ages) status = 'Still adding up their careers. One moment…';
-      else if (!common.length) status = 'These two never played in the majors at the same age.';
+      else if (!sa || !sb) status = 'No major-league seasons to line up yet.';
       else {
-        var age = S.age && common.indexOf(S.age) !== -1 ? S.age : common[common.length - 1];
-        S.age = age;
+        // from the earlier debut up to where the shorter career stops
+        var lo = Math.min(sa.first, sb.first), hi = Math.min(sa.last, sb.last), dom = [];
+        for (var v = lo; v <= hi; v++) dom.push(v);
+        var x = S.age && dom.indexOf(S.age) !== -1 ? S.age : hi;
+        S.age = x;
         var metrics = CMP_METRIC[kind], metric = S.metric && metrics.some(function (m) { return m[0] === S.metric; }) ? S.metric : metrics[0][0];
         var mWord = { h: 'hits', hr: 'homers', rbi: 'RBI', k: 'strikeouts', w: 'wins', ip: 'innings' }[metric];
-        rows = _cmpAgeRows(A, B, age, kind);
-        var chips = common.slice(-8);
-        ageHtml = '<div class="cmp-panel cmp-chart"><div class="cmp-ph"><span>CAREER ' + _cmpE(mWord.toUpperCase()) + ' BY AGE</span><span class="cmp-dash">DASHED · WHAT CAME NEXT</span></div>' +
-          _cmpChartHtml(A, B, age, kind, metric, nmA, nmB) + _cmpSeg('Chart', metrics, metric, 'metric', 'cmp-mini') + '</div>' +
-          '<div class="cmp-ages"><span class="cmp-eb">THROUGH AGE</span>' + _cmpSeg('Age', chips.map(function (x) { return [x, String(x)]; }), age, 'age', 'cmp-agechips') + '</div>';
-        ageNotes.push(_cmpPace(A, B, age, metric, nmA, nmB, mWord));
-        hdL = 'THROUGH AGE ' + age; key = keyHtml; label = 'Through age ' + age;
+        rows = _cmpAgeRows(sa, sb, x, kind);
+        var chips = dom.slice(-8), unit = align === 'year' ? 'SEASON' : 'AGE';
+        ageHtml = '<div class="cmp-panel cmp-chart"><div class="cmp-ph"><span>CAREER ' + _cmpE(mWord.toUpperCase()) + ' BY ' + unit + '</span><span class="cmp-dash">DASHED · WHAT CAME NEXT</span></div>' +
+          _cmpChartHtml(sa, sb, x, metric, nmA, nmB, align) +
+          '<div class="cmp-chartopts">' + _cmpSeg('Line up by', [['age', 'Same age'], ['year', 'Same season #']], align, 'align', 'cmp-mini') + _cmpSeg('Chart', metrics, metric, 'metric', 'cmp-mini') + '</div></div>' +
+          '<div class="cmp-ages"><span class="cmp-eb">THROUGH ' + unit + '</span>' + _cmpSeg(align === 'year' ? 'Season' : 'Age', chips.map(function (c) { return [c, String(c)]; }), x, 'age', 'cmp-agechips') + '</div>';
+        ageNotes.push(_cmpPace(sa, sb, A, B, x, metric, nmA, nmB, mWord, align));
+        hdL = 'THROUGH ' + unit + ' ' + x; key = keyHtml; label = align === 'year' ? 'Through ' + x + ' seasons' : 'Through age ' + x;
       }
     }
   } else {
@@ -547,7 +576,7 @@ function _cmpRender() {
     var xa = A.lines && A.lines.recent, xb = B.lines && B.lines.recent;
     if (xa && xb) notes.push(kind === 'pit' ? nmA + ': ' + xa.ip + ' IP · ' + nmB + ': ' + xb.ip + ' IP' : nmA + ': ' + xa.pa + ' PA · ' + nmB + ': ' + xb.pa + ' PA');
   }
-  if (view !== 'sc' && rows.length) notes.push((kind === 'pit' ? 'ERA+' : 'OPS+') + ' is league-adjusted, not park-adjusted.' + (view === 'age' ? ' Ages are as of June 30 each season.' : ''));
+  if (view !== 'sc' && rows.length) notes.push((kind === 'pit' ? 'ERA+' : 'OPS+') + ' is league-adjusted, not park-adjusted.' + (view === 'age' ? (S.align === 'year' ? ' Season 1 is each player’s first in the majors.' : ' Ages are as of June 30 each season.') : ''));
   if (view === 'sc' && rows.length) notes.push(kind === 'pit' ? 'Percentiles are Baseball Savant’s; fastball velo is his most-used fastball.' : 'Raw numbers from every pitch he’s seen this season; percentiles are Baseball Savant’s.');
   if (status && rows.length) notes.push(status);
   var inGame = typeof _sqInGame === 'function' && _sqInGame();
