@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.78.0', at: '2026-10-26T16:55:00-07:00',
+      title: 'Compare anyone, at any age',
+      sub: 'Pitchers too, and players who retired long ago. See where two careers stood at the same age.',
+      items: function () {
+        return [
+          { icon: 'compare', title: 'Pitchers and hitters', body: 'Tap any player, then Compare. Pitchers line up on W-L, ERA, WHIP, strikeouts and ERA+.' },
+          { icon: 'age', title: 'By age', body: 'Chapman at 33 next to Beltré at 33: a career chart, totals through that age, and what came next.' },
+          { icon: 'trophy', title: 'Legends included', body: 'Search anyone who played in the majors. Hall of Famers at his position are a tap away.' }
+        ];
+      }
+    },
+    {
       id: 'v7.76.0', at: '2026-10-26T15:44:03-07:00',
       title: 'Compare any two hitters',
       sub: 'Put two hitters side by side: the basics, OPS+ and WAR, or their Statcast.',
@@ -194,6 +206,8 @@
   ];
   var WN_MAX = 5;
   var ICONS = {
+    age: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
+    trophy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></svg>',
     compare: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M16 4v16M4 9h8M12 15h8"/></svg>',
     bars: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h7"/></svg>',
     chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',

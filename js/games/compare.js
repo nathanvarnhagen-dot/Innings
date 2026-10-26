@@ -1,50 +1,58 @@
-// ══ COMPARE TWO HITTERS (v7.76.0) ═══════════════════════════════════════
-// From any MLB hitter's player sheet: "Compare with another hitter" opens a
-// picker (same position in this game, both lineups, recent, search any
-// hitter), then a full-screen head to head:
-//   · Basics — BA, OBP, SLG, OPS, HR, RBI, OPS+, WAR for 2026 / last 15
-//     games / career. 2026 bars are each player's percentile among qualified
-//     MLB hitters; last 15 and career are head to head (no league to rank
-//     against for those windows).
-//   · Statcast — Savant percentiles with his raw numbers (2026).
-// In a game, "Share in chat" quotes the comparison above the chat composer;
-// in the chat, the quote opens the comparison again.
-// Data: /api/mlb?mode=compare (one hitter per call) and the player sheet's
-// own Savant call (smode=player). Depends on: _savGet, _savSeasonData,
-// _savPctColor (statcast.js), openPlayerLinkSheet / closePlayerLinkSheet
-// (games-list.js), _plsLinesFill (player-lines.js), _sqInGame (stat-reply.js),
-// _setReplyTarget (chat-tools.js), _gcStatQuoteHtml (memory-ticket.js),
-// _gcBox, _ghAbbrFallback, _ghLastName, _escapeHtml.
+// ══ COMPARE TWO PLAYERS (v7.76.0 hitters · v7.78.0 pitchers, retired, by age) ══
+// From any MLB player's sheet: "Compare with another hitter/pitcher" opens a
+// picker (this game, Hall of Famers at his position, recent, search anyone —
+// active or retired), then a full-screen head to head with three tabs:
+//   · Basics — hitters BA/OBP/SLG/OPS/HR/RBI/OPS+, pitchers W-L/ERA/WHIP/K/
+//     IP/K9/ERA+, for this season, recent games (15 / last 5 for pitchers) or
+//     career. Season bars are percentiles among qualified MLB players; the
+//     other windows are head to head.
+//   · Statcast — Savant percentiles with raw numbers (this season).
+//   · By age — each career so far at the same age: a chart by age (dashed =
+//     what came next), totals through the chosen age, and a pace line.
+// A retired player has no season: Basics is Career only, Statcast is off,
+// and the compare opens on By age.
+// In a game, "Share in chat" quotes it above the composer; in the chat the
+// quote opens the comparison again.
+// Data: /api/mlb?mode=compare (one player per call), mode=search&all=1,
+// mode=hof, and the player sheet's Savant call (smode=player). Depends on:
+// _savGet, _savSeasonData, _savPctColor (statcast.js), openPlayerLinkSheet /
+// closePlayerLinkSheet (games-list.js), _plsLinesFill (player-lines.js),
+// _sqInGame (stat-reply.js), _setReplyTarget (chat-tools.js),
+// _gcStatQuoteHtml (memory-ticket.js), _gcBox, _ghAbbrFallback, _ghLastName,
+// _escapeHtml.
 
 window._sav = window._sav || { pending: {} };
 window._sav.cmp = window._sav.cmp || {};
 window._sav.player = window._sav.player || {};
+window._sav.hof = window._sav.hof || {};
 window._cmp = window._cmp || null;
 
 var CMP_COL = { a: '#A89FE8', b: '#F2C869' };
-var CMP_RECENT_KEY = 'innings_cmp_recent';
+var CMP_RECENT_KEY = { bat: 'innings_cmp_recent', pit: 'innings_cmp_recent_p' };
 var CMP_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M16 4v16M4 9h8M12 15h8"/></svg>';
+// MLB team ids → abbreviations (stable ids; the Stats API's currentTeam only carries the name)
+var CMP_TEAM = { 108: 'LAA', 109: 'AZ', 110: 'BAL', 111: 'BOS', 112: 'CHC', 113: 'CIN', 114: 'CLE', 115: 'COL', 116: 'DET', 117: 'HOU', 118: 'KC', 119: 'LAD', 120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD', 136: 'SEA', 137: 'SF', 138: 'STL', 139: 'TB', 140: 'TEX', 141: 'TOR', 142: 'MIN', 143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL' };
 
 function _cmpE(s) { return typeof _escapeHtml === 'function' ? _escapeHtml(String(s == null ? '' : s)) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
 function _cmpLast(n) { return typeof _ghLastName === 'function' ? _ghLastName(n || '') : String(n || '').split(' ').slice(1).join(' ') || n || ''; }
 function _cmpIni(n) { var p = String(n || '').trim().split(/\s+/); return ((p[0] || '').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
-// MLB team ids → abbreviations (stable ids; the Stats API's currentTeam only carries the name)
-var CMP_TEAM = { 108: 'LAA', 109: 'AZ', 110: 'BAL', 111: 'BOS', 112: 'CHC', 113: 'CIN', 114: 'CLE', 115: 'COL', 116: 'DET', 117: 'HOU', 118: 'KC', 119: 'LAD', 120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD', 136: 'SEA', 137: 'SF', 138: 'STL', 139: 'TB', 140: 'TEX', 141: 'TOR', 142: 'MIN', 143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL' };
-function _cmpTeam(teamId, team) { return CMP_TEAM[teamId] || _cmpAbbr(team); }
 function _cmpAbbr(team) { return team ? (typeof _ghAbbrFallback === 'function' ? _ghAbbrFallback(team) : String(team).slice(0, 3).toUpperCase()) : ''; }
+function _cmpTeam(teamId, team) { return CMP_TEAM[teamId] || _cmpAbbr(team); }
 function _cmpLsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
 function _cmpLsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function _cmpGroup(kind) { return kind === 'pit' ? 'pitching' : 'hitting'; }
+function _cmpYears(first, last) { return first ? first + '–' + (last || '') : ''; }
+function _cmpNum(n) { return typeof n === 'number' && Math.abs(n) >= 1000 ? n.toLocaleString('en-US') : String(n); }
 
 // ── Data ──────────────────────────────────────────────────────────────────
-function _cmpData(id) {
+function _cmpKey(id, kind) { return String(id) + ':' + _cmpGroup(kind); }
+function _cmpData(id, kind) {
   if (!id || typeof _savGet !== 'function') return null;
-  var d = _savGet('cmp', String(id), '/api/mlb?mode=compare&id=' + encodeURIComponent(id), 30 * 60e3, _cmpRefresh);
-  // career WAR can come back incomplete when MLB is slow: one more try
-  var e = window._sav.cmp[String(id)];
-  if (d && d.partial && e && !e.retried) {
-    e.retried = true;
-    setTimeout(function () { e.at = 0; _savGet('cmp', String(id), '/api/mlb?mode=compare&id=' + encodeURIComponent(id) + '&r=1', 30 * 60e3, _cmpRefresh); }, 8000);
-  }
+  var key = _cmpKey(id, kind), url = '/api/mlb?mode=compare&id=' + encodeURIComponent(id) + '&group=' + _cmpGroup(kind);
+  var d = _savGet('cmp', key, url, 30 * 60e3, _cmpRefresh);
+  // the career-by-age lines can come back incomplete when MLB is slow: one more try
+  var e = window._sav.cmp[key];
+  if (d && d.partial && e && !e.retried) { e.retried = true; setTimeout(function () { e.at = 0; _savGet('cmp', key, url + '&r=1', 30 * 60e3, _cmpRefresh); }, 8000); }
   return d;
 }
 function _cmpSav(id) {
@@ -56,13 +64,18 @@ function _cmpSav(id) {
   if (d && d.partial && e && !e.retried) { e.retried = true; setTimeout(function () { e.at = 0; _savGet('player', String(id), url, 6 * 3600e3, _cmpRefresh); }, 6000); }
   return d;
 }
-function _cmpFailed(bucket, id) { var e = window._sav[bucket] && window._sav[bucket][String(id)]; return !!(e && e.failed); }
+function _cmpFailed(bucket, key) { var e = window._sav[bucket] && window._sav[bucket][String(key)]; return !!(e && e.failed); }
 function _cmpRefresh() {
   clearTimeout(window._cmpRT);
   window._cmpRT = setTimeout(function () { if (window._cmp && document.getElementById('cmp-screen')) _cmpRender(); }, 120);
 }
 
-// ── 1 · The button on the player sheet (MLB hitters) ─────────────────────
+// ── 1 · The button on the player sheet (any MLB player) ──────────────────
+function _cmpKindOf(d) {
+  if (!d || d.error) return null;
+  if (d.pitching && (d.pos === 'P' || !d.hitting)) return 'pit';
+  return d.hitting ? 'bat' : null;
+}
 function _cmpSheetFill(id) {
   var host = document.getElementById('player-cmp');
   if (!host) {
@@ -74,8 +87,9 @@ function _cmpSheetFill(id) {
   }
   if (!id || window._savSheetId !== String(id)) { host.innerHTML = ''; return; }
   var d = typeof _savSeasonData === 'function' ? _savSeasonData(id, function () { if (window._savSheetId === String(id)) _cmpSheetFill(id); }) : null;
-  var hitter = !!(d && !d.error && d.hitting && d.pos !== 'P');
-  host.innerHTML = hitter ? '<button type="button" class="cmp-open" onclick="cmpPick()">' + CMP_ICON + 'Compare with another hitter</button>' : '';
+  var kind = _cmpKindOf(d);
+  if (window._cmpSheet && window._cmpSheet.id === String(id)) { window._cmpSheet.kind = kind; window._cmpSheet.pos = d && d.pos || null; }
+  host.innerHTML = kind ? '<button type="button" class="cmp-open" onclick="cmpPick()">' + CMP_ICON + 'Compare with another ' + (kind === 'pit' ? 'pitcher' : 'hitter') + '</button>' : '';
 }
 (function () {
   if (typeof openPlayerLinkSheet === 'function') {
@@ -95,52 +109,84 @@ function _cmpSheetFill(id) {
 })();
 
 // ── 2 · Picker ────────────────────────────────────────────────────────────
+var CMP_OF = /^(LF|CF|RF|OF)$/;
+function _cmpPosMatch(a, b) { return !!a && !!b && (a === b || (CMP_OF.test(a) && CMP_OF.test(b))); }
 function _cmpGameGroups(base) {
   var box = typeof _gcBox === 'function' ? _gcBox() : null;
   var det = box && box.boxScoreDetail;
   if (!det) return [];
   var abbr = function (s) { return s === 'away' ? (box.awayAbbr || _cmpAbbr(box.away)) : (box.homeAbbr || _cmpAbbr(box.home)); };
+  var seen = {}; seen[base.id] = 1;
+  var listKey = base.kind === 'pit' ? 'pitchers' : 'batters';
   var side = null, pos = base.pos || null;
   ['away', 'home'].forEach(function (s) {
-    ((det[s] && det[s].batters) || []).forEach(function (b) { if (String(b.id) === base.id) { side = s; if (!pos) pos = b.pos; } });
+    ((det[s] && det[s][listKey]) || []).forEach(function (b) { if (String(b.id) === base.id) { side = s; if (!pos && b.pos) pos = b.pos; } });
   });
-  var seen = {}; seen[base.id] = 1;
   var list = function (s, filter) {
-    return ((det[s] && det[s].batters) || []).filter(function (b) {
-      if (!b.id || seen[String(b.id)] || b.pos === 'P' || (filter && !filter(b))) return false;
+    return ((det[s] && det[s][listKey]) || []).filter(function (b) {
+      if (!b.id || seen[String(b.id)] || (base.kind !== 'pit' && b.pos === 'P') || (filter && !filter(b))) return false;
       seen[String(b.id)] = 1;
       return true;
-    }).map(function (b) { return { id: String(b.id), name: b.name, pos: b.pos, team: abbr(s) }; });
+    }).map(function (b) { return { id: String(b.id), name: b.name, pos: base.kind === 'pit' ? 'P' : b.pos, team: abbr(s), active: true }; });
   };
   var groups = [];
-  if (pos && !/^(PH|PR)$/.test(pos)) {
-    var same = list('away', function (b) { return b.pos === pos; }).concat(list('home', function (b) { return b.pos === pos; }));
+  if (base.kind !== 'pit' && pos && !/^(PH|PR|DH)$/.test(pos)) {
+    var same = list('away', function (b) { return _cmpPosMatch(b.pos, pos); }).concat(list('home', function (b) { return _cmpPosMatch(b.pos, pos); }));
     if (same.length) groups.push({ h: 'Same position · this game', ps: same });
   }
-  var other = side === 'away' ? 'home' : 'away', own = side || 'home';
-  var o = list(other); if (o.length) groups.push({ h: abbr(other) + ' lineup', ps: o });
-  var w = list(own); if (w.length) groups.push({ h: abbr(own) + ' lineup', ps: w });
+  var other = side === 'away' ? 'home' : 'away', own = side || 'home', word = base.kind === 'pit' ? ' pitchers today' : ' lineup';
+  var o = list(other); if (o.length) groups.push({ h: abbr(other) + word, ps: o });
+  var w = list(own); if (w.length) groups.push({ h: abbr(own) + word, ps: w });
   return groups;
 }
+function _cmpHofGroup(base) {
+  var d = typeof _savGet === 'function' ? _savGet('hof', 'all', '/api/mlb?mode=hof', 7 * 86400e3, function () { if (document.getElementById('cmp-pick') && window._cmpBase) _cmpPickRender(); }) : null;
+  var ps = (d && d.players) || [];
+  var pos = base.pos;
+  var fit = ps.filter(function (p) {
+    if (String(p.id) === base.id) return false;
+    if (base.kind === 'pit') return p.pos === 'P';
+    return pos && pos !== 'P' && !/^(PH|PR|DH|TWP)$/.test(pos) ? _cmpPosMatch(p.pos, pos) : false;
+  }).sort(function (a, b) { return (b.last || 0) - (a.last || 0); }).slice(0, 5)
+    .map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, active: false, hof: true, first: p.first, last: p.last }; });
+  if (!fit.length) return null;
+  return { h: base.kind === 'pit' ? 'Hall of Fame pitchers' : 'Hall of Famers at ' + (CMP_OF.test(pos) ? 'OF' : pos), ps: fit };
+}
 function _cmpRowHtml(p) {
-  return '<button type="button" class="cmp-pr" data-id="' + _cmpE(p.id) + '" data-name="' + _cmpE(p.name) + '" data-pos="' + _cmpE(p.pos || '') + '" data-team="' + _cmpE(p.team || '') + '" onclick="cmpChoose(this)">' +
-    '<span class="cmp-av">' + _cmpE(_cmpIni(p.name)) + '</span><span class="cmp-pn"><b>' + _cmpE(p.name) + '</b><small>' + _cmpE([p.team, p.pos].filter(Boolean).join(' · ')) + '</small></span>' +
+  var retired = p.active === false;
+  var meta = retired ? [p.pos, _cmpYears(p.first, p.last)] : [p.team, p.pos];
+  var chip = p.hof ? '<span class="cmp-chip hof">HOF</span>' : retired ? '<span class="cmp-chip ret">Retired</span>' : '';
+  return '<button type="button" class="cmp-pr" data-id="' + _cmpE(p.id) + '" data-name="' + _cmpE(p.name) + '" data-pos="' + _cmpE(p.pos || '') + '" data-team="' + _cmpE(p.team || '') + '" data-ret="' + (retired ? '1' : '') + '" onclick="cmpChoose(this)">' +
+    '<span class="cmp-av' + (retired ? ' old' : '') + '">' + _cmpE(_cmpIni(p.name)) + '</span><span class="cmp-pn"><b>' + _cmpE(p.name) + '</b><small>' + _cmpE(meta.filter(Boolean).join(' · ')) + '</small></span>' + chip +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>';
 }
 function _cmpGroupsHtml(groups) {
-  if (!groups.length) return '<div class="cmp-pk-empty">Search any MLB hitter above.</div>';
+  if (!groups.length) return '<div class="cmp-pk-empty">Search any MLB ' + ((window._cmpBase || {}).kind === 'pit' ? 'pitcher' : 'hitter') + ', active or retired.</div>';
   return groups.map(function (g) { return '<div class="cmp-pg"><div class="cmp-eb">' + _cmpE(g.h) + '</div>' + g.ps.map(_cmpRowHtml).join('') + '</div>'; }).join('');
+}
+function _cmpPickGroups(base) {
+  var groups = _cmpGameGroups(base);
+  var hof = _cmpHofGroup(base);
+  if (hof) groups.push(hof);
+  var shown = {}; groups.forEach(function (g) { g.ps.forEach(function (x) { shown[x.id] = 1; }); });
+  var recent = (_cmpLsGet(CMP_RECENT_KEY[base.kind]) || []).filter(function (p) { return p && p.id && String(p.id) !== base.id && !shown[String(p.id)]; }).slice(0, 5);
+  if (recent.length) groups.push({ h: 'You compared recently', ps: recent });
+  return groups;
+}
+function _cmpPickRender() {
+  var res = document.getElementById('cmp-pick-res'), inp = document.getElementById('cmp-q');
+  if (!res || (inp && inp.value.trim().length >= 2)) return;
+  window._cmpPickList = _cmpPickGroups(window._cmpBase);
+  res.innerHTML = _cmpGroupsHtml(window._cmpPickList);
 }
 function cmpPick() {
   var s = window._cmpSheet;
   if (!s) return;
   var d = typeof _savSeasonData === 'function' ? _savSeasonData(s.id) : null;
-  var base = { id: s.id, name: s.name, pos: d && d.pos ? d.pos : null };
+  var kind = s.kind || _cmpKindOf(d) || 'bat';
+  var base = { id: s.id, name: s.name, pos: (d && d.pos) || s.pos || null, kind: kind };
   window._cmpBase = base;
-  var groups = _cmpGameGroups(base);
-  var recent = (_cmpLsGet(CMP_RECENT_KEY) || []).filter(function (p) { return p && p.id && String(p.id) !== base.id && !groups.some(function (g) { return g.ps.some(function (x) { return x.id === String(p.id); }); }); }).slice(0, 5);
-  if (recent.length) groups.push({ h: 'You compared recently', ps: recent });
-  window._cmpPickGroups = groups;
+  window._cmpPickList = _cmpPickGroups(base);
   var el = document.getElementById('cmp-pick');
   if (!el) {
     el = document.createElement('div');
@@ -151,11 +197,12 @@ function cmpPick() {
     el.addEventListener('click', function (e) { if (e.target === el) cmpPickClose(); });
     document.body.appendChild(el);
   }
+  var what = kind === 'pit' ? 'pitcher' : 'hitter';
   el.innerHTML = '<div class="cmp-pk"><div class="cmp-grab" aria-hidden="true"></div>' +
     '<div class="cmp-pk-hd"><h2 id="cmp-pick-t">Compare ' + _cmpE(_cmpLast(base.name)) + ' with…</h2><button type="button" class="cmp-x" aria-label="Close" onclick="cmpPickClose()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
-    '<label class="cmp-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="cmp-sr">Search MLB hitters</span>' +
-    '<input id="cmp-q" type="search" autocomplete="off" placeholder="Any MLB hitter" oninput="_cmpSearch(this.value)"></label>' +
-    '<div id="cmp-pick-res">' + _cmpGroupsHtml(groups) + '</div></div>';
+    '<label class="cmp-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="cmp-sr">Search MLB ' + what + 's</span>' +
+    '<input id="cmp-q" type="search" autocomplete="off" placeholder="Any ' + what + ', active or retired" oninput="_cmpSearch(this.value)"></label>' +
+    '<div id="cmp-pick-res">' + _cmpGroupsHtml(window._cmpPickList) + '</div></div>';
   el.style.display = 'flex';
   requestAnimationFrame(function () { el.classList.add('on'); });
 }
@@ -171,50 +218,59 @@ function _cmpSearch(q) {
   var res = document.getElementById('cmp-pick-res');
   if (!res) return;
   q = String(q || '').trim();
-  if (q.length < 2) { res.innerHTML = _cmpGroupsHtml(window._cmpPickGroups || []); return; }
+  if (q.length < 2) { res.innerHTML = _cmpGroupsHtml(window._cmpPickList || []); return; }
   window._cmpQT = setTimeout(function () {
     var want = q;
     res.innerHTML = '<div class="cmp-pk-empty">Searching…</div>';
-    fetch('/api/mlb?mode=search&q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/mlb?mode=search&all=1&q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
       var inp = document.getElementById('cmp-q');
       if (!inp || inp.value.trim() !== want) return;
-      var base = window._cmpBase || {};
-      var ps = ((d && d.players) || []).filter(function (p) { return p.pos !== 'P' && String(p.id) !== base.id; }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: _cmpTeam(p.teamId, p.team) }; });
-      res.innerHTML = ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB hitter by that name.</div>';
+      var base = window._cmpBase || {}, pit = base.kind === 'pit';
+      var ps = ((d && d.players) || []).filter(function (p) {
+        if (String(p.id) === base.id) return false;
+        return pit ? (p.pos === 'P' || p.pos === 'TWP') : p.pos !== 'P';
+      }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: _cmpTeam(p.teamId, p.team), active: p.active !== false, hof: !!p.hof, first: p.first, last: p.last }; });
+      res.innerHTML = ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB ' + (pit ? 'pitcher' : 'hitter') + ' by that name.</div>';
     }).catch(function () { res.innerHTML = '<div class="cmp-pk-empty">Couldn’t search right now. Try again in a moment.</div>'; });
   }, 250);
 }
 function cmpChoose(btn) {
   var base = window._cmpBase;
   if (!base || !btn) return;
-  var p = { id: btn.getAttribute('data-id'), name: btn.getAttribute('data-name'), pos: btn.getAttribute('data-pos') || null, team: btn.getAttribute('data-team') || null };
-  var rec = (_cmpLsGet(CMP_RECENT_KEY) || []).filter(function (x) { return x && String(x.id) !== p.id; });
+  var retired = btn.getAttribute('data-ret') === '1';
+  var p = { id: btn.getAttribute('data-id'), name: btn.getAttribute('data-name'), pos: btn.getAttribute('data-pos') || null, team: btn.getAttribute('data-team') || null, active: !retired };
+  var hof = !!btn.querySelector('.cmp-chip.hof');
+  if (hof) p.hof = true;
+  var key = CMP_RECENT_KEY[base.kind] || CMP_RECENT_KEY.bat;
+  var rec = (_cmpLsGet(key) || []).filter(function (x) { return x && String(x.id) !== p.id; });
   rec.unshift(p);
-  _cmpLsSet(CMP_RECENT_KEY, rec.slice(0, 8));
+  _cmpLsSet(key, rec.slice(0, 8));
   cmpPickClose();
-  cmpOpen({ id: base.id, name: base.name }, { id: p.id, name: p.name });
+  cmpOpen({ id: base.id, name: base.name }, { id: p.id, name: p.name }, base.kind, retired ? 'age' : null);
 }
 
 // ── 3 · The compare screen ────────────────────────────────────────────────
-function cmpOpen(a, b) {
+function cmpOpen(a, b, kind, view) {
   if (!a || !b || !a.id || !b.id) return;
   var prev = window._cmp;
-  window._cmp = { a: { id: String(a.id), name: a.name || '' }, b: { id: String(b.id), name: b.name || '' }, view: prev ? prev.view : 'basic', range: 'season' };
+  kind = kind === 'pit' ? 'pit' : 'bat';
+  window._cmp = { kind: kind, a: { id: String(a.id), name: a.name || '' }, b: { id: String(b.id), name: b.name || '' },
+    view: view || (prev && prev.kind === kind && prev.view !== 'age' ? prev.view : 'basic'), range: 'season', age: null, metric: null };
   var el = document.getElementById('cmp-screen');
   if (!el) {
     el = document.createElement('div');
     el.id = 'cmp-screen';
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Compare hitters');
     document.body.appendChild(el);
   }
+  el.setAttribute('aria-label', kind === 'pit' ? 'Compare pitchers' : 'Compare hitters');
   _cmpRender();
   el.style.display = 'block';
   el.scrollTop = 0;
   requestAnimationFrame(function () { el.classList.add('on'); });
 }
-function cmpOpenPair(aId, aName, bId, bName) { cmpOpen({ id: aId, name: aName }, { id: bId, name: bName }); }
+function cmpOpenPair(aId, aName, bId, bName, kind, view) { cmpOpen({ id: aId, name: aName }, { id: bId, name: bName }, kind, view || null); }
 function cmpClose() {
   var el = document.getElementById('cmp-screen');
   window._cmp = null;
@@ -224,66 +280,165 @@ function cmpClose() {
   window._cmpCloseT = setTimeout(function () { if (!window._cmp) { el.style.display = 'none'; el.innerHTML = ''; } }, 220);
 }
 function cmpSwap() { var S = window._cmp; if (!S) return; var t = S.a; S.a = S.b; S.b = t; _cmpRender(); }
-function cmpSet(k, v) { var S = window._cmp; if (!S) return; S[k] = v; if (k === 'view' && v === 'sc') S.range = 'season'; _cmpRender(); }
-
-var CMP_BASIC = [['BA', 'avg'], ['OBP', 'obp'], ['SLG', 'slg'], ['OPS', 'ops'], ['HR', 'hr'], ['RBI', 'rbi'], ['OPS+', 'opsPlus'], ['WAR', 'war']];
-// head-to-head bar scales for the windows with no league to rank against
-var CMP_SCALE = { avg: [.15, .35], obp: [.23, .45], slg: [.25, .65], ops: [.5, 1.1], opsPlus: [40, 200] };
-var CMP_SC = [['xwOBA', 'xwoba', 'xwoba'], ['Exit velo', 'exit_velocity', 'ev'], ['Hard-hit %', 'hard_hit_percent', 'hardHit'], ['Barrel %', 'brl_percent', 'barrel'],
-  ['Bat speed', 'bat_speed', 'batSpeed'], ['Chase %', 'chase_percent', 'chase'], ['Whiff %', 'whiff_percent', 'whiff'], ['K %', 'k_percent', 'k'], ['BB %', 'bb_percent', 'bb']];
-
-function _cmpFmtBasic(k, v) {
-  if (v == null || v === '') return null;
-  if (k === 'war') { var n = parseFloat(v); return isFinite(n) ? n.toFixed(1) : null; }
-  return String(v);
+function cmpSet(k, v) {
+  var S = window._cmp;
+  if (!S) return;
+  if (k === 'age') v = +v;
+  S[k] = v;
+  if (k === 'view' && v === 'sc') S.range = 'season';
+  _cmpRender();
 }
-function _cmpFmtSc(k, v) {
+
+// Basics rows: [label, key, lower-is-better]
+var CMP_BASIC = {
+  bat: [['BA', 'avg'], ['OBP', 'obp'], ['SLG', 'slg'], ['OPS', 'ops'], ['HR', 'hr'], ['RBI', 'rbi'], ['OPS+', 'opsPlus']],
+  pit: [['W-L', 'wl'], ['ERA', 'era', 1], ['WHIP', 'whip', 1], ['K', 'k'], ['IP', 'ip'], ['K/9', 'k9'], ['ERA+', 'eraPlus']]
+};
+// head-to-head bar scales (low end, high end) for windows with no league to rank against
+var CMP_SCALE = { avg: [.15, .35], obp: [.23, .45], slg: [.25, .65], ops: [.5, 1.1], opsPlus: [40, 200], era: [6.5, 1.5], whip: [1.8, .8], eraPlus: [50, 220], k9: [4, 13], wl: [.3, .75] };
+var CMP_SC = {
+  bat: [['xwOBA', 'xwoba', 'xwoba'], ['Exit velo', 'exit_velocity', 'ev'], ['Hard-hit %', 'hard_hit_percent', 'hardHit'], ['Barrel %', 'brl_percent', 'barrel'],
+    ['Bat speed', 'bat_speed', 'batSpeed'], ['Chase %', 'chase_percent', 'chase'], ['Whiff %', 'whiff_percent', 'whiff'], ['K %', 'k_percent', 'k'], ['BB %', 'bb_percent', 'bb']],
+  pit: [['xERA', 'xera'], ['Fastball velo', 'fb_velocity', 'fbVelo'], ['Fastball spin', 'fb_spin'], ['Whiff %', 'whiff_percent'], ['Chase %', 'chase_percent'],
+    ['K %', 'k_percent'], ['BB %', 'bb_percent'], ['Barrel % allowed', 'brl_percent'], ['Hard-hit % allowed', 'hard_hit_percent'], ['Extension', 'extension']]
+};
+// By age rows: [label, key, lower-is-better]
+var CMP_AGE = {
+  bat: [['G', 'g', 0, 1], ['H', 'h'], ['HR', 'hr'], ['RBI', 'rbi'], ['BA', 'avg'], ['OBP', 'obp'], ['SLG', 'slg'], ['OPS+', 'opsPlus'], ['Gold Gloves', 'gg']],
+  pit: [['G', 'g', 0, 1], ['GS', 'gs', 0, 1], ['W-L', 'wl'], ['ERA', 'era', 1], ['WHIP', 'whip', 1], ['IP', 'ip'], ['K', 'k'], ['ERA+', 'eraPlus'], ['SV', 'sv'], ['Gold Gloves', 'gg']]
+};
+var CMP_METRIC = { bat: [['h', 'Hits'], ['hr', 'HR'], ['rbi', 'RBI']], pit: [['k', 'K'], ['w', 'Wins'], ['ip', 'IP']] };
+
+function _cmpVal(line, k) {
+  if (!line) return null;
+  if (k === 'wl') return line.w != null && line.l != null ? line.w + '-' + line.l : null;
+  var v = line[k];
+  return v == null || v === '' ? null : v;
+}
+function _cmpNumOf(k, v) {
+  if (v == null) return NaN;
+  if (k === 'wl') { var p = String(v).split('-'), w = +p[0], l = +p[1]; return w + l ? w / (w + l) : NaN; }
+  if (k === 'ip') { var q = String(v).split('.'); return (+q[0] || 0) + (+q[1] || 0) / 3; }
+  return parseFloat(v);
+}
+function _cmpFmt(k, v) {
   if (v == null) return null;
-  if (k === 'xwoba') return v.toFixed(3).replace(/^0/, '');
-  return v.toFixed(1);
+  if (k === 'ip') return String(v).replace(/^(\d+)(\d{3})(?=\.|$)/, '$1,$2');
+  return typeof v === 'number' ? _cmpNum(v) : String(v);
 }
-// rows: [{ l, a, b, ap, bp, mode: 'pct'|'h2h', aw, bw, af, bf }]
-function _cmpBasicRows(A, B, range) {
+// one head-to-head row from two values
+function _cmpH2HRow(label, k, va, vb, lower, noWin) {
+  var na = _cmpNumOf(k, va), nb = _cmpNumOf(k, vb), sc = CMP_SCALE[k];
+  var f = function (n) {
+    if (!isFinite(n)) return 0;
+    if (sc) return Math.max(4, Math.min(100, (n - sc[0]) / (sc[1] - sc[0]) * 100));
+    var m = Math.max(isFinite(na) ? Math.abs(na) : 0, isFinite(nb) ? Math.abs(nb) : 0, 1);
+    return Math.max(4, Math.min(100, Math.max(0, n) / m * 100));
+  };
+  var both = isFinite(na) && isFinite(nb) && !noWin;
+  return { l: label, k: k, a: _cmpFmt(k, va), b: _cmpFmt(k, vb), mode: 'h2h', af: f(na), bf: f(nb),
+    aw: both && (lower ? na < nb : na > nb), bw: both && (lower ? nb < na : nb > na) };
+}
+function _cmpBasicRows(A, B, range, kind) {
   var la = A && A.lines && A.lines[range], lb = B && B.lines && B.lines[range];
   if (!la && !lb) return [];
-  return CMP_BASIC.filter(function (d) { return !(range === 'l15' && d[1] === 'war'); }).map(function (d) {
-    var k = d[1], va = la ? la[k] : null, vb = lb ? lb[k] : null;
-    var na = parseFloat(va), nb = parseFloat(vb);
+  return CMP_BASIC[kind].map(function (d) {
+    var k = d[1], va = _cmpVal(la, k), vb = _cmpVal(lb, k);
     var ap = range === 'season' && A.pct ? A.pct[k] : null, bp = range === 'season' && B.pct ? B.pct[k] : null;
-    var r = { l: d[0], k: k, a: _cmpFmtBasic(k, va), b: _cmpFmtBasic(k, vb) };
-    if (ap != null && bp != null) { r.mode = 'pct'; r.ap = ap; r.bp = bp; r.aw = ap > bp; r.bw = bp > ap; }
-    else {
-      r.mode = 'h2h';
-      var sc = CMP_SCALE[k], f = function (n) {
-        if (!isFinite(n)) return 0;
-        if (sc) return Math.max(4, Math.min(100, (n - sc[0]) / (sc[1] - sc[0]) * 100));
-        var m = Math.max(isFinite(na) ? Math.abs(na) : 0, isFinite(nb) ? Math.abs(nb) : 0, k === 'war' ? 1 : 1);
-        return Math.max(4, Math.min(100, Math.max(0, n) / m * 100));
-      };
-      r.af = f(na); r.bf = f(nb);
-      r.aw = isFinite(na) && isFinite(nb) && na > nb; r.bw = isFinite(na) && isFinite(nb) && nb > na;
-    }
-    return r;
+    if (ap != null && bp != null) return { l: d[0], k: k, a: _cmpFmt(k, va), b: _cmpFmt(k, vb), mode: 'pct', ap: ap, bp: bp, aw: ap > bp, bw: bp > ap };
+    return _cmpH2HRow(d[0], k, va, vb, !!d[2]);
   });
 }
-function _cmpScRows(SA, SB) {
+function _cmpFbVelo(S) {
+  var ars = (S && S.pitcher && S.pitcher.arsenal) || [], best = null;
+  ars.forEach(function (a) { if (/^(FF|SI|FC|FA|FT)$/.test(a.code || '') && a.mph != null && (!best || (a.usage || 0) > (best.usage || 0))) best = a; });
+  return best ? best.mph : null;
+}
+function _cmpScRows(SA, SB, kind) {
+  var side = kind === 'pit' ? 'pitcher' : 'batter';
   var pa = {}, pb = {};
-  ((SA && SA.batter && SA.batter.percentiles) || []).forEach(function (x) { pa[x.key] = x.pct; });
-  ((SB && SB.batter && SB.batter.percentiles) || []).forEach(function (x) { pb[x.key] = x.pct; });
-  var raw = function (S, k) { var b = S && S.batter; if (!b) return null; if (k === 'batSpeed') return b.avgBatSpeed != null ? b.avgBatSpeed : null; return b.raw ? b.raw[k] : null; };
-  return CMP_SC.map(function (d) {
+  ((SA && SA[side] && SA[side].percentiles) || []).forEach(function (x) { pa[x.key] = x.pct; });
+  ((SB && SB[side] && SB[side].percentiles) || []).forEach(function (x) { pb[x.key] = x.pct; });
+  var raw = function (S, k) {
+    if (!k || !S) return null;
+    if (kind === 'pit') return k === 'fbVelo' ? _cmpFbVelo(S) : null;
+    var b = S.batter; if (!b) return null;
+    if (k === 'batSpeed') return b.avgBatSpeed != null ? b.avgBatSpeed : null;
+    return b.raw ? b.raw[k] : null;
+  };
+  var fmt = function (k, v) { return v == null ? null : k === 'xwoba' ? v.toFixed(3).replace(/^0/, '') : v.toFixed(1); };
+  var ord = function (p) { return typeof _ordinalSuffix === 'function' ? _ordinalSuffix(p) : p + 'th'; };
+  return CMP_SC[kind].map(function (d) {
     var ap = pa[d[1]] != null ? Math.max(1, Math.min(99, Math.round(pa[d[1]]))) : null, bp = pb[d[1]] != null ? Math.max(1, Math.min(99, Math.round(pb[d[1]]))) : null;
-    var r = { l: d[0], k: d[2], a: _cmpFmtSc(d[2], raw(SA, d[2])), b: _cmpFmtSc(d[2], raw(SB, d[2])), mode: 'pct', ap: ap, bp: bp };
-    if (r.a == null && ap != null) r.a = ap + 'th';
-    if (r.b == null && bp != null) r.b = bp + 'th';
+    var xa = raw(SA, d[2]), xb = raw(SB, d[2]);
+    var r = { l: d[0], k: d[2] || d[1], a: fmt(d[2], xa), b: fmt(d[2], xb), mode: 'pct', ap: ap, bp: bp };
+    if (r.a == null && ap != null) r.a = ord(ap);
+    if (r.b == null && bp != null) r.b = ord(bp);
     if (ap != null && bp != null) { r.aw = ap > bp; r.bw = bp > ap; }
-    else {
+    else if (xa != null && xb != null && xa !== xb) {
       // no percentile for one of them (e.g. bat speed): the raw number decides; chase, whiff and K: lower is better
-      var xa = raw(SA, d[2]), xb = raw(SB, d[2]), lo = /^(chase|whiff|k)$/.test(d[2]);
-      if (xa != null && xb != null && xa !== xb) { r.aw = lo ? xa < xb : xa > xb; r.bw = !r.aw; }
+      var lo = /^(chase|whiff|k)$/.test(d[2]); r.aw = lo ? xa < xb : xa > xb; r.bw = !r.aw;
     }
     return r;
   }).filter(function (r) { return r.a != null || r.b != null; });
+}
+// By age: ages both players reached, newest last
+function _cmpCommonAges(A, B) {
+  var a = A && A.ages ? Object.keys(A.ages).map(Number) : [], b = B && B.ages ? B.ages : {};
+  return a.filter(function (x) { return b[x]; }).sort(function (x, y) { return x - y; });
+}
+function _cmpAgeRows(A, B, age, kind) {
+  var la = A.ages[age], lb = B.ages[age];
+  return CMP_AGE[kind].filter(function (d) {
+    if (d[1] === 'gg') return (la.gg || 0) + (lb.gg || 0) > 0;
+    if (d[1] === 'sv') return (la.sv || 0) + (lb.sv || 0) >= 20;
+    return true;
+  }).map(function (d) { return _cmpH2HRow(d[0], d[1], _cmpVal(la, d[1]), _cmpVal(lb, d[1]), !!d[2], !!d[3]); });
+}
+function _cmpMetricVal(line, m) { if (!line) return null; return m === 'ip' ? _cmpNumOf('ip', line.ip) : line[m]; }
+function _cmpChartHtml(A, B, age, kind, metric, nmA, nmB) {
+  var ka = Object.keys(A.ages).map(Number).sort(function (x, y) { return x - y; }), kb = Object.keys(B.ages).map(Number).sort(function (x, y) { return x - y; });
+  var lo = Math.min(ka[0], kb[0]), hi = Math.max(ka[ka.length - 1], kb[kb.length - 1]);
+  var max = 0;
+  ka.forEach(function (x) { max = Math.max(max, _cmpMetricVal(A.ages[x], metric) || 0); });
+  kb.forEach(function (x) { max = Math.max(max, _cmpMetricVal(B.ages[x], metric) || 0); });
+  var step = Math.pow(10, Math.floor(Math.log10(Math.max(max, 1)))), top = Math.ceil(Math.max(max, 1) / step) * step;
+  var W = 334, H = 132, L = 30, R = 326, T = 6, Bt = 114;
+  var X = function (x) { return L + (hi === lo ? 0 : (x - lo) / (hi - lo)) * (R - L); }, Y = function (v) { return Bt - (v || 0) / top * (Bt - T); };
+  var path = function (D, keys, from, to) {
+    var d = '';
+    keys.forEach(function (x) { if (x >= from && x <= to) d += (d ? ' L ' : 'M ') + X(x).toFixed(1) + ' ' + Y(_cmpMetricVal(D.ages[x], metric)).toFixed(1); });
+    return d;
+  };
+  var grid = [0, .5, 1].map(function (f) {
+    var v = top * f, y = Y(v).toFixed(1);
+    return '<line x1="' + L + '" y1="' + y + '" x2="' + R + '" y2="' + y + '" stroke="rgba(255,255,255,' + (f ? '.07' : '.18') + ')" stroke-width="1"/>' +
+      '<text x="' + (L - 6) + '" y="' + (+y + 3) + '" fill="#8A82D6" font-size="9" font-weight="700" text-anchor="end">' + _cmpE(_cmpNum(Math.round(v))) + '</text>';
+  }).join('');
+  var ticks = [], tstep = hi - lo > 12 ? 5 : hi - lo > 6 ? 2 : 1;
+  for (var t = Math.ceil(lo / tstep) * tstep; t <= hi; t += tstep) ticks.push('<text x="' + X(t).toFixed(1) + '" y="129" fill="#8A82D6" font-size="9" font-weight="700" text-anchor="middle">' + t + '</text>');
+  var sx = X(age).toFixed(1), ay = Y(_cmpMetricVal(A.ages[age], metric)), by = Y(_cmpMetricVal(B.ages[age], metric));
+  var label = 'Career ' + metric + ' by age. Through ' + age + ': ' + nmA + ' ' + _cmpNum(_cmpMetricVal(A.ages[age], metric) || 0) + ', ' + nmB + ' ' + _cmpNum(_cmpMetricVal(B.ages[age], metric) || 0) + '.';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + _cmpE(label) + '" style="display:block">' + grid + ticks.join('') +
+    '<line x1="' + sx + '" y1="4" x2="' + sx + '" y2="' + Bt + '" stroke="rgba(255,255,255,.35)" stroke-width="1" stroke-dasharray="3 3"/>' +
+    '<path d="' + path(B, kb, age, 99) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
+    '<path d="' + path(A, ka, age, 99) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2" stroke-dasharray="4 4" opacity=".55"/>' +
+    '<path d="' + path(B, kb, 0, age) + '" fill="none" stroke="' + CMP_COL.b + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="' + path(A, ka, 0, age) + '" fill="none" stroke="' + CMP_COL.a + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<rect x="' + (+sx - 4.5).toFixed(1) + '" y="' + (by - 4.5).toFixed(1) + '" width="9" height="9" rx="2" fill="' + CMP_COL.b + '" stroke="#140F33" stroke-width="2" transform="rotate(45 ' + sx + ' ' + by.toFixed(1) + ')"/>' +
+    '<circle cx="' + sx + '" cy="' + ay.toFixed(1) + '" r="5" fill="' + CMP_COL.a + '" stroke="#140F33" stroke-width="2"/></svg>';
+}
+function _cmpPace(A, B, age, metric, nmA, nmB, word) {
+  var va = _cmpMetricVal(A.ages[age], metric) || 0, vb = _cmpMetricVal(B.ages[age], metric) || 0;
+  var lastA = Math.max.apply(null, Object.keys(A.ages).map(Number)), lastB = Math.max.apply(null, Object.keys(B.ages).map(Number));
+  var fmt = function (n) { return metric === 'ip' ? _cmpNum(Math.round(n)) : _cmpNum(n); };
+  var diff = va - vb, s = 'Through ' + age + ', ';
+  s += Math.abs(diff) < (metric === 'ip' ? 1 : 1) ? nmA + ' and ' + nmB + ' are even in ' + word + '.' : nmA + (diff > 0 ? ' leads ' : ' trails ') + nmB + ' by ' + fmt(Math.abs(diff)) + ' ' + word + '.';
+  var more = function (D, last, nm, active) {
+    var add = (_cmpMetricVal(D.ages[last], metric) || 0) - (_cmpMetricVal(D.ages[age], metric) || 0);
+    return last > age ? ' ' + nm + ' added ' + fmt(Math.max(0, add)) + ' more after ' + age + (active ? ' so far.' : '.') : '';
+  };
+  return s + more(B, lastB, nmB, B.active !== false) + (lastA > age ? more(A, lastA, nmA, A.active !== false) : '');
 }
 function _cmpSideHtml(r, side) {
   var v = side === 'a' ? r.a : r.b, w = side === 'a' ? r.aw : r.bw;
@@ -303,73 +458,107 @@ function _cmpSideHtml(r, side) {
   }
   return '<div class="cmp-s ' + side + '">' + (side === 'a' ? val + trk : trk + val) + '</div>';
 }
-function _cmpHeadHtml(P, D, side, range) {
-  var meta = D ? [_cmpTeam(D.teamId, D.team), D.pos, D.age != null ? D.age : null].filter(function (x) { return x != null && x !== ''; }).join(' · ') : '';
-  var ln = D && D.lines && D.lines[range === 'sc' ? 'season' : range];
-  var slash = ln && ln.avg ? [ln.avg, ln.obp, ln.slg].join('/') : '';
+function _cmpHeadHtml(P, D, side, S, range) {
+  var meta;
+  if (D && D.active === false) meta = [D.hof ? 'HOF' : 'Retired', D.pos, _cmpYears(D.first, D.last)].filter(Boolean).join(' · ');
+  else meta = D ? [_cmpTeam(D.teamId, D.team), D.pos, D.age != null ? D.age : null].filter(function (x) { return x != null && x !== ''; }).join(' · ') : '';
+  var sub = '';
+  if (D && D.lines) {
+    var ln = D.lines[S.view === 'basic' ? range : D.active === false ? 'career' : 'season'] || D.lines.career;
+    if (ln) sub = S.kind === 'pit' ? (ln.w != null ? ln.w + '-' + ln.l + ' · ' + ln.era + ' ERA' : '') : (ln.avg ? [ln.avg, ln.obp, ln.slg].join('/') : '');
+  }
   return '<div class="cmp-hd ' + side + '"><span class="cmp-av ' + side + '">' + _cmpE(_cmpIni(P.name || (D && D.name))) + '</span>' +
     '<span class="cmp-nm">' + _cmpE(_cmpLast(P.name || (D && D.name) || '')) + '</span>' +
-    '<span class="cmp-meta">' + (meta ? _cmpE(meta) : '&nbsp;') + '</span><span class="cmp-sl">' + (slash ? _cmpE(slash) : '&nbsp;') + '</span></div>';
+    '<span class="cmp-meta">' + (meta ? _cmpE(meta) : '&nbsp;') + '</span><span class="cmp-sl">' + (sub ? _cmpE(sub) : '&nbsp;') + '</span></div>';
 }
-function _cmpSeg(label, items, cur, key) {
-  return '<div class="cmp-seg" role="tablist" aria-label="' + _cmpE(label) + '" style="grid-template-columns:repeat(' + items.length + ',minmax(0,1fr))">' + items.map(function (it) {
-    var on = it[0] === cur, dis = !!it[2];
+function _cmpSeg(label, items, cur, key, extra) {
+  return '<div class="cmp-seg' + (extra ? ' ' + extra : '') + '" role="tablist" aria-label="' + _cmpE(label) + '" style="grid-template-columns:repeat(' + items.length + ',minmax(0,1fr))">' + items.map(function (it) {
+    var on = String(it[0]) === String(cur), dis = !!it[2];
     return '<button type="button" role="tab" aria-selected="' + on + '"' + (dis ? ' aria-disabled="true" disabled' : '') + ' class="' + (on ? 'on' : '') + '" onclick="cmpSet(\'' + key + '\',\'' + it[0] + '\')">' + _cmpE(it[1]) + '</button>';
   }).join('') + '</div>';
 }
 function _cmpRender() {
   var S = window._cmp, el = document.getElementById('cmp-screen');
   if (!S || !el) return;
-  var A = _cmpData(S.a.id), B = _cmpData(S.b.id);
-  var sc = S.view === 'sc', range = sc ? 'season' : S.range;
-  var SA = sc ? _cmpSav(S.a.id) : null, SB = sc ? _cmpSav(S.b.id) : null;
+  var kind = S.kind, A = _cmpData(S.a.id, kind), B = _cmpData(S.b.id, kind);
+  var retired = (A && A.active === false) || (B && B.active === false);
+  if (retired && S.view === 'sc') S.view = 'age';
+  if (retired && S.view === 'basic') S.range = 'career';
+  var view = S.view, range = view === 'basic' ? S.range : 'season';
+  var SA = view === 'sc' ? _cmpSav(S.a.id) : null, SB = view === 'sc' ? _cmpSav(S.b.id) : null;
   var yr = (A && A.season) || (B && B.season) || new Date().getFullYear();
-  var rows = [], status = '';
-  if (sc) {
-    if (SA && SB) rows = _cmpScRows(SA, SB);
+  var nmA = _cmpLast(S.a.name || (A && A.name) || ''), nmB = _cmpLast(S.b.name || (B && B.name) || '');
+  var rows = [], status = '', ageHtml = '', hdL = '', key = '', label = '', ageNotes = [];
+  var keyHtml = '<span class="cmp-lg cmp-key"><i class="a"></i>' + _cmpE(nmA) + '<i class="b"></i>' + _cmpE(nmB) + '</span>';
+  var pctKey = '<span class="cmp-lg">BETTER →<i></i></span>';
+  var loadFail = (!A && _cmpFailed('cmp', _cmpKey(S.a.id, kind))) || (!B && _cmpFailed('cmp', _cmpKey(S.b.id, kind)));
+  if (view === 'sc') {
+    if (SA && SB) rows = _cmpScRows(SA, SB, kind);
     else if (_cmpFailed('player', S.a.id) || _cmpFailed('player', S.b.id)) status = 'Couldn’t reach Baseball Savant right now. Try again in a minute.';
-    if ((SA && SA.partial) || (SB && SB.partial)) status = status || 'Still loading some of it…';
+    hdL = 'PCTL VS MLB · ' + yr; key = pctKey; label = yr + ' Statcast';
+  } else if (view === 'age') {
+    if (A && B) {
+      var common = _cmpCommonAges(A, B);
+      if (!A.ages || !B.ages) status = 'Still adding up their careers. One moment…';
+      else if (!common.length) status = 'These two never played in the majors at the same age.';
+      else {
+        var age = S.age && common.indexOf(S.age) !== -1 ? S.age : common[common.length - 1];
+        S.age = age;
+        var metrics = CMP_METRIC[kind], metric = S.metric && metrics.some(function (m) { return m[0] === S.metric; }) ? S.metric : metrics[0][0];
+        var mWord = { h: 'hits', hr: 'homers', rbi: 'RBI', k: 'strikeouts', w: 'wins', ip: 'innings' }[metric];
+        rows = _cmpAgeRows(A, B, age, kind);
+        var chips = common.slice(-8);
+        ageHtml = '<div class="cmp-panel cmp-chart"><div class="cmp-ph"><span>CAREER ' + _cmpE(mWord.toUpperCase()) + ' BY AGE</span><span class="cmp-dash">DASHED · WHAT CAME NEXT</span></div>' +
+          _cmpChartHtml(A, B, age, kind, metric, nmA, nmB) + _cmpSeg('Chart', metrics, metric, 'metric', 'cmp-mini') + '</div>' +
+          '<div class="cmp-ages"><span class="cmp-eb">THROUGH AGE</span>' + _cmpSeg('Age', chips.map(function (x) { return [x, String(x)]; }), age, 'age', 'cmp-agechips') + '</div>';
+        ageNotes.push(_cmpPace(A, B, age, metric, nmA, nmB, mWord));
+        hdL = 'THROUGH AGE ' + age; key = keyHtml; label = 'Through age ' + age;
+      }
+    }
   } else {
-    if (A && B) rows = _cmpBasicRows(A, B, range);
-    else if (_cmpFailed('cmp', S.a.id) || _cmpFailed('cmp', S.b.id)) status = 'Couldn’t reach MLB stats right now. Try again in a minute.';
+    if (A && B) rows = _cmpBasicRows(A, B, range, kind);
+    var anyPctB = rows.some(function (r) { return r.mode === 'pct'; });
+    hdL = anyPctB ? 'PCTL VS QUALIFIED ' + (kind === 'pit' ? 'PITCHERS' : 'HITTERS') : 'HEAD TO HEAD'; key = anyPctB ? pctKey : keyHtml;
+    label = { season: yr + ' basics', recent: kind === 'pit' ? 'Last 5 games' : 'Last 15 games', career: 'Career' }[range];
   }
+  if (loadFail) status = 'Couldn’t reach MLB stats right now. Try again in a minute.';
   var loading = !rows.length && !status;
-  var anyPct = rows.some(function (r) { return r.mode === 'pct'; });
-  var hdL = sc ? 'PCTL VS MLB · ' + yr : anyPct ? 'PCTL VS QUALIFIED HITTERS' : 'HEAD TO HEAD';
   var body;
-  if (loading) body = new Array(sc ? 10 : 9).join('<div class="cmp-r cmp-sk" aria-hidden="true"><div class="cmp-s a"><span class="cmp-t a"></span></div><div class="cmp-l"></div><div class="cmp-s b"><span class="cmp-t b"></span></div></div>');
-  else if (!rows.length) body = '<div class="cmp-msg">' + _cmpE(status || 'No ' + (range === 'l15' ? 'games in this window' : 'numbers') + ' for these two yet.') + '</div>';
+  if (loading) body = new Array(9).join('<div class="cmp-r cmp-sk" aria-hidden="true"><div class="cmp-s a"><span class="cmp-t a"></span></div><div class="cmp-l"></div><div class="cmp-s b"><span class="cmp-t b"></span></div></div>');
+  else if (!rows.length) body = '<div class="cmp-msg">' + _cmpE(status || 'No ' + (range === 'recent' ? 'games in this window' : 'numbers') + ' for these two yet.') + '</div>';
   else body = rows.map(function (r) { return '<div class="cmp-r">' + _cmpSideHtml(r, 'a') + '<div class="cmp-l">' + _cmpE(r.l) + '</div>' + _cmpSideHtml(r, 'b') + '</div>'; }).join('');
   var aw = 0, bw = 0;
   rows.forEach(function (r) { if (r.aw) aw++; if (r.bw) bw++; });
-  var nmA = _cmpLast(S.a.name || (A && A.name) || ''), nmB = _cmpLast(S.b.name || (B && B.name) || '');
-  var edge = loading ? 'Loading…' : !rows.length ? '—' : aw > bw ? nmA + ' wins ' + aw + ' of ' + rows.length : bw > aw ? nmB + ' wins ' + bw + ' of ' + rows.length : 'Dead even, ' + aw + '–' + bw;
-  var pips = rows.map(function (r) { return '<i style="background:' + (r.aw ? CMP_COL.a : r.bw ? CMP_COL.b : 'rgba(168,159,232,.25)') + '"></i>'; }).join('');
-  var rangeLabel = { season: yr + ' basics', l15: 'Last 15 games', career: 'Career' }[range];
-  var label = sc ? yr + ' Statcast' : rangeLabel;
-  var pick = (sc ? ['xwOBA', 'Exit velo', 'Barrel %', 'Chase %'] : ['OPS', 'HR', 'OPS+', 'WAR']);
+  var scored = rows.filter(function (r) { return r.l !== 'G' && r.l !== 'GS'; }).length;
+  var edge = loading ? 'Loading…' : !rows.length ? '—' : aw > bw ? nmA + ' wins ' + aw + ' of ' + scored : bw > aw ? nmB + ' wins ' + bw + ' of ' + scored : 'Dead even, ' + aw + '–' + bw;
+  var pips = rows.filter(function (r) { return r.l !== 'G' && r.l !== 'GS'; }).map(function (r) { return '<i style="background:' + (r.aw ? CMP_COL.a : r.bw ? CMP_COL.b : 'rgba(168,159,232,.25)') + '"></i>'; }).join('');
+  var pick = view === 'sc' ? (kind === 'pit' ? ['xERA', 'Fastball velo', 'Whiff %', 'K %'] : ['xwOBA', 'Exit velo', 'Barrel %', 'Chase %'])
+    : view === 'age' ? (kind === 'pit' ? ['W-L', 'ERA', 'K', 'ERA+'] : ['H', 'HR', 'OPS+'])
+    : (kind === 'pit' ? ['W-L', 'ERA', 'K', 'ERA+'] : ['OPS', 'HR', 'OPS+']);
   var bits = rows.filter(function (r) { return pick.indexOf(r.l) !== -1 && r.a != null && r.b != null; }).map(function (r) { return r.l + ' ' + r.a + '–' + r.b; });
   window._cmpShare = rows.length ? { label: label, text: [edge].concat(bits).join(' · ') } : null;
   var notes = [];
-  if (!sc && range === 'career' && A && B) {
+  if (view === 'basic' && range === 'career' && A && B) {
     var ca = A.lines && A.lines.career, cb = B.lines && B.lines.career;
-    if (ca && cb) notes.push(nmA + ': ' + ca.g + ' G' + (ca.seasons ? ', ' + ca.seasons + ' seasons' : '') + ' · ' + nmB + ': ' + cb.g + ' G' + (cb.seasons ? ', ' + cb.seasons + ' seasons' : ''));
+    if (ca && cb) notes.push(nmA + ': ' + _cmpNum(ca.g) + ' G' + (ca.seasons ? ', ' + ca.seasons + ' seasons' : '') + ' · ' + nmB + ': ' + _cmpNum(cb.g) + ' G' + (cb.seasons ? ', ' + cb.seasons + ' seasons' : ''));
   }
-  if (!sc && range === 'l15' && A && B) {
-    var xa = A.lines && A.lines.l15, xb = B.lines && B.lines.l15;
-    if (xa && xb) notes.push(nmA + ': ' + xa.pa + ' PA · ' + nmB + ': ' + xb.pa + ' PA');
+  if (view === 'basic' && range === 'recent' && A && B) {
+    var xa = A.lines && A.lines.recent, xb = B.lines && B.lines.recent;
+    if (xa && xb) notes.push(kind === 'pit' ? nmA + ': ' + xa.ip + ' IP · ' + nmB + ': ' + xb.ip + ' IP' : nmA + ': ' + xa.pa + ' PA · ' + nmB + ': ' + xb.pa + ' PA');
   }
-  if (!sc && rows.length) notes.push('OPS+ is league-adjusted, not park-adjusted. WAR is MLB’s.');
-  if (sc && rows.length) notes.push('Raw numbers from every pitch he’s seen this season; percentiles are Baseball Savant’s.');
+  if (view !== 'sc' && rows.length) notes.push((kind === 'pit' ? 'ERA+' : 'OPS+') + ' is league-adjusted, not park-adjusted.' + (view === 'age' ? ' Ages are as of June 30 each season.' : ''));
+  if (view === 'sc' && rows.length) notes.push(kind === 'pit' ? 'Percentiles are Baseball Savant’s; fastball velo is his most-used fastball.' : 'Raw numbers from every pitch he’s seen this season; percentiles are Baseball Savant’s.');
   if (status && rows.length) notes.push(status);
   var inGame = typeof _sqInGame === 'function' && _sqInGame();
+  var tabs = _cmpSeg('View', [['basic', retired ? 'Career' : 'Basics'], ['sc', 'Statcast', retired], ['age', 'By age']], view, 'view');
+  var ranges = view === 'basic' && !retired ? _cmpSeg('Range', [['season', String(yr)], ['recent', kind === 'pit' ? 'L5' : 'L15'], ['career', 'Career']], range, 'range') : '';
   el.innerHTML = '<div class="cmp-in">' +
     '<div class="cmp-top"><button type="button" class="cmp-ib" aria-label="Back" onclick="cmpClose()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<span class="cmp-ttl">COMPARE HITTERS</span><button type="button" class="cmp-ib" aria-label="Swap sides" onclick="cmpSwap()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg></button></div>' +
-    '<div class="cmp-heads">' + _cmpHeadHtml(S.a, A, 'a', range) + '<span class="cmp-vs">VS</span>' + _cmpHeadHtml(S.b, B, 'b', range) + '</div>' +
-    '<div class="cmp-tabs">' + _cmpSeg('Stat set', [['basic', 'Basics'], ['sc', 'Statcast']], S.view, 'view') +
-    _cmpSeg('Range', [['season', String(yr)], ['l15', 'L15', sc], ['career', 'Career', sc]], range, 'range') + '</div>' +
-    '<div class="cmp-panel"><div class="cmp-ph"><span>' + _cmpE(hdL) + '</span>' + (sc || anyPct ? '<span class="cmp-lg">BETTER →<i></i></span>' : '<span class="cmp-lg cmp-key"><i class="a"></i>' + _cmpE(nmA) + '<i class="b"></i>' + _cmpE(nmB) + '</span>') + '</div>' + body + '</div>' +
+    '<span class="cmp-ttl">' + (kind === 'pit' ? 'COMPARE PITCHERS' : 'COMPARE HITTERS') + '</span><button type="button" class="cmp-ib" aria-label="Swap sides" onclick="cmpSwap()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg></button></div>' +
+    '<div class="cmp-heads">' + _cmpHeadHtml(S.a, A, 'a', S, range) + '<span class="cmp-vs">VS</span>' + _cmpHeadHtml(S.b, B, 'b', S, range) + '</div>' +
+    '<div class="cmp-tabs">' + tabs + ranges + '</div>' + ageHtml +
+    '<div class="cmp-panel"><div class="cmp-ph"><span>' + _cmpE(hdL || (view === 'age' ? 'BY AGE' : '')) + '</span>' + (rows.length ? key : '') + '</div>' + body + '</div>' +
+    (ageNotes.length ? '<div class="cmp-pace"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span>' + _cmpE(ageNotes[0]) + '</span></div>' : '') +
     '<div class="cmp-edge"><div><span class="cmp-eb">EDGE</span><b>' + _cmpE(edge) + '</b></div><span class="cmp-pips" aria-hidden="true">' + pips + '</span></div>' +
     (inGame && rows.length ? '<button type="button" class="cmp-share" onclick="cmpShare()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Share in chat</button>' : '') +
     (notes.length ? '<div class="cmp-notes">' + notes.map(function (n) { return '<p>' + _cmpE(n) + '</p>'; }).join('') + '</div>' : '') +
@@ -377,8 +566,8 @@ function _cmpRender() {
   // the player sheet may have started a Savant call this screen didn't, so
   // its arrival won't ping us: look again shortly while anything is missing
   clearTimeout(window._cmpPoll);
-  var waiting = function (bucket, id, d) { return !d && !_cmpFailed(bucket, id); };
-  if (loading || waiting('cmp', S.a.id, A) || waiting('cmp', S.b.id, B)) window._cmpPoll = setTimeout(_cmpRefresh, 1500);
+  var waiting = function (d, key) { return !d && !_cmpFailed('cmp', key); };
+  if (loading || waiting(A, _cmpKey(S.a.id, kind)) || waiting(B, _cmpKey(S.b.id, kind))) window._cmpPoll = setTimeout(_cmpRefresh, 1500);
 }
 
 // ── 4 · Share in the game chat ───────────────────────────────────────────
@@ -386,7 +575,7 @@ function cmpShare() {
   var S = window._cmp, q = window._cmpShare;
   if (!S || !q) return;
   var who = _cmpLast(S.a.name) + ' vs ' + _cmpLast(S.b.name);
-  var pair = { a: { id: S.a.id, name: S.a.name }, b: { id: S.b.id, name: S.b.name } };
+  var pair = { a: { id: S.a.id, name: S.a.name }, b: { id: S.b.id, name: S.b.name }, kind: S.kind, view: S.view };
   cmpClose();
   cmpPickClose();
   if (typeof closePlayerLinkSheet === 'function') closePlayerLinkSheet();
@@ -403,7 +592,7 @@ function cmpShare() {
     var st = rt && rt.stat, c = st && st.cmp;
     if (!c || !c.a || !c.b || !c.a.id || !c.b.id) return prev.apply(this, arguments);
     var bd = mine ? 'rgba(255,255,255,0.45)' : 'rgba(232,199,102,.65)';
-    return '<button class="gc-pq gc-sq' + (mine ? ' me' : '') + '" data-a="' + _cmpE(c.a.id) + '" data-an="' + _cmpE(c.a.name || '') + '" data-b="' + _cmpE(c.b.id) + '" data-bn="' + _cmpE(c.b.name || '') + '" onclick="event.stopPropagation();cmpOpenPair(this.dataset.a,this.dataset.an,this.dataset.b,this.dataset.bn)" style="border-left-color:' + bd + '">' +
+    return '<button class="gc-pq gc-sq' + (mine ? ' me' : '') + '" data-a="' + _cmpE(c.a.id) + '" data-an="' + _cmpE(c.a.name || '') + '" data-b="' + _cmpE(c.b.id) + '" data-bn="' + _cmpE(c.b.name || '') + '" data-k="' + _cmpE(c.kind || 'bat') + '" data-v="' + _cmpE(c.view || '') + '" onclick="event.stopPropagation();cmpOpenPair(this.dataset.a,this.dataset.an,this.dataset.b,this.dataset.bn,this.dataset.k,this.dataset.v)" style="border-left-color:' + bd + '">' +
       '<span class="gc-pq-hd"><span>' + _cmpE([st.player, st.label].filter(Boolean).join(' · ')) + '</span><span class="gc-pq-go">Compare ›</span></span>' +
       '<span class="gc-pq-tx">' + _cmpE(st.text || rt.text || '') + '</span></button>';
   };
