@@ -465,8 +465,9 @@ function _renderFriendChips(containerEl, uids, dark) {
     containerEl.innerHTML = docs.map(function(doc){
       var d = doc.data() || {};
       var nm = d.name || 'Innings User';
+      var dot = typeof ipDotHtml === 'function' ? ipDotHtml(d, 14) : '';
       return '<div onclick="openUserProfile(\'' + doc.id + '\')" style="display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;cursor:pointer">' +
-        '<div style="width:48px;height:48px;border-radius:50%;background:' + avBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + avColor + '">' + _escapeHtml(_initialsFallback(nm)) + '</div>' +
+        '<div class="ip-chip-av" style="position:relative;width:48px;height:48px;border-radius:50%;background:' + avBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:' + avColor + '">' + _escapeHtml(_initialsFallback(nm)) + dot + '</div>' +
         '<div style="font-size:11px;font-weight:600;color:' + nameColor + ';text-align:center;line-height:1.3">' + _escapeHtml(nm.split(' ')[0]) + '</div>' +
       '</div>';
     }).join('');
@@ -500,6 +501,7 @@ function loadMyFriendsList() {
     if (emptyEl) emptyEl.style.display = uids.length ? 'none' : 'block';
     window._myFriendUids = uids;
     _renderFriendChips(listEl, uids, true);
+    if (typeof ipRenderPulse === 'function') ipRenderPulse(uids);
   }).catch(function(err){
     console.error('Load my friends error:', err);
   });

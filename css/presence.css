@@ -1,0 +1,52 @@
+/* ══ ACTIVITY DOTS + INNINGS PULSE + WHAT'S NEW (v7.75.0) ══════════════ */
+
+/* ── dots: shape AND color differ, so they read without color too ── */
+.ip-dot{position:absolute;right:-2px;bottom:-2px;box-sizing:border-box;border-radius:50%;box-shadow:0 0 0 2px #09061A;pointer-events:none}
+.ip-dot.ip-now{background:#34D399}
+.ip-dot.ip-today{background:#A89FE8}
+.ip-dot.ip-week{background:transparent;border:2.5px solid rgba(244,242,255,.6);box-shadow:0 0 0 2px #09061A,inset 0 0 0 1px #09061A}
+
+/* ── Innings Pulse card (top of Friends, admin only) ── */
+.ip-card{border-radius:26px;padding:18px;background:linear-gradient(160deg,rgba(61,53,128,.55),rgba(26,22,64,.75));border:1px solid rgba(168,159,232,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 20px 40px rgba(0,0,0,.25);color:#F4F2FF}
+.ip-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.ip-hd b{display:block;font-size:17px;font-weight:700;letter-spacing:-.2px}
+.ip-hd small{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;font-weight:600;color:rgba(244,242,255,.7)}
+.ip-pill{font-size:11px;font-weight:800;letter-spacing:.04em;color:#0B0718;background:#CFC7FF;border-radius:999px;padding:4px 10px}
+.ip-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.ip-tile{border-radius:16px;padding:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;gap:2px}
+.ip-tile b{font-size:30px;line-height:1}
+.ip-tile span{font-size:12px;font-weight:600;color:rgba(244,242,255,.72)}
+.ip-sub{font-size:12px;font-weight:600;color:rgba(244,242,255,.7);margin-bottom:8px;line-height:1.45}
+.ip-sub code{font-size:11px}
+.ip-bars{display:flex;align-items:flex-end;gap:8px;height:66px}
+.ip-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%}
+.ip-bar i{display:block;width:100%;max-width:30px;border-radius:5px;background:#CFC7FF}
+.ip-bar span{font-size:11px;font-weight:600;color:rgba(244,242,255,.6)}
+.ip-list{border-radius:16px;background:rgba(9,6,26,.35);overflow:hidden}
+
+/* rows (Pulse list + What's new preview) */
+.ip-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.ip-row:last-child{border-bottom:0}
+.ip-av{position:relative;width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(168,159,232,.18);color:#CFC7FF;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ip-nm{flex:1;min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ip-when{font-size:12.5px;font-weight:600;color:rgba(244,242,255,.62);flex-shrink:0}
+.ip-w-now{color:#6EE7B7}
+.ip-w-today{color:#CFC7FF}
+
+/* ── What's new: one-time load-in ── */
+#ip-wn{position:fixed;inset:0;z-index:9000;background:#1A1640;color:#F4F2FF;display:flex;justify-content:center;overflow-y:auto;opacity:0;transform:translateY(16px);transition:opacity .26s ease,transform .26s ease;-webkit-font-smoothing:antialiased}
+#ip-wn.on{opacity:1;transform:none}
+.ip-wn-in{width:100%;max-width:440px;box-sizing:border-box;padding:calc(env(safe-area-inset-top,20px) + 40px) 24px calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;flex-direction:column;gap:18px;min-height:100%}
+.ip-wn-tag{align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:.08em;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 12px}
+#ip-wn h2{margin:0;font-size:32px;font-weight:700;letter-spacing:-.8px;line-height:1.1}
+#ip-wn p{margin:-6px 0 0;font-size:16px;line-height:1.45;color:rgba(244,242,255,.78)}
+.ip-wn-prev{border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.ip-wn-prev .ip-dot{box-shadow:0 0 0 2px #221D52}
+.ip-wn-items{display:flex;flex-direction:column;gap:16px;flex:1}
+.ip-wn-it{display:flex;gap:14px;align-items:flex-start}
+.ip-wn-ic{width:40px;height:40px;flex-shrink:0;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center}
+.ip-wn-it b{display:block;font-size:16px;font-weight:700}
+.ip-wn-it small{display:block;margin-top:3px;font-size:14px;line-height:1.4;color:rgba(244,242,255,.74)}
+.ip-wn-ok{min-height:52px;border:0;border-radius:26px;background:#F4F2FF;color:#0B0718;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
+.ip-wn-ok:active{transform:scale(.985)}
+@media (prefers-reduced-motion:reduce){#ip-wn{transition:none;transform:none}}
