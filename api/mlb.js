@@ -420,11 +420,11 @@ module.exports = async function handler(req, res) {
           if (!p && !r) return null;
           const active = p ? p.active !== false : false, t = (p && p.currentTeam) || {};
           return {
-            id: +id, name: (p && p.fullName) || r[1], pos: (p && p.primaryPosition && p.primaryPosition.abbreviation) || null,
+            id: +id, name: (p && p.fullName) || r[1], pos: _cmpPos(p),
             team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, league: 'mlb', active: active,
             first: p && p.mlbDebutDate ? +String(p.mlbDebutDate).slice(0, 4) : (r ? r[2] : null),
             last: active ? null : (p && p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : (r ? r[3] : null)),
-            hof: !!(p && (p.awards || []).some(a => /hall of fame/i.test(a.name || '') || a.id === 'MLBHOF'))
+            hof: !!(p && _cmpIsHof(p.awards))
           };
         }).filter(Boolean);
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
@@ -448,7 +448,7 @@ module.exports = async function handler(req, res) {
           if (!out.active) { out.team = null; out.teamId = null; }
           out.first = p.mlbDebutDate ? +String(p.mlbDebutDate).slice(0, 4) : null;
           out.last = !out.active && p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : null;
-          out.hof = (p.awards || []).some(function (a) { return /hall of fame/i.test(a.name || '') || a.id === 'MLBHOF'; });
+          out.hof = _cmpIsHof(p.awards);
         }
         return out;
       });
@@ -1059,6 +1059,13 @@ async function _regSeason(ids, season) {
   }
   return out;
 }
+// v7.78.3: only the National Baseball Hall of Fame counts — not a team's
+// own hall or wall of fame (Buster Posey isn't in Cooperstown yet).
+function _cmpIsHof(awards) {
+  return (awards || []).some(a => a && (a.id === 'MLBHOF' || /^(the )?(national )?(baseball )?hall of fame( inductee)?$/i.test(String(a.name || '').trim())));
+}
+// MLB files some Negro Leagues players under position "X" (unknown)
+function _cmpPos(p) { const v = p && p.primaryPosition && p.primaryPosition.abbreviation; return v && v !== 'X' ? v : null; }
 // ── v7.78.1: every MLB player ever, for the compare picker's search ──
 // data/mlb-players.json is a static file (Chadwick Bureau register, see
 // data/README.md), fetched from this deployment once per instance — not
@@ -1248,7 +1255,7 @@ async function _cmpPlayer(id, yr, group) {
   const years = [p.mlbDebutDate, p.lastPlayedDate].map(d => d ? +String(d).slice(0, 4) : null);
   return { id: p.id, name: p.fullName || null, group: group, age: p.currentAge != null ? p.currentAge : null, birthDate: p.birthDate || null,
     pos: (p.primaryPosition && p.primaryPosition.abbreviation) || null, bats: (p.batSide && p.batSide.code) || null, throws: (p.pitchHand && p.pitchHand.code) || null,
-    team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, active: active, hof: awards.some(a => /hall of fame/i.test(a.name || '') || a.id === 'MLBHOF'),
+    team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, active: active, hof: _cmpIsHof(awards),
     first: years[0], last: active ? null : years[1], season: yr, lines: lines, pct: pct, ages: ages ? ages.ages : null,
     partial: !ages || ages.complete === false };
 }
