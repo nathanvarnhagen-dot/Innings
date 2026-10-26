@@ -158,20 +158,22 @@
   // ── 3. What's new ───────────────────────────────────────────────────────
   // Edit this block for the next bigger build. Bump id → it shows again once.
   var WHATS_NEW = {
-    id: 'v7.75.0',
-    title: 'See who’s around',
-    sub: 'A dot next to a friend’s name now shows when they were last on Innings.',
-    preview: true,
-    items: function (admin) {
+    id: 'v7.76.0',
+    title: 'Compare any two hitters',
+    sub: 'Put two hitters side by side: the basics, OPS+ and WAR, or their Statcast.',
+    preview: false,
+    items: function () {
       return [
-        { icon: 'friends', title: 'Friends see your dot', body: 'Active now, today, or this week. Never exact times.' },
-        admin
-          ? { icon: 'lock', title: 'Only you see weekly usage', body: 'Innings Pulse is at the top of your Friends tab. Messages are never tracked.' }
-          : { icon: 'lock', title: 'Only Nathan sees weekly usage', body: 'He uses it to see what’s working in the app. Your messages are never tracked.' }
+        { icon: 'compare', title: 'Tap a hitter, then Compare', body: 'Pick someone at his position in this game, either lineup, or search any MLB hitter.' },
+        { icon: 'bars', title: 'Basics or Statcast', body: 'This season, his last 15 games or his career. Bars show where each one ranks in MLB.' },
+        { icon: 'chat', title: 'Settle it in the chat', body: 'Share a comparison in the game chat. Friends tap it to see the whole thing.' }
       ];
     }
   };
   var ICONS = {
+    compare: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M16 4v16M4 9h8M12 15h8"/></svg>',
+    bars: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M4 8h8M12 12h7M6 16h6"/></svg>',
+    chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
     friends: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.4 0 4 1.6 4.5 4.5"/></svg>',
     lock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
   };

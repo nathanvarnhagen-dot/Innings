@@ -1,0 +1,86 @@
+/* ═══ COMPARE TWO HITTERS (v7.76.0) — js/games/compare.js ═══
+   Button on the player sheet → picker sheet → full-screen head to head.
+   Player A lavender, player B gold, Savant's blue→grey→red percentile scale. */
+.cmp-open{width:100%;min-height:44px;margin:10px 0 2px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:1px solid rgba(168,159,232,.4);background:rgba(168,159,232,.12);color:#E9E5FF;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.cmp-open:active{background:rgba(168,159,232,.22)}
+.cmp-open:focus-visible,.cmp-pr:focus-visible,.cmp-seg button:focus-visible,.cmp-ib:focus-visible,.cmp-share:focus-visible,.cmp-x:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.cmp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* picker */
+#cmp-pick{display:none;position:fixed;inset:0;z-index:200;background:rgba(5,3,15,0);align-items:flex-end;justify-content:center;transition:background .22s ease}
+#cmp-pick.on{background:rgba(5,3,15,.55)}
+.cmp-pk{width:100%;max-width:430px;box-sizing:border-box;max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;background:#17123A;border-top:1px solid rgba(168,159,232,.3);padding:10px 16px calc(env(safe-area-inset-bottom,16px) + 18px);display:flex;flex-direction:column;gap:12px;transform:translateY(100%);transition:transform .26s cubic-bezier(.22,1,.36,1)}
+#cmp-pick.on .cmp-pk{transform:none}
+.cmp-grab{width:40px;height:5px;border-radius:3px;background:rgba(168,159,232,.35);align-self:center}
+.cmp-pk-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cmp-pk-hd h2{margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;color:#fff;line-height:1.1}
+.cmp-x{flex:none;width:44px;height:44px;border-radius:22px;border:1px solid rgba(168,159,232,.22);background:rgba(168,159,232,.08);color:#E9E5FF;display:grid;place-items:center;cursor:pointer}
+.cmp-q{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:12px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.22);color:#9C95D0}
+.cmp-q input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#E9E5FF;font-family:inherit;font-size:16px}
+.cmp-q input::placeholder{color:#8A82D6}
+.cmp-q:focus-within{border-color:#A89FE8}
+.cmp-pg{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.cmp-eb{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9C95D0;margin:2px 0 4px}
+.cmp-pr{display:grid;grid-template-columns:34px minmax(0,1fr) 14px;align-items:center;gap:10px;min-height:50px;padding:0 10px;border-radius:12px;border:0;background:rgba(168,159,232,.06);color:#9C95D0;font-family:inherit;text-align:left;cursor:pointer}
+.cmp-pr:active{background:rgba(168,159,232,.16)}
+.cmp-pr .cmp-av{width:34px;height:34px;font-size:11px;border-width:0;background:#2A2360;color:#C9C2F5}
+.cmp-pn{min-width:0;display:flex;flex-direction:column}
+.cmp-pn b{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-pn small{font-size:11px;font-weight:600;color:#9C95D0}
+.cmp-pk-empty{font-size:12.5px;color:#9C95D0;padding:14px 4px}
+
+/* compare screen */
+#cmp-screen{display:none;position:fixed;inset:0;z-index:210;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(120% 60% at 50% 0%,#2A2366 0%,#140F33 55%,#0D0820 100%) #0D0820;color:#E9E5FF;opacity:0;transform:translateX(24px);transition:opacity .22s ease,transform .26s cubic-bezier(.22,1,.36,1)}
+#cmp-screen.on{opacity:1;transform:none}
+.cmp-in{max-width:430px;margin:0 auto;box-sizing:border-box;padding:calc(env(safe-area-inset-top,20px) + 10px) 16px calc(env(safe-area-inset-bottom,16px) + 24px);display:flex;flex-direction:column;gap:12px}
+.cmp-top{display:flex;align-items:center;justify-content:space-between}
+.cmp-ib{width:44px;height:44px;border-radius:22px;border:1px solid rgba(168,159,232,.22);background:rgba(168,159,232,.08);color:#E9E5FF;display:grid;place-items:center;cursor:pointer}
+.cmp-ttl{font-size:11px;font-weight:800;letter-spacing:.16em;color:#B9B3E6}
+.cmp-heads{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);align-items:end}
+.cmp-hd{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cmp-hd.b{align-items:flex-end;text-align:right}
+.cmp-av{width:46px;height:46px;border-radius:23px;box-sizing:border-box;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+.cmp-av.a{background:#2E2770;border:2px solid #A89FE8;color:#E9E5FF}
+.cmp-av.b{background:#3A2F14;border:2px solid #F2C869;color:#FFF4D6}
+.cmp-nm{font-family:'Instrument Serif',serif;font-size:25px;line-height:1.05;color:#fff;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-meta{font-size:11px;font-weight:700;letter-spacing:.04em}
+.cmp-hd.a .cmp-meta{color:#A89FE8}.cmp-hd.b .cmp-meta{color:#F2C869}
+.cmp-sl{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;color:#E9E5FF}
+.cmp-vs{text-align:center;font-size:11px;font-weight:800;color:#7F77DD;padding-bottom:22px}
+.cmp-tabs{display:flex;gap:8px}
+.cmp-seg{display:grid;gap:3px;padding:3px;border-radius:11px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.18)}
+.cmp-seg:first-child{flex:1}.cmp-seg:last-child{flex:1.4}
+.cmp-seg button{min-height:36px;border-radius:8px;border:0;background:transparent;color:#B9B3E6;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.cmp-seg button.on{background:#A89FE8;color:#1A1640}
+.cmp-seg button[disabled]{color:#5E5799;cursor:default}
+.cmp-panel{border-radius:16px;background:linear-gradient(180deg,rgba(168,159,232,.1),rgba(168,159,232,.03));border:1px solid rgba(168,159,232,.22);padding:6px 12px 8px}
+.cmp-ph{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#9C95D0;padding:2px 0 6px}
+.cmp-lg{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.cmp-lg i{width:30px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgb(50,102,204),rgb(160,160,175),rgb(214,41,50))}
+.cmp-key{letter-spacing:.04em;text-transform:none;font-size:10.5px;color:#B9B3E6;overflow:hidden}
+.cmp-key i{width:9px;height:9px;border-radius:5px;margin-left:4px}
+.cmp-key i.a{background:#A89FE8}.cmp-key i.b{background:#F2C869}
+.cmp-r{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);align-items:center;height:44px;border-top:1px solid rgba(255,255,255,.06)}
+.cmp-s{display:flex;align-items:center;gap:6px;min-width:0}
+.cmp-l{text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#B9B3E6;line-height:1.15}
+.cmp-v{min-width:40px;font-size:13px;font-weight:600;color:#8A82D6;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp-s.b .cmp-v{text-align:right}
+.cmp-v.w{font-size:15px;font-weight:800;color:#fff}
+.cmp-t{position:relative;flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08)}
+.cmp-t i{position:absolute;top:0;bottom:0;border-radius:3px}
+.cmp-t.a i{right:0}.cmp-t.b i{left:0}
+.cmp-t b{position:absolute;top:50%;width:22px;height:18px;margin-top:-9px;border-radius:9px;font-size:10px;font-weight:800;color:#fff;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.cmp-t.a b.w{box-shadow:0 0 0 2px #A89FE8}.cmp-t.b b.w{box-shadow:0 0 0 2px #F2C869}
+.cmp-sk .cmp-t{animation:cmpPulse 1.2s ease-in-out infinite}
+.cmp-sk .cmp-l{height:8px;width:34px;margin:0 auto;border-radius:4px;background:rgba(168,159,232,.14)}
+@keyframes cmpPulse{50%{opacity:.4}}
+.cmp-msg{font-size:12.5px;color:#9C95D0;padding:14px 2px 10px;line-height:1.45}
+.cmp-edge{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:14px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.2)}
+.cmp-edge>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cmp-edge b{font-size:14px;font-weight:700;color:#fff}
+.cmp-edge .cmp-eb{margin:0}
+.cmp-pips{display:flex;gap:3px;flex:none}
+.cmp-pips i{width:8px;height:22px;border-radius:3px}
+.cmp-share{min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:0;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.cmp-notes p{margin:0 2px 4px;font-size:11.5px;line-height:1.45;color:#9C95D0}
+@media (prefers-reduced-motion: reduce){#cmp-screen,.cmp-pk,#cmp-pick{transition:none}.cmp-sk .cmp-t{animation:none}}

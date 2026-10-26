@@ -193,6 +193,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=compare&id=<id>[&season=YYYY]  (v7.76.0)
+    // One hitter's side of a compare: this season, his last 15 games and
+    // his career — BA/OBP/SLG/OPS/HR/RBI, OPS+ and WAR — plus where this
+    // season ranks among qualified MLB hitters (percentiles).
+    if (mode === 'compare') {
+      const id = req.query.id;
+      if (!id) { res.status(400).json({ error: 'Missing id' }); return; }
+      const yr = parseInt(req.query.season, 10) || new Date().getFullYear();
+      const out = await _cmpPlayer(String(id), yr);
+      if (!out) { res.status(502).json({ error: 'No compare data' }); return; }
+      res.setHeader('Cache-Control', out.partial ? 's-maxage=60' : 's-maxage=1800, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+
     // GET /api/mlb?mode=bvp&batter=<id>&pitcher=<id>  (v5.89.0)
     // A hitter's career line against one pitcher (MLB Stats API vsPlayer).
     if (mode === 'bvp') {
@@ -976,6 +991,109 @@ async function _regSeason(ids, season) {
   }
   return out;
 }
+// ── v7.76.0: compare two hitters ────────────────────────────────────
+// League OBP/SLG per season (for OPS+ = 100 × (OBP/lgOBP + SLG/lgSLG − 1),
+// league-adjusted, not park-adjusted) and, for the current season, the
+// qualified-hitter pools the percentiles rank against. Past seasons never
+// change, so they stay cached for the life of the instance.
+const _CMP_LG = global.__inningsCmpLg || (global.__inningsCmpLg = new Map());
+const _CMP_API = 'https://statsapi.mlb.com/api/v1';
+function _cmpSplits(j) { return (j && j.stats && j.stats[0] && j.stats[0].splits) || []; }
+function _cmpStat(j) { const s = _cmpSplits(j)[0]; return s ? s.stat : null; }
+function _cmpN(v) { const n = parseFloat(v); return isFinite(n) ? n : null; }
+async function _cmpLeague(yr, withPools) {
+  const key = yr + (withPools ? ':p' : ''), e = _CMP_LG.get(key);
+  const past = yr < new Date().getFullYear();
+  if (e && (past || Date.now() - e.at < 6 * 3600e3)) return e.v;
+  const jobs = [_tpGetJson(_CMP_API + '/teams/stats?season=' + yr + '&group=hitting&stats=season&sportIds=1&gameType=R')];
+  if (withPools) {
+    jobs.push(_tpGetJson(_CMP_API + '/stats?stats=season&group=hitting&season=' + yr + '&sportId=1&playerPool=Qualified&limit=500&gameType=R'));
+    jobs.push(_tpGetJson(_CMP_API + '/stats?stats=sabermetrics&group=hitting&season=' + yr + '&sportId=1&playerPool=Qualified&limit=500&gameType=R'));
+  }
+  const [teams, pool, saber] = await Promise.all(jobs);
+  const t = { h: 0, bb: 0, hbp: 0, ab: 0, sf: 0, tb: 0 };
+  _cmpSplits(teams).forEach(s => { const st = s.stat || {}; t.h += +st.hits || 0; t.bb += +st.baseOnBalls || 0; t.hbp += +st.hitByPitch || 0; t.ab += +st.atBats || 0; t.sf += +st.sacFlies || 0; t.tb += +st.totalBases || 0; });
+  const v = { obp: t.ab ? (t.h + t.bb + t.hbp) / (t.ab + t.bb + t.hbp + t.sf) : null, slg: t.ab ? t.tb / t.ab : null };
+  if (withPools) {
+    const col = (j, k) => _cmpSplits(j).map(s => _cmpN(s.stat && s.stat[k])).filter(x => x != null);
+    v.pool = { avg: col(pool, 'avg'), obp: col(pool, 'obp'), slg: col(pool, 'slg'), ops: col(pool, 'ops'), hr: col(pool, 'homeRuns'), rbi: col(pool, 'rbi'), war: col(saber, 'war') };
+  }
+  if (v.obp == null) return v; // don't cache a failed lookup
+  _CMP_LG.set(key, { at: Date.now(), v: v });
+  return v;
+}
+function _cmpPct(list, x) {
+  if (x == null || !list || list.length < 20) return null;
+  let below = 0, same = 0;
+  list.forEach(y => { if (y < x) below++; else if (y === x) same++; });
+  return Math.max(1, Math.min(99, Math.round((below + same / 2) / list.length * 100)));
+}
+function _cmpLine(st, lg) {
+  if (!st || !(+st.plateAppearances)) return null;
+  const obp = _cmpN(st.obp), slg = _cmpN(st.slg);
+  return { g: +st.gamesPlayed || 0, pa: +st.plateAppearances || 0, avg: st.avg || null, obp: st.obp || null, slg: st.slg || null, ops: st.ops || null,
+    hr: +st.homeRuns || 0, rbi: +st.rbi || 0, h: +st.hits || 0,
+    opsPlus: lg && lg.obp && lg.slg && obp != null && slg != null ? Math.round(100 * (obp / lg.obp + slg / lg.slg - 1)) : null };
+}
+async function _cmpCareerExtras(id, yby) {
+  // WAR is a per-season number in the Stats API, so career WAR is the sum of
+  // his seasons; career OPS+ is each season's OPS+ weighted by plate appearances.
+  const bySeason = {};
+  _cmpSplits(yby).forEach(s => {
+    if (s.sport && s.sport.id && s.sport.id !== 1) return;
+    const st = s.stat || {}, y = s.season;
+    const b = bySeason[y] || (bySeason[y] = { h: 0, bb: 0, hbp: 0, ab: 0, sf: 0, tb: 0, pa: 0 });
+    b.h += +st.hits || 0; b.bb += +st.baseOnBalls || 0; b.hbp += +st.hitByPitch || 0; b.ab += +st.atBats || 0; b.sf += +st.sacFlies || 0; b.tb += +st.totalBases || 0; b.pa += +st.plateAppearances || 0;
+  });
+  const years = Object.keys(bySeason).filter(y => bySeason[y].pa > 0);
+  if (!years.length) return { seasons: 0, war: null, opsPlus: null };
+  const P = _CMP_API + '/people/' + encodeURIComponent(id) + '/stats?stats=sabermetrics&group=hitting&gameType=R&season=';
+  const [wars, lgs] = await Promise.all([
+    Promise.all(years.map(y => _tpGetJson(P + y).then(j => _cmpN((_cmpStat(j) || {}).war)))),
+    Promise.all(years.map(y => _cmpLeague(+y, false).catch(() => null)))
+  ]);
+  let war = 0, nWar = 0, wSum = 0, pSum = 0;
+  years.forEach((y, i) => {
+    if (wars[i] != null) { war += wars[i]; nWar++; }
+    const b = bySeason[y], lg = lgs[i];
+    if (lg && lg.obp && lg.slg && b.ab) {
+      const obp = (b.h + b.bb + b.hbp) / (b.ab + b.bb + b.hbp + b.sf), slg = b.tb / b.ab;
+      wSum += b.pa * 100 * (obp / lg.obp + slg / lg.slg - 1); pSum += b.pa;
+    }
+  });
+  return { seasons: years.length, war: nWar ? Math.round(war * 10) / 10 : null, opsPlus: pSum ? Math.round(wSum / pSum) : null, warComplete: nWar === years.length };
+}
+async function _cmpPlayer(id, yr) {
+  const P = _CMP_API + '/people/' + encodeURIComponent(id);
+  const [ppl, season, l15, career, yby, saber, lg] = await Promise.all([
+    _tpGetJson(P + '?hydrate=currentTeam'),
+    _tpGetJson(P + '/stats?stats=season&group=hitting&season=' + yr + '&gameType=R'),
+    _tpGetJson(P + '/stats?stats=lastXGames&group=hitting&limit=15&season=' + yr + '&gameType=R'),
+    _tpGetJson(P + '/stats?stats=career&group=hitting&gameType=R&sportId=1'),
+    _tpGetJson(P + '/stats?stats=yearByYear&group=hitting&gameType=R&sportId=1'),
+    _tpGetJson(P + '/stats?stats=sabermetrics&group=hitting&season=' + yr + '&gameType=R'),
+    _cmpLeague(yr, true).catch(() => null)
+  ]);
+  const p = ppl && ppl.people && ppl.people[0];
+  if (!p) return null;
+  // career extras get what's left of Vercel's ~10s; past that they come back empty and fill in on a retry
+  const extras = await Promise.race([_cmpCareerExtras(id, yby).catch(() => null), new Promise(r => setTimeout(() => r(null), 6000))]);
+  const t = p.currentTeam || {};
+  const lines = { season: _cmpLine(_cmpStat(season), lg), l15: _cmpLine(_cmpStat(l15), lg), career: _cmpLine(_cmpStat(career), null) };
+  if (lines.season) lines.season.war = _cmpN((_cmpStat(saber) || {}).war);
+  if (lines.career) { lines.career.war = extras ? extras.war : null; lines.career.opsPlus = extras ? extras.opsPlus : null; lines.career.seasons = extras ? extras.seasons : null; }
+  const pct = {};
+  if (lines.season && lg && lg.pool) {
+    const s = lines.season;
+    pct.avg = _cmpPct(lg.pool.avg, _cmpN(s.avg)); pct.obp = _cmpPct(lg.pool.obp, _cmpN(s.obp)); pct.slg = _cmpPct(lg.pool.slg, _cmpN(s.slg));
+    pct.ops = _cmpPct(lg.pool.ops, _cmpN(s.ops)); pct.opsPlus = pct.ops; // same league, same order
+    pct.hr = _cmpPct(lg.pool.hr, s.hr); pct.rbi = _cmpPct(lg.pool.rbi, s.rbi); pct.war = _cmpPct(lg.pool.war, s.war);
+  }
+  return { id: p.id, name: p.fullName || null, age: p.currentAge != null ? p.currentAge : null, pos: (p.primaryPosition && p.primaryPosition.abbreviation) || null,
+    bats: (p.batSide && p.batSide.code) || null, team: t.name || null, teamId: t.id || null, season: yr, lines: lines, pct: pct,
+    partial: !extras || !(extras.warComplete !== false) };
+}
+
 // ── v7.36.0: who is still available ─────────────────────────────────
 // MLB's box score lists, per team, the position players who have not come
 // into the game (bench) and the pitchers who have not pitched (bullpen —
@@ -1980,8 +2098,20 @@ async function batterSeason(id, year) {
   const rows = await csv(url, 6 * 3600 * 1000, 7200);
   const spray = [], zones = {};
   let bsSum = 0, bsN = 0;
+  // v7.76.0: his season's raw Statcast numbers for the compare screen
+  const R = { bbe: 0, evSum: 0, hard: 0, brl: 0, out: 0, chase: 0, sw: 0, whiff: 0, pa: 0, k: 0, bb: 0, xw: 0, xwN: 0 };
+  const SWING = /swinging_strike|foul|hit_into_play|missed_bunt/, WHIFF = /swinging_strike|missed_bunt/;
   rows.forEach(r => {
     const ev = String(r.events || '');
+    const ls = num(r.launch_speed), desc = String(r.description || ''), zn = num(r.zone);
+    if (desc === 'hit_into_play' && ls != null) { R.bbe++; R.evSum += ls; if (ls >= 95) R.hard++; if (num(r.launch_speed_angle) === 6) R.brl++; }
+    if (SWING.test(desc)) { R.sw++; if (WHIFF.test(desc)) R.whiff++; }
+    if (zn >= 11 && zn <= 14) { R.out++; if (SWING.test(desc)) R.chase++; }
+    if (ev && num(r.woba_denom) === 1) {
+      R.pa++; if (/^strikeout/.test(ev)) R.k++; if (/^(walk|intent_walk)$/.test(ev)) R.bb++;
+      const xe = num(r.estimated_woba_using_speedangle), wv = num(r.woba_value);
+      if (xe != null && desc === 'hit_into_play') { R.xw += xe; R.xwN++; } else if (wv != null) { R.xw += wv; R.xwN++; }
+    }
     const bs = num(r.bat_speed); if (bs != null && bs > 40) { bsSum += bs; bsN++; }
     if (ev && num(r.hc_x) != null && num(r.hc_y) != null && spray.length < 500) spray.push({ x: num(r.hc_x), y: num(r.hc_y), ev: ev });
     const z = num(r.zone);
@@ -1992,7 +2122,10 @@ async function batterSeason(id, year) {
   });
   const zoneAvg = {};
   Object.keys(zones).forEach(z => { if (zones[z].ab >= 3) zoneAvg[z] = { avg: Math.round(zones[z].h / zones[z].ab * 1000) / 1000, ab: zones[z].ab }; });
-  return { spray: spray, zones: zoneAvg, avgBatSpeed: bsN ? round1(bsSum / bsN) : null };
+  const pc = (a, b) => b ? round1(a / b * 100) : null;
+  const raw = { ev: R.bbe ? round1(R.evSum / R.bbe) : null, hardHit: pc(R.hard, R.bbe), barrel: pc(R.brl, R.bbe), chase: pc(R.chase, R.out),
+    whiff: pc(R.whiff, R.sw), k: pc(R.k, R.pa), bb: pc(R.bb, R.pa), xwoba: R.xwN ? Math.round(R.xw / R.xwN * 1000) / 1000 : null, pa: R.pa };
+  return { spray: spray, zones: zoneAvg, avgBatSpeed: bsN ? round1(bsSum / bsN) : null, raw: raw };
 }
 async function sprint(id, year) {
   const rows = await csv('https://baseballsavant.mlb.com/leaderboard/sprint_speed?year=' + year + '&position=&team=&min=0&csv=true').catch(() => []);
