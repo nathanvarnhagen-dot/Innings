@@ -1,0 +1,104 @@
+/* ══ HOW IT WORKS (v7.79.0) — js/core/how-it-works.js ═══════════════════
+   The walkthrough frame: story bars, Skip, a stage that draws the real page,
+   and the caption sheet. Everything inside the stage uses the app's own
+   classes, so it looks exactly like the page it explains. */
+.hiw{position:absolute;inset:0;z-index:9000;background:#09061A;color:#F4F2FF;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;opacity:0;transition:opacity .28s ease;overflow:hidden}
+.hiw.on{opacity:1}
+.hiw-bars{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 4px);display:flex;gap:4px;z-index:3}
+.hiw-bar{flex:1;height:20px;padding:8px 0;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hiw-bar i{display:block;height:3px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden;position:relative}
+.hiw-bar i{background:linear-gradient(#A89FE8,#A89FE8) no-repeat left/100% 100%,rgba(255,255,255,.16);transform-origin:left center}
+.hiw-bar{position:relative}
+.hiw-bar::before{content:'';position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
+.hiw-bar i{position:relative;z-index:1;background:#A89FE8;transform:scaleX(0)}
+.hiw-top{position:absolute;left:16px;right:12px;top:calc(env(safe-area-inset-top,0px) + 22px);height:44px;display:flex;align-items:center;justify-content:space-between;z-index:3}
+.hiw-eb{font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#A89FE8}
+.hiw-skip{height:44px;padding:0 18px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);color:#F4F2FF;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.hiw-stage{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 74px);bottom:calc(env(safe-area-inset-bottom,0px) + 238px);overflow:hidden;pointer-events:none;-webkit-mask-image:linear-gradient(180deg,#000 0,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(180deg,#000 0,#000 calc(100% - 26px),transparent)}
+.hiw-scene{position:relative;min-height:100%}
+.hiw-scene *{pointer-events:none!important}
+
+/* the caption sheet — same build as the app's bottom sheets */
+.hiw-sheet{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);height:214px;border-radius:26px;background:rgba(26,20,64,.96);border:1px solid rgba(168,159,232,.22);box-shadow:0 -14px 40px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);z-index:3;overflow:hidden}
+.hiw-cap{position:absolute;left:22px;right:22px;top:20px}
+.hiw-cap.in{animation:hiwCap .45s cubic-bezier(.22,1,.36,1) both}
+@keyframes hiwCap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hiw-n{font-size:10.5px;font-weight:800;letter-spacing:.16em;color:#F2C869}
+.hiw-h{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:28px;line-height:1.05;margin:6px 0 6px;color:#fff;letter-spacing:0}
+.hiw-p{margin:0;font-size:13.5px;line-height:1.45;color:#C9C2F5}
+.hiw-cta{position:absolute;left:22px;right:22px;bottom:18px;display:flex;gap:10px}
+.hiw-btn{flex:1;height:48px;border-radius:14px;border:0;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.hiw-btn.g{flex:0 0 110px;background:rgba(255,255,255,.07);color:#E9E5FF;border:1px solid rgba(168,159,232,.25)}
+.hiw-btn:focus-visible,.hiw-skip:focus-visible,.hiw-bar:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+
+/* timed bits */
+.hiw-a{opacity:0;transform:translateY(10px);transition:opacity .45s cubic-bezier(.22,1,.36,1),transform .45s cubic-bezier(.22,1,.36,1)}
+.hiw-a.hiw-on{opacity:1;transform:none}
+.hiw-a.up{transform:translateY(120%)}
+.hiw-a.up.hiw-on{transform:none}
+.hiw-a.dn{transform:translateY(-60px)}
+.hiw-a.dn.hiw-on{transform:none}
+.hiw-a.pop{transform:scale(.6)}
+.hiw-a.pop.hiw-on{transform:none;transition:opacity .25s ease,transform .45s cubic-bezier(.3,1.5,.5,1)}
+.hiw-a.fade{transform:none}
+.hiw-gone{opacity:0!important;transition:opacity .3s ease!important}
+.hiw-pressed{transform:scale(.96)!important;transition:transform .14s ease!important}
+
+/* the finger */
+.hiw-tap{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.26);border:2px solid #fff;box-shadow:0 0 0 8px rgba(168,159,232,.25),0 6px 18px rgba(0,0,0,.35);opacity:0;z-index:40;pointer-events:none}
+.hiw-tap.go.k-tap{animation:hiwTap 1s ease both}
+.hiw-tap.go.k-dtap{animation:hiwDtap 1.2s ease both}
+.hiw-tap.go.k-hold{animation:hiwHold 1.5s ease both}
+.hiw-tap.go.k-swipe{animation:hiwSwipe 1.2s cubic-bezier(.4,0,.2,1) both}
+@keyframes hiwTap{0%{opacity:0;transform:scale(1.5)}22%{opacity:1;transform:scale(1)}38%{transform:scale(.76)}55%{transform:scale(1)}100%{opacity:0;transform:scale(1.1)}}
+@keyframes hiwDtap{0%{opacity:0;transform:scale(1.5)}18%{opacity:1;transform:scale(1)}28%{transform:scale(.76)}38%{transform:scale(1)}48%{transform:scale(.76)}58%{transform:scale(1)}100%{opacity:0}}
+@keyframes hiwHold{0%{opacity:0;transform:scale(1.4)}14%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(.82);box-shadow:0 0 0 18px rgba(168,159,232,.35),0 6px 18px rgba(0,0,0,.35)}100%{opacity:0}}
+@keyframes hiwSwipe{0%{opacity:0;transform:none}12%{opacity:1;transform:none}75%{opacity:1;transform:translateX(var(--dx,120px))}100%{opacity:0;transform:translateX(var(--dx,120px))}}
+
+/* a page-sized backdrop for scenes */
+.hiw-pg{position:relative;min-height:100%;background:var(--bg)}
+.hiw-pg.gl{background:#09061A;color:#F4F2FF}
+.hiw-pg .gl-amb{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+
+@media (prefers-reduced-motion:reduce){
+  .hiw,.hiw-a,.hiw-cap.in{transition:none!important;animation:none!important}
+  .hiw-tap{display:none}
+}
+
+/* pieces of the real page that are styled by id in the app */
+.hiw-dock{position:relative;margin:0 16px;height:66px;border-radius:33px;background:rgba(30,24,64,.72);border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 20px 40px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);display:flex;align-items:center;gap:2px;padding:0 9px}
+.hiw-tabs{display:flex;gap:22px;padding:0 16px;border-top:1px solid rgba(255,255,255,.06);overflow:hidden;background:#08051A;border-bottom:1px solid rgba(255,255,255,.08)}
+.hiw-tabs>button{position:relative;height:46px;background:transparent;border:0;border-radius:0;padding:0;font-family:'Barlow Condensed',sans-serif;font-size:16.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);flex-shrink:0;white-space:nowrap;transition:color .2s}
+.hiw-tabs>button::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px 3px 0 0;background:#A89FE8;transform:scaleX(0);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.hiw-tabs>button.on{color:#fff}
+.hiw-tabs>button.on::after{transform:scaleX(1)}
+.hiw-hd{position:relative;z-index:5;background:#08051A;border-bottom:1px solid rgba(255,255,255,.08)}
+.hiw-pan .pap{background:none;border:0;padding:4px 0 0;gap:10px;overflow:visible}
+.hiw-pan .pap-hd{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.18em;color:#C9C2F5}
+.hiw-pan.sq .pap{padding:10px 12px;gap:6px;margin-top:10px}
+.hiw-pan.sq .pap-sq{display:none}
+.hiw-pan.sq .pap-g{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px}
+.hiw-pan.sq .pap-g.odd .pap-r:last-child{grid-column:auto}
+.hiw-pan.sq .pap-r{min-height:0;padding:8px 8px 9px;gap:5px;border-radius:12px}
+.hiw-pan.sq .pap-l{font-size:10px;letter-spacing:.1em}
+.hiw-pan.sq .pap-l em{display:none}
+.hiw-pan.sq .pap-v{font-size:20px}
+.hiw-pan.sq .pap-v small{font-size:10px;margin-left:2px}
+.hiw-pan.sq .pap-tx{font-size:12.5px}
+.hiw-pan.sq .pap-bar{height:4px}
+.hiw-pan.sq .pap-bar b{width:22px;height:15px;margin-top:-7.5px;font-size:10.5px}
+.hiw .gsb{position:relative!important}
+/* a scene that scrolls itself to show what's further down the page */
+.hiw-scroll{transition:transform .8s cubic-bezier(.4,0,.2,1)}
+.hiw-scroll.on{transform:translateY(var(--y,-200px))}
+.hiw-sqhint{text-align:center;font-size:11.5px;color:#8F88C4;margin:-2px 0 10px}
+.hiw-ps .sq-on{z-index:6;outline:2px solid rgba(168,159,232,.8);outline-offset:1px;border-radius:10px;background-color:rgba(168,159,232,.1)}
+.hiw .gsbd{border-radius:0 0 26px 26px}
+/* a page that slides or fades over another inside a scene sits above it */
+.hiw-scene>[style*="position:absolute"]{z-index:6}
+
+/* the ? buttons (js/core/how-it-works.js) */
+.hiw-qb span{font-size:18px;font-weight:800;line-height:1}
+.imm-hero .hiw-qa{position:absolute;right:16px;top:calc(env(safe-area-inset-top,20px) + 10px);z-index:2}
+#hiw-list .gtut-body{padding-bottom:6px}
+#hiw-list .gl-prow{margin:0}

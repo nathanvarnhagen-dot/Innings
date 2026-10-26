@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.79.0', at: '2026-10-26T16:56:00-07:00',
+      title: 'How it works, page by page',
+      sub: 'The first time you open a page, a short walkthrough plays and shows what you can tap.',
+      items: function () {
+        return [
+          { icon: 'help', title: 'Every page has one', body: 'Home, Games, a game, Plays, a player’s card, Chat, crews, your Archive and more. Each plays once.' },
+          { icon: 'help', title: 'Replay it with ?', body: 'Tap ? on the page, or Profile › How Innings works for the whole list.' },
+          { icon: 'friends', title: 'New friends get a welcome tour', body: 'Anyone joining from your invite sees how Innings works before they start.' }
+        ];
+      }
+    },
+    {
       id: 'v7.78.0', at: '2026-10-26T16:55:00-07:00',
       title: 'Compare anyone, at any age',
       sub: 'Pitchers too, and players who retired long ago. See where two careers stood at the same age.',
@@ -212,6 +224,7 @@
     bars: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h7"/></svg>',
     chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
     friends: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.4 0 4 1.6 4.5 4.5"/></svg>',
+    help: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.2v.01"/></svg>',
     lock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
   };
   var CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
@@ -245,6 +258,8 @@
       tries++;
       var act = document.querySelector('.screen.active');
       var landed = act && /screen-(feed|home|friends|games|games-picker|profile)$/.test(act.id);
+      // v7.79.0: never on top of a How it works walkthrough, or a new person's welcome tour
+      if (window._hiwOpen || window._hiwLaunchPending) { if (tries > 600) clearInterval(t); return; }
       if (!landed || !window.userData) { if (tries > 120) clearInterval(t); return; }
       clearInterval(t);
       setTimeout(showWhatsNew, 900);
@@ -319,4 +334,14 @@
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 260);
   }
   window.ipShowWhatsNew = showWhatsNew;
+  // v7.79.0: How it works (js/core/how-it-works.js) waits while What's new is
+  // still to come, and a new person's welcome tour counts as having seen it
+  window.ipWhatsNewPending = function () { return !!window.userData && !seenWhatsNew() && !forceAll(); };
+  window.ipMarkWhatsNewSeen = function () {
+    var id = WHATS_NEW[0].id;
+    lsSet('innings_whatsnew_seen', id);
+    var u = me();
+    if (u && window.db) window.db.collection('users').doc(u.uid).set({ whatsNewSeen: id }, { merge: true }).catch(function (err) { console.error('[whats new] save', err); });
+    if (window.userData) window.userData.whatsNewSeen = id;
+  };
 })();

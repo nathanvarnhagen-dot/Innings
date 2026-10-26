@@ -419,6 +419,8 @@ button.pap-pt:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px;border
 .apl-ls .ls-he{color:#B3ACE0}
 .apl-ls .ls-team{display:flex;align-items:center}
 .apl-ls .ls-badge{display:inline-grid;place-items:center;width:44px;height:26px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.06em}
+/* v7.79.0: the login splash's .ls-badge (base.css) hid these — opacity 0, scaled down, its border and shadow */
+.apl-ls .ls-badge{opacity:1;transform:none;border:0;box-shadow:none;transition:none}
 .apl-state{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:10px 14px;border-radius:14px;background:rgba(13,10,32,.55);font-family:'Barlow Condensed',sans-serif}
 .apl-state .inn{font-size:15px;font-weight:700;letter-spacing:.08em;color:#F1EEFF;white-space:nowrap}
 .apl-state .inn i{font-style:normal;color:#A89FE8;margin-right:6px;font-size:12px}
