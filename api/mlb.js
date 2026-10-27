@@ -239,6 +239,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=career&id=<id>  (v7.80.0)
+    // A retired player's card: career line, honors, every season (teams
+    // added together, gaps marked), whether his team won it all that year,
+    // and when he's first eligible for the Hall of Fame.
+    if (mode === 'career') {
+      const id = String(req.query.id || '');
+      if (!id) { res.status(400).json({ error: 'Missing id' }); return; }
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const out = await _careerCard(id, host);
+      if (!out) { res.status(404).json({ error: 'No career found' }); return; }
+      res.setHeader('Cache-Control', out.active ? 's-maxage=1800, stale-while-revalidate' : 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json(out);
+      return;
+    }
+
     // GET /api/mlb?mode=hof  (v7.78.0)
     // Hall of Fame players (not managers or executives) with their primary
     // position and years — the compare picker's "Hall of Famers at 3B".
@@ -1172,6 +1187,73 @@ async function _histLiveSeason(y, tid) {
   if (me.divChamp) flags = 'D' + flags;
   else if (post.length) flags = 'W' + flags;
   return { season: [y, me.w, me.l, me.rank, me.div, me.name, flags], post: post, ongoing: ongoing };
+}
+
+// ── v7.80.0: a retired player's card ──────────────────────────────────
+const _CAREER_KEEP = /MVP|Rookie of the Year|Cy Young|All-Star|Gold Glove|Silver Slugger|Batting (Champion|Title)|World Series|Hank Aaron|Comeback Player|Reliever of the Year|Platinum Glove|Roberto Clemente|Edgar Mart[ií]nez|Hall of Fame/i;
+const _CAREER_DROP = /of the (Week|Month)|Minor League|Futures|Fall League|Prospect|Triple-A|Double-A|Single-A|Rookie Ball|Winter League|Organization|Spring Training|Wall of Fame|Team Hall/i;
+async function _careerCard(id, host) {
+  const P = _CMP_API + '/people/' + encodeURIComponent(id);
+  const [ppl, hy, py, hc, pc, base] = await Promise.all([
+    _tpGetJson(P + '?hydrate=currentTeam,awards'),
+    _tpGetJson(P + '/stats?stats=yearByYear&group=hitting&gameType=R&sportId=1'),
+    _tpGetJson(P + '/stats?stats=yearByYear&group=pitching&gameType=R&sportId=1'),
+    _tpGetJson(P + '/stats?stats=career&group=hitting&gameType=R&sportId=1'),
+    _tpGetJson(P + '/stats?stats=career&group=pitching&gameType=R&sportId=1'),
+    _histBase(host).catch(() => null)
+  ]);
+  const p = ppl && ppl.people && ppl.people[0];
+  if (!p) return null;
+  const pos = _cmpPos(p);
+  const pit = pos === 'P';
+  const yby = pit ? py : hy;
+  // champions by team id and year, from the history file
+  const champ = {};
+  if (base && base.teams) Object.keys(base.teams).forEach(tid => base.teams[tid].seasons.forEach(x => { if ((x[6] || '').indexOf('C') !== -1) champ[tid + ':' + x[0]] = 1; }));
+  const by = {}, teamSeasons = {};
+  _cmpSplits(yby).forEach(sp => {
+    if (sp.sport && sp.sport.id && sp.sport.id !== 1) return;
+    const y = +sp.season, st = sp.stat || {}, t = sp.team || {};
+    if (!y) return;
+    const b = by[y] || (by[y] = { y: y, teams: [], champ: false, g: 0, gs: 0, ab: 0, h: 0, hr: 0, rbi: 0, bb: 0, hbp: 0, sf: 0, tb: 0, w: 0, l: 0, sv: 0, outs: 0, er: 0, k: 0, pbb: 0, ph: 0 });
+    if (t.id) { b.teams.push(t.id); teamSeasons[t.id] = (teamSeasons[t.id] || 0) + 1; if (champ[t.id + ':' + y]) b.champ = true; }
+    b.g += +st.gamesPlayed || 0; b.gs += +st.gamesStarted || 0;
+    if (pit) { b.w += +st.wins || 0; b.l += +st.losses || 0; b.sv += +st.saves || 0; b.outs += _cmpOuts(st); b.er += +st.earnedRuns || 0; b.k += +st.strikeOuts || 0; }
+    else { b.ab += +st.atBats || 0; b.h += +st.hits || 0; b.hr += +st.homeRuns || 0; b.rbi += +st.rbi || 0; }
+  });
+  const r3 = x => x >= 1 ? x.toFixed(3) : x.toFixed(3).replace(/^0/, '');
+  const ys = Object.keys(by).map(Number).sort((a, b) => b - a);
+  const seasons = [];
+  ys.forEach((y, i) => {
+    const b = by[y];
+    seasons.push(pit
+      ? { y: y, teams: Array.from(new Set(b.teams)), champ: b.champ, g: b.g, gs: b.gs, wl: b.w + '-' + b.l, era: b.outs ? (b.er * 27 / b.outs).toFixed(2) : null, ip: _cmpIp(b.outs), k: b.k, sv: b.sv }
+      : { y: y, teams: Array.from(new Set(b.teams)), champ: b.champ, g: b.g, h: b.h, hr: b.hr, rbi: b.rbi, ba: b.ab ? r3(b.h / b.ab) : null });
+    const next = ys[i + 1];
+    if (next != null) for (let gap = y - 1; gap > next; gap--) seasons.push({ y: gap, dnp: true });
+  });
+  const mk = pit ? _cmpPLine : _cmpLine;
+  const career = mk(_cmpStat(pit ? pc : hc), null);
+  // honors: kept awards, counted by name ("7× NL All-Star"), newest year noted
+  const hon = {};
+  (p.awards || []).forEach(a => {
+    const n = String(a.name || '').trim();
+    if (!n || !_CAREER_KEEP.test(n) || _CAREER_DROP.test(n) || /hall of fame/i.test(n)) return;
+    const h = hon[n] || (hon[n] = { name: n, years: [] });
+    if (a.season && h.years.indexOf(+a.season) === -1) h.years.push(+a.season);
+  });
+  const honors = Object.keys(hon).map(k => hon[k]).map(h => ({ name: h.name, n: Math.max(1, h.years.length), years: h.years.sort((a, b) => a - b) }))
+    .sort((a, b) => (/MVP|Cy Young|World Series/i.test(b.name) ? 1 : 0) - (/MVP|Cy Young|World Series/i.test(a.name) ? 1 : 0) || b.n - a.n);
+  const rings = seasons.filter(x => x.champ).length;
+  const mainTeam = Object.keys(teamSeasons).sort((a, b) => teamSeasons[b] - teamSeasons[a])[0] || null;
+  const first = ys.length ? ys[ys.length - 1] : null, last = ys.length ? ys[0] : null;
+  const active = p.active !== false, hof = _cmpIsHof(p.awards);
+  const played = ys.length;
+  const eligible = !active && !hof && last && played >= 10 ? last + 6 : null;
+  return { id: p.id, name: p.fullName, pos: pos, bats: (p.batSide && p.batSide.code) || null, throws: (p.pitchHand && p.pitchHand.code) || null,
+    active: active, hof: hof, first: first, last: last, seasonsPlayed: played, mainTeamId: mainTeam ? +mainTeam : null, rings: rings,
+    hofEligible: eligible && eligible > new Date().getFullYear() ? eligible : null,
+    group: pit ? 'pitching' : 'hitting', career: career, honors: honors, seasons: seasons };
 }
 
 // ── v7.78.1: every MLB player ever, for the compare picker's search ──

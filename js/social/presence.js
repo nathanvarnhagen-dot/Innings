@@ -166,6 +166,17 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.81.0', at: '2026-10-26T17:40:00-07:00',
+      title: 'Legends get a real card',
+      sub: 'Tap any retired player and his whole career is there.',
+      items: function () {
+        return [
+          { icon: 'trophy', title: 'Career up top', body: 'His career line, World Series rings and honors, and when he’s eligible for the Hall of Fame.' },
+          { icon: 'history', title: 'Every season below', body: 'Year by year, newest first or oldest first, with championship years marked.' }
+        ];
+      }
+    },
+    {
       id: 'v7.80.0', at: '2026-10-26T17:20:00-07:00',
       title: 'Team pages in team colors',
       sub: 'Every team page now wears its own colors, and baseball teams get their whole history.',

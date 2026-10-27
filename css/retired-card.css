@@ -1,0 +1,38 @@
+/* ═══ RETIRED PLAYER'S CARD (v7.80.0) — js/players/retired-card.js ═══
+   Sits in #player-lines on the player sheet when a player has no current
+   season. --rc-tint = his main team's primary, --rc-hi = a readable accent. */
+.rc{display:flex;flex-direction:column;gap:12px;margin:2px 0 12px}
+.rc-top{border-radius:16px;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--rc-tint) 34%,transparent),transparent 85%);border:1px solid color-mix(in srgb,var(--rc-tint) 40%,transparent)}
+.rc-who{font-size:12.5px;font-weight:800;color:var(--rc-hi);letter-spacing:.02em}
+.rc-sub{font-size:12px;color:#B8B2CF;margin-top:2px}
+.rc-elig{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(242,200,105,.45);color:#F2C869;font-size:11.5px;font-weight:700}
+.rc-box{border-radius:16px;background:rgba(168,159,232,.08);border:1px solid rgba(168,159,232,.2);padding:10px 12px}
+.rc-eb{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#A89FE8;margin-bottom:8px}
+.rc-eb span+span{color:#8E88AE;letter-spacing:.06em}
+.rc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 6px;text-align:center}
+.rc-grid .span2{grid-column:span 2}
+.rc-grid b{display:block;font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:700;font-size:25px;color:#fff;font-variant-numeric:tabular-nums}
+.rc-grid small{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;color:#A9A3C7}
+.rc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.rc-chip{font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:999px;background:rgba(168,159,232,.12);color:#D6D1F5}
+.rc-chip.big{background:rgba(242,200,105,.12);color:#F2C869}
+.rc-chip.gold{background:#F2C869;color:#2A2006;font-weight:800}
+.rc-years{padding:10px 0 4px}
+.rc-years .rc-eb{padding:0 12px}
+.rc-order{min-height:30px;padding:0 10px;border-radius:15px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#D6D1F5;font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:0;cursor:pointer}
+.rc-order:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.rc-yh,.rc-row{display:grid;gap:4px;align-items:center;padding:0 12px;text-align:right;font-variant-numeric:tabular-nums}
+.rc-yh{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#8E88AE;padding-bottom:6px}
+.rc-yh span:first-child{text-align:left}
+.rc-row{min-height:36px;border-top:1px solid rgba(255,255,255,.05);font-size:13px;font-weight:600;color:#E2DEF5}
+.rc-yr{display:flex;align-items:center;gap:4px;text-align:left;min-width:0}
+.rc-yr b{font-family:'Barlow Condensed',system-ui,sans-serif;font-size:17px;color:#fff}
+.rc-yr small{font-size:9.5px;font-weight:700;color:#8E88AE;white-space:nowrap}
+.rc-dot{display:inline-block;width:7px;height:7px;border-radius:4px;background:#F2C869;flex:none}
+.rc-dnp{grid-column:2/-1;text-align:left;font-size:12px;color:#8E88AE}
+.rc-key{display:flex;align-items:center;gap:6px;padding:8px 12px 6px;font-size:11px;color:#A9A3C7}
+.rc-sk{height:44px;border-radius:14px;background:rgba(168,159,232,.1);animation:tmPulse 1.2s ease-in-out infinite}
+.rc-sk.short{width:60%}
+.rc-pre #player-sav{display:none}
+@supports not (color: color-mix(in srgb, red 50%, blue)){.rc-top{background:rgba(168,159,232,.1);border-color:rgba(168,159,232,.25)}}
+@media (prefers-reduced-motion: reduce){.rc-sk{animation:none}}
