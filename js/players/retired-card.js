@@ -14,8 +14,11 @@ window._rcOrder = window._rcOrder || {};
 
 function _rcIsRetired(id) {
   var se = window._sav.season && window._sav.season[String(id)];
-  return !!(se && (se.failed || (se.data && se.data.error)));
+  // v7.81.1: MLB answers a retired player's season with his profile and no
+  // line at all, so "no hitting and no pitching this season" counts too
+  return !!(se && (se.failed || (se.data && (se.data.error || (!se.data.hitting && !se.data.pitching)))));
 }
+window._rcOrig = window._rcOrig || {};
 function _rcAbbr(tid) { return typeof CMP_TEAM !== 'undefined' && CMP_TEAM[tid] ? CMP_TEAM[tid] : ''; }
 function _rcN(n) { return typeof n === 'number' && n >= 1000 ? n.toLocaleString('en-US') : String(n); }
 function rcFlip(id) { window._rcOrder[id] = !window._rcOrder[id]; _rcFill(id); }
@@ -29,6 +32,8 @@ function _rcFill(id) {
     el.innerHTML = e && e.failed ? '' : '<div class="rc"><div class="rc-sk"></div><div class="rc-sk"></div><div class="rc-sk short"></div></div>';
     return;
   }
+  // never played in the majors (a prospect): keep the regular season table
+  if (!d.seasons || !d.seasons.length) { if (window._rcOrig[String(id)] != null) el.innerHTML = window._rcOrig[String(id)]; return; }
   if (bd) bd.classList.toggle('rc-pre', !!(d.last && d.last < 2015)); // no Statcast before 2015
   var abbr = _rcAbbr(d.mainTeamId), c = abbr && typeof _ghTeamColors === 'function' ? _ghTeamColors(abbr) : null;
   var tint = c ? c.bg : '#3D3580', hi = '#C9C2F5';
@@ -72,6 +77,8 @@ function _rcFill(id) {
     var r = prev.apply(this, arguments);
     var bd = document.getElementById('player-link-backdrop');
     if (bd) bd.classList.remove('rc-pre');
+    var el = document.getElementById('player-lines');
+    if (el) window._rcOrig[String(id)] = el.innerHTML;
     if (_rcIsRetired(id)) _rcFill(id);
     return r;
   };

@@ -91,7 +91,7 @@ function _cmpSheetFill(id) {
   var kind = _cmpKindOf(d), pos = d && d.pos || null;
   // v7.78.2: a retired player has no season line — his career data says what he was
   var se = window._sav.season && window._sav.season[String(id)];
-  if (!kind && se && (se.failed || (se.data && se.data.error))) {
+  if (!kind && se && (se.failed || (se.data && (se.data.error || (!se.data.hitting && !se.data.pitching))))) {
     var c = _savGet('cmpkind', String(id), '/api/mlb?mode=compare&group=hitting&id=' + encodeURIComponent(id), 24 * 3600e3, function () { if (window._savSheetId === String(id)) _cmpSheetFill(id); });
     if (c && c.pos) { pos = c.pos; kind = c.pos === 'P' ? 'pit' : 'bat'; }
   }
