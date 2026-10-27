@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.80.0', at: '2026-10-26T17:20:00-07:00',
+      title: 'Team pages in team colors',
+      sub: 'Every team page now wears its own colors, and baseball teams get their whole history.',
+      items: function () {
+        return [
+          { icon: 'palette', title: 'Their colors, every sport', body: 'The header, tabs, jersey numbers and buttons take each team’s colors, with run (or point, or goal) differential and home and away records up top.' },
+          { icon: 'history', title: 'History, back to year one', body: 'MLB teams have a History tab: every season, newest first, back to the franchise’s first, with decade jumps.' },
+          { icon: 'trophy', title: 'Every postseason', body: 'Titles in gold, pennants marked, and every series one tap away.' }
+        ];
+      }
+    },
+    {
       id: 'v7.79.0', at: '2026-10-26T16:56:00-07:00',
       title: 'How it works, page by page',
       sub: 'The first time you open a page, a short walkthrough plays and shows what you can tap.',
@@ -218,6 +230,8 @@
   ];
   var WN_MAX = 5;
   var ICONS = {
+    palette: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.6 0-.9-.6-1.3-.6-2.1 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.7-4-8.7-9-8.7z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/></svg>',
+    history: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
     age: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
     trophy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/></svg>',
     compare: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M16 4v16M4 9h8M12 15h8"/></svg>',

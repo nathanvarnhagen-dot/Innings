@@ -209,6 +209,36 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=history&teamId=<id>  (v7.80.0)
+    // A franchise's every season and every postseason series. 1871–2021 come
+    // from data/mlb-history.json (Lahman / Baseball Databank, CC BY-SA),
+    // served as a static file; later seasons from MLB's standings and
+    // postseason schedule, one call each per season, cached.
+    if (mode === 'history') {
+      const tid = String(req.query.teamId || '');
+      if (!tid) { res.status(400).json({ error: 'Missing teamId' }); return; }
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const base = await _histBase(host).catch(() => null);
+      const t = base && base.teams && base.teams[tid];
+      if (!t) { res.status(404).json({ error: 'No history for this team' }); return; }
+      const now = new Date().getFullYear(), years = [];
+      for (let y = base.through + 1; y <= now; y++) years.push(y);
+      const live = await Promise.all(years.map(y => _histLiveSeason(y, tid).catch(() => null)));
+      const seasons = t.seasons.slice(), post = t.post.slice();
+      let partial = false;
+      live.forEach((L, i) => {
+        if (!L) { partial = true; return; }
+        if (L.season) seasons.unshift(L.season);
+        L.post.forEach(p => post.unshift(p));
+        if (L.ongoing) partial = true;
+      });
+      seasons.sort((a, b) => b[0] - a[0]);
+      post.sort((a, b) => b[0] - a[0]);
+      res.setHeader('Cache-Control', partial ? 's-maxage=600, stale-while-revalidate' : 's-maxage=43200, stale-while-revalidate');
+      res.status(200).json({ teamId: +tid, seasons: seasons, post: post, through: base.through });
+      return;
+    }
+
     // GET /api/mlb?mode=hof  (v7.78.0)
     // Hall of Fame players (not managers or executives) with their primary
     // position and years — the compare picker's "Hall of Famers at 3B".
@@ -1066,6 +1096,84 @@ function _cmpIsHof(awards) {
 }
 // MLB files some Negro Leagues players under position "X" (unknown)
 function _cmpPos(p) { const v = p && p.primaryPosition && p.primaryPosition.abbreviation; return v && v !== 'X' ? v : null; }
+// ── v7.80.0: team history ─────────────────────────────────────────────
+// Seasons are [year, W, L, rank, "NL West", team name, flags] — flags D
+// division title, W wild card, P pennant, C World Series. Post rows are
+// [year, round, opponent, won 1/0, wins, losses].
+let _HIST = null;
+async function _histBase(host) {
+  if (_HIST && _HIST.v) return _HIST.v;
+  if (_HIST && _HIST.p) return _HIST.p;
+  const p = (async () => {
+    const r = await fetch('https://' + host + '/data/mlb-history.json');
+    if (!r.ok) throw new Error('history HTTP ' + r.status);
+    const v = await r.json();
+    _HIST = { v: v };
+    return v;
+  })();
+  _HIST = { p: p };
+  try { return await p; } catch (e) { _HIST = null; throw e; }
+}
+const _HIST_LIVE = global.__inningsHistLive || (global.__inningsHistLive = new Map());
+const _HIST_DIV = { 200: 'AL West', 201: 'AL East', 202: 'AL Central', 203: 'NL West', 204: 'NL East', 205: 'NL Central' };
+const _HIST_ROUND = { F: 'WC', D: 'DS', L: 'CS', W: 'WS' }, _HIST_NEED = { F: 2, D: 3, L: 4, W: 4 };
+// One season of MLB's own numbers, all 30 teams at once (cached; past
+// seasons for the life of the instance, the current one for 10 minutes).
+async function _histLiveAll(y) {
+  const e = _HIST_LIVE.get(y), cur = y >= new Date().getFullYear();
+  if (e && (!cur || Date.now() - e.at < 600e3)) return e.v;
+  const [st, sc] = await Promise.all([
+    _tpGetJson('https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&standingsTypes=regularSeason&season=' + y + '&hydrate=team'),
+    _tpGetJson('https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=' + y + '&gameType=F,D,L,W&hydrate=team')
+  ]);
+  if (!st) throw new Error('no standings ' + y);
+  const teams = {};
+  (st.records || []).forEach(rec => {
+    const div = _HIST_DIV[rec.division && rec.division.id] || '';
+    (rec.teamRecords || []).forEach(tr => {
+      const t = tr.team || {};
+      teams[t.id] = { w: +tr.wins || 0, l: +tr.losses || 0, rank: +tr.divisionRank || 0, div: div, name: t.name || '', divChamp: !!tr.divisionChamp, lg: div.slice(0, 2) };
+    });
+  });
+  const series = {};
+  ((sc && sc.dates) || []).forEach(d => (d.games || []).forEach(g => {
+    const a = g.teams && g.teams.away, h = g.teams && g.teams.home;
+    if (!a || !h || !a.team || !h.team) return;
+    const key = g.gameType + ':' + [a.team.id, h.team.id].sort().join('-');
+    const s = series[key] || (series[key] = { type: g.gameType, ids: [a.team.id, h.team.id].sort(), names: {}, wins: {}, gamePks: {} });
+    s.names[a.team.id] = a.team.name; s.names[h.team.id] = h.team.name;
+    if (s.gamePks[g.gamePk]) return; // a postponed game is listed twice
+    s.gamePks[g.gamePk] = 1;
+    const fin = g.status && g.status.abstractGameState === 'Final' && a.score != null && h.score != null && a.score !== h.score;
+    if (fin) { const win = a.score > h.score ? a.team.id : h.team.id; s.wins[win] = (s.wins[win] || 0) + 1; }
+  }));
+  const v = { teams: teams, series: Object.keys(series).map(k => series[k]) };
+  _HIST_LIVE.set(y, { at: Date.now(), v: v });
+  return v;
+}
+async function _histLiveSeason(y, tid) {
+  const all = await _histLiveAll(y);
+  const me = all.teams[tid];
+  const post = [];
+  let ongoing = false, flags = '';
+  all.series.forEach(s => {
+    if (s.ids.map(String).indexOf(String(tid)) === -1) return;
+    const opp = s.ids.filter(x => String(x) !== String(tid))[0];
+    const mine = s.wins[tid] || 0, theirs = s.wins[opp] || 0, need = _HIST_NEED[s.type] || 4;
+    const done = mine >= need || theirs >= need;
+    if (!done) ongoing = true;
+    const lg = me ? me.lg : '';
+    const round = s.type === 'W' ? 'WS' : lg + _HIST_ROUND[s.type];
+    post.push([y, round, s.names[opp] || '', done ? (mine > theirs ? 1 : 0) : -1, mine, theirs]);
+    if (done && mine > theirs && s.type === 'L') flags += 'P';
+    if (done && mine > theirs && s.type === 'W') flags += 'C';
+  });
+  if (!me) return { season: null, post: post, ongoing: ongoing };
+  if (me.divChamp) flags = 'D' + flags;
+  else if (post.length) flags = 'W' + flags;
+  return { season: [y, me.w, me.l, me.rank, me.div, me.name, flags], post: post, ongoing: ongoing };
+}
+
 // ── v7.78.1: every MLB player ever, for the compare picker's search ──
 // data/mlb-players.json is a static file (Chadwick Bureau register, see
 // data/README.md), fetched from this deployment once per instance — not
