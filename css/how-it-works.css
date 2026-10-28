@@ -102,3 +102,7 @@
 .imm-hero .hiw-qa{position:absolute;right:16px;top:calc(env(safe-area-inset-top,20px) + 10px);z-index:2}
 #hiw-list .gtut-body{padding-bottom:6px}
 #hiw-list .gl-prow{margin:0}
+#hiw-list .hiw-auto{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+#hiw-list .hiw-auto .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#hiw-list .hiw-auto b{font-size:14.5px;font-weight:700;color:#F4F2FF}
+#hiw-list .hiw-auto small{font-size:12px;color:#8F88C4}

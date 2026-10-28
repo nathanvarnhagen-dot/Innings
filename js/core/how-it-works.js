@@ -235,9 +235,28 @@
     if (!(window.currentUser || (window.auth && window.auth.currentUser)) || !window.userData) return true;
     return false;
   }
+  // v7.85.0: walkthroughs no longer play on their own unless the person
+  // turns it on (Profile › How Innings works › Play on first visit).
+  // Off by default; ? on each page and the list always work.
+  var AUTO_KEY = 'innings_hiw_auto';
+  function autoOn() {
+    var ud = window.userData;
+    if (ud && typeof ud.hiwAuto === 'boolean') return ud.hiwAuto;
+    try { return localStorage.getItem(AUTO_KEY) === '1'; } catch (e) { return false; }
+  }
+  window.hiwAutoOn = autoOn;
+  window.hiwSetAuto = function (on) {
+    on = !!on;
+    try { localStorage.setItem(AUTO_KEY, on ? '1' : '0'); } catch (e) {}
+    if (window.userData) window.userData.hiwAuto = on;
+    var u = window.currentUser || (window.auth && window.auth.currentUser);
+    if (u && window.db) window.db.collection('users').doc(u.uid).set({ hiwAuto: on }, { merge: true })
+      .catch(function (err) { console.error('[how it works] save auto', err); });
+  };
   var queued = {};
   window.hiwAuto = function (key, stillHere, delay) {
     if (!REG[key] || hiwSeen(key) || queued[key]) return;
+    if (!autoOn()) return;
     if (/[?&]nohiw\b/.test(location.search || '')) return;
     queued[key] = 1;
     var tries = 0;
@@ -421,7 +440,7 @@
       if (stamp && !document.getElementById('hiw-prow')) {
         var r = document.createElement('button');
         r.className = 'gl-prow'; r.id = 'hiw-prow';
-        r.innerHTML = '<span class="ic"><span style="font:800 17px/1 -apple-system,sans-serif">?</span></span><span class="tx"><b>How Innings works</b><small>Replay any walkthrough</small></span>' + ((window.GL_ICON && GL_ICON.chev) || '');
+        r.innerHTML = '<span class="ic"><span style="font:800 17px/1 -apple-system,sans-serif">?</span></span><span class="tx"><b>How Innings works</b><small>A walkthrough for every page</small></span>' + ((window.GL_ICON && GL_ICON.chev) || '');
         r.onclick = function () { hiwOpenList(); };
         stamp.insertBefore(r, stamp.firstChild);
       }
@@ -439,14 +458,23 @@
       el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'hiw-list-t');
       el.innerHTML = '<div class="gtut-scrim" onclick="hiwCloseList()"></div><div class="gtut-card"><div class="gtut-grab" aria-hidden="true"></div>' +
         '<div class="gtut-hd"><h3 id="hiw-list-t">How Innings works</h3><button type="button" class="gtut-x" onclick="hiwCloseList()" aria-label="Close">✕</button></div>' +
-        '<div class="gtut-body"><div class="gl-prows" style="margin:0">' + LIST.filter(function (x) { return hiwHas(x[0]); }).map(function (x) {
+        '<div class="gtut-body"><div class="hiw-auto"><span class="tx"><b id="hiw-auto-l">Play on first visit</b><small>A page’s walkthrough plays the first time you open it</small></span>' +
+          '<button type="button" class="gdl-sw" id="hiw-auto-sw" role="switch" aria-checked="false" aria-labelledby="hiw-auto-l" onclick="hiwToggleAuto()"><i></i></button></div>' +
+        '<div class="gl-prows" style="margin:0">' + LIST.filter(function (x) { return hiwHas(x[0]); }).map(function (x) {
           return '<button class="gl-prow" onclick="hiwCloseList();setTimeout(function(){hiwPlay(\'' + x[0] + '\')},260)"><span class="tx"><b>' + x[1] + '</b><small>' + x[2] + '</small></span>' + ((window.GL_ICON && GL_ICON.chev) || '') + '</button>';
         }).join('') + '</div></div></div>';
       (document.querySelector('.app') || document.body).appendChild(el);
     }
+    paintAuto();
     el.style.display = 'block';
     requestAnimationFrame(function () { el.classList.add('on'); });
   };
+  function paintAuto() {
+    var sw = document.getElementById('hiw-auto-sw'); if (!sw) return;
+    var on = hiwAutoOn();
+    sw.classList.toggle('on', on); sw.setAttribute('aria-checked', String(on));
+  }
+  window.hiwToggleAuto = function () { hiwSetAuto(!hiwAutoOn()); paintAuto(); };
   window.hiwCloseList = function () {
     var el = document.getElementById('hiw-list');
     if (!el) return;

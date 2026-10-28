@@ -202,11 +202,11 @@
     {
       id: 'v7.79.0', at: '2026-10-26T16:56:00-07:00',
       title: 'How it works, page by page',
-      sub: 'The first time you open a page, a short walkthrough plays and shows what you can tap.',
+      sub: 'Tap ? on any page and a short walkthrough shows what you can tap.',
       items: function () {
         return [
-          { icon: 'help', title: 'Every page has one', body: 'Home, Games, a game, Plays, a player’s card, Chat, crews, your Archive and more. Each plays once.' },
-          { icon: 'help', title: 'Replay it with ?', body: 'Tap ? on the page, or Profile › How Innings works for the whole list.' },
+          { icon: 'help', title: 'Every page has one', body: 'Home, Games, a game, Plays, a player’s card, Chat, crews, your Archive and more.' },
+          { icon: 'help', title: 'Watch whenever you want', body: 'Tap ? on the page, or Profile › How Innings works for the whole list.' },
           { icon: 'friends', title: 'New friends get a welcome tour', body: 'Anyone joining from your invite sees how Innings works before they start.' }
         ];
       }
