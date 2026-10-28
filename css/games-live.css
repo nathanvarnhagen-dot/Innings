@@ -466,3 +466,24 @@ button.pap-pt:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px;border
 .pa-dis.balk .e{color:#E8565C}
 .pa-dis.balk .b{color:#FFB3A8}
 @media (prefers-reduced-motion: reduce){.pa-dis{animation:none}}
+
+/* ═══ REPLAY REVIEW (v7.83.0) — manager challenge / crew chief review
+   banner across the top of the at-bat square; a sweep while it's being
+   looked at, then the ruling for ten seconds. ═══ */
+.rvw-nt{position:absolute;left:10px;right:10px;top:10px;z-index:6;display:flex;align-items:center;gap:10px;padding:9px 12px 9px 10px;border-radius:13px;background:rgba(13,8,32,.94);border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 28px rgba(0,0,0,.45);overflow:hidden;pointer-events:none;animation:rvwDrop .45s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--t0)}
+@keyframes rvwDrop{from{opacity:0;transform:translateY(-10px)}}
+.rvw-nt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acc)}
+.rvw-ic{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;margin-left:4px;color:#fff;background:var(--tbg);border:1.5px solid var(--acc)}
+.rvw-tx{display:flex;flex-direction:column;min-width:0;flex:1}
+.rvw-nt .t{font-size:14px;font-weight:900;letter-spacing:.14em;color:#fff;line-height:1.15}
+.rvw-nt .s{font-size:12px;font-weight:700;letter-spacing:.01em;color:#B9B3E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.rvw-left{flex:none;display:flex;flex-direction:column;align-items:center;font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#9C95D0;line-height:1}
+.rvw-left b{font-size:17px;font-weight:900;color:#fff;letter-spacing:0;margin-bottom:2px;font-variant-numeric:tabular-nums}
+.rvw-nt.live::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-40%;background:linear-gradient(90deg,transparent,rgba(168,159,232,.26),transparent);animation:fbxScan 2.2s ease-in-out infinite}
+.rvw-nt.live .rvw-ic{animation:rvwPulse 1.6s ease-in-out infinite}
+@keyframes rvwPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 60%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.rvw-nt.ov{border-color:rgba(242,200,105,.45)}
+.rvw-nt.ov .t{color:#F2C869}
+.rvw-nt.ov .rvw-ic{background:rgba(242,200,105,.2);border-color:rgba(242,200,105,.6);color:#F2C869}
+.rvw-nt.st .rvw-ic{background:rgba(168,159,232,.18);border-color:rgba(168,159,232,.5);color:#C9C2F5}
+@media (prefers-reduced-motion: reduce){.rvw-nt,.rvw-nt.live::after,.rvw-nt.live .rvw-ic{animation:none}}

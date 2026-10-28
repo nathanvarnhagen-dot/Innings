@@ -166,6 +166,17 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.83.0', at: '2026-10-27T18:50:00-07:00',
+      title: 'Replay reviews, live',
+      sub: 'When a call goes to New York, the at-bat square tells you.',
+      items: function () {
+        return [
+          { icon: 'help', title: 'Under review', body: 'A manager challenge or crew chief review shows across the top of the square while it’s being looked at: who challenged, what for, and how many challenges they have left.' },
+          { icon: 'history', title: 'The ruling', body: 'Call overturned or call stands, right when it comes back.' }
+        ];
+      }
+    },
+    {
       id: 'v7.81.0', at: '2026-10-26T17:40:00-07:00',
       title: 'Legends get a real card',
       sub: 'Tap any retired player and his whole career is there.',

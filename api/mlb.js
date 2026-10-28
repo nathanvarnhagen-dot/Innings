@@ -347,6 +347,7 @@ module.exports = async function handler(req, res) {
       // v7.36.0: the game screen (plays=all) also gets who is still available
       // on each side during a live game — bench, bullpen, spare starters
       const jobs = [_seasonLinesForMatchup(out, data).catch(function () { /* keep the box score even if this lookup fails */ })];
+      if (out.review) jobs.push(_reviewReasonsFill(out).catch(function () { /* the notice still shows without a reason */ }));
       if (req.query.plays === 'all' && st === 'Live') jobs.push(_reserves(out, data).catch(function (e) { console.error('[reserves]', e); }));
       await Promise.all(jobs);
       out.feedTs = feedTs; // v7.45.0: for &since=
@@ -868,7 +869,11 @@ function summarize(data, gamePk, wantAllPlays) {
     pitchSequence: pitchSequence,
     boxScoreDetail: boxScoreDetail,
     // v6.3.0: ABS challenges left/used per team (feed/live gameData.absChallenges)
-    absChallenges: gameData.absChallenges || null
+    absChallenges: gameData.absChallenges || null,
+    // v7.83.0: a manager challenge / crew-chief review going on (or just
+    // finished), and each team's replay challenges left (gameData.review)
+    review: _mlbReview(gameData, allPlays, abstractState),
+    challenges: (gameData.review && gameData.review.hasChallenges !== false && gameData.review.away && gameData.review.home) ? { away: gameData.review.away, home: gameData.review.home } : null
   };
 }
 
@@ -2582,6 +2587,73 @@ function _absOf(e) {
   var id = rv.challengeTeamId != null ? rv.challengeTeamId : null;
   var side = id == null ? null : (id === _absTeamIds.away ? 'away' : (id === _absTeamIds.home ? 'home' : null));
   return { overturned: !!rv.isOverturned, inProgress: !!rv.inProgress, teamId: id, side: side };
+}
+
+
+// ── REPLAY REVIEW (v7.83.0) ───────────────────────────────────────────────
+// Manager challenges and crew-chief reviews of a play (not ABS pitch
+// challenges, which have their own notice). reviewDetails sits on the play
+// and/or on the event that was reviewed; reviewType is two letters: M
+// (manager challenge) or N (umpire review), then the reason code from
+// /api/v1/reviewReasons ("J" is ball/strike = ABS, skipped here). While it's
+// being looked at, inProgress is true and the game's status can also read
+// "Manager challenge" / "Umpire review" (statusCode M?/N?). Afterwards the
+// play text starts "Rays challenged (tag play), call on the field was
+// overturned: ..." — the reason comes from there when we have it.
+function _mlbReview(gameData, allPlays, abstractState) {
+  if (abstractState !== 'Live' && abstractState !== 'Final') return null;
+  var teams = gameData.teams || {}, st = gameData.status || {};
+  var awayId = teams.away && teams.away.id, homeId = teams.home && teams.home.id;
+  var sideOf = function (id) { return id == null ? null : (id === awayId ? 'away' : (id === homeId ? 'home' : null)); };
+  var live = null, done = null;
+  for (var i = allPlays.length - 1; i >= Math.max(0, allPlays.length - 3) && !(live && done); i--) {
+    var p = allPlays[i], about = p.about || {}, desc = (p.result && p.result.description) || '';
+    var cands = [];
+    if (p.reviewDetails) cands.push(p.reviewDetails);
+    ((p.reviewDetails && p.reviewDetails.additionalReviews) || []).forEach(function (x) { cands.push(x); });
+    (p.playEvents || []).slice().reverse().forEach(function (e) { if (e && e.reviewDetails) cands.push(e.reviewDetails); });
+    cands.forEach(function (rv) {
+      var code = String(rv.reviewType || '');
+      if (/^[MN]J$/.test(code)) return; // ABS
+      if (!code && !rv.inProgress) return;
+      var m = String(desc).match(/\(([^)]+)\),\s*call on the field was (overturned|upheld|confirmed|reversed|stands)/i);
+      var o = {
+        inProgress: !!rv.inProgress, code: code || null,
+        kind: code.charAt(0) === 'N' ? 'crew' : (code.charAt(0) === 'M' || rv.challengeTeamId != null ? 'challenge' : 'crew'),
+        side: sideOf(rv.challengeTeamId), teamId: rv.challengeTeamId != null ? rv.challengeTeamId : null,
+        overturned: !!rv.isOverturned, reason: m ? m[1] : null,
+        atBatIndex: about.atBatIndex != null ? about.atBatIndex : null, inning: about.inning || null, half: about.isTopInning ? 'top' : 'bottom',
+        text: rv.inProgress ? null : (desc || null)
+      };
+      if (o.inProgress) { if (!live) live = o; }
+      else if (!done) done = o;
+    });
+  }
+  // the status says a review is on even if no play carries it yet
+  var sc = String(st.statusCode || ''), ds = String(st.detailedState || '');
+  if (!live && abstractState === 'Live' && ((/^[MN][A-IK-Z]$/.test(sc)) || /manager challenge|umpire review|under review/i.test(ds))) {
+    live = { inProgress: true, code: /^[MN][A-Z]$/.test(sc) ? sc : null, kind: (sc.charAt(0) === 'N' || /umpire/i.test(ds)) ? 'crew' : 'challenge', side: null, teamId: null, overturned: false, reason: null, atBatIndex: null, text: null, status: ds || null };
+  }
+  if (live && abstractState !== 'Live') live = null;
+  return (live || done) ? { live: live, last: done } : null;
+}
+// Reason names ("Tag play", "Home run"…) from MLB's own list, loaded once
+var _REVIEW_REASONS = null;
+async function _reviewReasonsFill(out) {
+  var rv = out && out.review;
+  if (!rv) return;
+  var need = [rv.live, rv.last].filter(function (x) { return x && x.code && !x.reason; });
+  if (!need.length) return;
+  if (!_REVIEW_REASONS) {
+    try {
+      var r = await fetch('https://statsapi.mlb.com/api/v1/reviewReasons');
+      var arr = r.ok ? await r.json() : [];
+      var map = {};
+      (Array.isArray(arr) ? arr : []).forEach(function (x) { if (x && x.code) map[String(x.code)] = x.description || null; });
+      _REVIEW_REASONS = map;
+    } catch (e) { return; }
+  }
+  need.forEach(function (x) { x.reason = _REVIEW_REASONS[x.code.slice(1)] || _REVIEW_REASONS[x.code] || null; });
 }
 
 
