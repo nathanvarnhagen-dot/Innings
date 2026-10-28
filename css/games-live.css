@@ -62,6 +62,7 @@
 @keyframes psSpin{to{transform:rotate(360deg)}}
 .gw-champ .tro{width:52px;height:auto;filter:drop-shadow(0 6px 20px rgba(242,200,105,.5))}
 .gw-champ .big{font-size:28px;font-weight:900;font-style:italic;background:linear-gradient(180deg,#FFF1C4,#F2C869 55%,#B7822A);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.05}
+.gw-champ .tt{margin-top:4px;font-size:10.5px;font-weight:900;letter-spacing:.14em;color:var(--ta);background:var(--tb);border:1px solid color-mix(in srgb,var(--ta) 45%,transparent);padding:5px 10px;border-radius:8px;white-space:nowrap}
 @media (prefers-reduced-motion: reduce){.ps-shine{display:none}.psb.on{animation:none}.gw-champ{animation:none;opacity:1}.gw-champ .rays{animation:none}}
 
 /* ═══ GAME WINNER / WALK-OFF (v6.7.0) — closes the highlights reel ═══ */

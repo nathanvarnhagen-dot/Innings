@@ -270,6 +270,25 @@ function _psBracketHtml(season, d) {
   });
   return h;
 }
+// ── v7.82.0: the franchise's title count under CHAMPIONS ("First title in
+// franchise history", "2nd title · first since 1982", "Back-to-back · 9th
+// title"). World Series wins since 1903 by MLB team id, from
+// data/mlb-history.json (through 2021) plus 2022-2025; the year being won
+// is never in the table, so a team missing from it has never won.
+var _PS_WS_TITLES = { 108: [2002], 109: [2001], 110: [1966,1970,1983], 111: [1903,1912,1915,1916,1918,2004,2007,2013,2018], 112: [1907,1908,2016], 113: [1919,1940,1975,1976,1990], 114: [1920,1948], 116: [1935,1945,1968,1984], 117: [2017,2022], 118: [1985,2015], 119: [1955,1959,1963,1965,1981,1988,2020,2024,2025], 120: [2019], 121: [1969,1986], 133: [1910,1911,1913,1929,1930,1972,1973,1974,1989], 134: [1909,1925,1960,1971,1979], 137: [1905,1921,1922,1933,1954,2010,2012,2014], 138: [1926,1931,1934,1942,1944,1946,1964,1967,1982,2006,2011], 140: [2023], 141: [1992,1993], 142: [1924,1987,1991], 143: [1980,2008], 144: [1914,1957,1995,2021], 145: [1906,1917,2005], 146: [1997,2003], 147: [1923,1927,1928,1932,1936,1937,1938,1939,1941,1943,1947,1949,1950,1951,1952,1953,1956,1958,1961,1962,1977,1978,1996,1998,1999,2000,2009] };
+function _psOrd(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+// pill text: the team's accent when it reads on their primary, else gold
+function _psTtInk(W) { var a = W.c.accent; return (a && typeof _gxLum === 'function' && Math.abs(_gxLum(a) - _gxLum(W.c.bg)) > .25) ? a : '#F2C869'; }
+function _psTitleLine(teamId, yr) {
+  var prior = (_PS_WS_TITLES[teamId] || []).filter(function (y) { return y < yr; });
+  if (!prior.length) return 'FIRST TITLE IN FRANCHISE HISTORY';
+  var n = prior.length + 1, run = 1, i = prior.length - 1;
+  while (i >= 0 && prior[i] === yr - run) { run++; i--; }
+  if (run === 2) return 'BACK-TO-BACK \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
+  if (run === 3) return 'THREE-PEAT \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
+  if (run > 3) return run + ' STRAIGHT \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
+  return _psOrd(n).toUpperCase() + ' TITLE \u00b7 FIRST SINCE ' + prior[prior.length - 1];
+}
 // ── the end of a series: clinch or champions, in place of the win graphic ──
 function _psClinchHtml(end, box, W, L, ws, ls, t0) {
   var g = _psGame();
@@ -290,7 +309,8 @@ function _psClinchHtml(end, box, W, L, ws, ls, t0) {
     return '<div class="gw gw-champ" style="--t0:' + t0 + '"><svg class="rays" viewBox="0 0 520 520" aria-hidden="true">' + rays + '</svg>' +
       '<div class="ct"><span ' + d(200) + '>' + tro + '</span><span class="fin" style="--wa:#F2C869;animation-delay:calc(var(--t0) + 380ms)">' + yr + ' WORLD SERIES</span><span class="big" ' + d(480) + '>CHAMPIONS</span>' +
       '<span class="ln" ' + d(600) + '>' + _escapeHtml((end.winner === 'home' ? box.home : box.away) || W.name) + '</span>' +
-      '<span class="rec" ' + d(700) + '>Beat the ' + _escapeHtml(L.name) + ' ' + wWins + '\u2013' + lWins + '</span></div></div>';
+      '<span class="rec" ' + d(700) + '>Beat the ' + _escapeHtml(L.name) + ' ' + wWins + '\u2013' + lWins + '</span>' +
+      '<span class="tt" style="--tb:' + W.c.bg + ';--ta:' + _psTtInk(W) + ';animation-delay:calc(var(--t0) + 1000ms)">' + _escapeHtml(_psTitleLine(g[winSide + 'Id'], yr)) + '</span></div></div>';
   }
   var nextName = R.next === 'WS' ? 'World Series' : (g.league || '') + R.next;
   return '<div class="gw gw-win gw-ps" style="--t0:' + t0 + ';--wc:' + _ghHexAlpha(W.c.bg, .55) + ';--rc:' + R.rc + ';--rc2:' + R.rc2 + ';--wa:' + R.rc + '">' +
