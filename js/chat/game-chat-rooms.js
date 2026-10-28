@@ -484,13 +484,32 @@ function _gcrNewRoom(key) {
   return window.db.collection('gameChatRooms').doc(id).set({ pk: key, gamePk: st.gamePk != null ? st.gamePk : key, replayOf: null, founder: me, mod: me, members: [me], names: names, joined: {}, asks: {}, no: {}, createdAt: Date.now() }).then(function () { return id; });
 }
 // every message goes here (game-chat.js, pitch-talk.js, memory-ticket.js call _gcAdd)
+// v7.81.2: a message sent before your profile loaded went out as "You" — wait for your real name first
+function _gcrNameReady() {
+  var nm = window.userData && window.userData.name;
+  if (nm) return Promise.resolve(nm);
+  var me = _gcrMe();
+  if (!me || !window.db) return Promise.resolve(null);
+  return window.db.collection('users').doc(me).get().then(function (d) {
+    var n = d.exists && d.data().name;
+    if (n) { window.userData = window.userData || {}; if (!window.userData.name) window.userData.name = n; }
+    return n || null;
+  }).catch(function () { return null; });
+}
 _gcAdd = function (data) {
+  var bad = !data.author || data.author === 'You' || data.author === 'Someone';
+  if (bad && data.uid && data.uid === _gcrMe()) {
+    return _gcrNameReady().then(function (nm) { if (nm) data.author = nm; return _gcAddNow(data); });
+  }
+  return _gcAddNow(data);
+};
+function _gcAddNow(data) {
   var key = _gcrKey(), st = key ? _gcrS(key) : null, v = st && st.view;
   if (!v || v.mode !== 'rooms') return window.db.collection('gameChats').add(data);
   var p = v.mine && v.mine.kind === 'new' ? Promise.resolve(v.mine.id) : v.mine ? _gcrMigrate(key, v.mine.id) : _gcrNewRoom(key);
   return p.then(function (rid) { return window.db.collection('gameChatRooms').doc(rid).collection('messages').add(data).then(function (ref) { _gcrCheckLanded(key, rid, ref.id); return ref; }); })
     .catch(function (err) { console.error('[game chat] send to room', err); if (typeof ib_toast === 'function') ib_toast('Couldn’t send (room) — ' + ((err && err.code) || err)); throw err; });
-};
+}
 // v7.47.1: a sent message that hasn't shown up after a few seconds says why (what the app is listening to vs where it wrote)
 function _gcrCheckLanded(key, rid, id) {
   setTimeout(function () {

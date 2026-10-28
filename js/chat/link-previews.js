@@ -8,7 +8,7 @@ function _extractFirstUrl(text) {
 }
 
 function _fetchLinkPreview(url) {
-  var timeout = new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 4000); });
+  var timeout = new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 6500); });
   var req = fetch('/api/unfurl?url=' + encodeURIComponent(url)).then(function(r){
     return r.ok ? r.json() : null;
   }).catch(function(){ return null; });

@@ -200,6 +200,71 @@ function _gcStatQuoteHtml(rt, mine) {
     '<span class="gc-pq-tx">' + _escapeHtml(st.text || rt.text || '') + '</span></button>';
 }
 
+// v7.81.2: a message sent before your profile name loaded was saved as "You" —
+// look the sender up by uid so friends never see "You" on someone else's message
+window._gcUidNames = window._gcUidNames || {};
+function _gcBadAuthor(a) { a = String(a || '').trim(); return !a || a === 'You' || a === 'Someone' || a === 'Friend'; }
+function _gcAuthorOf(c, mine) {
+  if (!_gcBadAuthor(c.author)) return c.author;
+  if (mine && window.userData && window.userData.name) return window.userData.name;
+  var uid = c.uid;
+  if (!uid) return 'Friend';
+  var hit = window._gcUidNames[uid];
+  if (typeof hit === 'string') return hit;
+  if (!hit && window.db) {
+    window._gcUidNames[uid] = true; // looking it up
+    window.db.collection('users').doc(uid).get().then(function (d) {
+      var nm = d.exists && d.data().name;
+      window._gcUidNames[uid] = nm ? String(nm) : 'Friend';
+      if (nm) _gcRerenderChat();
+    }).catch(function () { window._gcUidNames[uid] = 'Friend'; });
+  }
+  return 'Friend';
+}
+var _gcRerenderT = null;
+function _gcRerenderChat() {
+  clearTimeout(_gcRerenderT);
+  _gcRerenderT = setTimeout(function () {
+    var g = window._activeBrowseGame, key = g && g.gamePk != null ? String(g.gamePk) : null;
+    var msgs = key && window._gameChatMsgs && window._gameChatMsgs[key];
+    if (msgs && typeof renderGameChat === 'function') {
+      var panel = document.getElementById('game-chat-panel');
+      var keep = panel ? panel.scrollTop : null;
+      renderGameChat(msgs);
+      if (panel && keep != null) panel.scrollTop = keep;
+    }
+  }, 120);
+}
+// v7.81.2: a link card that came back bare (site blocked the first fetch) gets fetched again
+window._gcLpFix = window._gcLpFix || {};
+function _gcThinPreview(lp) {
+  if (!lp || !lp.url) return false;
+  if (lp.image) return false;
+  var host = '';
+  try { host = new URL(lp.url).hostname.replace(/^www\./, ''); } catch (e) {}
+  var t = String(lp.title || '').replace(/^www\./, '');
+  return !t || t === host;
+}
+function _gcPreviewOf(c) {
+  var lp = c.linkPreview;
+  if (!_gcThinPreview(lp)) return lp;
+  var fix = window._gcLpFix[lp.url];
+  if (fix && typeof fix === 'object') return fix;
+  if (!fix && typeof _fetchLinkPreview === 'function') {
+    window._gcLpFix[lp.url] = true;
+    _fetchLinkPreview(lp.url).then(function (nlp) {
+      if (nlp && nlp.url && !_gcThinPreview(nlp)) { nlp.url = lp.url; window._gcLpFix[lp.url] = nlp; _gcRerenderChat(); }
+      else window._gcLpFix[lp.url] = 'no';
+    });
+  }
+  return lp;
+}
+
+function _gcSameUrl(a, b) {
+  var n = function (u) { return String(u || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, ''); };
+  return n(a) === n(b);
+}
+
 function renderGameChat(msgs) {
   var box = document.getElementById('game-chat-msgs');
   var empty = document.getElementById('game-chat-empty');
@@ -217,21 +282,32 @@ function renderGameChat(msgs) {
     }
     if (c.systemType === 'play_reaction' && c.play) {
       return '<button class="gc-sys" data-tag="' + _escapeHtml(c.play.tag || '') + '" data-text="' + _escapeHtml(c.play.text || '') + '" data-pid="' + _escapeHtml(c.play.playId || '') + '" onclick="openPlayContext(this.dataset.tag,this.dataset.text,this.dataset.pid||null)">' +
-        '<span class="gc-sys-e">' + _escapeHtml(c.emoji || '') + '</span><span><b>' + _escapeHtml(mine ? 'You' : (c.author || 'Someone')) + '</b> reacted to <b>' + _escapeHtml(c.play.tag || 'a play') + '</b> · ' + _escapeHtml(c.play.text || '') + '</span></button>';
+        '<span class="gc-sys-e">' + _escapeHtml(c.emoji || '') + '</span><span><b>' + _escapeHtml(mine ? 'You' : _gcAuthorOf(c, false)) + '</b> reacted to <b>' + _escapeHtml(c.play.tag || 'a play') + '</b> · ' + _escapeHtml(c.play.text || '') + '</span></button>';
     }
+    var author = _gcAuthorOf(c, mine);
     var badges = _reactionBadgesHtml(c.reactions, true);
     var quote = c.replyTo ? (c.replyTo.pitch && typeof _gcPitchQuoteHtml === 'function' ? _gcPitchQuoteHtml(c.replyTo, mine) : c.replyTo.stat ? _gcStatQuoteHtml(c.replyTo, mine) : _gcIsPlayReply(c.replyTo) ? _gcPlayQuoteHtml(c.replyTo, mine) : _replyQuoteHtml(c.replyTo, mine)) : '';
-    var photo = c.photo ? '<img class="gc-photo" src="' + c.photo + '" alt="Photo from ' + _escapeHtml(c.author || 'a friend') + '" data-src="' + (mine ? 'me' : 'them') + '" onclick="event.stopPropagation();openPhotoLightbox(this.src)">' : '';
-    var lp = c.linkPreview && typeof _linkPreviewCardHtml === 'function' ? _linkPreviewCardHtml(c.linkPreview) : '';
-    var linkOnly = !!(c.linkPreview && c.text && c.text.trim() === c.linkPreview.url);
+    var photo = c.photo ? '<img class="gc-photo" src="' + c.photo + '" alt="Photo from ' + _escapeHtml(author || 'a friend') + '" data-src="' + (mine ? 'me' : 'them') + '" onclick="event.stopPropagation();openPhotoLightbox(this.src)">' : '';
+    var lpData = c.linkPreview ? _gcPreviewOf(c) : null;
+    var lp = lpData && typeof _linkPreviewCardHtml === 'function' ? _linkPreviewCardHtml(lpData) : '';
+    var linkOnly = !!(c.linkPreview && c.text && _gcSameUrl(c.text.trim(), c.linkPreview.url));
     var textHtml = (c.text && !linkOnly) ? '<div class="b-txt">' + _renderMessageTextWithMentions(c.text, !!mine) + '</div>' : '';
     var time = '<div class="b-t">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div>';
-    var bubbleInner = quote + (mine ? '' : '<div class="b-who">' + _escapeHtml(c.author) + '</div>') + photo + textHtml + time;
-    var bubble = '<div class="bubble ' + (mine ? 'me' : 'them') + (photo ? ' gc-has-photo' : '') + '" onclick="_msgDoubleTap(this,\'' + (c._col || 'gameChats') + '\',\'' + c._id + '\',' + (mine ? 'true' : 'false') + ')" style="max-width:100%;cursor:pointer">' + bubbleInner + '</div>';
+    var who = mine ? '' : '<div class="b-who">' + _escapeHtml(author) + '</div>';
+    var tap = 'onclick="_msgDoubleTap(this,\'' + (c._col || 'gameChats') + '\',\'' + c._id + '\',' + (mine ? 'true' : 'false') + ')"';
+    var bubble;
+    // v7.81.2: a bare link is just the card + its time — no empty bubble under it
+    if (linkOnly && !quote && !photo && lp) {
+      lp = (mine ? '' : '<div class="b-who" style="margin:0 0 -2px 2px">' + _escapeHtml(author) + '</div>') + lp;
+      bubble = '<div class="b-t" ' + tap + ' style="padding:0 4px;cursor:pointer">' + _fmtTime(c.ts) + (c.edited ? ' · Edited' : '') + '</div>';
+    } else {
+      var bubbleInner = quote + who + photo + textHtml + time;
+      bubble = '<div class="bubble ' + (mine ? 'me' : 'them') + (photo ? ' gc-has-photo' : '') + '" ' + tap + ' style="max-width:100%;cursor:pointer">' + bubbleInner + '</div>';
+    }
     if (mine) {
       return '<div class="msg" style="justify-content:flex-end"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:76%;min-width:0;gap:4px">' + lp + bubble + badges + '</div></div>';
     }
-    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(c.author)) + '</div>' +
+    return '<div class="msg"><div class="m-av av-b">' + _escapeHtml(_initials(author)) + '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-start;max-width:76%;min-width:0;gap:4px">' + lp + bubble + badges + '</div></div>';
   }).join('');
   var panel = document.getElementById('game-chat-panel');
