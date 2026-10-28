@@ -633,12 +633,13 @@ function _bkxBoardHtml(m) {
 // · 4th title", "4th title · first since 2018"), on a solid card in the
 // winner's colors with one shower of confetti behind the words. Played once
 // when the final is seen arriving; opened later it shows at rest.
-// Title years by team nickname, through 2025 (franchises that folded or
-// whose titles came in another city — Comets, Monarchs, Detroit Shock —
-// aren't carried); the year being won is never counted from the table.
+// Title years by team nickname, through 2025. A franchise that moved keeps
+// its titles (the Detroit Shock's go with the Dallas Wings); folded ones
+// (Comets, Monarchs) aren't carried. The year being won is never counted
+// from the table.
 var BKX_WNBA_TITLES = {
   Sparks: [2001, 2002, 2016], Storm: [2004, 2010, 2018, 2020], Mercury: [2007, 2009, 2014], Lynx: [2011, 2013, 2015, 2017],
-  Fever: [2012], Mystics: [2019], Sky: [2021], Aces: [2022, 2023, 2025], Liberty: [2024]
+  Wings: [2003, 2006, 2008], Fever: [2012], Mystics: [2019], Sky: [2021], Aces: [2022, 2023, 2025], Liberty: [2024]
 };
 function _bkxTitleYears(t) {
   var nm = String((t && (t.name || t.short)) || '');
