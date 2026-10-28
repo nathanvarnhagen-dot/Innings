@@ -272,24 +272,75 @@ function _psBracketHtml(season, d) {
 }
 // ── v7.82.0: the franchise's title count under CHAMPIONS ("First title in
 // franchise history", "2nd title · first since 1982", "Back-to-back · 9th
-// title"). World Series wins since 1903 by MLB team id, from
-// data/mlb-history.json (through 2021) plus 2022-2025; the year being won
-// is never in the table, so a team missing from it has never won.
-var _PS_WS_TITLES = { 108: [2002], 109: [2001], 110: [1966,1970,1983], 111: [1903,1912,1915,1916,1918,2004,2007,2013,2018], 112: [1907,1908,2016], 113: [1919,1940,1975,1976,1990], 114: [1920,1948], 116: [1935,1945,1968,1984], 117: [2017,2022], 118: [1985,2015], 119: [1955,1959,1963,1965,1981,1988,2020,2024,2025], 120: [2019], 121: [1969,1986], 133: [1910,1911,1913,1929,1930,1972,1973,1974,1989], 134: [1909,1925,1960,1971,1979], 137: [1905,1921,1922,1933,1954,2010,2012,2014], 138: [1926,1931,1934,1942,1944,1946,1964,1967,1982,2006,2011], 140: [2023], 141: [1992,1993], 142: [1924,1987,1991], 143: [1980,2008], 144: [1914,1957,1995,2021], 145: [1906,1917,2005], 146: [1997,2003], 147: [1923,1927,1928,1932,1936,1937,1938,1939,1941,1943,1947,1949,1950,1951,1952,1953,1956,1958,1961,1962,1977,1978,1996,1998,1999,2000,2009] };
+// title"). World Series wins since 1903 by MLB team id, each with the name
+// the team won it under, from data/mlb-history.json (through 2021) plus
+// 2022-2025; the year being won is never in the table, so a team missing
+// from it has never won. v7.84.2: a franchise that moved or renamed also
+// gets a line splitting its titles by city ("4 in San Francisco · 5 as the
+// New York Giants").
+var _PS_WS_TITLES = {
+  108: [[2002, "Anaheim Angels"]],
+  109: [[2001, "Arizona Diamondbacks"]],
+  110: [[1966, "Baltimore Orioles"], [1970, "Baltimore Orioles"], [1983, "Baltimore Orioles"]],
+  111: [[1903, "Boston Americans"], [1912, "Boston Red Sox"], [1915, "Boston Red Sox"], [1916, "Boston Red Sox"], [1918, "Boston Red Sox"], [2004, "Boston Red Sox"], [2007, "Boston Red Sox"], [2013, "Boston Red Sox"], [2018, "Boston Red Sox"]],
+  112: [[1907, "Chicago Cubs"], [1908, "Chicago Cubs"], [2016, "Chicago Cubs"]],
+  113: [[1919, "Cincinnati Reds"], [1940, "Cincinnati Reds"], [1975, "Cincinnati Reds"], [1976, "Cincinnati Reds"], [1990, "Cincinnati Reds"]],
+  114: [[1920, "Cleveland Indians"], [1948, "Cleveland Indians"]],
+  116: [[1935, "Detroit Tigers"], [1945, "Detroit Tigers"], [1968, "Detroit Tigers"], [1984, "Detroit Tigers"]],
+  117: [[2017, "Houston Astros"], [2022, "Houston Astros"]],
+  118: [[1985, "Kansas City Royals"], [2015, "Kansas City Royals"]],
+  119: [[1955, "Brooklyn Dodgers"], [1959, "Los Angeles Dodgers"], [1963, "Los Angeles Dodgers"], [1965, "Los Angeles Dodgers"], [1981, "Los Angeles Dodgers"], [1988, "Los Angeles Dodgers"], [2020, "Los Angeles Dodgers"], [2024, "Los Angeles Dodgers"], [2025, "Los Angeles Dodgers"]],
+  120: [[2019, "Washington Nationals"]],
+  121: [[1969, "New York Mets"], [1986, "New York Mets"]],
+  133: [[1910, "Philadelphia Athletics"], [1911, "Philadelphia Athletics"], [1913, "Philadelphia Athletics"], [1929, "Philadelphia Athletics"], [1930, "Philadelphia Athletics"], [1972, "Oakland Athletics"], [1973, "Oakland Athletics"], [1974, "Oakland Athletics"], [1989, "Oakland Athletics"]],
+  134: [[1909, "Pittsburgh Pirates"], [1925, "Pittsburgh Pirates"], [1960, "Pittsburgh Pirates"], [1971, "Pittsburgh Pirates"], [1979, "Pittsburgh Pirates"]],
+  137: [[1905, "New York Giants"], [1921, "New York Giants"], [1922, "New York Giants"], [1933, "New York Giants"], [1954, "New York Giants"], [2010, "San Francisco Giants"], [2012, "San Francisco Giants"], [2014, "San Francisco Giants"]],
+  138: [[1926, "St. Louis Cardinals"], [1931, "St. Louis Cardinals"], [1934, "St. Louis Cardinals"], [1942, "St. Louis Cardinals"], [1944, "St. Louis Cardinals"], [1946, "St. Louis Cardinals"], [1964, "St. Louis Cardinals"], [1967, "St. Louis Cardinals"], [1982, "St. Louis Cardinals"], [2006, "St. Louis Cardinals"], [2011, "St. Louis Cardinals"]],
+  140: [[2023, "Texas Rangers"]],
+  141: [[1992, "Toronto Blue Jays"], [1993, "Toronto Blue Jays"]],
+  142: [[1924, "Washington Senators"], [1987, "Minnesota Twins"], [1991, "Minnesota Twins"]],
+  143: [[1980, "Philadelphia Phillies"], [2008, "Philadelphia Phillies"]],
+  144: [[1914, "Boston Braves"], [1957, "Milwaukee Braves"], [1995, "Atlanta Braves"], [2021, "Atlanta Braves"]],
+  145: [[1906, "Chicago White Sox"], [1917, "Chicago White Sox"], [2005, "Chicago White Sox"]],
+  146: [[1997, "Florida Marlins"], [2003, "Florida Marlins"]],
+  147: [[1923, "New York Yankees"], [1927, "New York Yankees"], [1928, "New York Yankees"], [1932, "New York Yankees"], [1936, "New York Yankees"], [1937, "New York Yankees"], [1938, "New York Yankees"], [1939, "New York Yankees"], [1941, "New York Yankees"], [1943, "New York Yankees"], [1947, "New York Yankees"], [1949, "New York Yankees"], [1950, "New York Yankees"], [1951, "New York Yankees"], [1952, "New York Yankees"], [1953, "New York Yankees"], [1956, "New York Yankees"], [1958, "New York Yankees"], [1961, "New York Yankees"], [1962, "New York Yankees"], [1977, "New York Yankees"], [1978, "New York Yankees"], [1996, "New York Yankees"], [1998, "New York Yankees"], [1999, "New York Yankees"], [2000, "New York Yankees"], [2009, "New York Yankees"]]
+};
 function _psOrd(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 // pill text: the team's accent when it reads on their primary, else gold
 function _psTtInk(W) { var a = W.c.accent; return (a && typeof _gxLum === 'function' && Math.abs(_gxLum(a) - _gxLum(W.c.bg)) > .25) ? a : '#F2C869'; }
-function _psTitleLine(teamId, yr) { return _champTitleLine(_PS_WS_TITLES[teamId], yr); }
-// v7.84.0: the same line for any league, from a list of title years
-function _champTitleLine(years, yr) {
-  var prior = (years || []).filter(function (y) { return y < yr; });
-  if (!prior.length) return 'FIRST TITLE IN FRANCHISE HISTORY';
-  var n = prior.length + 1, run = 1, i = prior.length - 1;
-  while (i >= 0 && prior[i] === yr - run) { run++; i--; }
-  if (run === 2) return 'BACK-TO-BACK \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
-  if (run === 3) return 'THREE-PEAT \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
-  if (run > 3) return run + ' STRAIGHT \u00b7 ' + _psOrd(n).toUpperCase() + ' TITLE';
-  return _psOrd(n).toUpperCase() + ' TITLE \u00b7 FIRST SINCE ' + prior[prior.length - 1];
+function _psTitleLine(teamId, yr, curName) { return _champTitle(_PS_WS_TITLES[teamId], yr, curName); }
+// v7.84.0/v7.84.2: the title line for any league. entries: [year, name it
+// won under] (a bare year means the team's current name). → { line, sub }
+// renames that kept the same home count as one city; the Athletics carry no
+// city in their name while they play in Sacramento (update when they move)
+var _CHAMP_SAME_CITY = { Florida: 'Miami', Anaheim: 'Los Angeles', 'Los Angeles Angels of Anaheim': 'Los Angeles' };
+var _CHAMP_NO_CITY = { Athletics: 'Sacramento' };
+function _champCity(name) {
+  var n = String(name || '').trim();
+  if (_CHAMP_NO_CITY[n]) return _CHAMP_NO_CITY[n];
+  var m = n.match(/^(.*?)\s+(Red Sox|White Sox|Blue Jays)$/), i = n.lastIndexOf(' ');
+  var c = m ? m[1] : (i > 0 ? n.slice(0, i) : '');
+  return _CHAMP_SAME_CITY[c] || c;
+}
+function _champTitle(entries, yr, curName) {
+  var cur = String(curName || ''), curCity = _champCity(cur);
+  var prior = (entries || []).map(function (e) { return typeof e === 'number' ? [e, cur] : e; }).filter(function (e) { return e[0] < yr; }).sort(function (a, b) { return a[0] - b[0]; });
+  if (!prior.length) return { line: 'FIRST TITLE IN FRANCHISE HISTORY', sub: '' };
+  var n = prior.length + 1, ord = _psOrd(n).toUpperCase(), run = 1, i = prior.length - 1;
+  while (i >= 0 && prior[i][0] === yr - run) { run++; i--; }
+  // the titles split by the city they were won in, this one included (a
+  // rename in the same city — Indians → Guardians — stays one city)
+  var key = function (name) { return _champCity(name) || name; };
+  var groups = [{ k: key(cur), n: 1 }];
+  prior.forEach(function (e) { var k = key(e[1]), g = groups.filter(function (x) { return x.k === k; })[0]; if (g) g.n++; else groups.push({ k: k, n: 1 }); });
+  var sub = groups.length > 1 ? groups.map(function (g) { return g.n + (g.k === cur ? ' as the ' + cur : ' in ' + g.k); }).join(' · ') : '';
+  var line;
+  if (run === 2) line = 'BACK-TO-BACK · ' + ord + ' TITLE';
+  else if (run === 3) line = 'THREE-PEAT · ' + ord + ' TITLE';
+  else if (run > 3) line = run + ' STRAIGHT · ' + ord + ' TITLE';
+  else if (groups[0].n === 1 && groups.length > 1 && curCity) line = ord + ' TITLE · FIRST IN ' + curCity.toUpperCase();
+  else line = ord + ' TITLE · FIRST SINCE ' + prior[prior.length - 1][0];
+  return { line: line, sub: sub };
 }
 // ── the end of a series: clinch or champions, in place of the win graphic ──
 function _psClinchHtml(end, box, W, L, ws, ls, t0) {
@@ -312,7 +363,11 @@ function _psClinchHtml(end, box, W, L, ws, ls, t0) {
       '<div class="ct"><span ' + d(200) + '>' + tro + '</span><span class="fin" style="--wa:#F2C869;animation-delay:calc(var(--t0) + 380ms)">' + yr + ' WORLD SERIES</span><span class="big" ' + d(480) + '>CHAMPIONS</span>' +
       '<span class="ln" ' + d(600) + '>' + _escapeHtml((end.winner === 'home' ? box.home : box.away) || W.name) + '</span>' +
       '<span class="rec" ' + d(700) + '>Beat the ' + _escapeHtml(L.name) + ' ' + wWins + '\u2013' + lWins + '</span>' +
-      '<span class="tt" style="--tb:' + W.c.bg + ';--ta:' + _psTtInk(W) + ';animation-delay:calc(var(--t0) + 1000ms)">' + _escapeHtml(_psTitleLine(g[winSide + 'Id'], yr)) + '</span></div></div>';
+      (function () {
+        var T = _psTitleLine(g[winSide + 'Id'], yr, (end.winner === 'home' ? box.home : box.away) || W.name);
+        return '<span class="tt" style="--tb:' + W.c.bg + ';--ta:' + _psTtInk(W) + ';animation-delay:calc(var(--t0) + 1000ms)">' + _escapeHtml(T.line) + '</span>' +
+          (T.sub ? '<span class="rec" ' + d(1150) + '>' + _escapeHtml(T.sub) + '</span>' : '');
+      })() + '</div></div>';
   }
   var nextName = R.next === 'WS' ? 'World Series' : (g.league || '') + R.next;
   return '<div class="gw gw-win gw-ps" style="--t0:' + t0 + ';--wc:' + _ghHexAlpha(W.c.bg, .55) + ';--rc:' + R.rc + ';--rc2:' + R.rc2 + ';--wa:' + R.rc + '">' +

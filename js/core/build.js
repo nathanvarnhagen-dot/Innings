@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.84.1-wnba-moved-titles';
+window.INNINGS_BUILD = 'v7.84.2-titles-by-city';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

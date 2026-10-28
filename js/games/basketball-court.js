@@ -639,7 +639,7 @@ function _bkxBoardHtml(m) {
 // from the table.
 var BKX_WNBA_TITLES = {
   Sparks: [2001, 2002, 2016], Storm: [2004, 2010, 2018, 2020], Mercury: [2007, 2009, 2014], Lynx: [2011, 2013, 2015, 2017],
-  Wings: [2003, 2006, 2008], Fever: [2012], Mystics: [2019], Sky: [2021], Aces: [2022, 2023, 2025], Liberty: [2024]
+  Wings: [[2003, 'Detroit Shock'], [2006, 'Detroit Shock'], [2008, 'Detroit Shock']], Fever: [2012], Mystics: [2019], Sky: [2021], Aces: [2022, 2023, 2025], Liberty: [2024]
 };
 function _bkxTitleYears(t) {
   var nm = String((t && (t.name || t.short)) || '');
@@ -662,7 +662,7 @@ function _bkxChamp(m) {
   if (gn && Number(gn) !== ww + lw) return null; // an earlier game of a finished series
   var yr = parseInt(String(m.startTime || '').slice(0, 4), 10) || new Date().getFullYear();
   return { W: W, L: L, ww: ww, lw: lw, gn: gn ? Number(gn) : ww + lw, yr: yr,
-    line: typeof _champTitleLine === 'function' ? _champTitleLine(_bkxTitleYears(W), yr) : '' };
+    title: typeof _champTitle === 'function' ? _champTitle(_bkxTitleYears(W), yr, W.name || W.short) : { line: '', sub: '' } };
 }
 function _bkxChampHtml(m, st) {
   var c = _bkxChamp(m);
@@ -676,7 +676,7 @@ function _bkxChampHtml(m, st) {
   var cf = '', cc = [_tpLight(bg), acc, '#F2C869', '#FFFFFF'];
   for (var i = 0; i < 22; i++) cf += '<i style="left:' + (i * 41 % 100) + '%;background:' + cc[i % 4] + ';animation-duration:' + (2.6 + (i % 5) * .5).toFixed(1) + 's;animation-delay:calc(var(--t0) + ' + (900 + (i % 7) * 260) + 'ms)"></i>';
   var ball = '<svg class="bkc-ball" ' + d(0) + ' viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#E8792B"/><circle cx="50" cy="50" r="46" fill="none" stroke="#7A3510" stroke-width="3"/><g fill="none" stroke="#3B1A08" stroke-width="3.2" stroke-linecap="round"><path d="M4 50h92"/><path d="M50 4v92"/><path d="M18 17 Q38 50 18 83"/><path d="M82 17 Q62 50 82 83"/></g><ellipse cx="34" cy="30" rx="12" ry="7" fill="#FFFFFF" opacity=".18" transform="rotate(-30 34 30)"/></svg>';
-  var aria = c.yr + ' WNBA Finals champions: ' + (W.name || W.short) + ', beat the ' + (c.L.short || c.L.name) + ' ' + c.ww + '–' + c.lw + (c.line ? '. ' + c.line.toLowerCase() : '');
+  var aria = c.yr + ' WNBA Finals champions: ' + (W.name || W.short) + ', beat the ' + (c.L.short || c.L.name) + ' ' + c.ww + '–' + c.lw + (c.title.line ? '. ' + c.title.line.toLowerCase() : '') + (c.title.sub ? '. ' + c.title.sub : '');
   return '<div class="bkc" role="img" aria-label="' + _escapeHtml(aria) + '" style="--t0:' + t0 + 'ms;--bkc-bg:' + _fbxDark(bg, .72) + ';--bkc-glow:' + _ghHexAlpha(bg, .75) + ';--bkc-pill:' + bg + ';--bkc-ln:' + acc + '">' +
     '<div class="bkc-cf" aria-hidden="true">' + cf + '</div><div class="bkc-glow"></div>' +
     '<div class="bkc-ct">' + ball +
@@ -685,7 +685,8 @@ function _bkxChampHtml(m, st) {
     '<span class="tm" ' + d(900) + '>' + _escapeHtml(W.name || W.short || '') + '</span>' +
     '<span class="rec" ' + d(1000) + '>Beat the ' + _escapeHtml(c.L.short || c.L.name || '') + ' ' + c.ww + '–' + c.lw + '</span>' +
     '<span class="rec" ' + d(1100) + '>Won Game ' + c.gn + ', ' + ws + '–' + ls + '</span>' +
-    (c.line ? '<span class="tt" ' + d(1300) + '>' + _escapeHtml(c.line) + '</span>' : '') +
+    (c.title.line ? '<span class="tt" ' + d(1300) + '>' + _escapeHtml(c.title.line) + '</span>' : '') +
+    (c.title.sub ? '<span class="rec sub" ' + d(1450) + '>' + _escapeHtml(c.title.sub) + '</span>' : '') +
     '</div></div>';
 }
 function _tpLight(hex) { return typeof _tpMix === 'function' ? _tpMix(hex, '#FFFFFF', .45) : hex; }
