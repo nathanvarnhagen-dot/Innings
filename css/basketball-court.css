@@ -207,3 +207,23 @@
 .bkt-pp{display:flex;gap:3px}
 .bkt-pp i{width:7px;height:7px;border-radius:50%;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.3)}
 .bkt-pp i.on{background:#F2C869;border-color:#F2C869}.bkt-pp i.hot{background:#F0656B;border-color:#F0656B}
+
+/* ═══ WNBA CHAMPIONS (v7.84.0) — in place of the floor on the final of
+   the title-clinching game ═══ */
+.bkc{position:relative;height:330px;border-radius:16px;overflow:hidden;background:var(--bkc-bg)}
+.bkc-glow{position:absolute;left:50%;top:38%;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;background:radial-gradient(circle,var(--bkc-glow) 0%,transparent 70%);opacity:0;animation:bkcFade .8s ease both;animation-delay:var(--t0)}
+.bkc-cf{position:absolute;inset:0;pointer-events:none}
+.bkc-cf i{position:absolute;top:0;width:5px;height:10px;border-radius:1px;opacity:0;animation-name:bkcFall;animation-timing-function:linear;animation-iteration-count:2;animation-fill-mode:both}
+.bkc-ct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;padding:0 16px}
+.bkc-ct>*{animation:bkcUp .5s cubic-bezier(.22,1,.36,1) both}
+.bkc-ct .bkc-ball{width:72px;height:72px;animation:bkcDrop 1.1s cubic-bezier(.3,.7,.4,1) both}
+.bkc .fin{font-size:12px;font-weight:800;letter-spacing:.3em;color:#fff}
+.bkc .big{font-size:32px;font-weight:900;font-style:italic;color:#F2C869;line-height:1.05}
+.bkc .tm{font-size:16px;font-weight:800;color:#fff}
+.bkc .rec{font-size:13px;font-weight:600;color:rgba(255,255,255,.82)}
+.bkc .tt{margin-top:6px;font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#fff;background:var(--bkc-pill);border:1px solid color-mix(in srgb,var(--bkc-ln) 70%,transparent);padding:6px 12px;border-radius:8px;white-space:nowrap}
+@keyframes bkcUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes bkcFade{to{opacity:1}}
+@keyframes bkcDrop{0%{opacity:0;transform:translateY(-140px) rotate(-90deg)}55%{opacity:1;transform:translateY(0) rotate(0)}72%{transform:translateY(-18px)}86%{transform:translateY(0)}93%{transform:translateY(-5px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes bkcFall{0%{opacity:.55;transform:translateY(-30px) rotate(0)}100%{opacity:.55;transform:translateY(370px) rotate(540deg)}}
+@media (prefers-reduced-motion: reduce){.bkc-ct>*,.bkc-ct .bkc-ball,.bkc-glow{animation:none;opacity:1}.bkc-cf{display:none}}

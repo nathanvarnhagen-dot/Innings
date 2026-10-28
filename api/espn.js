@@ -1756,6 +1756,17 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
     highlights: [], feed: [], leaders: [], teamStats: [], form: { away: [], home: [] },
     situation: null, drive: null, box: { away: { sections: [] }, home: { sections: [] } }, star: null, stars: null
   };
+  // v7.84.0: the playoff series this game belongs to (title, wins, done),
+  // so the page can tell a title-clinching final from any other
+  try {
+    var ser = comp.series;
+    if (ser && (ser.competitors || []).length) {
+      var wins = { a: null, h: null };
+      ser.competitors.forEach(function (c) { var id = String(c.id); if (id === String(away.id)) wins.a = _num(c.wins); if (id === String(home.id)) wins.h = _num(c.wins); });
+      model.series = { title: ser.title || null, summary: ser.summary || null, completed: !!ser.completed, games: _num(ser.totalCompetitions), wins: wins,
+        note: (header.gameNote) || ((comp.notes && comp.notes[0] && comp.notes[0].headline) || null) };
+    }
+  } catch (e) { model.series = null; }
   var boxById = {};
   try {
     if (sport === 'football') {

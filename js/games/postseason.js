@@ -279,8 +279,10 @@ var _PS_WS_TITLES = { 108: [2002], 109: [2001], 110: [1966,1970,1983], 111: [190
 function _psOrd(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 // pill text: the team's accent when it reads on their primary, else gold
 function _psTtInk(W) { var a = W.c.accent; return (a && typeof _gxLum === 'function' && Math.abs(_gxLum(a) - _gxLum(W.c.bg)) > .25) ? a : '#F2C869'; }
-function _psTitleLine(teamId, yr) {
-  var prior = (_PS_WS_TITLES[teamId] || []).filter(function (y) { return y < yr; });
+function _psTitleLine(teamId, yr) { return _champTitleLine(_PS_WS_TITLES[teamId], yr); }
+// v7.84.0: the same line for any league, from a list of title years
+function _champTitleLine(years, yr) {
+  var prior = (years || []).filter(function (y) { return y < yr; });
   if (!prior.length) return 'FIRST TITLE IN FRANCHISE HISTORY';
   var n = prior.length + 1, run = 1, i = prior.length - 1;
   while (i >= 0 && prior[i] === yr - run) { run++; i--; }

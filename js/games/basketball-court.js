@@ -469,7 +469,9 @@ function _bkxStripHtml(m, runHtml) {
   var st = _bkxTrack(m);
   setTimeout(_bkxStartTick, 0);
   // v7.66.0: team fouls + bonus over the floor, foul trouble under the panel
-  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxFoulsHtml(m) + _bkxCourtHtml(m, st) + _bkxPanelHtml(m, st) + (runHtml || '') + _bkxTroubleHtml(m) + _bkxBoardHtml(m) + '</div>';
+  // v7.84.0: a title-clinching final shows the champions card in place of the floor
+  var champ = _bkxChampHtml(m, st);
+  return '<div class="gh-panel gh-strip bkx" style="display:flex;flex-direction:column;gap:10px">' + _bkxFoulsHtml(m) + (champ || _bkxCourtHtml(m, st)) + _bkxPanelHtml(m, st) + (runHtml || '') + _bkxTroubleHtml(m) + _bkxBoardHtml(m) + '</div>';
 }
 
 // ── v7.66.0: TEAM FOULS — this period's team fouls for each side as five
@@ -622,3 +624,67 @@ function _bkxBoardHtml(m) {
     hdr('FOUR FACTORS', 'PCT \u00b7 LEADER LIT') + '<div class="bkb-ffs">' + ff + '</div>' +
     (m.phase === 'live' ? '<div class="bkb-2">' + foot(A, 'a') + foot(H, 'h') + '</div>' : '') + '</div>';
 }
+
+
+// ═══ WNBA CHAMPIONS (v7.84.0) ═══════════════════════════════════════════
+// The final of the game that wins the WNBA Finals: a basketball drops in and
+// bounces, then "2026 WNBA FINALS / CHAMPIONS", the team, the series and the
+// franchise's title count ("First title in franchise history", "Back-to-back
+// · 4th title", "4th title · first since 2018"), on a solid card in the
+// winner's colors with one shower of confetti behind the words. Played once
+// when the final is seen arriving; opened later it shows at rest.
+// Title years by team nickname, through 2025 (franchises that folded or
+// whose titles came in another city — Comets, Monarchs, Detroit Shock —
+// aren't carried); the year being won is never counted from the table.
+var BKX_WNBA_TITLES = {
+  Sparks: [2001, 2002, 2016], Storm: [2004, 2010, 2018, 2020], Mercury: [2007, 2009, 2014], Lynx: [2011, 2013, 2015, 2017],
+  Fever: [2012], Mystics: [2019], Sky: [2021], Aces: [2022, 2023, 2025], Liberty: [2024]
+};
+function _bkxTitleYears(t) {
+  var nm = String((t && (t.name || t.short)) || '');
+  for (var k in BKX_WNBA_TITLES) if (new RegExp('\\b' + k + '$', 'i').test(nm)) return BKX_WNBA_TITLES[k];
+  return [];
+}
+function _bkxChamp(m) {
+  if (!m || m.league !== 'wnba' || m.phase !== 'final') return null;
+  var s = m.series;
+  if (!s) return null;
+  var label = String((s.title || '') + ' ' + (s.note || ''));
+  if (!/finals/i.test(label) || /semi|conference|first round|second round/i.test(label)) return null;
+  var a = m.away, h = m.home;
+  if (a.score == null || h.score == null || a.score === h.score) return null;
+  var wSide = a.score > h.score ? 'a' : 'h', W = wSide === 'a' ? a : h, L = wSide === 'a' ? h : a;
+  var ww = s.wins && s.wins[wSide], lw = s.wins && s.wins[wSide === 'a' ? 'h' : 'a'];
+  var need = s.games ? Math.ceil(s.games / 2) : 4;
+  if (ww == null || lw == null || ww < need || lw >= ww) return null; // this game's winner took the series
+  var gn = (String(s.note || '').match(/game\s*(\d+)/i) || [])[1];
+  if (gn && Number(gn) !== ww + lw) return null; // an earlier game of a finished series
+  var yr = parseInt(String(m.startTime || '').slice(0, 4), 10) || new Date().getFullYear();
+  return { W: W, L: L, ww: ww, lw: lw, gn: gn ? Number(gn) : ww + lw, yr: yr,
+    line: typeof _champTitleLine === 'function' ? _champTitleLine(_bkxTitleYears(W), yr) : '' };
+}
+function _bkxChampHtml(m, st) {
+  var c = _bkxChamp(m);
+  if (!c) return '';
+  var now = Date.now(), W = c.W, col = W.colors || {};
+  var bg = col.bg || '#3D3580', acc = col.accent || '#A89FE8';
+  if (!st.champAt) st.champAt = st.seeded ? now : now - 60000;
+  var t0 = now - st.champAt > 6000 ? -60000 : -(now - st.champAt); // frozen once played
+  var d = function (ms) { return 'style="animation-delay:calc(var(--t0) + ' + ms + 'ms)"'; };
+  var ws = W === m.away ? m.away.score : m.home.score, ls = W === m.away ? m.home.score : m.away.score;
+  var cf = '', cc = [_tpLight(bg), acc, '#F2C869', '#FFFFFF'];
+  for (var i = 0; i < 22; i++) cf += '<i style="left:' + (i * 41 % 100) + '%;background:' + cc[i % 4] + ';animation-duration:' + (2.6 + (i % 5) * .5).toFixed(1) + 's;animation-delay:calc(var(--t0) + ' + (900 + (i % 7) * 260) + 'ms)"></i>';
+  var ball = '<svg class="bkc-ball" ' + d(0) + ' viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#E8792B"/><circle cx="50" cy="50" r="46" fill="none" stroke="#7A3510" stroke-width="3"/><g fill="none" stroke="#3B1A08" stroke-width="3.2" stroke-linecap="round"><path d="M4 50h92"/><path d="M50 4v92"/><path d="M18 17 Q38 50 18 83"/><path d="M82 17 Q62 50 82 83"/></g><ellipse cx="34" cy="30" rx="12" ry="7" fill="#FFFFFF" opacity=".18" transform="rotate(-30 34 30)"/></svg>';
+  var aria = c.yr + ' WNBA Finals champions: ' + (W.name || W.short) + ', beat the ' + (c.L.short || c.L.name) + ' ' + c.ww + '–' + c.lw + (c.line ? '. ' + c.line.toLowerCase() : '');
+  return '<div class="bkc" role="img" aria-label="' + _escapeHtml(aria) + '" style="--t0:' + t0 + 'ms;--bkc-bg:' + _fbxDark(bg, .72) + ';--bkc-glow:' + _ghHexAlpha(bg, .75) + ';--bkc-pill:' + bg + ';--bkc-ln:' + acc + '">' +
+    '<div class="bkc-cf" aria-hidden="true">' + cf + '</div><div class="bkc-glow"></div>' +
+    '<div class="bkc-ct">' + ball +
+    '<span class="fin" ' + d(700) + '>' + c.yr + ' WNBA FINALS</span>' +
+    '<span class="big" ' + d(800) + '>CHAMPIONS</span>' +
+    '<span class="tm" ' + d(900) + '>' + _escapeHtml(W.name || W.short || '') + '</span>' +
+    '<span class="rec" ' + d(1000) + '>Beat the ' + _escapeHtml(c.L.short || c.L.name || '') + ' ' + c.ww + '–' + c.lw + '</span>' +
+    '<span class="rec" ' + d(1100) + '>Won Game ' + c.gn + ', ' + ws + '–' + ls + '</span>' +
+    (c.line ? '<span class="tt" ' + d(1300) + '>' + _escapeHtml(c.line) + '</span>' : '') +
+    '</div></div>';
+}
+function _tpLight(hex) { return typeof _tpMix === 'function' ? _tpMix(hex, '#FFFFFF', .45) : hex; }
