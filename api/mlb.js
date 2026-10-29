@@ -424,6 +424,33 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // GET /api/mlb?mode=hotstove[&date=YYYY-MM-DD]  (v7.86.0)
+    // The offseason page's Hot Stove: MLB-level signings, trades, free agents,
+    // claims, releases and retirements since October 1 (the last 30 days in
+    // season), each player with his season line, plus the free agents still
+    // unsigned and the next spring training date.
+    if (mode === 'hotstove') {
+      const today = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : new Date(Date.now() - 8 * 3600e3).toISOString().slice(0, 10);
+      const out = await _hsFeed(today);
+      res.setHeader('Cache-Control', out.error ? 's-maxage=30' : 's-maxage=300, stale-while-revalidate=900');
+      res.status(out.error ? 502 : 200).json(out);
+      return;
+    }
+
+    // GET /api/mlb?mode=replaces&teamId=<id>&pos=RF&role=sp|rp&exclude=<id>&season=YYYY  (v7.86.0)
+    // Who a new signing or trade pickup is taking over from: that team's
+    // regular at his position last season (most PA there; for pitchers the
+    // most starts, or the most relief appearances).
+    if (mode === 'replaces') {
+      const teamId = parseInt(req.query.teamId, 10);
+      if (!_HS_MLB.has(teamId)) { res.status(400).json({ error: 'Bad team' }); return; }
+      const season = parseInt(req.query.season, 10) || new Date().getFullYear();
+      const out = await _hsReplaces(teamId, String(req.query.pos || ''), String(req.query.role || ''), String(req.query.exclude || ''), season);
+      res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
+      res.status(200).json(out || { player: null });
+      return;
+    }
+
     if (mode === 'teams') {
       const url = 'https://statsapi.mlb.com/api/v1/teams?sportId=1';
       const r = await fetch(url);
@@ -2767,6 +2794,132 @@ async function _mlbPhase(today) {
   // nothing left to play (or the bracket isn't posted yet, right after the regular season)
   if (pj && (pj.dates || []).length) return { phase: 'off', label: 'Offseason' };
   return postEnd && today <= postEnd ? { phase: 'post', label: 'Postseason' } : { phase: 'off', label: 'Offseason' };
+}
+
+// ── HOT STOVE (v7.86.0) ───────────────────────────────────────────────────
+// mode=hotstove and mode=replaces (see the handler). The Stats API's
+// transactions list mixes every level of every organization, so only moves
+// that touch a big-league club and aren't minor league deals are kept.
+const _HS_MLB = new Set([108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 158]);
+function _hsKind(t) {
+  const d = String(t.typeDesc || ''), s = String(t.description || '');
+  if (/minor league/i.test(s)) return null;
+  if (/^trade$/i.test(d)) return 'trade';
+  if (/free agency/i.test(d) || /elected free agency|declared free agency|became a free agent/i.test(s)) return 'fa';
+  if (/signed as free agent/i.test(d) || /^signed$/i.test(d)) return 'sign';
+  if (/claimed/i.test(d)) return 'claim';
+  if (/^released$/i.test(d)) return 'release';
+  if (/retired/i.test(d)) return 'retire';
+  if (/designated for assignment/i.test(d)) return 'dfa';
+  return null;
+}
+function _hsIp(v) { const m = /^(\d+)(?:\.(\d))?$/.exec(String(v == null ? '' : v)); return m ? +m[1] + (+(m[2] || 0)) / 3 : 0; }
+function _hsSplit(p, group) {
+  const st = ((p && p.stats) || []).filter(s => s && s.group && s.group.displayName === group)[0];
+  const sp = (st && st.splits) || [];
+  if (!sp.length) return null;
+  // a season split across teams comes with a combined line (no team): that's the one
+  const tot = sp.filter(x => !x.team)[0];
+  return { stat: (tot || sp[sp.length - 1]).stat || {}, team: ((sp.filter(x => x.team).slice(-1)[0] || {}).team || {}).id || null };
+}
+function _hsPerson(p) {
+  const pos = (p.primaryPosition && p.primaryPosition.abbreviation) || null;
+  const h = _hsSplit(p, 'hitting'), pi = _hsSplit(p, 'pitching');
+  const o = { id: p.id, name: p.fullName || '', pos: pos, age: p.currentAge || null, lastTeam: (pi && pi.team) || (h && h.team) || null };
+  if (h && h.stat.plateAppearances) {
+    const s = h.stat;
+    o.bat = { g: s.gamesPlayed || 0, pa: s.plateAppearances || 0, avg: s.avg || null, obp: s.obp || null, slg: s.slg || null, ops: s.ops || null, hr: s.homeRuns || 0, rbi: s.rbi || 0, sb: s.stolenBases || 0 };
+  }
+  if (pi && (pi.stat.inningsPitched || pi.stat.gamesPitched)) {
+    const s = pi.stat;
+    o.pit = { g: s.gamesPitched || s.gamesPlayed || 0, gs: s.gamesStarted || 0, ip: s.inningsPitched || '0.0', era: s.era || null, whip: s.whip || null, so: s.strikeOuts || 0, w: s.wins || 0, l: s.losses || 0, sv: s.saves || 0 };
+  }
+  const pitcher = pos === 'P' || (pos === 'TWP' && o.pit && !o.bat);
+  o.score = Math.round(Math.max(pitcher ? 0 : (o.bat ? o.bat.pa : 0), o.pit ? _hsIp(o.pit.ip) * 3 : 0));
+  return o;
+}
+async function _hsFeed(today) {
+  const y = +today.slice(0, 4), mo = +today.slice(5, 7);
+  // the season these players just played: October through February belongs to the year it began in
+  const season = mo < 3 ? y - 1 : y;
+  const off = mo >= 10 || mo < 3;
+  const start = off ? season + '-10-01' : new Date(Date.parse(today) - 30 * 864e5).toISOString().slice(0, 10);
+  const [tj, sj] = await Promise.all([
+    _tpGetJson(_CMP_API + '/transactions?sportId=1&startDate=' + start + '&endDate=' + today),
+    _tpGetJson(_CMP_API + '/seasons/' + (off ? season + 1 : y) + '?sportId=1')
+  ]);
+  if (!tj) return { error: 'No transactions' };
+  const sea = (sj && sj.seasons && sj.seasons[0]) || null;
+  const spring = (sea && (sea.springStartDate || sea.preSeasonStartDate)) || null;
+  const moves = [], trades = {}, ids = new Set(), lastBy = {};
+  ((tj && tj.transactions) || []).forEach(t => {
+    const kind = _hsKind(t);
+    if (!kind || !t.person || !t.person.id) return;
+    const to = t.toTeam || null, fr = t.fromTeam || null;
+    const toMlb = !!(to && _HS_MLB.has(to.id)), frMlb = !!(fr && _HS_MLB.has(fr.id));
+    if (kind === 'sign' || kind === 'claim') { if (!toMlb) return; }
+    else if (!toMlb && !frMlb) return;
+    const date = String(t.effectiveDate || t.date || '').slice(0, 10);
+    const pid = t.person.id;
+    ids.add(pid);
+    const tm = x => x ? { id: x.id, name: x.name || '' } : null;
+    if (kind === 'trade') {
+      if (!to || !fr) return;
+      const key = date + ':' + [to.id, fr.id].sort((a, b) => a - b).join('-');
+      const tr = trades[key] || (trades[key] = { kind: 'trade', date: date, id: 'tr' + key, teams: {} });
+      const side = tr.teams[to.id] || (tr.teams[to.id] = { team: tm(to), gets: [] });
+      if (side.gets.indexOf(pid) < 0) side.gets.push(pid);
+      tr.teams[fr.id] = tr.teams[fr.id] || { team: tm(fr), gets: [] };
+    } else {
+      moves.push({ kind: kind, date: date, id: String(t.id || pid + ':' + date + ':' + kind), player: pid, team: kind === 'fa' || kind === 'release' || kind === 'retire' || kind === 'dfa' ? tm(fr || to) : tm(to), from: kind === 'claim' ? tm(fr) : null });
+    }
+    // the latest thing that happened to each player decides if he's still out there
+    if (!lastBy[pid] || lastBy[pid].date <= date) lastBy[pid] = { date: date, kind: kind };
+  });
+  Object.keys(trades).forEach(k => { const tr = trades[k]; tr.teams = Object.keys(tr.teams).map(id => tr.teams[id]); moves.push(tr); });
+  moves.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  // every player's season line, 50 at a time
+  const list = Array.from(ids).slice(0, 400), people = {};
+  const chunks = [];
+  for (let i = 0; i < list.length; i += 50) chunks.push(list.slice(i, i + 50));
+  const hyd = 'stats(group=[hitting,pitching],type=[season],season=' + season + ')';
+  const got = await Promise.all(chunks.map(c => _tpGetJson(_CMP_API + '/people?personIds=' + c.join(',') + '&hydrate=' + encodeURIComponent(hyd))));
+  got.forEach(j => ((j && j.people) || []).forEach(p => { people[p.id] = _hsPerson(p); }));
+  const fas = Object.keys(lastBy).filter(id => lastBy[id].kind === 'fa' && people[id]).sort((a, b) => people[b].score - people[a].score).slice(0, 40).map(Number);
+  return { today: today, season: season, spring: spring, moves: moves.slice(0, 250), people: people, fas: fas };
+}
+async function _hsReplaces(teamId, pos, role, exclude, season) {
+  const pitcher = pos === 'P' || role === 'sp' || role === 'rp';
+  const hyd = 'person(stats(type=[season],season=' + season + ',group=[' + (pitcher ? 'pitching' : 'hitting') + ']))';
+  const j = await _tpGetJson(_CMP_API + '/teams/' + teamId + '/roster?rosterType=fullSeason&season=' + season + '&hydrate=' + encodeURIComponent(hyd));
+  const roster = (j && j.roster) || [];
+  const OF = /^(LF|CF|RF|OF)$/;
+  const line = r => {
+    const st = ((r.person && r.person.stats) || [])[0], sp = (st && st.splits) || [];
+    // only what he did for this team counts
+    const mine = sp.filter(x => x.team && x.team.id === teamId)[0] || (sp.length === 1 ? sp[0] : null);
+    return (mine && mine.stat) || {};
+  };
+  let best = null, bestScore = 0, how = '';
+  const pass = (match, label) => {
+    roster.forEach(r => {
+      if (!r.person || String(r.person.id) === exclude) return;
+      const rp = (r.position && r.position.abbreviation) || '';
+      if (!match(rp)) return;
+      const s = line(r);
+      let sc;
+      if (pitcher) sc = role === 'rp' ? ((s.gamesStarted || 0) < 3 ? (s.gamesPitched || 0) : 0) : (s.gamesStarted || 0);
+      else sc = s.plateAppearances || 0;
+      if (sc > bestScore) { bestScore = sc; best = r.person; how = label; }
+    });
+  };
+  if (pitcher) pass(rp => rp === 'P', role === 'rp' ? 'reliever' : 'starter');
+  else {
+    pass(rp => rp === pos, pos);
+    if (!best && OF.test(pos)) pass(rp => OF.test(rp), 'OF');
+  }
+  if (!best || bestScore < (pitcher ? 10 : 150)) return { player: null };
+  return { player: { id: best.id, name: best.fullName || '' }, how: how, season: season };
 }
 
 // ── THE ROUND'S SERIES (v7.41.0) ──────────────────────────────────────────

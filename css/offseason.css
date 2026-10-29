@@ -1,0 +1,86 @@
+/* ═══ BASEBALL OFFSEASON PAGE (v7.86.0) — js/games/offseason.js
+   Top of the MLB Games screen once the season is over: a countdown to
+   spring training, a player search with quick compares, and the Hot Stove
+   (signings, trades, free agents) with a team-color card for the biggest
+   move and a "Where does he sign?" pick card for you and your friends. ═══ */
+#games-offseason{margin-bottom:16px}
+.hs{display:flex;flex-direction:column;gap:14px;color:#E9E5FF}
+.hs-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.hs-eb{font-size:11px;font-weight:800;letter-spacing:.16em;color:#F2A06B}
+.hs-h1{margin:2px 0 0;font-family:'Instrument Serif',serif;font-weight:400;font-size:32px;line-height:1.05;color:#fff}
+.hs-cd{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.hs-cd b{font-size:24px;font-weight:800;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums}
+.hs-cd b small{font-size:12px;font-weight:700;color:#C9C2F5;letter-spacing:0;margin-left:3px}
+.hs-cd span{font-size:10px;font-weight:800;letter-spacing:.1em;color:#9C95D0;text-transform:uppercase}
+.hs-q{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;background:rgba(168,159,232,.1);border:1px solid rgba(168,159,232,.35);color:#C9C2F5}
+.hs-q input{flex:1;min-width:0;border:0;background:transparent;color:#fff;font:600 16px -apple-system,system-ui,sans-serif;outline:none}
+.hs-q input::placeholder{color:#9C95D0}
+.hs-q:focus-within{border-color:#A89FE8}
+.hs-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.hs-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.hs-chips::-webkit-scrollbar{display:none}
+.hs-chip{flex:0 0 auto;min-height:34px;padding:0 12px;border-radius:10px;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#E9E5FF;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.hs-chip.gold{border-color:rgba(242,200,105,.4);background:rgba(242,200,105,.1);color:#F2C869}
+.hs-chip.on{background:#A89FE8;border-color:#A89FE8;color:#1A1640}
+.hs-chip:focus-visible,.hs-btn:focus-visible,.hs-row:focus-visible,.hs-cmp:focus-visible,.hs-tm:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.hs-res{border-radius:16px;background:rgba(168,159,232,.06);border:1px solid rgba(168,159,232,.2);overflow:hidden}
+.hs-empty{padding:16px;font-size:13px;color:#9C95D0;text-align:center}
+.hs-base{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(242,200,105,.1);border:1px solid rgba(242,200,105,.35);font-size:13px;font-weight:700;color:#F2C869}
+.hs-base button{min-height:32px;padding:0 10px;border-radius:9px;border:1px solid rgba(242,200,105,.4);background:transparent;color:#F2C869;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer}
+.hs-hd{display:flex;justify-content:space-between;align-items:baseline;padding-top:4px}
+.hs-h2{margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;color:#fff}
+.hs-mut{font-size:12px;color:#9C95D0}
+.hs-card{border-radius:18px;overflow:hidden;border:1px solid rgba(168,159,232,.22);background:rgba(168,159,232,.06)}
+.hs-band{position:relative;padding:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;cursor:pointer}
+.hs-band:after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 55%,rgba(0,0,0,.38));pointer-events:none}
+.hs-band>*{position:relative;z-index:1}
+.hs-kd{font-size:10px;font-weight:800;letter-spacing:.2em;opacity:.9}
+.hs-nm{font-size:24px;font-weight:900;letter-spacing:-.02em;line-height:1.02;margin-top:4px}
+.hs-tl{font-size:13px;font-weight:700;margin-top:4px}
+.hs-ab{font-size:28px;font-weight:900;opacity:.4;flex-shrink:0}
+.hs-st{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 14px}
+.hs-st div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.hs-st b{font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.hs-st span{font-size:10px;font-weight:700;color:#9C95D0}
+.hs-called{margin:0 14px 10px;font-size:12px;font-weight:700;color:#F2C869}
+.hs-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 14px 12px}
+.hs-btn{min-height:42px;border-radius:11px;border:1px solid rgba(168,159,232,.3);background:transparent;color:#E9E5FF;font:700 13px -apple-system,system-ui,sans-serif;cursor:pointer;padding:0 10px}
+.hs-btn.pri{border:0;background:#A89FE8;color:#1A1640;font-weight:800}
+.hs-btn[disabled]{opacity:.55;cursor:default}
+.hs-pick{border-radius:18px;border:1px solid rgba(242,200,105,.35);background:rgba(242,200,105,.06);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.hs-pk-hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hs-pk-eb{font-size:11px;font-weight:800;letter-spacing:.14em;color:#F2C869}
+.hs-pk-nv{display:flex;gap:4px}
+.hs-pk-nv button{width:36px;height:36px;border-radius:18px;border:1px solid rgba(242,200,105,.35);background:transparent;color:#F2C869;font:800 16px -apple-system,system-ui,sans-serif;cursor:pointer}
+.hs-pk-nv button[disabled]{opacity:.35;cursor:default}
+.hs-pk-who{display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.hs-pk-who b{font-size:17px;font-weight:800;color:#fff}
+.hs-pk-who span{font-size:12px;color:#C9C2F5}
+.hs-pk-tms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.hs-tm{min-height:44px;border-radius:10px;border:0;font:800 12px -apple-system,system-ui,sans-serif;cursor:pointer;padding:0 4px}
+.hs-tm.mine{box-shadow:0 0 0 2px #F2C869}
+.hs-tm.wide{grid-column:1/-1}
+.hs-rep{margin:-2px 14px 10px;font-size:12px;font-weight:600;color:#C9C2F5;line-height:1.35}
+.hs-tm.add{border:1px solid rgba(168,159,232,.35);background:transparent;color:#E9E5FF;font-weight:700}
+.hs-pk-ft{font-size:11px;color:#9C95D0}
+.hs-list{border-radius:16px;background:rgba(168,159,232,.06);border:1px solid rgba(168,159,232,.2);overflow:hidden}
+.hs-row{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px 10px 0;border-top:1px solid rgba(255,255,255,.06);cursor:pointer}
+.hs-row:first-child{border-top:0}
+.hs-row .bar{height:36px;border-radius:0 3px 3px 0}
+.hs-row .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hs-row .tx b{font-size:14px;font-weight:700;color:#fff;line-height:1.25}
+.hs-row .tx span{font-size:11.5px;color:#9C95D0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-cmp{min-height:36px;padding:0 10px;border-radius:9px;border:1px solid rgba(168,159,232,.35);background:transparent;color:#C9C2F5;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer}
+.hs-more{width:100%;min-height:44px;border:0;border-top:1px solid rgba(255,255,255,.06);background:transparent;color:#C9C2F5;font:700 13px -apple-system,system-ui,sans-serif;cursor:pointer}
+.hs-sched{font-size:11px;font-weight:800;letter-spacing:.14em;color:#9C95D0;margin:6px 0 -6px}
+.hs-skel{height:120px;border-radius:18px;background:rgba(168,159,232,.07);animation:hsPulse 1.4s ease-in-out infinite}
+@keyframes hsPulse{50%{opacity:.5}}
+/* team picker sheet */
+#hs-teams{position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
+#hs-teams .sh{width:100%;max-width:430px;max-height:82vh;overflow-y:auto;background:#1A1640;border-radius:22px 22px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,16px) + 16px);box-sizing:border-box}
+#hs-teams .sh-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+#hs-teams h2{margin:0;font-size:17px;font-weight:800;color:#fff}
+#hs-teams .x{width:44px;height:44px;border-radius:22px;border:1px solid rgba(168,159,232,.3);background:rgba(168,159,232,.1);color:#fff;cursor:pointer;flex-shrink:0}
+#hs-teams .gr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+#hs-teams .clr{width:100%;margin-top:12px}
+@media (prefers-reduced-motion: reduce){.hs-skel{animation:none}}

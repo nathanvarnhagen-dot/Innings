@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.86.0', at: '2026-10-29T11:30:00-07:00',
+      title: 'Baseball’s offseason',
+      sub: 'The season’s over. Open MLB in Games for everything happening until spring.',
+      items: function () {
+        return [
+          { icon: 'compare', title: 'Look up and compare anyone', body: 'Search any player, active or retired. Tap Compare on two of them, or use the quick compares for the best free agents still out there.' },
+          { icon: 'history', title: 'The Hot Stove', body: 'Every signing, trade and free agent as it happens, filtered to your teams if you like. The biggest move gets its team’s colors and a compare against the player he’s replacing.' },
+          { icon: 'friends', title: 'Where does he sign?', body: 'Pick a team for the top free agents. Your friends’ picks show up too, and when he signs, his card says who called it.' }
+        ];
+      }
+    },
+    {
       id: 'v7.83.0', at: '2026-10-27T18:50:00-07:00',
       title: 'Replay reviews, live',
       sub: 'When a call goes to New York, the at-bat square tells you.',
