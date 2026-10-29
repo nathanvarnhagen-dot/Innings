@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.86.0-offseason-hot-stove';
+window.INNINGS_BUILD = 'v7.86.1-offseason-no-schedule';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

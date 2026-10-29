@@ -63,12 +63,23 @@ function _hsPhase() {
   var P = typeof _gsPhaseState === 'function' ? _gsPhaseState() : null;
   return (P && P.by && P.by.mlb && P.by.mlb.phase) || null;
 }
+// v7.86.1: while the offseason page is up there's nothing on the schedule
+// until spring, so the date bar and the day's (empty) list are hidden
+function _hsSchedule(show) {
+  var el = document.getElementById('games-offseason'), nav = el && el.nextElementSibling, list = document.getElementById('games-list');
+  if (nav && nav !== list && nav.querySelector('#games-date-label')) nav.style.display = show ? 'flex' : 'none';
+  if (list) list.style.display = show ? 'flex' : 'none';
+}
 function hsSync() {
   var el = _hsHost();
   if (!el) return;
+  var shown = _hsSyncInner(el);
+  _hsSchedule(!shown);
+}
+function _hsSyncInner(el) {
   var onToday = !window._gamesDate || window._gamesDate === _hsToday();
   var ph = _hsPhase();
-  if (window._gamesSport !== 'mlb' || !onToday) { el.style.display = 'none'; return; }
+  if (window._gamesSport !== 'mlb' || !onToday) { el.style.display = 'none'; return false; }
   if (!ph) {
     // the Games page normally has the season line already; if not, ask once
     if (!window._hsPhaseAsk) {
@@ -79,9 +90,9 @@ function hsSync() {
       }).catch(function () {}).then(function () { window._hsPhaseAsk = false; });
     }
     el.style.display = 'none';
-    return;
+    return false;
   }
-  if (ph !== 'off') { el.style.display = 'none'; return; }
+  if (ph !== 'off') { el.style.display = 'none'; return false; }
   el.style.display = '';
   if (!el.firstChild) _hsRender();
   _hsLoad();
@@ -94,6 +105,7 @@ function hsSync() {
       if (window._hs.filter === 'mine' && was !== JSON.stringify(window._hs.fav)) _hsRender();
     });
   }
+  return true;
 }
 function _hsLoad(force) {
   var H = window._hs;
@@ -453,7 +465,7 @@ function _hsRender() {
     else out += '<div class="hs-list">' + (show.length ? show.map(_hsRowHtml).join('') : '<div class="hs-empty">Nothing here yet.</div>') +
       (rows.length > show.length ? '<button type="button" class="hs-more" onclick="hsMore()">Show ' + (Math.min(rows.length, 120) - show.length) + ' more</button>' : '') + '</div>';
   }
-  out += '<div class="hs-sched">SCHEDULE</div></div>';
+  out += '</div>';
   el.innerHTML = out;
   if (keepFocus) { var q = document.getElementById('hs-q'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) {} } }
 }
