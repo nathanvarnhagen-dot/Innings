@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.87.0', at: '2026-10-29T11:40:00-07:00',
+      title: 'Basketball player cards',
+      sub: 'Tap any NBA or WNBA player for his numbers, not just his bio.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Season, last season, career', body: 'Points, rebounds, assists, FG% and 3P% per game, right under age and height.' },
+          { icon: 'history', title: 'Every game this season', body: 'His line from each game, newest first, playoffs included.' },
+          { icon: 'help', title: 'Full names', body: 'Tapping a shortened name like G. Williams now opens the card under her full name.' }
+        ];
+      }
+    },
+    {
       id: 'v7.86.0', at: '2026-10-29T11:30:00-07:00',
       title: 'Baseball’s offseason',
       sub: 'The season’s over. Open MLB in Games for everything happening until spring.',

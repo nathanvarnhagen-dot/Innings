@@ -77,8 +77,19 @@ function _plsBioHtml(name, id, league) {
   if (d.height) cells.push(['Height', String(d.height)]);
   if (d.seasons != null && Number(d.seasons) > 0) cells.push([PLS_BIO_LG[league] + ' season', typeof _ordinalSuffix === 'function' ? _ordinalSuffix(Number(d.seasons)) : String(d.seasons)]);
   else if (d.cls) cells.push(['Class', String(d.cls).replace(/^redshirt\s+/i, 'RS ')]); // "Redshirt Sophomore" doesn't fit the tile
+  _plsFullName(d.name);
   if (!cells.length) return '';
   return '<div class="plb">' + cells.map(function (c) { return '<span><small>' + _escapeHtml(c[0]) + '</small><b>' + _escapeHtml(c[1]) + '</b></span>'; }).join('') + '</div>';
+}
+// v7.87.0: a sheet opened from an abbreviated name ("G. Williams") takes
+// the full name once the bio lookup has matched the player
+function _plsFullName(full) {
+  var nm = document.querySelector('#player-link-name .pls-nm') || document.getElementById('player-link-name');
+  if (!nm || !full) return;
+  var cur = String(nm.textContent || '').trim();
+  if (!cur || cur === full) return;
+  var a = cur.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim(), b = String(full).toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (a.split(' ').pop() === b.split(' ').pop() && a.charAt(0) === b.charAt(0) && a.length < b.length) nm.textContent = full;
 }
 function _plsBioFill(name, id, league) {
   var el = document.getElementById('player-bio');
@@ -96,7 +107,7 @@ function _plsBioFill(name, id, league) {
 // line, so their card stays as it was.
 window._sav.fb = window._sav.fb || {};
 var PLS_FB_TTL = 5 * 60e3;
-function _plsFbOn(league) { return league === 'nfl' || league === 'cfb'; }
+function _plsFbOn(league) { return league === 'nfl' || league === 'cfb' || league === 'nba' || league === 'wnba'; } // v7.87.0: basketball too
 function _plsFbKey(name, id, league) { return league + ':' + (id || '') + ':' + String(name || '').toLowerCase(); }
 function _plsFbRow(cls, label, small, v, n, i) {
   var cells = '';
@@ -117,21 +128,21 @@ function _plsFbHtml(name, id, league) {
   var meta = [d.pos, d.team].filter(Boolean).join(' · ');
   if (d.none || !d.cols || !d.cols.length) return meta ? '<div class="pll"><div class="pll-meta">' + _escapeHtml(meta) + '</div></div>' : '';
   var n = d.cols.length, grid = n === 5 ? '' : ' style="--plf-n:' + n + '"';
-  var head = function (first) { return '<div class="pll-r pll-h"><span>' + first + '</span>' + d.cols.map(function (c) { return '<b>' + _escapeHtml(c) + '</b>'; }).join('') + '</div>'; };
+  var head = function (first, cols) { return '<div class="pll-r pll-h"><span>' + first + '</span>' + (cols || d.cols).map(function (c) { return '<b>' + _escapeHtml(c) + '</b>'; }).join('') + '</div>'; };
   var gp = function (r) { return _escapeHtml([r.g ? r.g + ' G' : '', r.team || ''].filter(Boolean).join(' · ')); };
   // a kicker's "251-284" needs a little more room than a number does
   var tight = [d.season, d.prev, d.career].some(function (r) { return r && (r.v || []).some(function (x) { return String(x).length > 6; }); });
-  var h = '<div class="pll plf' + (tight ? ' tight' : '') + '"' + grid + '><div class="pll-meta">' + _escapeHtml(meta) + '</div>' + head('Season');
-  var i = 0;
-  h += d.season ? _plsFbRow('ssn', String(d.season.year), gp(d.season), d.season.v, n, i++) : _plsFbRow('ssn', String(d.cur || ''), 'No games yet', null, n, i++);
-  if (d.prev) h += _plsFbRow('', String(d.prev.year), gp(d.prev), d.prev.v, n, i++);
+  var h = '<div class="pll plf' + (tight ? ' tight' : '') + '"' + grid + '><div class="pll-meta">' + _escapeHtml(meta) + '</div>' + head(d.perGame ? 'Per game' : 'Season');
+  var i = 0, yl = function (r) { return String(r.label || r.year); };
+  h += d.season ? _plsFbRow('ssn', yl(d.season), gp(d.season), d.season.v, n, i++) : _plsFbRow('ssn', String(d.curLabel || d.cur || ''), 'No games yet', null, n, i++);
+  if (d.prev) h += _plsFbRow('', yl(d.prev), gp(d.prev), d.prev.v, n, i++);
   if (d.career) h += _plsFbRow('car', 'Career', d.career.g ? _escapeHtml(d.career.g + ' G') : '', d.career.v, n, i++);
-  h += '<div class="plf-sub">' + _escapeHtml(String(d.cur || '')) + ' game by game</div>';
+  h += '<div class="plf-sub">' + _escapeHtml(String(d.curLabel || d.cur || '')) + ' game by game</div>';
   if (d.log && d.log.length) {
-    h += head('Game');
+    h += head('Game', d.logCols);
     d.log.forEach(function (g) {
       var where = (g.at === '@' ? '@ ' : 'vs ') + (g.opp || '');
-      var tag = g.post ? (league === 'cfb' ? 'Bowl' : 'Playoffs') : (g.wk != null ? 'Wk ' + g.wk : '');
+      var tag = g.tag != null ? g.tag : g.post ? (league === 'cfb' ? 'Bowl' : 'Playoffs') : (g.wk != null ? 'Wk ' + g.wk : '');
       var res = g.res ? '<i class="' + (g.res === 'W' ? 'w' : g.res === 'L' ? 'l' : '') + '">' + _escapeHtml(g.res) + '</i>' + (g.score ? ' ' + _escapeHtml(g.score) : '') : '';
       h += _plsFbRow('', where, [_escapeHtml(tag), res].filter(Boolean).join(' · '), g.v, n, i++);
     });
@@ -196,9 +207,10 @@ function _plsFlip(src, name) {
     var lines = document.getElementById('player-lines');
     window._plsFbCur = null;
     if (lines) { if (league === 'mlb' && id) _plsLinesFill(id); else if (_plsFbOn(league)) _plsFbFill(name, id, league); else lines.innerHTML = ''; }
-    try { _plsBioFill(name, id, league); } catch (e) { console.error('[player bio]', e); }
     window._plsSrc = src; window._plsSrcId = id != null ? String(id) : null;
     try { _plsFlip(src, name); } catch (e) { console.error('[player sheet]', e); }
+    // after the flip, so a cached bio's full name isn't overwritten by the tapped one
+    try { _plsBioFill(name, id, league); } catch (e) { console.error('[player bio]', e); }
     return r;
   };
 })();

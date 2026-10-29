@@ -77,9 +77,11 @@ function _gxTag(p, m) {
   var t = p.side === 'h' ? m.home : m.away;
   return '<span class="gh-tag" style="background:' + _ghHexAlpha(t.colors.accent, .2) + ';color:' + t.colors.accent + '">' + _escapeHtml(p.tag || '') + '</span>';
 }
-function _gxPlayerLink(name, id, league, extraStyle) {
+// label: what to show when it differs from the name (v7.87.0) — the sheet
+// always gets the full name
+function _gxPlayerLink(name, id, league, extraStyle, label) {
   if (!name) return '';
-  return '<span data-name="' + _escapeHtml(name) + '" data-id="' + _escapeHtml(String(id || '')) + '" data-league="' + league + '" onclick="event.stopPropagation();openPlayerLinkSheet(this.dataset.name,this.dataset.id||null,this.dataset.league)" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.28);text-underline-offset:3px;' + (extraStyle || '') + '">' + _escapeHtml(name) + '</span>';
+  return '<span data-name="' + _escapeHtml(name) + '" data-id="' + _escapeHtml(String(id || '')) + '" data-league="' + league + '" onclick="event.stopPropagation();openPlayerLinkSheet(this.dataset.name,this.dataset.id||null,this.dataset.league)" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.28);text-underline-offset:3px;' + (extraStyle || '') + '">' + _escapeHtml(label || name) + '</span>';
 }
 function _gxOrdinal(n) { return _ordinalSuffix(n); }
 

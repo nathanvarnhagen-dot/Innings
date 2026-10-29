@@ -2245,7 +2245,8 @@ function _psGuessGroup(F) {
 }
 async function _playerStats(req, res) {
   const league = String(req.query.league || '').toLowerCase();
-  if (league !== 'nfl' && league !== 'cfb') { res.status(400).json({ error: 'Stat lines are built for nfl and cfb' }); return; }
+  if (league === 'nba' || league === 'wnba') { await _playerStatsBk(req, res, league); return; }
+  if (league !== 'nfl' && league !== 'cfb') { res.status(400).json({ error: 'Stat lines are built for nfl, cfb, nba and wnba' }); return; }
   let id = String(req.query.id || '').replace(/[^0-9]/g, '');
   const name = String(req.query.name || '').trim().slice(0, 80);
   if (!id && name) { const hits = await _bioIdsByName(league, name); if (hits.length === 1) id = hits[0]; }
@@ -2328,6 +2329,156 @@ async function _playerStats(req, res) {
   const result = { league: league, id: id, pos: F.pos, group: group, team: team, cols: cols.map(function (c) { return c[0]; }), cur: cur, season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log };
   if (req.query.debug) result.debug = { cats: Object.keys(F.names), years: years, logFeed: gl ? { names: gl.names, types: (gl.seasonTypes || []).map(function (st) { return st.displayName; }), events: Object.keys(gl.events || {}).length } : null };
   // in season the lines move every week (and during games); otherwise they sit
+  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+  res.status(200).json(result);
+}
+
+// ── BASKETBALL STAT LINES FOR THE PLAYER CARD (v7.87.0) ──────────────────
+// What football's card has, for the NBA and WNBA: this season, last season
+// and his career as per-game averages (PTS REB AST FG% 3P%), then every
+// game this season, newest first, as box-score lines (PTS REB AST FG 3PT).
+// Same two ESPN feeds as football (…/athletes/{id}/stats and /gamelog).
+// Each column lists a few names because ESPN's basketball names drift
+// between feeds; the first one the feed carries is used. ?debug=1 returns
+// the category and column names the feeds actually sent.
+// Seasons: the NBA's 2026-27 season is ESPN year 2027 (labelled "2026-27");
+// the WNBA's season is its calendar year.
+var _BK_SEASON_COLS = [
+  ['PTS', ['avgPoints']],
+  ['REB', ['avgRebounds', 'avgTotalRebounds']],
+  ['AST', ['avgAssists']],
+  ['FG%', ['fieldGoalPct']],
+  ['3P%', ['threePointFieldGoalPct', 'threePointPct']]
+];
+var _BK_LOG_COLS = [
+  ['PTS', ['points']],
+  ['REB', ['totalRebounds', 'rebounds']],
+  ['AST', ['assists']],
+  ['FG', ['fieldGoalsMade-fieldGoalsAttempted']],
+  ['3PT', ['threePointFieldGoalsMade-threePointFieldGoalsAttempted']]
+];
+function _bkCurYear(league, now) {
+  var d = now || new Date();
+  if (league === 'nba') return d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear(); // Oct onward is next year's season
+  return d.getFullYear();
+}
+function _bkLabel(league, yr) { return league === 'nba' ? (yr - 1) + '-' + String(yr).slice(2) : String(yr); }
+// the first category + name the feed carries for one column
+function _bkFind(F, cands) {
+  for (var i = 0; i < cands.length; i++) for (var c in F.names) if (F.names[c].indexOf(cands[i]) !== -1) return { cat: c, name: cands[i] };
+  return null;
+}
+function _bkFmt(n, name) {
+  if (n == null || !isFinite(n)) return '—';
+  return /pct/i.test(name) ? n.toFixed(1) : (Math.round(n * 10) / 10).toFixed(1);
+}
+// one season's value; two teams' rows (a traded player) are combined —
+// averages weighted by games, percentages from made/attempted when the
+// feed's totals category has them
+function _bkSeasonVal(F, Y, loc) {
+  var rows = Y.cats[loc.cat];
+  if (!rows || !rows.length) return null;
+  var names = F.names[loc.cat];
+  if (rows.length === 1) return _psCell(names, rows[0], loc.name);
+  var gi = names.indexOf('gamesPlayed');
+  if (/pct/i.test(loc.name)) {
+    var key = loc.name === 'fieldGoalPct' ? 'fieldGoalsMade-fieldGoalsAttempted' : 'threePointFieldGoalsMade-threePointFieldGoalsAttempted';
+    var tl = null;
+    for (var c in F.names) if (F.names[c].indexOf(key) !== -1 && Y.cats[c]) tl = c;
+    if (tl) {
+      var a = 0, b = 0;
+      Y.cats[tl].forEach(function (r) { var m = String(_psCell(F.names[tl], r, key) || '').match(/^([\d.]+)-([\d.]+)$/); if (m) { a += Number(m[1]); b += Number(m[2]); } });
+      if (b) return _bkFmt(a / b * 100, loc.name);
+    }
+  }
+  if (gi === -1) return null;
+  var t = 0, g = 0;
+  rows.forEach(function (r) { var v = _plNum(r[names.indexOf(loc.name)]), n = _plNum(r[gi]); if (v != null && n) { t += v * n; g += n; } });
+  return g ? _bkFmt(t / g, loc.name) : null;
+}
+async function _playerStatsBk(req, res, league) {
+  let id = String(req.query.id || '').replace(/[^0-9]/g, '');
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  if (!id && name) { const hits = await _bioIdsByName(league, name); if (hits.length === 1) id = hits[0]; }
+  if (!id) { res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate'); res.status(200).json({ error: 'No player' }); return; }
+  const base = 'https://site.web.api.espn.com/apis/common/v3/sports/' + LEAGUE_PATHS[league] + '/athletes/' + id;
+  const cur = _bkCurYear(league);
+  const parts = await Promise.all([_tpGetJson(base + '/stats'), _tpGetJson(base + '/gamelog?season=' + cur)]);
+  const raw = parts[0], gl = parts[1];
+  if (!raw || !Array.isArray(raw.categories)) { res.status(200).json({ error: 'No stats from ESPN' }); return; }
+  const F = { names: {}, totals: {}, years: {}, pos: null, posYear: 0 };
+  const teamBySlug = {};
+  Object.keys(raw.teams || {}).forEach(function (k) { const t = raw.teams[k] || {}; teamBySlug[k] = { abbr: t.abbreviation || null, name: t.displayName || t.name || null }; });
+  raw.categories.forEach(function (cat) {
+    if (!cat || !cat.name || !Array.isArray(cat.names)) return;
+    F.names[cat.name] = cat.names;
+    F.totals[cat.name] = cat.totals || [];
+    (cat.statistics || []).forEach(function (row) {
+      const yr = row && row.season && Number(row.season.year);
+      if (!yr) return;
+      const Y = F.years[yr] || (F.years[yr] = { cats: {}, slugs: [] });
+      (Y.cats[cat.name] || (Y.cats[cat.name] = [])).push(row.stats || []);
+      if (row.teamSlug && Y.slugs.indexOf(row.teamSlug) === -1) Y.slugs.push(row.teamSlug);
+      if (row.position && yr >= F.posYear) { F.pos = row.position; F.posYear = yr; }
+    });
+  });
+  const locs = _BK_SEASON_COLS.map(function (c) { return _bkFind(F, c[1]); });
+  const gLoc = _bkFind(F, ['gamesPlayed']);
+  const years = Object.keys(F.years).map(Number).sort(function (a, b) { return b - a; });
+  const latest = years.length ? F.years[years[0]] : null;
+  const slug = latest && latest.slugs[latest.slugs.length - 1];
+  const team = slug && teamBySlug[slug] ? teamBySlug[slug].name : null;
+  const debug = req.query.debug ? { cats: F.names, years: years, logNames: gl && gl.names, logTypes: gl && (gl.seasonTypes || []).map(function (st) { return st.displayName; }) } : undefined;
+  if (locs.filter(Boolean).length < 3 || !years.length) {
+    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
+    res.status(200).json({ league: league, id: id, pos: F.pos, team: team, none: true, debug: debug });
+    return;
+  }
+  const seasonRow = function (yr) {
+    const Y = F.years[yr];
+    if (!Y) return null;
+    const g = gLoc && Y.cats[gLoc.cat] ? (Y.cats[gLoc.cat].length === 1 ? _psCell(F.names[gLoc.cat], Y.cats[gLoc.cat][0], 'gamesPlayed') : _psMerge(F.names[gLoc.cat], Y.cats[gLoc.cat], 'gamesPlayed', league)) : null;
+    return {
+      year: yr, label: _bkLabel(league, yr),
+      g: _psHas(g) ? String(g) : null,
+      team: Y.slugs.map(function (sl) { return (teamBySlug[sl] && teamBySlug[sl].abbr) || null; }).filter(Boolean).join('/') || null,
+      v: locs.map(function (l) { return l ? _psShow(_bkSeasonVal(F, Y, l)) : '—'; })
+    };
+  };
+  const prevYear = years.filter(function (y) { return y < cur; })[0];
+  const cg = gLoc ? _psCell(F.names[gLoc.cat], F.totals[gLoc.cat], 'gamesPlayed') : null;
+  const career = { g: _psHas(cg) ? String(cg) : null, seasons: years.length, v: locs.map(function (l) { return l ? _psShow(_psCell(F.names[l.cat], F.totals[l.cat], l.name)) : '—'; }) };
+
+  const log = [];
+  let logCols = _BK_LOG_COLS.map(function (c) { return c[0]; });
+  if (gl && Array.isArray(gl.names) && Array.isArray(gl.seasonTypes)) {
+    const pick = _BK_LOG_COLS.map(function (c) { for (var i = 0; i < c[1].length; i++) if (_psCarries(gl.names, c[1][i])) return c[1][i]; return null; });
+    const ev = gl.events || {};
+    gl.seasonTypes.forEach(function (st) {
+      const tn = String(st && st.displayName || '');
+      if (/pre/i.test(tn)) return; // preseason games aren't his line
+      const post = /post|playoff/i.test(tn), cup = /cup|in-season/i.test(tn);
+      ((st && st.categories) || []).forEach(function (cat) {
+        ((cat && cat.events) || []).forEach(function (e) {
+          const info = ev[e.eventId] || {};
+          const dt = info.gameDate ? new Date(info.gameDate) : null;
+          log.push({
+            post: post,
+            tag: post ? 'Playoffs' : cup ? 'Cup' : (dt && !isNaN(dt) ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }) : ''),
+            date: info.gameDate || null,
+            at: info.atVs || null,
+            opp: (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || null,
+            res: info.gameResult || null,
+            score: info.score || null,
+            v: pick.map(function (n) { return n ? _psShow(_psCell(gl.names, e.stats || [], n)) : '—'; })
+          });
+        });
+      });
+    });
+    log.sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+  }
+  const result = { league: league, id: id, pos: F.pos, group: 'bk', team: team, cols: _BK_SEASON_COLS.map(function (c) { return c[0]; }), logCols: logCols, perGame: true, cur: cur, curLabel: _bkLabel(league, cur), season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log };
+  if (debug) result.debug = debug;
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
   res.status(200).json(result);
 }

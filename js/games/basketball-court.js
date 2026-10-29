@@ -594,7 +594,7 @@ function _bkxBoardHtml(m) {
     var of = _bkxOnFloor(m, side), bg = t.colors.bg, acc = t.colors.accent;
     // v7.55.1: the two teams stack in one full-width table so names never truncate
     var rows = of.rows.map(function (r) {
-      return '<div class="bkb-r"><span class="n">' + _gxPlayerLink(_bkxShortName(r.name), r.id, m.league, 'text-decoration:none') + '</span><b>' + _escapeHtml(r.pts) + '</b><span>' + _escapeHtml(r.reb) + '</span><span>' + _escapeHtml(r.ast) + '</span><span class="pf' + (Number(r.pf) >= 5 ? ' hot' : '') + '">' + _escapeHtml(r.pf) + '</span></div>';
+      return '<div class="bkb-r"><span class="n">' + _gxPlayerLink(r.name, r.id, m.league, 'text-decoration:none', _bkxShortName(r.name)) + '</span><b>' + _escapeHtml(r.pts) + '</b><span>' + _escapeHtml(r.reb) + '</span><span>' + _escapeHtml(r.ast) + '</span><span class="pf' + (Number(r.pf) >= 5 ? ' hot' : '') + '">' + _escapeHtml(r.pf) + '</span></div>';
     }).join('');
     var head = '<div class="bkb-tn">' + _escapeHtml(String(t.short || t.name || t.abbr).toUpperCase()) + '</div>';
     var stat = function (k, x, pct) { return '<div class="bkb-s"><span>' + k + '</span><b>' + v(x, pct) + '</b></div>'; };
