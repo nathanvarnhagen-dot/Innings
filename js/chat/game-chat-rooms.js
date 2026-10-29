@@ -108,7 +108,7 @@ function _gcrFold(all, me) {
     if (was && was !== rid && rooms[was]) delete rooms[was].members[uid];
     where[uid] = rid;
     var R = room(rid);
-    R.members[uid] = name || R.members[uid] || 'Someone';
+    R.members[uid] = _gcrNameOf(name || R.members[uid], uid) || 'Someone';
     if (at != null) R.joined[uid] = at;
     delete R.asks[uid]; delete R.no[uid];
   };
@@ -154,8 +154,31 @@ function _gcrOldItems(f, rid, me) {
   f.lines.forEach(function (x) { if (x.room === rid) out.push(_gcrLineMsg(x.m, x.act, x.p, me)); });
   return out;
 }
+// v7.85.1: a "joined" line saved before the joiner's profile name loaded says
+// "Someone" — look them up by uid so the line names them
+window._gcrUidNames = window._gcrUidNames || {};
+function _gcrBadName(n) { n = String(n || '').trim(); return !n || n === 'You' || n === 'Someone' || n === 'Friend'; }
+function _gcrNameOf(name, uid) {
+  if (!_gcrBadName(name) || !uid) return name;
+  if (uid === _gcrMe() && window.userData && window.userData.name) return window.userData.name;
+  var hit = window._gcrUidNames[uid];
+  if (typeof hit === 'string') return hit;
+  if (!hit && window.db) {
+    window._gcrUidNames[uid] = true; // looking it up
+    window.db.collection('users').doc(uid).get().then(function (d) {
+      var nm = d.exists && d.data().name;
+      window._gcrUidNames[uid] = nm ? String(nm) : 'Someone';
+      if (nm) { try { var k = _gcrKey(); if (k) _gcrPublish(k); } catch (e) { console.error('[game chat] name repaint', e); } }
+    }).catch(function () { window._gcrUidNames[uid] = 'Someone'; });
+  }
+  return name;
+}
 function _gcrLineMsg(m, act, p, me) {
-  var L = _gcrLineText(act, m.uid, m.author, p, me);
+  p = Object.assign({}, p || {});
+  if (p.who) p.name = _gcrNameOf(p.name, p.who);
+  if (p.inv) p.invName = _gcrNameOf(p.invName, p.inv);
+  if (p.next) p.nextName = _gcrNameOf(p.nextName, p.next);
+  var L = _gcrLineText(act, m.uid, _gcrNameOf(m.author, m.uid), p, me);
   return Object.assign({}, m, { _line: L ? L.t : '', _sub: L ? L.s : '', _join: act === 'ok' });
 }
 function _gcrAskItems(R) {
@@ -176,7 +199,7 @@ function _gcrView(key) {
     var byOld = {};
     (st.rooms || []).forEach(function (d) {
       var names = d.names || {}, members = {};
-      (d.members || []).forEach(function (u) { members[u] = names[u] || 'Someone'; });
+      (d.members || []).forEach(function (u) { members[u] = _gcrNameOf(names[u], u) || 'Someone'; });
       var R = { id: d.id, kind: 'new', members: members, asks: d.asks || {}, no: d.no || {}, joined: d.joined || {}, invites: d.invites || {}, mod: d.mod || d.founder || null, founder: d.founder || null, replayOf: d.replayOf || null,
         pk: d.pk != null ? String(d.pk) : key, gamePks: Array.isArray(d.gamePks) ? d.gamePks.map(String) : null, games: d.games || {} }; // v7.61.0: the games in it
       if (R.replayOf) byOld[R.replayOf] = R;
@@ -733,6 +756,7 @@ function _gcrLetInDo(rid, uid, name, btn, at, key) {
     if (at && at.ts) { console.info('[game chat] invited join from the @ refused (' + ((err && err.code) || err) + ') — letting in from now'); _gcrLetInDo(rid, uid, name, btn, { by: at.by, byName: at.byName }, key); return; }
     _gcrFail(err);
   };
+  name = _gcrNameOf(name, uid) || name; // v7.85.1: never save "Someone" when we know who it is
   var now = Date.now(), line = { act: 'ok', who: uid, name: name }, since = now;
   if (at) { line.inv = at.by; line.invName = at.byName || ''; if (at.ts && at.ts < now) { since = at.ts; line.since = since; } }
   if (R.kind === 'new' && FV) {
