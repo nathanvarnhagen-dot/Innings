@@ -356,7 +356,7 @@ function _isRender() {
     if (s.loading && !s.players.length) html += '<div class="rb-empty">Searching…</div>';
     else if (!s.players.length) html += '<div class="rb-empty">' + (s.err ? 'Player search is unavailable right now.' : 'No players match.') + '</div>';
     else html += '<div class="rb-list">' + s.players.slice(0, cap).map(function (p) {
-      var sub = [p.pos, p.active === false ? (p.hof ? 'Hall of Fame' : 'Retired') + (p.first ? ' · ' + p.first + '–' + (p.last || '') : '') : p.team, _rbSportName(p.league)].filter(Boolean).join(' · ');
+      var sub = [p.pos, p.active === false ? (p.hof ? 'Hall of Fame' : 'Retired') + (p.first ? ' · ' + p.first + '–' + (p.last || '') : '') : (p.fa ? 'Free agent' : p.team), _rbSportName(p.league)].filter(Boolean).join(' · ');
       return '<button class="is-row" data-n="' + _escapeHtml(p.name) + '" data-id="' + _escapeHtml(String(p.id == null ? '' : p.id)) + '" data-l="' + _escapeHtml(p.league) + '" onclick="openPlayerLinkSheet(this.dataset.n,this.dataset.id||null,this.dataset.l)">' +
         '<span class="is-av">' + _escapeHtml(_initials(p.name)) + '</span>' +
         '<span class="is-txt"><b>' + _escapeHtml(p.name) + '</b><span>' + _escapeHtml(sub) + '</span></span>' + _isMemBadge(_isPlayerMemCount(p)) + '</button>';

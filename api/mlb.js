@@ -491,10 +491,10 @@ module.exports = async function handler(req, res) {
         const players = ids.map(id => {
           const p = byId[id], r = regById[id];
           if (!p && !r) return null;
-          const active = p ? p.active !== false : false, t = (p && p.currentTeam) || {};
+          const active = p ? _mlbStillPlaying(p) : false, fa = _mlbIsFa(p), t = (p && p.currentTeam) || {};
           return {
             id: +id, name: (p && p.fullName) || r[1], pos: _cmpPos(p),
-            team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, league: 'mlb', active: active,
+            team: active && !fa ? (t.name || null) : null, teamId: active && !fa ? (t.id || null) : null, league: 'mlb', active: active, fa: fa,
             first: p && p.mlbDebutDate ? +String(p.mlbDebutDate).slice(0, 4) : (r ? r[2] : null),
             last: active ? null : (p && p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : (r ? r[3] : null)),
             hof: !!(p && _cmpIsHof(p.awards))
@@ -517,8 +517,8 @@ module.exports = async function handler(req, res) {
           league: 'mlb'
         };
         if (all) {
-          out.active = p.active !== false;
-          if (!out.active) { out.team = null; out.teamId = null; }
+          out.active = _mlbStillPlaying(p); out.fa = _mlbIsFa(p);
+          if (!out.active || out.fa) { out.team = null; out.teamId = null; }
           out.first = p.mlbDebutDate ? +String(p.mlbDebutDate).slice(0, 4) : null;
           out.last = !out.active && p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : null;
           out.hof = _cmpIsHof(p.awards);
@@ -1138,6 +1138,18 @@ async function _regSeason(ids, season) {
 }
 // v7.78.3: only the National Baseball Hall of Fame counts — not a team's
 // own hall or wall of fame (Buster Posey isn't in Cooperstown yet).
+// v7.89.1: MLB flips active to false the moment a player becomes a free
+// agent, so active === false doesn't mean retired. Someone who played in the
+// season just finished (or this one) is still playing: an unsigned free agent
+// until he signs or MLB's register catches up.
+function _mlbCurSeason() { const d = new Date(); return d.getUTCMonth() < 3 ? d.getUTCFullYear() - 1 : d.getUTCFullYear(); }
+function _mlbStillPlaying(p) {
+  if (!p) return false;
+  if (p.active !== false) return true;
+  const lp = p.lastPlayedDate ? +String(p.lastPlayedDate).slice(0, 4) : null;
+  return !!lp && lp >= _mlbCurSeason();
+}
+function _mlbIsFa(p) { return !!p && p.active === false && _mlbStillPlaying(p); }
 function _cmpIsHof(awards) {
   return (awards || []).some(a => a && (a.id === 'MLBHOF' || /^(the )?(national )?(baseball )?hall of fame( inductee)?$/i.test(String(a.name || '').trim())));
 }
@@ -1279,7 +1291,7 @@ async function _careerCard(id, host) {
   const rings = seasons.filter(x => x.champ).length;
   const mainTeam = Object.keys(teamSeasons).sort((a, b) => teamSeasons[b] - teamSeasons[a])[0] || null;
   const first = ys.length ? ys[ys.length - 1] : null, last = ys.length ? ys[0] : null;
-  const active = p.active !== false, hof = _cmpIsHof(p.awards);
+  const active = _mlbStillPlaying(p), hof = _cmpIsHof(p.awards);
   const played = ys.length;
   const eligible = !active && !hof && last && played >= 10 ? last + 6 : null;
   return { id: p.id, name: p.fullName, pos: pos, bats: (p.batSide && p.batSide.code) || null, throws: (p.pitchHand && p.pitchHand.code) || null,
@@ -1458,7 +1470,7 @@ async function _cmpPlayer(id, yr, group) {
   const awards = p.awards || [];
   // the by-age lines get what's left of Vercel's ~10s; past that they come back empty and fill in on a retry
   const ages = await Promise.race([_cmpByAge(yby, group, p.birthDate, awards).catch(() => null), new Promise(r => setTimeout(() => r(null), 6000))]);
-  const t = p.currentTeam || {}, active = p.active !== false;
+  const active = _mlbStillPlaying(p), fa = _mlbIsFa(p), t = fa ? {} : (p.currentTeam || {});
   const mk = group === 'pitching' ? _cmpPLine : _cmpLine;
   const lines = { season: active ? mk(_cmpStat(season), lg) : null, recent: active ? mk(_cmpStat(recent), lg) : null, career: mk(_cmpStat(career), null) };
   if (lines.career) { lines.career.seasons = ages ? ages.seasons : null; if (ages) lines.career[group === 'pitching' ? 'eraPlus' : 'opsPlus'] = ages.careerPlus; }
@@ -1477,7 +1489,7 @@ async function _cmpPlayer(id, yr, group) {
   const years = [p.mlbDebutDate, p.lastPlayedDate].map(d => d ? +String(d).slice(0, 4) : null);
   return { id: p.id, name: p.fullName || null, group: group, age: p.currentAge != null ? p.currentAge : null, birthDate: p.birthDate || null,
     pos: (p.primaryPosition && p.primaryPosition.abbreviation) || null, bats: (p.batSide && p.batSide.code) || null, throws: (p.pitchHand && p.pitchHand.code) || null,
-    team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, active: active, hof: _cmpIsHof(awards),
+    team: active ? (t.name || null) : null, teamId: active ? (t.id || null) : null, active: active, fa: fa, hof: _cmpIsHof(awards),
     first: years[0], last: active ? null : years[1], season: yr, lines: lines, pct: pct, ages: ages ? ages.ages : null,
     partial: !ages || ages.complete === false };
 }

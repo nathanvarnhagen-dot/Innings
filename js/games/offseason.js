@@ -414,7 +414,7 @@ function hsSearch(q) {
       if (!inp || inp.value.trim() !== want) return;
       var ps = ((d && d.players) || []).slice(0, 8);
       box.innerHTML = ps.length ? ps.map(function (p) {
-        var kind = p.pos === 'P' ? 'pit' : 'bat', team = p.active !== false ? (p.team || '') : (p.first ? p.first + '–' + (p.last || '') : 'Retired');
+        var kind = p.pos === 'P' ? 'pit' : 'bat', team = p.active !== false ? (p.fa ? 'Free agent' : (p.team || '')) : (p.first ? p.first + '–' + (p.last || '') : 'Retired');
         var held = H.base && String(H.base.id) === String(p.id);
         return '<div class="hs-row" role="button" tabindex="0" onclick="hsCard(' + p.id + ',' + _hsA(p.name) + ')"><div class="bar" style="background:rgba(168,159,232,.35)"></div>' +
           '<div class="tx"><b>' + _hsE(p.name) + '</b><span>' + _hsE([p.pos, team, p.hof ? 'Hall of Fame' : ''].filter(Boolean).join(' · ')) + '</span></div>' +

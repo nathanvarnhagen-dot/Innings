@@ -256,7 +256,7 @@ function _cmpSearch(q) {
       var ps = ((d && d.players) || []).filter(function (p) {
         if (String(p.id) === base.id || String(p.id) === String(base.skip)) return false;
         return pit ? (p.pos === 'P' || p.pos === 'TWP') : p.pos !== 'P';
-      }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: _cmpTeam(p.teamId, p.team), active: p.active !== false, hof: !!p.hof, first: p.first, last: p.last }; });
+      }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: p.fa ? 'Free agent' : _cmpTeam(p.teamId, p.team), active: p.active !== false, hof: !!p.hof, first: p.first, last: p.last }; });
       res.innerHTML = (ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB ' + (pit ? 'pitcher' : 'hitter') + ' by that name.</div>') +
         '<div class="cmp-credit">Every MLB player ever, from the Chadwick Baseball Bureau register.</div>';
     }).catch(function () { res.innerHTML = '<div class="cmp-pk-empty">Couldn’t search right now. Try again in a moment.</div>'; });
@@ -576,7 +576,7 @@ function _cmpSideHtml(r, side) {
 function _cmpHeadHtml(P, D, side, S, range) {
   var meta;
   if (D && D.active === false) meta = [D.hof ? 'HOF' : 'Retired', D.pos, _cmpYears(D.first, D.last)].filter(Boolean).join(' · ');
-  else meta = D ? [_cmpTeam(D.teamId, D.team), D.pos, D.age != null ? D.age : null].filter(function (x) { return x != null && x !== ''; }).join(' · ') : '';
+  else meta = D ? [D.fa ? 'Free agent' : _cmpTeam(D.teamId, D.team), D.pos, D.age != null ? D.age : null].filter(function (x) { return x != null && x !== ''; }).join(' · ') : '';
   var sub = '';
   if (D && D.lines) {
     var ln = D.lines[S.view === 'basic' ? range : D.active === false ? 'career' : 'season'] || D.lines.career;
