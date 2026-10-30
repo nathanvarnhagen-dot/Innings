@@ -166,6 +166,17 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.88.0', at: '2026-10-29T21:40:00-07:00',
+      title: 'Chart any stat in Compare',
+      sub: 'Every category in a player comparison now goes on the graph, one on one.',
+      items: function () {
+        return [
+          { icon: 'compare', title: 'Every category, charted', body: 'In By age, pick BA, OBP, SLG, OPS, OPS+, HR, RBI, games, Gold Gloves, or for pitchers ERA, WHIP, K/9, ERA+, wins, saves and more from the chips under the graph.' },
+          { icon: 'bars', title: 'Tap a row', body: 'Tap any stat in the comparison, in By age or Basics, and the graph switches to it, career to date at every age.' }
+        ];
+      }
+    },
+    {
       id: 'v7.87.0', at: '2026-10-29T11:40:00-07:00',
       title: 'Basketball player cards',
       sub: 'Tap any NBA or WNBA player for his numbers, not just his bio.',

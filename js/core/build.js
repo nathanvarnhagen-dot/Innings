@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.87.0-basketball-player-stats';
+window.INNINGS_BUILD = 'v7.88.0-compare-chart-any-stat';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');
