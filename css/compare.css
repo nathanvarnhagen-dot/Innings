@@ -120,4 +120,16 @@
 .cmp-r.on .cmp-l{color:#fff}
 .cmp-gi{display:block;margin:3px auto 0;opacity:.35}
 .cmp-r.on .cmp-gi{opacity:1;color:#A89FE8}
+/* v7.89.0 · tap a player to change him */
+#cmp-pick.over{z-index:220}
+button.cmp-hd.a{align-items:flex-start;text-align:left}
+button.cmp-hd{appearance:none;-webkit-appearance:none;background:transparent;border:0;padding:4px;margin:-4px;border-radius:14px;font-family:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.cmp-hd:active{background:rgba(168,159,232,.08)}
+button.cmp-hd:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.cmp-hd .cmp-av{position:relative}
+.cmp-avx{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:10px;display:grid;place-items:center;background:#140F33;border:1.5px solid currentColor}
+.cmp-av.a .cmp-avx{color:#A89FE8}.cmp-av.b .cmp-avx{color:#F2C869}
+.cmp-chg{margin-top:4px;min-height:28px;padding:0 12px;display:inline-flex;align-items:center;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.02em}
+.cmp-hd.a .cmp-chg{background:rgba(168,159,232,.14);border:1px solid rgba(168,159,232,.35);color:#C9C2F5}
+.cmp-hd.b .cmp-chg{background:rgba(242,200,105,.12);border:1px solid rgba(242,200,105,.35);color:#F2C869}
 @media (prefers-reduced-motion: reduce){#cmp-screen,.cmp-pk,#cmp-pick{transition:none}.cmp-sk .cmp-t{animation:none}}

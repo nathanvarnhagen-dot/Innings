@@ -177,8 +177,9 @@ function _cmpPickGroups(base) {
   var groups = _cmpGameGroups(base);
   var hof = _cmpHofGroup(base);
   if (hof) groups.push(hof);
+  if (base.skip) groups = groups.map(function (g) { return { h: g.h, ps: g.ps.filter(function (x) { return String(x.id) !== String(base.skip); }) }; }).filter(function (g) { return g.ps.length; });
   var shown = {}; groups.forEach(function (g) { g.ps.forEach(function (x) { shown[x.id] = 1; }); });
-  var recent = (_cmpLsGet(CMP_RECENT_KEY[base.kind]) || []).filter(function (p) { return p && p.id && String(p.id) !== base.id && !shown[String(p.id)]; }).slice(0, 5);
+  var recent = (_cmpLsGet(CMP_RECENT_KEY[base.kind]) || []).filter(function (p) { return p && p.id && String(p.id) !== base.id && String(p.id) !== String(base.skip) && !shown[String(p.id)]; }).slice(0, 5);
   if (recent.length) groups.push({ h: 'You compared recently', ps: recent });
   return groups;
 }
@@ -193,7 +194,20 @@ function cmpPick() {
   if (!s) return;
   var d = typeof _savSeasonData === 'function' ? _savSeasonData(s.id) : null;
   var kind = s.kind || _cmpKindOf(d) || 'bat';
-  var base = { id: s.id, name: s.name, pos: (d && !d.error && d.pos) || s.pos || null, kind: kind };
+  _cmpPickOpen({ id: s.id, name: s.name, pos: (d && !d.error && d.pos) || s.pos || null, kind: kind });
+}
+// v7.89.0: change either player right from the compare screen — tap his
+// name. The picker opens over the comparison with the other player kept;
+// the new one takes that side, and the tab, chart stat and line-up stay.
+function cmpChange(side) {
+  var S = window._cmp;
+  if (!S || (side !== 'a' && side !== 'b')) return;
+  var keep = side === 'a' ? S.b : S.a, gone = S[side];
+  var D = _cmpData(keep.id, S.kind);
+  _cmpPickOpen({ id: keep.id, name: keep.name || (D && D.name) || '', pos: S.kind === 'pit' ? 'P' : (D && D.pos) || null, kind: S.kind, replace: side, skip: gone.id, goneName: gone.name });
+}
+function _cmpPickOpen(base) {
+  var kind = base.kind;
   window._cmpBase = base;
   window._cmpPickList = _cmpPickGroups(base);
   var el = document.getElementById('cmp-pick');
@@ -207,13 +221,17 @@ function cmpPick() {
     document.body.appendChild(el);
   }
   var what = kind === 'pit' ? 'pitcher' : 'hitter';
+  el.classList.toggle('over', !!base.replace);
+  var ttl = base.replace ? 'Swap out ' + _cmpE(_cmpLast(base.goneName || '')) + ' for…' : 'Compare ' + _cmpE(_cmpLast(base.name)) + ' with…';
   el.innerHTML = '<div class="cmp-pk"><div class="cmp-grab" aria-hidden="true"></div>' +
-    '<div class="cmp-pk-hd"><h2 id="cmp-pick-t">Compare ' + _cmpE(_cmpLast(base.name)) + ' with…</h2><button type="button" class="cmp-x" aria-label="Close" onclick="cmpPickClose()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+    '<div class="cmp-pk-hd"><h2 id="cmp-pick-t">' + ttl + '</h2><button type="button" class="cmp-x" aria-label="Close" onclick="cmpPickClose()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
     '<label class="cmp-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="cmp-sr">Search MLB ' + what + 's</span>' +
     '<input id="cmp-q" type="search" autocomplete="off" placeholder="Any ' + what + ', active or retired" oninput="_cmpSearch(this.value)"></label>' +
     '<div id="cmp-pick-res">' + _cmpGroupsHtml(window._cmpPickList) + '</div></div>';
   el.style.display = 'flex';
   requestAnimationFrame(function () { el.classList.add('on'); });
+  // changing a player: straight to search
+  if (base.replace) setTimeout(function () { var q = document.getElementById('cmp-q'); if (q) try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } }, 280);
 }
 function cmpPickClose() {
   var el = document.getElementById('cmp-pick');
@@ -236,7 +254,7 @@ function _cmpSearch(q) {
       if (!inp || inp.value.trim() !== want) return;
       var base = window._cmpBase || {}, pit = base.kind === 'pit';
       var ps = ((d && d.players) || []).filter(function (p) {
-        if (String(p.id) === base.id) return false;
+        if (String(p.id) === base.id || String(p.id) === String(base.skip)) return false;
         return pit ? (p.pos === 'P' || p.pos === 'TWP') : p.pos !== 'P';
       }).map(function (p) { return { id: String(p.id), name: p.name, pos: p.pos, team: _cmpTeam(p.teamId, p.team), active: p.active !== false, hof: !!p.hof, first: p.first, last: p.last }; });
       res.innerHTML = (ps.length ? '<div class="cmp-pg">' + ps.map(_cmpRowHtml).join('') + '</div>' : '<div class="cmp-pk-empty">No MLB ' + (pit ? 'pitcher' : 'hitter') + ' by that name.</div>') +
@@ -256,6 +274,13 @@ function cmpChoose(btn) {
   rec.unshift(p);
   _cmpLsSet(key, rec.slice(0, 8));
   cmpPickClose();
+  var S = window._cmp;
+  if (base.replace && S && S.kind === base.kind) {
+    S[base.replace] = { id: p.id, name: p.name };
+    S.age = null;
+    _cmpRender();
+    return;
+  }
   cmpOpen({ id: base.id, name: base.name }, { id: p.id, name: p.name }, base.kind, retired ? 'age' : null);
 }
 
@@ -557,9 +582,12 @@ function _cmpHeadHtml(P, D, side, S, range) {
     var ln = D.lines[S.view === 'basic' ? range : D.active === false ? 'career' : 'season'] || D.lines.career;
     if (ln) sub = S.kind === 'pit' ? (ln.w != null ? ln.w + '-' + ln.l + ' · ' + ln.era + ' ERA' : '') : (ln.avg ? [ln.avg, ln.obp, ln.slg].join('/') : '');
   }
-  return '<div class="cmp-hd ' + side + '"><span class="cmp-av ' + side + '">' + _cmpE(_cmpIni(P.name || (D && D.name))) + '</span>' +
-    '<span class="cmp-nm">' + _cmpE(_cmpLast(P.name || (D && D.name) || '')) + '</span>' +
-    '<span class="cmp-meta">' + (meta ? _cmpE(meta) : '&nbsp;') + '</span><span class="cmp-sl">' + (sub ? _cmpE(sub) : '&nbsp;') + '</span></div>';
+  var full = P.name || (D && D.name) || '';
+  return '<button type="button" class="cmp-hd ' + side + '" onclick="cmpChange(\'' + side + '\')" aria-label="' + _cmpE('Change ' + full) + '"><span class="cmp-av ' + side + '">' + _cmpE(_cmpIni(full)) +
+    '<i class="cmp-avx" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"/></svg></i></span>' +
+    '<span class="cmp-nm">' + _cmpE(_cmpLast(full)) + '</span>' +
+    '<span class="cmp-meta">' + (meta ? _cmpE(meta) : '&nbsp;') + '</span><span class="cmp-sl">' + (sub ? _cmpE(sub) : '&nbsp;') + '</span>' +
+    '<span class="cmp-chg">Change</span></button>';
 }
 function _cmpSeg(label, items, cur, key, extra) {
   return '<div class="cmp-seg' + (extra ? ' ' + extra : '') + '" role="tablist" aria-label="' + _cmpE(label) + '" style="grid-template-columns:repeat(' + items.length + ',minmax(0,1fr))">' + items.map(function (it) {

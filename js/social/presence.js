@@ -166,6 +166,17 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.89.0', at: '2026-10-29T21:50:00-07:00',
+      title: 'Change a player in Compare',
+      sub: 'Swap either side without starting over.',
+      items: function () {
+        return [
+          { icon: 'compare', title: 'Tap a name', body: 'Tap either player (or Change under his name) to search for someone else. The other player stays put.' },
+          { icon: 'bars', title: 'Your view stays', body: 'The tab, the stat on the graph and how the careers line up all stay the same, so you can run through comparisons fast.' }
+        ];
+      }
+    },
+    {
       id: 'v7.88.0', at: '2026-10-29T21:40:00-07:00',
       title: 'Chart any stat in Compare',
       sub: 'Every category in a player comparison now goes on the graph, one on one.',
