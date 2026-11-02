@@ -164,6 +164,21 @@ module.exports = async function handler(req, res) {
       res.status(200).json(result);
       return;
     }
+    // v7.90.0: the NBA's two conference tables and its six divisions
+    if (mode === 'standings' && league === 'nba') {
+      const q = req.query.season ? '&season=' + encodeURIComponent(req.query.season) : '';
+      const data = await _tpGetJson('https://site.web.api.espn.com/apis/v2/sports/' + path + '/standings?level=3' + q);
+      const result = data ? summarizeNbaStandings(data) : null;
+      if (!result || !result.east.length || !result.west.length) {
+        res.status(200).json({ error: 'Standings unavailable', debug: req.query.debug ? { topLevelKeys: Object.keys(data || {}) } : undefined });
+        return;
+      }
+      // the feed carries no colors; every badge should have them on a first open
+      result.teamColors = await _gcTeamColors(path, league);
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+      res.status(200).json(result);
+      return;
+    }
     if (mode === 'standings') {
       if (league !== 'nfl') { res.status(400).json({ error: 'Standings-based playoff seeding is only built for nfl right now — cfb seeding comes from the CFP committee, not computable win-loss standings' }); return; }
       const season = req.query.season || new Date().getFullYear();
@@ -905,6 +920,58 @@ function summarizeNflStandings(data) {
     };
   });
   return result;
+}
+
+// ── NBA STANDINGS (v7.90.0) ──
+// Same feed and nesting as the NFL's (level=3: conference → division → teams).
+// The order is worked out from wins and losses, with ESPN's playoff seed
+// breaking ties, so it holds up even if ESPN changes a rank field. Home, road,
+// last ten and streak are looked up loosely and simply stay blank if renamed.
+function _nbaStat(e, re) {
+  return ((e.stats || []).filter(function (s) { return re.test(String(s.name || '')) || re.test(String(s.type || '')) || re.test(String(s.abbreviation || '')); })[0]) || null;
+}
+function _nbaRec(e, re) {
+  var s = _nbaStat(e, re);
+  var v = s && String(s.summary || s.displayValue || '');
+  return v && /^\d+-\d+$/.test(v) ? v : null;
+}
+function _nbaStreak(e) {
+  var s = _nbaStat(e, /^streak$/i);
+  if (!s) return null;
+  var d = String(s.displayValue || '').trim();
+  if (/^[WL]\d+$/i.test(d)) return d.toUpperCase();
+  var n = Number(s.value);
+  return isFinite(n) && n ? (n > 0 ? 'W' : 'L') + Math.abs(n) : null;
+}
+function _nbaPct(t) { return t.w + t.l > 0 ? t.w / (t.w + t.l) : 0.5; }
+function _nbaOrder(a, b) {
+  return (_nbaPct(b) - _nbaPct(a)) || (b.w - a.w) || ((a.seed || 99) - (b.seed || 99)) || String(a.name).localeCompare(String(b.name));
+}
+function summarizeNbaStandings(data) {
+  var out = { season: null, east: [], west: [], divisions: [] };
+  var team = function (e, div) {
+    var t = e.team || {}, seed = _nflStatValue(e, 'playoffSeed');
+    return { id: t.id != null ? String(t.id) : null, name: t.displayName || t.name || '', short: t.shortDisplayName || t.name || t.displayName || '', abbr: t.abbreviation || null,
+      w: _nflStatValue(e, 'wins'), l: _nflStatValue(e, 'losses'), seed: seed > 0 ? seed : null, div: div || null,
+      home: _nbaRec(e, /^home$/i), road: _nbaRec(e, /^(road|away)$/i), l10: _nbaRec(e, /^(last ?ten( ?games)?|lasttengames|l10)$/i), strk: _nbaStreak(e) };
+  };
+  (data.children || []).forEach(function (conf) {
+    var key = /east/i.test(conf.name || conf.abbreviation || '') ? 'east' : /west/i.test(conf.name || conf.abbreviation || '') ? 'west' : null;
+    if (!key) return;
+    if (!out.season && conf.standings && conf.standings.seasonDisplayName) out.season = conf.standings.seasonDisplayName;
+    var divs = conf.children || [];
+    divs.forEach(function (div) {
+      if (!out.season && div.standings && div.standings.seasonDisplayName) out.season = div.standings.seasonDisplayName;
+      var name = String(div.name || div.abbreviation || '').replace(/\s+Division$/i, '');
+      var teams = ((div.standings && div.standings.entries) || []).map(function (e) { return team(e, name); });
+      out[key] = out[key].concat(teams);
+      out.divisions.push({ conf: key, name: name, teams: teams.slice().sort(_nbaOrder) });
+    });
+    // a conference that comes back flat still gets its table
+    if (!divs.length) out[key] = ((conf.standings && conf.standings.entries) || []).map(function (e) { return team(e, null); });
+    out[key].sort(_nbaOrder);
+  });
+  return out;
 }
 
 function _winPctNfl(t) { return (t.w + t.l) > 0 ? t.w / (t.w + t.l) : 0; }
@@ -3063,7 +3130,10 @@ async function _phDaily(league, base, now, why) {
       var ahead = days.filter(function (d) { return d > today && d <= plus(8); })[0] || null;
       var back = days.filter(function (d) { return d < today && d >= plus(-3); }).pop() || null;
       // nothing on today, nothing ahead, nothing just played: the playoffs are over
-      if (!going && !ahead && !back && !evs.length) return { phase: 'off', label: PHASE_WORDS.off };
+      // (v7.90.0: ESPN's scoreboard goes on showing the last game long after it,
+      // so a last game more than three days old counts as nothing just played)
+      var stale = evs.length > 0 && t - Math.max.apply(null, evs.map(function (e) { return e.t; })) > 3 * 864e5;
+      if (!going && !ahead && !back && (!evs.length || stale)) return { phase: 'off', label: PHASE_WORDS.off };
       if (!round) {
         var tries = [ahead, back].filter(Boolean);
         for (var i = 0; i < tries.length && !round; i++) {
@@ -3079,6 +3149,8 @@ async function _phDaily(league, base, now, why) {
     // v7.41.0: the round's series, for the Games page's playoff card
     try {
       var list = await _phSeries(league, base, sb, lg, now, label, why);
+      // v7.90.0: the title series is decided: the season's over, whatever ESPN's season type still says
+      if (list && list.length === 1 && list[0].final && list[0].over) return { phase: 'off', label: PHASE_WORDS.off };
       if (list && list.length) return { phase: kind, label: label, series: list };
     } catch (e) { if (why) why.push(league + ' series: ' + String(e && e.message || e)); }
   }

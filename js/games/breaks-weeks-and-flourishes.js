@@ -673,7 +673,7 @@ function _gsPhaseLoad() {
   var paint = function () { try { _gsPhasePaint(); } catch (e) { console.error('[league phase] paint:', e); } };
   // v7.41.1: each answer is shown the moment it lands — baseball doesn't wait on the slower all-leagues lookup
   var mlb = json('/api/mlb?mode=phase&v=2&date=' + encodeURIComponent(_todayLocal())).then(function (r) { if (take('mlb', r)) paint(); });
-  var rest = json('/api/espn?mode=phases&v=3').then(function (r) {
+  var rest = json('/api/espn?mode=phases&v=4').then(function (r) {
     var lg = (r && r.leagues) || {}, any = false;
     Object.keys(lg).forEach(function (k) { if (take(k, lg[k])) any = true; });
     if (any) paint();

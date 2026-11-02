@@ -24,6 +24,8 @@ function _ppLeagueKeys() { return window._ppSport === 'nfl' ? ['afc', 'nfc'] : [
 function _ppLeagueLabel(key) { return key.toUpperCase(); }
 
 function openPlayoffPicture(sport) {
+  // v7.90.0: the NBA gets its standings (js/games/nba-standings.js)
+  if (sport === 'nba') { openNbaStandings(); return; }
   window._ppSport = (sport === 'nfl') ? 'nfl' : 'mlb';
   window._ppData = null;
   window._ppPicks = {};

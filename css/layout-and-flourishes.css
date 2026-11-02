@@ -367,6 +367,23 @@
 /* Playoff Picture — bracket boxes, wild card race rows, interactive
    "play it out" pick pairs, division standings rows. Prefixed pp- to
    match the mockup this was built from. */
+/* NBA standings (v7.90.0) */
+.ns-sub{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:14px}
+.ns-hdr,.ns-row{display:grid;grid-template-columns:18px 26px minmax(0,1fr) 46px 32px 36px 30px;align-items:center;column-gap:6px}
+.ns-hdr{padding:0 4px 5px;font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.04em}
+.ns-hdr span{text-align:right}
+.ns-row{width:100%;padding:8px 4px;background:none;border:0;border-bottom:.5px solid rgba(255,255,255,.06);font-family:inherit;text-align:left;cursor:pointer;color:#fff}
+.ns-rk{font-size:11px;font-weight:700;color:rgba(255,255,255,.4)}
+.ns-bdg{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;letter-spacing:-.02em;box-sizing:border-box}
+.ns-nm{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ns-wl,.ns-v{text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.ns-wl{font-weight:700;color:rgba(255,255,255,.85)}
+.ns-v{color:rgba(255,255,255,.5)}
+.ns-v.w{color:#9be8ac}
+.ns-v.l{color:#e8917a}
+.ns-cut{margin:12px 0 4px}
+.ns-div{margin-bottom:22px}
+.ns-msg{text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)}
 .pp-section-title{font-size:11px;font-weight:800;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px 2px;display:flex;justify-content:space-between;align-items:center}
 .pp-reset{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:none;letter-spacing:0;cursor:pointer;border:1px solid rgba(255,255,255,.15);padding:3px 9px;border-radius:8px}
 .pp-bracket-sub{font-size:10.5px;color:rgba(255,255,255,.4);margin:-2px 0 10px 2px}

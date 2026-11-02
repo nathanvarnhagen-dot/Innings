@@ -166,6 +166,17 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.90.0', at: '2026-11-02T09:40:00-08:00',
+      title: 'NBA standings',
+      sub: 'East, West and all six divisions.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Find it on the NBA page', body: 'Tap the trophy at the top of the NBA Games page for each conference, with record, games back, last ten and streak.' },
+          { icon: 'bars', title: 'See the race', body: 'Lines mark the top six and the play-in spots. Tap any team to open its page.' }
+        ];
+      }
+    },
+    {
       id: 'v7.89.0', at: '2026-10-29T21:50:00-07:00',
       title: 'Change a player in Compare',
       sub: 'Swap either side without starting over.',

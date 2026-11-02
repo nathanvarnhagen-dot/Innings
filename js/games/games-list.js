@@ -312,7 +312,7 @@ window._gamesSport = 'mlb';
 // yet.
 function _refreshPlayoffBtnVisibility() {
   var btn = document.getElementById('games-playoff-btn');
-  if (btn) btn.style.display = (window._gamesSport === 'mlb' || window._gamesSport === 'nfl') ? 'flex' : 'none';
+  if (btn) btn.style.display = (window._gamesSport === 'mlb' || window._gamesSport === 'nfl' || window._gamesSport === 'nba') ? 'flex' : 'none';
   var teamsBtn = document.getElementById('games-teams-btn');
   if (teamsBtn) teamsBtn.style.display = 'flex';
 }

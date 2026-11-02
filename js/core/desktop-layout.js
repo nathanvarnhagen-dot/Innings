@@ -271,7 +271,7 @@ function msOpenPerson(uid, name) {
   _navApplyScreen = function (id) {
     prevNav(id);
     if (id === 'feed') { loadOnThisDay(); if (_isDesk()) _deskRenderRail(); }
-    var gamesIds = ['games', 'games-picker', 'games-soon', 'game', 'team', 'playoff-picture', 'team-prefs'];
+    var gamesIds = ['games', 'games-picker', 'games-soon', 'game', 'team', 'playoff-picture', 'nba-standings', 'team-prefs'];
     var gb = document.getElementById('ipad-nav-games');
     if (gb) gb.classList.toggle('active', gamesIds.indexOf(id) !== -1);
   };

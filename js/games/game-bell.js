@@ -14,7 +14,7 @@
 // Notifications and slides it back out. Swipe the bell right to tuck it
 // away without reading; swipe left along the bottom of the screen to pull
 // it back anytime, even with nothing unread.
-var GBELL_SCREENS = ['screen-games-picker', 'screen-games', 'screen-games-soon', 'screen-game', 'screen-multi', 'screen-team', 'screen-playoff-picture'];
+var GBELL_SCREENS = ['screen-games-picker', 'screen-games', 'screen-games-soon', 'screen-game', 'screen-multi', 'screen-team', 'screen-playoff-picture', 'screen-nba-standings'];
 var GBELL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 var GBELL_ZONE = 150;   // px from the bottom of the screen where the pull-back swipe starts
 var GBELL_SNAP = 36;    // px of drag that commits a tuck or a pull
