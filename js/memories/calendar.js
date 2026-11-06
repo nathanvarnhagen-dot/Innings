@@ -207,7 +207,7 @@ function _calRenderDayDetail(momentsByDate) {
         '</div>';
       }
       if (m._watchedGame) {
-        var sportEmoji = { mlb: '⚾', nfl: '🏈', cfb: '🏈', nba: '🏀', wnba: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[m.sport] || '🏆';
+        var sportEmoji = { mlb: '⚾', nfl: '🏈', cfb: '🏈', nba: '🏀', wnba: '🏀', cbb: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[m.sport] || '🏆';
         return '<div data-gamepk="' + _escapeHtml(String(m.gamePk)) + '" data-away="' + _escapeHtml(m.away || '') + '" data-home="' + _escapeHtml(m.home || '') + '" data-sport="' + _escapeHtml(m.sport || 'mlb') + '" data-date="' + _escapeHtml(m.date || '') + '" onclick="openGameScreen(this.dataset.gamepk,this.dataset.away,this.dataset.home,this.dataset.sport,this.dataset.date)" style="background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">' +
           '<div style="width:40px;height:40px;border-radius:12px;background:rgba(168,159,232,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + sportEmoji + '</div>' +
           '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml((m.away || '?') + ' @ ' + (m.home || '?')) + '</div>' +

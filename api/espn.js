@@ -1,4 +1,4 @@
-// Vercel Serverless Function — GET /api/espn?league=nfl|cfb|nba|wnba|mls|nwsl&mode=schedule&date=YYYYMMDD
+// Vercel Serverless Function — GET /api/espn?league=nfl|cfb|nba|wnba|cbb|mls|nwsl&mode=schedule&date=YYYYMMDD
 //                               GET /api/espn?league=...&mode=boxscore&eventId=<id>
 //                               GET /api/espn?mode=search&q=<name>[&debug=1]
 //                               GET /api/espn?league=nfl&mode=player&id=<athleteId>[&debug=1]
@@ -30,6 +30,8 @@ var LEAGUE_PATHS = {
   cfb: 'football/college-football',
   nba: 'basketball/nba',
   wnba: 'basketball/wnba',
+  // v7.91.0: men's college basketball (Division I)
+  cbb: 'basketball/mens-college-basketball',
   mls: 'soccer/usa.1',
   nwsl: 'soccer/usa.nwsl',
   // Team list only (team picker / favorites). NHL games themselves come
@@ -49,12 +51,14 @@ module.exports = async function handler(req, res) {
   // Where each league's season stands right now, all leagues at once (v7.40.0).
   if (mode === 'phases') { try { await _leaguePhases(req, res); } catch (e) { res.status(200).json({ leagues: {} }); } return; }
   const path = LEAGUE_PATHS[league];
-  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, mls, nwsl (or nhl for teams)' }); return; }
+  if (!path) { res.status(400).json({ error: 'Unknown league — use nfl, cfb, nba, wnba, cbb, mls, nwsl (or nhl for teams)' }); return; }
   try {
     if (mode === 'schedule') {
       const date = req.query.date;
       if (!date) { res.status(400).json({ error: 'Missing date (YYYYMMDD)' }); return; }
-      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/scoreboard?dates=' + encodeURIComponent(date);
+      // v7.91.0: college basketball's scoreboard only sends ESPN's featured
+      // games unless it's asked for all of Division I (group 50)
+      const url = 'https://site.api.espn.com/apis/site/v2/sports/' + path + '/scoreboard?dates=' + encodeURIComponent(date) + (league === 'cbb' ? '&groups=50&limit=500' : '');
       const r = await fetch(url);
       const data = await r.json();
       const games = (data.events || []).map(summarizeEvent).filter(Boolean);
@@ -101,7 +105,9 @@ module.exports = async function handler(req, res) {
       if (model.phase === 'pre' && (model.form.away.length || model.form.home.length)) {
         model.teamColors = await _gcTeamColors(path, league);
       }
-      if (model.phase === 'live' && BASKETBALL_LEAGUES[league]) await _nbaLiveOverlay(model, path, eventId); // v7.50.0
+      // v7.91.0: not for college — its scoreboard is every Division I game (a
+      // megabyte or two per look), too heavy to read on every 4-second poll
+      if (model.phase === 'live' && BASKETBALL_LEAGUES[league] && league !== 'cbb') await _nbaLiveOverlay(model, path, eventId); // v7.50.0
       if (!req.query.debug) delete model._nbaDbg;
       if (req.query.debug) model.debug = { nba: model._nbaDbg, topLevelKeys: Object.keys(data || {}), playsCount: (data.plays || []).length, keyEvents: (data.keyEvents || []).length };
       // A live football score can change on one snap, so the edge holds it
@@ -162,6 +168,15 @@ module.exports = async function handler(req, res) {
       if (!result.team.name && !result.games.length) { res.status(502).json({ error: 'No team data from ESPN' }); return; }
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
       res.status(200).json(result);
+      return;
+    }
+    // v7.91.0: college basketball's polls (AP Top 25, the coaches poll)
+    if (mode === 'rankings' && league === 'cbb') {
+      const data = await _tpGetJson('https://site.api.espn.com/apis/site/v2/sports/' + path + '/rankings');
+      const polls = data ? summarizeCbbRankings(data) : [];
+      if (!polls.length) { res.setHeader('Cache-Control', 's-maxage=120'); res.status(200).json({ error: 'Rankings unavailable', polls: [] }); return; }
+      res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
+      res.status(200).json({ polls: polls });
       return;
     }
     // v7.90.0: the NBA's two conference tables and its six divisions
@@ -260,6 +275,15 @@ module.exports = async function handler(req, res) {
           const all = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=1000').then(function (r) { return r.json(); }).catch(function () { return null; });
           teams = collect(all);
         }
+      } else if (league === 'cbb') {
+        // v7.91.0: every Division I school (360-odd); the conference view if the flat list comes up short
+        const all = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=1000').then(function (r) { return r.json(); }).catch(function () { return null; });
+        teams = collect(all);
+        if (teams.length < 300) {
+          const d1 = await fetch('https://site.web.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=1000&groups=50&groupType=conference&enable=groups').then(function (r) { return r.json(); }).catch(function () { return null; });
+          const more = collect(d1);
+          if (more.length > teams.length) teams = more;
+        }
       } else {
         const data = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + path + '/teams?limit=300').then(function (r) { return r.json(); });
         teams = collect(data);
@@ -270,7 +294,7 @@ module.exports = async function handler(req, res) {
       res.status(200).json({ teams: teams });
       return;
     }
-    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, gamecast, pregame, team, standings, teams, or player' });
+    res.status(400).json({ error: 'Unknown mode — use schedule, boxscore, gamecast, pregame, team, standings, rankings, teams, or player' });
   } catch (err) {
     res.status(500).json({ error: league.toUpperCase() + ' lookup failed' });
   }
@@ -313,8 +337,15 @@ function summarizeEvent(event) {
     // v7.38.0: where a live game stands (down & distance, the spot, the last
     // play), for Multi view's tiles — null whenever ESPN doesn't send it
     sit: _eventSit(parts),
-    goals: _eventGoals(parts) // v7.59.0: soccer only
+    goals: _eventGoals(parts), // v7.59.0: soccer only
+    // v7.91.0: a Top 25 team's poll rank (college), null for everyone else
+    awayRank: _eventRank(parts.away),
+    homeRank: _eventRank(parts.home)
   };
+}
+function _eventRank(c) {
+  var r = c && c.curatedRank && Number(c.curatedRank.current);
+  return r && r >= 1 && r <= 25 ? r : null;
 }
 function _eventSit(parts) {
   try {
@@ -363,8 +394,9 @@ var SOCCER_LEAGUES = { mls: true, nwsl: true };
 // OT naming convention.
 function periodLabel(league, index, total) {
   var isSoccer = SOCCER_LEAGUES[league];
-  var regulation = isSoccer ? 2 : 4;
-  if (index < regulation) return isSoccer ? (index === 0 ? '1st' : '2nd') : 'Q' + (index + 1);
+  var halves = league === 'cbb'; // v7.91.0: men's college plays two 20-minute halves
+  var regulation = isSoccer || halves ? 2 : 4;
+  if (index < regulation) return isSoccer ? (index === 0 ? '1st' : '2nd') : halves ? (index === 0 ? '1H' : '2H') : 'Q' + (index + 1);
   return total - regulation > 1 ? 'OT' + (index - regulation + 1) : 'OT';
 }
 
@@ -394,14 +426,14 @@ function extractPeriods(league, awayComp, homeComp) {
 // than breaking anything, since the score card already renders fine
 // without it.
 function extractHighlights(league, data) {
-  var emoji = { nfl: '🏈', cfb: '🏈', mls: '⚽', nwsl: '⚽', nba: '🏀', wnba: '🏀' }[league] || '🏆';
+  var emoji = { nfl: '🏈', cfb: '🏈', mls: '⚽', nwsl: '⚽', nba: '🏀', wnba: '🏀', cbb: '🏀' }[league] || '🏆';
   var highlights = [];
   try {
     if (league === 'nfl' || league === 'cfb' || SOCCER_LEAGUES[league]) {
       (data.scoringPlays || []).slice(-4).forEach(function (p) {
         if (p && p.text) highlights.push({ emoji: emoji, text: p.text });
       });
-    } else if (league === 'nba' || league === 'wnba') {
+    } else if (BASKETBALL_LEAGUES[league]) {
       (data.leaders || []).forEach(function (teamLeaders) {
         var cat = (teamLeaders.leaders || [])[0];
         var top = cat && cat.leaders && cat.leaders[0];
@@ -468,7 +500,28 @@ function summarizeSummary(data, eventId, league) {
 // fields on this status object across ESPN's site API, but not tested
 // against a live in-progress response in this session, unlike the
 // status.type fields already proven by the existing status text).
-var BASKETBALL_LEAGUES = { nba: true, wnba: true };
+var BASKETBALL_LEAGUES = { nba: true, wnba: true, cbb: true };
+// v7.91.0: each basketball league's clock and shot-clock rules. Men's college
+// plays two 20-minute halves on a 30-second shot clock (reset to 20 on an
+// offensive rebound), and its team fouls run for the whole half, with
+// overtime carrying on the second half's count. ESPN's summary names the
+// game's format (format.regulation); when it disagrees with the table (the
+// NCAA has been weighing quarters) the feed wins.
+var BB_RULES = {
+  nba: { reg: 4, per: 720, ot: 300, shot: 24, oreb: 14, carry: false, offFouls: false },
+  wnba: { reg: 4, per: 600, ot: 300, shot: 24, oreb: 14, carry: false, offFouls: false },
+  cbb: { reg: 2, per: 1200, ot: 300, shot: 30, oreb: 20, carry: true, offFouls: true }
+};
+function _bbRules(league, data) {
+  var R = BB_RULES[league] || BB_RULES.nba;
+  var f = data && data.format && data.format.regulation;
+  var n = f ? Number(f.periods) : NaN;
+  if (isFinite(n) && n > 0 && n !== R.reg && (n === 2 || n === 4)) {
+    var secs = Number(f.clock);
+    R = Object.assign({}, R, { reg: n, per: isFinite(secs) && secs > 0 ? secs : (n === 2 ? 1200 : 600), carry: n === 2 });
+  }
+  return R;
+}
 function extractLiveSituation(league, comp) {
   if (!BASKETBALL_LEAGUES[league] && !SOCCER_LEAGUES[league]) return null;
   var status = comp.status || {};
@@ -1048,12 +1101,15 @@ function _gcSide(c) {
     score: _num(c.score),
     record: _gcRecord(c),
     standing: (rank && rank <= 25) ? 'No. ' + rank : null,
+    rank: (rank && rank <= 25) ? Number(rank) : null, // v7.91.0: the poll rank beside the name
     linescores: (c.linescores || []).map(function (l) { return _num(l.displayValue != null ? l.displayValue : l.value); })
   };
 }
-function _gcPeriodTag(sport, n) {
+function _gcPeriodTag(sport, n, reg) {
   if (!n) return '';
   if (sport === 'soccer') return n === 1 ? '1H' : n === 2 ? '2H' : 'ET';
+  // v7.91.0: a game played in halves (men's college basketball)
+  if (reg === 2) return n === 1 ? '1H' : n === 2 ? '2H' : n === 3 ? 'OT' : (n - 2) + 'OT';
   if (n <= 4) return 'Q' + n;
   return n === 5 ? 'OT' : (n - 4) + 'OT';
 }
@@ -1404,6 +1460,7 @@ function _bbShot(text) {
 // from the play-by-play — ESPN sends no shot clock, so the app counts down
 // from the last reset (24 on a change of possession or a score, 14 after an
 // offensive rebound) against the game clock.
+// v7.91.0: college — 30 and 20, 20-minute halves (BB_RULES).
 function _bbCoord(p) {
   var c = p && p.coordinate;
   if (!c || c.x == null || c.y == null) return null;
@@ -1428,23 +1485,28 @@ function _bbPlayKind(p) {
   return 'other';
 }
 function _bbCourt(data, away, home, league) {
+  var R = _bbRules(league, data), SC = R.shot, OR = R.oreb;
   var raw = (data.plays || []).filter(function (p) { return p && p.text; });
   var sideOf = function (p) { var id = p.team && String(p.team.id); return id === String(home.id) ? 'h' : (id === String(away.id) ? 'a' : null); };
   var other = function (s) { return s === 'h' ? 'a' : (s === 'a' ? 'h' : null); };
   var shots = [];
-  var poss = null, resetVal = 24, resetClock = null, resetPeriod = null;
+  var poss = null, resetVal = SC, resetClock = null, resetPeriod = null;
   var last = null, lastShot = null, scLast = null, scLastShot = null;
-  var periodSecs = league === 'wnba' ? 600 : 720;
+  var periodSecs = R.per;
   // v7.55.0: timeouts used and team fouls this period (for the arena board),
   // plus the timeout in progress — the newest timeout play with nothing but
   // substitutions and the like logged after it
-  var tmo = { a: 0, h: 0 }, fouls = { a: 0, h: 0 }, foulsPer = null, curTmo = null;
+  // v7.91.0: college's team fouls run for the whole half, and overtime carries
+  // on the second half's count; its player-control fouls count too
+  var tmo = { a: 0, h: 0 }, fouls = { a: 0, h: 0 }, foulsPer = null, foulsGrp = null, curTmo = null;
   raw.forEach(function (p) {
     var kind = _bbPlayKind(p), side = sideOf(p), per = (p.period && p.period.number) || 0, clk = p.clock && p.clock.displayValue;
     var secs = _bbSecs(clk);
-    if (per !== resetPeriod) { resetPeriod = per; resetVal = 24; resetClock = per > 4 ? 300 : periodSecs; }
-    if (per !== foulsPer) { foulsPer = per; fouls = { a: 0, h: 0 }; }
-    if (kind === 'foul' && side && !/offensive|technical|charge/i.test(String(p.text || ''))) fouls[side]++;
+    if (per !== resetPeriod) { resetPeriod = per; resetVal = SC; resetClock = per > R.reg ? R.ot : periodSecs; }
+    var grp = R.carry ? Math.min(per, R.reg) : per;
+    if (grp !== foulsGrp) { foulsGrp = grp; fouls = { a: 0, h: 0 }; }
+    foulsPer = per;
+    if (kind === 'foul' && side && !(R.offFouls ? /technical/i : /offensive|technical|charge/i).test(String(p.text || ''))) fouls[side]++;
     if (kind === 'timeout') {
       if (side) tmo[side]++;
       var tt = String(p.text || '');
@@ -1460,19 +1522,19 @@ function _bbCourt(data, away, home, league) {
       var pts = p.scoreValue != null ? Number(p.scoreValue) : (p.pointsAttempted != null ? Number(p.pointsAttempted) : (/three/i.test(p.text) ? 3 : 2));
       if (c) shots.push({ x: c.x, y: c.y, s: side, m: made ? 1 : 0, p: pts, q: per, id: String(p.id || '') });
       if (side) poss = side;
-      if (made) reset(other(side), 24);
+      if (made) reset(other(side), SC);
       lastShot = p; scLastShot = scNow;
     } else if (kind === 'ft') {
       // the last free throw of a trip: made → other team's ball; missed → live rebound
       var ofm = String(p.text || '').match(/(\d) of (\d)/);
       var lastOf = !ofm || ofm[1] === ofm[2];
-      if (lastOf && p.scoringPlay) reset(other(side), 24);
+      if (lastOf && p.scoringPlay) reset(other(side), SC);
       else if (side) poss = side;
-    } else if (kind === 'dreb') reset(side, 24);
-    else if (kind === 'oreb') reset(side, 14);
-    else if (kind === 'reb') { if (side && side !== poss) reset(side, 24); else if (side) reset(side, 14); }
-    else if (kind === 'to') reset(other(side), 24);
-    else if (kind === 'jump' && side) reset(side, 24);
+    } else if (kind === 'dreb') reset(side, SC);
+    else if (kind === 'oreb') reset(side, OR);
+    else if (kind === 'reb') { if (side && side !== poss) reset(side, SC); else if (side) reset(side, OR); }
+    else if (kind === 'to') reset(other(side), SC);
+    else if (kind === 'jump' && side) reset(side, SC);
     last = p; scLast = scNow;
   });
   var mk = function (pl, sc) {
@@ -1494,7 +1556,8 @@ function _bbCourt(data, away, home, league) {
     };
   };
   return { shots: shots, last: mk(last, scLast), lastShot: mk(lastShot, scLastShot), poss: poss, sc: { reset: resetVal, at: resetClock, period: resetPeriod }, periodSecs: periodSecs, ft: _bbFtTrip(raw, sideOf),
-    timeouts: tmo, fouls: fouls, foulsPeriod: foulsPer, timeout: curTmo }; // v7.55.0
+    timeouts: tmo, fouls: fouls, foulsPeriod: foulsPer, timeout: curTmo, // v7.55.0
+    reg: R.reg, shotSecs: SC, otSecs: R.ot }; // v7.91.0
 }
 // v7.50.0: the free-throw trip in progress (or just finished): who's at the
 // line, how many he gets, and each one's result so far. Walked back from
@@ -1573,7 +1636,8 @@ function _bbShooter(text) {
   var m = String(text || '').match(/^(.+?) (makes|made|dunks|lays|hits)/i);
   return m ? _lastName(m[1]) : '';
 }
-function _bbAnalyze(data, away, home) {
+function _bbAnalyze(data, away, home, league) {
+  var R = _bbRules(league, data), REG = R.reg; // v7.91.0: "late" is the last period of regulation, whichever it is
   var raw = (data.plays || []).filter(function (p) { return p && p.text; });
   var scoring = raw.filter(function (p) { return p.scoringPlay && p.awayScore != null && p.homeScore != null; });
   var sideOf = function (p) { var id = p.team && String(p.team.id); return id === String(home.id) ? 'h' : (id === String(away.id) ? 'a' : null); };
@@ -1596,10 +1660,10 @@ function _bbAnalyze(data, away, home) {
     var per = (p.period && p.period.number) || 0;
     var secs = _bbSecs(p.clock && p.clock.displayValue);
     if (leader !== 0 && prevLeader !== 0 && leader !== prevLeader) leadChanges++;
-    var late = per >= 4 && secs != null && secs <= 300;
+    var late = per >= REG && secs != null && secs <= 300;
     if (late && leader !== prevLeader) add(p, leader === 0 ? 'Ties it with ' + p.clock.displayValue + ' left' : 'Go-ahead with ' + p.clock.displayValue + ' left', 3);
     if (secs != null && secs <= 1.5 && pts > 0) add(p, 'Beats the buzzer', 4);
-    if (pts === 3 && per >= 4 && secs != null && secs <= 120 && Math.abs(a - h) <= 5) add(p, 'Clutch three with ' + p.clock.displayValue + ' left', 2);
+    if (pts === 3 && per >= REG && secs != null && secs <= 120 && Math.abs(a - h) <= 5) add(p, 'Clutch three with ' + p.clock.displayValue + ' left', 2);
     if (side === runSide) { runPts += pts; runLast = p; }
     else { closeRun(); runSide = side; runPts = pts; runLast = p; }
     if (leader !== 0) prevLeader = leader;
@@ -1613,7 +1677,7 @@ function _bbAnalyze(data, away, home) {
       var p = m.p;
       var shooter = _bbShooter(p.text);
       return {
-        tag: _gcPeriodTag('basketball', p.period && p.period.number), side: sideOf(p),
+        tag: _gcPeriodTag('basketball', p.period && p.period.number, REG), side: sideOf(p),
         time: (p.clock && p.clock.displayValue) || '', head: (shooter ? shooter + ' ' : '') + _bbShot(p.text),
         sub: m.reason, as: Number(p.awayScore), hs: Number(p.homeScore), id: String(p.id || ''), text: p.text || '' // v7.62.0
       };
@@ -1622,7 +1686,7 @@ function _bbAnalyze(data, away, home) {
   var feed = raw.filter(function (p) { return p.scoringPlay || /\bblocks?\b/i.test(p.text); }).slice(-150).reverse().map(function (p) {
     var isBlock = !p.scoringPlay;
     return {
-      tag: _gcPeriodTag('basketball', p.period && p.period.number), time: (p.clock && p.clock.displayValue) || '',
+      tag: _gcPeriodTag('basketball', p.period && p.period.number, REG), time: (p.clock && p.clock.displayValue) || '',
       side: sideOf(p), text: p.text, kind: isBlock ? 'block' : 'score',
       pts: p.scoreValue != null ? Number(p.scoreValue) : null,
       as: isBlock ? null : Number(p.awayScore), hs: isBlock ? null : Number(p.homeScore),
@@ -1654,7 +1718,7 @@ function _bbGlance(data, league) {
   var run = null;
   try { run = _bbRun(scoring); } catch (e) {}
   var st = comp.status || {};
-  return { poss: court.poss, sc: court.sc, periodSecs: court.periodSecs, period: st.period || null, clock: st.displayClock || null,
+  return { poss: court.poss, sc: court.sc, periodSecs: court.periodSecs, reg: court.reg, shotSecs: court.shotSecs, otSecs: court.otSecs, period: st.period || null, clock: st.displayClock || null, // v7.91.0
     last: court.last ? { text: court.last.text, side: court.last.side, made: court.last.made, pts: court.last.pts, ft: court.last.ft, who: court.last.who } : null,
     run: run ? { side: run.side, pts: run.pts, opp: run.opp } : null, fouls: court.fouls, timeouts: court.timeouts, ft: court.ft || null };
 }
@@ -1859,7 +1923,8 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
       boxById = _fbBox(data);
       try { model.glance = _fbGlance(data, away, home); } catch (e) { model.glance = null; } // v7.34.0
     } else if (sport === 'basketball') {
-      var bb = _bbAnalyze(data, away, home);
+      var bb = _bbAnalyze(data, away, home, league);
+      model.reg = _bbRules(league, data).reg; // v7.91.0: 2 (halves) or 4 (quarters)
       model.highlights = bb.moments;
       model.feed = bb.feed;
       model.leadChanges = bb.leadChanges;
@@ -1939,7 +2004,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
 async function _gcTeamColors(path, league) {
   try {
     var cfb = league === 'cfb';
-    var url = 'https://' + (cfb ? 'site.web.api.espn.com' : 'site.api.espn.com') + '/apis/site/v2/sports/' + path + '/teams?limit=400' + (cfb ? '&groups=80&groupType=conference&enable=groups' : '');
+    var url = 'https://' + (cfb ? 'site.web.api.espn.com' : 'site.api.espn.com') + '/apis/site/v2/sports/' + path + '/teams?limit=' + (league === 'cbb' ? 1000 : 400) + (cfb ? '&groups=80&groupType=conference&enable=groups' : '');
     var r = await fetch(url);
     var data = await r.json();
     var list = (((data.sports || [])[0] || {}).leagues || [])[0] || {};
@@ -2063,12 +2128,12 @@ function summarizeTeamPage(parts, teamId, league) {
 // ever come back empty for a name that should match, hit this with
 // &debug=1 to see what ESPN actually returned instead of guessing.
 var _SEARCH_LEAGUE = {
-  'nfl': 'nfl', 'college-football': 'cfb', 'nba': 'nba', 'wnba': 'wnba', 'nhl': 'nhl', 'mlb': 'mlb',
+  'nfl': 'nfl', 'college-football': 'cfb', 'nba': 'nba', 'wnba': 'wnba', 'nhl': 'nhl', 'mlb': 'mlb', 'mens-college-basketball': 'cbb',
   'usa.1': 'mls', 'mls': 'mls', 'usa.nwsl': 'nwsl', 'nwsl': 'nwsl'
 };
 // ESPN numeric league ids, for items that only carry a uid like
 // "s:20~l:28~a:3139477".
-var _SEARCH_LEAGUE_ID = { '28': 'nfl', '23': 'cfb', '46': 'nba', '59': 'wnba', '90': 'nhl', '10': 'mlb', '770': 'mls' };
+var _SEARCH_LEAGUE_ID = { '28': 'nfl', '23': 'cfb', '46': 'nba', '59': 'wnba', '90': 'nhl', '10': 'mlb', '770': 'mls', '41': 'cbb' };
 function _searchItemToPlayer(it) {
   if (!it || typeof it !== 'object') return null;
   var type = String(it.type || '').toLowerCase();
@@ -2104,7 +2169,7 @@ function _searchItemToPlayer(it) {
 // ESPN feed for that league is tried, and with no id at all the player is
 // looked up by exact name. Nothing is returned rather than the wrong man.
 // Field names confirmed against live responses on 2026-10-11.
-var _BIO_PATHS = { mlb: 'baseball/mlb', nhl: 'hockey/nhl', nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
+var _BIO_PATHS = { mlb: 'baseball/mlb', nhl: 'hockey/nhl', nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', cbb: 'basketball/mens-college-basketball', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
 function _bioNorm(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\b(jr|sr|ii|iii|iv)\b/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -2164,7 +2229,7 @@ async function _bioEspn(league, id) {
   var m = dx.match(/(\d+)/), seasons = null, cls = null;
   if (m) seasons = Number(m[1]);
   else if (/rookie/i.test(dx)) seasons = 1;
-  else if (league === 'cfb' && dx) cls = dx; // college: his class ("Junior", "Redshirt Sophomore")
+  else if ((league === 'cfb' || league === 'cbb') && dx) cls = dx; // college: his class ("Junior", "Redshirt Sophomore")
   else if (a.experience && a.experience.years != null && isFinite(Number(a.experience.years))) seasons = Number(a.experience.years) + 1;
   if (seasons == null && !cls && soccer && parts[1]) {
     var c = Number(parts[1].count) || (parts[1].items || []).length;
@@ -2312,8 +2377,8 @@ function _psGuessGroup(F) {
 }
 async function _playerStats(req, res) {
   const league = String(req.query.league || '').toLowerCase();
-  if (league === 'nba' || league === 'wnba') { await _playerStatsBk(req, res, league); return; }
-  if (league !== 'nfl' && league !== 'cfb') { res.status(400).json({ error: 'Stat lines are built for nfl, cfb, nba and wnba' }); return; }
+  if (league === 'nba' || league === 'wnba' || league === 'cbb') { await _playerStatsBk(req, res, league); return; }
+  if (league !== 'nfl' && league !== 'cfb') { res.status(400).json({ error: 'Stat lines are built for nfl, cfb, nba, wnba and cbb' }); return; }
   let id = String(req.query.id || '').replace(/[^0-9]/g, '');
   const name = String(req.query.name || '').trim().slice(0, 80);
   if (!id && name) { const hits = await _bioIdsByName(league, name); if (hits.length === 1) id = hits[0]; }
@@ -2409,7 +2474,8 @@ async function _playerStats(req, res) {
 // between feeds; the first one the feed carries is used. ?debug=1 returns
 // the category and column names the feeds actually sent.
 // Seasons: the NBA's 2026-27 season is ESPN year 2027 (labelled "2026-27");
-// the WNBA's season is its calendar year.
+// the WNBA's season is its calendar year. College basketball counts like the
+// NBA (2026-27 is ESPN year 2027; it tips off in November).
 var _BK_SEASON_COLS = [
   ['PTS', ['avgPoints']],
   ['REB', ['avgRebounds', 'avgTotalRebounds']],
@@ -2426,10 +2492,10 @@ var _BK_LOG_COLS = [
 ];
 function _bkCurYear(league, now) {
   var d = now || new Date();
-  if (league === 'nba') return d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear(); // Oct onward is next year's season
+  if (league === 'nba' || league === 'cbb') return d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear(); // Oct onward is next year's season
   return d.getFullYear();
 }
-function _bkLabel(league, yr) { return league === 'nba' ? (yr - 1) + '-' + String(yr).slice(2) : String(yr); }
+function _bkLabel(league, yr) { return league === 'nba' || league === 'cbb' ? (yr - 1) + '-' + String(yr).slice(2) : String(yr); }
 // the first category + name the feed carries for one column
 function _bkFind(F, cands) {
   for (var i = 0; i < cands.length; i++) for (var c in F.names) if (F.names[c].indexOf(cands[i]) !== -1) return { cat: c, name: cands[i] };
@@ -2531,7 +2597,7 @@ async function _playerStatsBk(req, res, league) {
           const dt = info.gameDate ? new Date(info.gameDate) : null;
           log.push({
             post: post,
-            tag: post ? 'Playoffs' : cup ? 'Cup' : (dt && !isNaN(dt) ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }) : ''),
+            tag: post ? (league === 'cbb' ? 'NCAA' : 'Playoffs') : cup ? 'Cup' : (dt && !isNaN(dt) ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }) : ''),
             date: info.gameDate || null,
             at: info.atVs || null,
             opp: (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || null,
@@ -3021,7 +3087,7 @@ async function _playerProfile(req, res, path, league) {
 //     the last one played; on a playoff off-day the nearest game day is
 //     looked up from the season calendar.
 // Any league that fails to load is simply left out; the app keeps what it had.
-var PHASE_LEAGUES = ['nfl', 'cfb', 'nba', 'wnba', 'nhl', 'mls', 'nwsl'];
+var PHASE_LEAGUES = ['nfl', 'cfb', 'nba', 'wnba', 'cbb', 'nhl', 'mls', 'nwsl'];
 var PHASE_WORDS = { pre: 'Preseason', reg: 'Regular season', post: 'Playoffs', off: 'Offseason' };
 async function _phGet(url, ms, why) {
   var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -3155,6 +3221,57 @@ async function _phDaily(league, base, now, why) {
     } catch (e) { if (why) why.push(league + ' series: ' + String(e && e.message || e)); }
   }
   return { phase: kind, label: label };
+}
+
+// ── COLLEGE BASKETBALL'S SEASON (v7.91.0) ─────────────────────────────────
+// "Regular season" from November, "Conference tournaments" once today's
+// games are conference tournament games, then the NCAA tournament by round
+// ("March Madness · Sweet 16") — from the round ESPN writes in each game's
+// note ("Men's Basketball Championship - East Region - Sweet 16"). No series
+// cards: the bracket is its own screen, later.
+var CBB_ROUNDS = [[/first four/i, 'First Four'], [/1st round|first round/i, 'First round'], [/2nd round|second round/i, 'Second round'], [/sweet 16|regional semi/i, 'Sweet 16'], [/elite (8|eight)|regional final/i, 'Elite Eight'], [/final four|national semi/i, 'Final Four'], [/national championship|championship game/i, 'Title game']];
+function _phCbb(sb, now) {
+  var lg = (sb && sb.leagues && sb.leagues[0]) || {}, seas = lg.season || {}, t = now.getTime();
+  var evs = _phEvents(sb);
+  var kind = _phKind(seas.type && seas.type.name) || (evs[0] && _phKind(evs[0].slug));
+  var s0 = Date.parse(seas.startDate), s1 = Date.parse(seas.endDate);
+  if (!evs.length && ((s1 && t > s1) || (s0 && t < s0))) kind = 'off';
+  if (!kind) return null;
+  var heads = evs.map(function (e) { return String(e.head || ''); });
+  var ncaa = heads.filter(function (h) { return /men's basketball championship|ncaa/i.test(h); });
+  if (ncaa.length) {
+    var round = '';
+    for (var i = 0; i < CBB_ROUNDS.length && !round; i++) if (ncaa.some(function (h) { return CBB_ROUNDS[i][0].test(h); })) round = CBB_ROUNDS[i][1];
+    return { phase: 'post', label: 'March Madness' + (round ? ' \u00b7 ' + round : '') };
+  }
+  // (only late in the season: November's events are "tournaments" too)
+  var mo = new Date(t - 5 * 3600e3).getUTCMonth();
+  if ((mo === 1 || mo === 2) && heads.some(function (h) { return /tournament|championship/i.test(h) && !/invitational|classic|showcase|nit\b|cbi\b|crown/i.test(h); })) return { phase: 'post', label: 'Conference tournaments' };
+  if (kind === 'post') return { phase: 'post', label: 'Postseason' };
+  return { phase: kind, label: PHASE_WORDS[kind] };
+}
+
+// ── COLLEGE BASKETBALL POLLS (v7.91.0) ───────────────────────────────────
+// /rankings → rankings[] { name, shortName, type, occurrence.displayValue,
+// date, ranks[] { current, previous, points, firstPlaceVotes, trend,
+// recordSummary, team { id, location, name, abbreviation, color,
+// alternateColor, logos } }, others[] (also receiving votes) }. Read
+// defensively: whatever's missing is left off the row.
+function summarizeCbbRankings(data) {
+  var row = function (r) {
+    var t = (r && r.team) || {};
+    var name = t.displayName || ((t.location || '') + ' ' + (t.name || '')).trim() || t.nickname || null;
+    var logo = t.logo || (t.logos && t.logos[0] && t.logos[0].href) || null;
+    return { rank: _num(r.current), prev: _num(r.previous), pts: _num(r.points), fpv: _num(r.firstPlaceVotes), trend: r.trend != null ? String(r.trend) : null,
+      rec: r.recordSummary || null, id: t.id != null ? String(t.id) : null, name: name, short: t.shortDisplayName || t.location || t.nickname || name,
+      abbr: t.abbreviation || null, color: _hex(t.color), alt: _hex(t.alternateColor), logo: logo };
+  };
+  return ((data && data.rankings) || []).map(function (p) {
+    var ranks = (p.ranks || []).map(row).filter(function (r) { return r.rank && r.name; }).sort(function (a, b) { return a.rank - b.rank; });
+    var others = (p.others || []).map(row).filter(function (r) { return r.name; }).sort(function (a, b) { return (b.pts || 0) - (a.pts || 0); });
+    return { name: p.name || p.shortName || 'Poll', short: p.shortName || p.name || 'Poll', type: p.type || null,
+      week: (p.occurrence && p.occurrence.displayValue) || null, date: p.date || null, ranks: ranks, others: others };
+  }).filter(function (p) { return p.ranks.length; });
 }
 
 // ── THE ROUND'S SERIES (v7.41.0) ─────────────────────────────────────────
@@ -3297,6 +3414,7 @@ async function _leaguePhases(req, res) {
     try {
       var p = null;
       if (football) { var sb = await _phGet(base, 0, why); p = sb ? _phFootball(league, sb, now) : null; }
+      else if (league === 'cbb') { var sbc = await _phGet(base, 0, why); p = sbc ? _phCbb(sbc, now) : null; } // v7.91.0
       else p = await _phDaily(league, base, now, why);
       if (p && p.label) out[league] = p;
       else why.push(league + ': no answer');

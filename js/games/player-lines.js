@@ -58,7 +58,7 @@ function _plsLinesFill(id) {
 // nothing at all when the player couldn't be matched by name.
 window._sav.bio = window._sav.bio || {};
 var PLS_BIO_TTL = 6 * 3600e3;
-var PLS_BIO_LG = { mlb: 'MLB', nhl: 'NHL', nfl: 'NFL', cfb: 'CFB', nba: 'NBA', wnba: 'WNBA', mls: 'MLS', nwsl: 'NWSL' };
+var PLS_BIO_LG = { mlb: 'MLB', nhl: 'NHL', nfl: 'NFL', cfb: 'CFB', nba: 'NBA', wnba: 'WNBA', cbb: 'College', mls: 'MLS', nwsl: 'NWSL' };
 function _plsBioKey(name, id, league) { return league + ':' + (id || '') + ':' + String(name || '').toLowerCase(); }
 function _plsBioHtml(name, id, league) {
   if (!PLS_BIO_LG[league] || (!id && !name) || typeof _savGet !== 'function') return '';
@@ -107,7 +107,7 @@ function _plsBioFill(name, id, league) {
 // line, so their card stays as it was.
 window._sav.fb = window._sav.fb || {};
 var PLS_FB_TTL = 5 * 60e3;
-function _plsFbOn(league) { return league === 'nfl' || league === 'cfb' || league === 'nba' || league === 'wnba'; } // v7.87.0: basketball too
+function _plsFbOn(league) { return league === 'nfl' || league === 'cfb' || league === 'nba' || league === 'wnba' || league === 'cbb'; } // v7.87.0: basketball too (v7.91.0: college)
 function _plsFbKey(name, id, league) { return league + ':' + (id || '') + ':' + String(name || '').toLowerCase(); }
 function _plsFbRow(cls, label, small, v, n, i) {
   var cells = '';
@@ -142,7 +142,7 @@ function _plsFbHtml(name, id, league) {
     h += head('Game', d.logCols);
     d.log.forEach(function (g) {
       var where = (g.at === '@' ? '@ ' : 'vs ') + (g.opp || '');
-      var tag = g.tag != null ? g.tag : g.post ? (league === 'cfb' ? 'Bowl' : 'Playoffs') : (g.wk != null ? 'Wk ' + g.wk : '');
+      var tag = g.tag != null ? g.tag : g.post ? (league === 'cfb' ? 'Bowl' : league === 'cbb' ? 'NCAA' : 'Playoffs') : (g.wk != null ? 'Wk ' + g.wk : '');
       var res = g.res ? '<i class="' + (g.res === 'W' ? 'w' : g.res === 'L' ? 'l' : '') + '">' + _escapeHtml(g.res) + '</i>' + (g.score ? ' ' + _escapeHtml(g.score) : '') : '';
       h += _plsFbRow('', where, [_escapeHtml(tag), res].filter(Boolean).join(' · '), g.v, n, i++);
     });

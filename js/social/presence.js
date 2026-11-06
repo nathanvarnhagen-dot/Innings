@@ -166,6 +166,19 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.91.0', at: '2026-11-06T14:45:00-08:00',
+      title: 'College basketball',
+      sub: 'Every Division I men\u2019s game, on the same live court as the NBA.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Find it on Games', body: 'Tap College basketball. Your teams come first, then every Top 25 game. The rest of the night\u2019s games are one tap away.' },
+          { icon: 'history', title: 'Built for the college game', body: 'Two halves, a 30-second shot clock, the one-and-one and double bonus, and five fouls to foul out. The floor has the college lane and three-point line.' },
+          { icon: 'trophy', title: 'The Top 25', body: 'Tap the trophy for the AP and coaches polls: record, who moved and first-place votes. Ranks show next to team names everywhere.' },
+          { icon: 'friends', title: 'Players, teams, Home', body: 'Tap any player for his class, season and game log, or any school for its page. Home and Multi view pick up ranked games, your teams\u2019 games and any game a friend is in.' }
+        ];
+      }
+    },
+    {
       id: 'v7.90.0', at: '2026-11-02T09:40:00-08:00',
       title: 'NBA standings',
       sub: 'East, West and all six divisions.',

@@ -10,6 +10,8 @@
 // Like the field, nothing animates on first open — only changes seen while
 // watching; every animation carries a negative delay so the 6-second
 // re-render resumes it mid-flight instead of replaying it.
+// v7.91.0: men's college basketball too — its halves, 30-second clock,
+// fouls and narrower floor come from _bkR (js/games/college-hoops.js).
 window._bkx = null;
 var BKX_W = 940, BKX_H = 500; // 10 px per foot
 
@@ -42,7 +44,7 @@ function _bkxMoment(lp, m) {
   var title = three ? 'THREE' : dunk ? 'DUNK' : /hook/i.test(t) ? 'HOOK' : /floater|floating/i.test(t) ? 'FLOATER' : /layup|lay-up/i.test(t) ? 'LAYUP' : /tip/i.test(t) ? 'TIP-IN' : /fadeaway|fade away/i.test(t) ? 'FADEAWAY' : /step back/i.test(t) ? 'STEP-BACK' : /pull-?up/i.test(t) ? 'PULL-UP' : 'JUMPER';
   var stx = [];
   if (lp.ft != null) stx.push([lp.ft, 'FT']);
-  if (lp.sc != null) stx.push([lp.sc < 5 ? lp.sc.toFixed(1) : Math.ceil(lp.sc), 'ON THE 24']);
+  if (lp.sc != null) stx.push([lp.sc < 5 ? lp.sc.toFixed(1) : Math.ceil(lp.sc), 'ON THE ' + _bkR(m).shot]);
   return { tier: three || dunk ? 'full' : 'lite', side: lp.side, title: title, who: (lp.who || '') + (lp.ft != null ? ' · ' + lp.ft + ' ft' : '') + (lp.assist ? ' · ' + lp.assist + ' assist' : ''), stx: stx };
 }
 
@@ -83,7 +85,7 @@ function _bkxTrack(m) {
     else {
       // first look: the clock is running unless the log says play is stopped
       var lk = lp ? lp.kind : '';
-      st.running = secs > 0 && !/half|end of|intermission/i.test(m.statusDetail || '') && lk !== 'timeout' && lk !== 'period' && !(ft && !ft.done);
+      st.running = secs > 0 && !_bkAtBreak(m.statusDetail) && lk !== 'timeout' && lk !== 'period' && !(ft && !ft.done);
     }
     if (ft && !ft.done) st.running = false; // the clock stops for free throws
     // v7.50.1: the feed's clock trails the floor by a few seconds and arrives
@@ -106,8 +108,9 @@ function _bkxShotClock(m, st) {
   if (!sc || sc.at == null || st.clockSecs == null) return null;
   var live = st.clockSecs - (st.running ? (Date.now() - st.clockAt) / 1000 : 0);
   if (live < 0) live = 0;
-  var reset = sc.reset || 24, at = sc.at;
-  if (sc.period !== m.period) { reset = 24; at = m.period > 4 ? 300 : (c.periodSecs || 720); }
+  var R = _bkR(m);
+  var reset = sc.reset || R.shot, at = sc.at;
+  if (sc.period !== m.period) { reset = R.shot; at = m.period > R.reg ? R.ot : (c.periodSecs || R.per); }
   var v = reset - (at - live);
   if (v > reset) v = reset;
   if (v > live) v = live;
@@ -161,7 +164,7 @@ function _bkxCenterHtml(m, pt) {
     '<span style="font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#9C95D0;white-space:nowrap">' + _escapeHtml(pt.big) + '</span></div>';
 }
 
-function _bkxGameClockOr(m, st, fallback) { return (m.phase === 'live' && m.clock && !/half|end of|intermission/i.test(m.statusDetail || '')) ? _bkxGameClock(m, st) : (fallback || ''); }
+function _bkxGameClockOr(m, st, fallback) { return (m.phase === 'live' && m.clock && !_bkAtBreak(m.statusDetail)) ? _bkxGameClock(m, st) : (fallback || ''); }
 // Ticks the ring between polls (started by the strip render, stops itself
 // when the basketball hero is gone)
 window._bkxTimer = null;
@@ -175,7 +178,7 @@ function _bkxStartTick() {
       return;
     }
     // the game clock, everywhere it shows (score bar, collapsed scorebug)
-    if (m.clock && !/half|end of|intermission/i.test(m.statusDetail || '')) {
+    if (m.clock && !_bkAtBreak(m.statusDetail)) {
       var gc = _bkxGameClock(m, st);
       document.querySelectorAll('.bkx-gc').forEach(function (el) { if (el.textContent !== gc) el.textContent = gc; });
     }
@@ -216,17 +219,23 @@ function _bkxCourtHtml(m, st) {
   var A = m.away, H = m.home;
   var aC = A.colors.bg, hC = H.colors.bg, aA = A.colors.accent, hA = H.colors.accent;
   var F = 'font-family="-apple-system,Helvetica,sans-serif"';
+  // v7.91.0: the college floor — a 12-ft lane (the NBA's is 16) and the
+  // 22-ft-1¾ three, 21 ft 7¾ in the corners
+  var cb = _bkIsCbb(m);
+  var kY = cb ? 190 : 170, kH = cb ? 120 : 160;
+  var tL = cb ? 'M0 33.5 H99.3 A221.5 221.5 0 0 1 99.3 466.5 H0' : 'M0 30 H142 A237.5 237.5 0 0 1 142 470 H0';
+  var tR = cb ? 'M940 33.5 H840.7 A221.5 221.5 0 0 0 840.7 466.5 H940' : 'M940 30 H798 A237.5 237.5 0 0 0 798 470 H940';
   var h = '<svg viewBox="0 0 ' + BKX_W + ' ' + BKX_H + '" role="img" aria-label="Court">' +
     '<defs><pattern id="' + id + 'pl" width="' + BKX_W + '" height="26" patternUnits="userSpaceOnUse"><rect width="' + BKX_W + '" height="26" fill="#5C3F27"/><rect width="' + BKX_W + '" height="13" fill="#634429"/><rect y="12" width="' + BKX_W + '" height="1" fill="rgba(0,0,0,.28)"/><rect y="25" width="' + BKX_W + '" height="1" fill="rgba(0,0,0,.35)"/><rect x="180" width="1" height="13" fill="rgba(0,0,0,.25)"/><rect x="560" y="13" width="1" height="13" fill="rgba(0,0,0,.25)"/><rect x="760" width="1" height="13" fill="rgba(0,0,0,.25)"/></pattern>' +
     '<linearGradient id="' + id + 'sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".07"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></linearGradient>' +
     '<filter id="' + id + 'gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
     '<rect width="' + BKX_W + '" height="' + BKX_H + '" fill="url(#' + id + 'pl)"/><rect width="' + BKX_W + '" height="' + BKX_H + '" fill="url(#' + id + 'sh)"/>' +
     // keys painted for the team defending each end
-    '<rect y="170" width="190" height="160" fill="' + aC + '" opacity=".85"/><rect x="750" y="170" width="190" height="160" fill="' + hC + '" opacity=".85"/>' +
+    '<rect y="' + kY + '" width="190" height="' + kH + '" fill="' + aC + '" opacity=".85"/><rect x="750" y="' + kY + '" width="190" height="' + kH + '" fill="' + hC + '" opacity=".85"/>' +
     '<circle cx="470" cy="250" r="60" fill="rgba(0,0,0,.12)"/>' +
     '<g fill="none" stroke="#F3EBDD" stroke-width="3"><rect x="2" y="2" width="936" height="496"/><line x1="470" y1="0" x2="470" y2="500"/><circle cx="470" cy="250" r="60"/>' +
-    '<rect y="170" width="190" height="160"/><path d="M0 30 H142 A237.5 237.5 0 0 1 142 470 H0" stroke="' + aA + '" stroke-width="4"/><circle cx="190" cy="250" r="60"/><path d="M52.5 210 A40 40 0 0 1 52.5 290"/>' +
-    '<rect x="750" y="170" width="190" height="160"/><path d="M940 30 H798 A237.5 237.5 0 0 0 798 470 H940" stroke="' + hA + '" stroke-width="4"/><circle cx="750" cy="250" r="60"/><path d="M887.5 210 A40 40 0 0 0 887.5 290"/></g>' +
+    '<rect y="' + kY + '" width="190" height="' + kH + '"/><path d="' + tL + '" stroke="' + aA + '" stroke-width="4"/><circle cx="190" cy="250" r="60"/><path d="M52.5 210 A40 40 0 0 1 52.5 290"/>' +
+    '<rect x="750" y="' + kY + '" width="190" height="' + kH + '"/><path d="' + tR + '" stroke="' + hA + '" stroke-width="4"/><circle cx="750" cy="250" r="60"/><path d="M887.5 210 A40 40 0 0 0 887.5 290"/></g>' +
     '<line x1="40" y1="220" x2="40" y2="280" stroke="#F3EBDD" stroke-width="5"/><circle cx="52.5" cy="250" r="10" fill="none" stroke="#E8532A" stroke-width="4"/>' +
     '<line x1="900" y1="220" x2="900" y2="280" stroke="#F3EBDD" stroke-width="5"/><circle cx="887.5" cy="250" r="10" fill="none" stroke="#E8532A" stroke-width="4"/>' +
     '<text x="110" y="470" font-size="26" font-weight="900" fill="' + aA + '" opacity=".75" text-anchor="middle" letter-spacing="2" ' + F + '>' + _escapeHtml(A.abbr || '') + '</text>' +
@@ -304,7 +313,7 @@ function _bkxRunChipHtml(m, side) {
   var fresh = st && st.runAt && now - st.runAt < 600 ? ' in' : '';
   var grew = st && st.runGrewAt && now - st.runGrewAt < 600 && !fresh ? ' grew' : '';
   var hot = r.pts >= 12 ? ' hot' : '';
-  var since = r.since && r.sincePeriod && r.sincePeriod !== r.period ? ' \u00b7 since Q' + r.sincePeriod : '';
+  var since = r.since && r.sincePeriod && r.sincePeriod !== r.period ? ' \u00b7 since ' + _bkPerTag(m, r.sincePeriod) : '';
   return '<span class="bkx-runchip' + fresh + grew + hot + '" role="status">' +
     '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 1-3s0 3 2 3c0-4 2-6 2-10z"/></svg>' +
     '<b>' + r.pts + '\u2013' + r.opp + ' RUN</b>' + (since ? '<small>' + _escapeHtml(since) + '</small>' : '') + '</span>';
@@ -315,11 +324,11 @@ function _bkxRunChipHtml(m, side) {
 // team and the numbers that explain the gap so far.
 function _bkxBreak(m) {
   var a = m.away, h = m.home, sd = String(m.statusDetail || ''), lp = m.court && m.court.last;
-  var per = m.period || 0;
-  var ord = function (n) { return n === 1 ? '1ST' : n === 2 ? '2ND' : n === 3 ? '3RD' : n + 'TH'; };
-  var otTag = function (n) { return n <= 4 ? '' : (n === 5 ? 'OT' : (n - 4) + 'OT'); };
+  var per = m.period || 0, R = _bkR(m), HALF = _bkHalfAt(m);
+  var ord = _bkOrd;
+  var otTag = function (n) { return n <= R.reg ? '' : (n === R.reg + 1 ? 'OT' : (n - R.reg) + 'OT'); };
   if (m.phase === 'final') {
-    var ot = per > 4 ? ' \u00b7 ' + otTag(per) : (/\/\s*(\d*)OT/i.test(sd) ? ' \u00b7 ' + sd.replace(/^.*\/\s*/, '').toUpperCase() : '');
+    var ot = per > R.reg ? ' \u00b7 ' + otTag(per) : (/\/\s*(\d*)OT/i.test(sd) ? ' \u00b7 ' + sd.replace(/^.*\/\s*/, '').toUpperCase() : '');
     var w = (a.score || 0) > (h.score || 0) ? a : ((h.score || 0) > (a.score || 0) ? h : null);
     return { key: 'final', lb: 'FINAL' + ot, sub: w ? (w.short || w.name) + ' win' : 'Tied', acc: w ? w.colors.bg : '#A89FE8', win: w };
   }
@@ -327,20 +336,20 @@ function _bkxBreak(m) {
   // v7.51.1: the card lives only while the clock sits at zero (or the feed
   // still says the break); the moment the next period's clock runs, it's gone
   var clockZero = /^0?\.0$|^0:00$/.test(String(m.clock || ''));
-  if (!clockZero && !/half|end of/i.test(sd)) return null;
+  if (!clockZero && !_bkAtBreak(sd)) return null;
   // v7.52.1: the clock at zero is the end of the period, whatever the feed's
   // status or last play say yet
-  if (clockZero && !/half|end of/i.test(sd) && !(lp && lp.kind === 'period')) lp = { kind: 'period', text: 'End of period', period: per };
+  if (clockZero && !_bkAtBreak(sd) && !(lp && lp.kind === 'period')) lp = { kind: 'period', text: 'End of period', period: per };
   var endOf = sd.match(/end of (?:the )?(\d)(?:st|nd|rd|th)|end of (?:the )?(\d*)\s*OT/i);
   var lpEnd = lp && lp.kind === 'period' && /end of/i.test(lp.text || '') && clockZero && lp.period === per;
-  if ((/half/i.test(sd) && (per <= 2 || clockZero)) || (lpEnd && per === 2)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
+  if ((/halftime/i.test(sd) && (per <= HALF || clockZero)) || (lpEnd && per === HALF)) return { key: 'half', lb: 'HALFTIME', sub: _bkxLeadText(m), acc: '#A89FE8' };
   if (endOf || lpEnd || (/^0?\.0$|^0:00$/.test(String(m.clock || '')) && lp && lp.kind === 'period')) {
     var n = endOf && endOf[1] ? Number(endOf[1]) : per;
-    var isOt = (endOf && endOf[2] != null) || n > 4;
+    var isOt = (endOf && endOf[2] != null) || n > R.reg;
     if (per > n && !clockZero) return null; // the feed's status is behind the clock
-    if (!isOt && n === 4 && a.score === h.score) return { key: 'reg', lb: 'END OF REGULATION', sub: 'Overtime is next', acc: '#5AB0FF' };
+    if (!isOt && n === R.reg && a.score === h.score) return { key: 'reg', lb: 'END OF REGULATION', sub: 'Overtime is next', acc: '#5AB0FF' };
     if (isOt && a.score === h.score) return { key: 'ot' + n, lb: 'END OF ' + (otTag(n) || 'OT'), sub: 'More overtime', acc: '#5AB0FF' };
-    return { key: 'q' + n, lb: 'END OF ' + (isOt ? (otTag(n) || 'OT') : ord(n)), sub: _bkxLeadText(m), acc: '#A89FE8' };
+    return { key: 'q' + n, lb: 'END OF ' + (isOt ? (otTag(n) || 'OT') : ord(n) + (R.half ? ' HALF' : '')), sub: _bkxLeadText(m), acc: '#A89FE8' };
   }
   return null;
 }
@@ -423,7 +432,7 @@ function _bkxBoxRow(m, side, pid, name) {
 }
 function _bkxPanelHtml(m, st) {
   var c = m.court || {}, ls = c.lastShot;
-  var lab = '<span class="pap-hl">LAST SHOT' + (ls && ls.clock ? ' · ' + _escapeHtml((ls.period <= 4 ? 'Q' + ls.period : 'OT') + ' ' + ls.clock) : '') + '</span>';
+  var lab = '<span class="pap-hl">LAST SHOT' + (ls && ls.clock ? ' · ' + _escapeHtml(_bkPerTag(m, ls.period) + ' ' + ls.clock) : '') + '</span>';
   if (!ls) return '<div class="pap pap-e"><div class="pap-hd">' + lab + '</div><div class="pap-empty">Every shot shows here as it happens</div></div>';
   var t = _bkxTeam(m, ls.side), acc = t ? t.colors.accent : '#A89FE8';
   var rows = [], badge = '';
@@ -438,7 +447,7 @@ function _bkxPanelHtml(m, st) {
   }
   if (ls.made) rows.push({ l: 'Assist', txt: ls.assist || 'Unassisted' });
   else if (ls.blocker) rows.push({ l: 'Blocked by', txt: ls.blocker });
-  if (ls.sc != null) rows.push({ l: 'Released', v: ls.sc < 5 ? ls.sc.toFixed(1) : Math.ceil(ls.sc), u: 'on the 24' });
+  if (ls.sc != null) rows.push({ l: 'Released', v: ls.sc < 5 ? ls.sc.toFixed(1) : Math.ceil(ls.sc), u: 'on the ' + _bkR(m).shot });
   if (ls.as != null && ls.hs != null) rows.push({ l: 'Score', txt: ls.as === ls.hs ? 'Tied ' + ls.as + '–' + ls.hs : (ls.as > ls.hs ? m.away.abbr + ' by ' + (ls.as - ls.hs) : m.home.abbr + ' by ' + (ls.hs - ls.as)) });
   var s = m.situation || {};
   if (s.momA != null && Math.abs(s.momA - s.momH) >= 6) rows.push({ l: 'Last 8', txt: (s.momA > s.momH ? m.away.abbr + ' ' + s.momA + '–' + s.momH : m.home.abbr + ' ' + s.momH + '–' + s.momA) });
@@ -477,15 +486,17 @@ function _bkxStripHtml(m, runHtml) {
 // ── v7.66.0: TEAM FOULS — this period's team fouls for each side as five
 // pips (the fifth puts the other team in the bonus), what that means in
 // words, and timeouts. NBA/WNBA: 4 fouls to give a quarter, the 5th is FTs.
+// v7.91.0: college — ten pips a half: the 7th foul gives the other team the
+// one-and-one, the 10th the double bonus (overtime keeps the 2nd half's count).
 function _bkxFoulsHtml(m) {
   var c = m.court || {};
   if (m.phase !== 'live' || !c.fouls || c.foulsPeriod !== m.period) return '';
   var side = function (t, sd) {
     var o = _bkxTeam(m, _bkxOther(sd)), n = c.fouls[sd] || 0, used = c.timeouts ? c.timeouts[sd] : null;
-    var pips = '';
-    for (var i = 0; i < 5; i++) pips += '<i' + (i < n ? (i === 4 ? ' class="pen"' : ' class="on"') : '') + '></i>';
-    var bonus = n >= 5;
-    var msg = bonus ? (o ? o.abbr : 'Opponent') + ' in the bonus' : n === 4 ? 'Next foul is FTs' : (4 - n) + ' to give';
+    var FS = _bkFoulState(m, n), pips = '';
+    for (var i = 0; i < FS.pips; i++) pips += '<i' + (i < n ? (i >= FS.pen ? ' class="pen' + (FS.dbl >= 0 && i >= FS.dbl ? ' dbl' : '') + '"' : ' class="on"') : (FS.pips > 5 && (i === FS.pen || i === FS.dbl) ? ' class="mk"' : '')) + '></i>';
+    var bonus = FS.bonus;
+    var msg = bonus ? (o ? o.abbr : 'Opponent') + ' ' + FS.oppMsg : FS.msg;
     // NBA: 7 timeouts in regulation; elsewhere (WNBA, OT) just count what's been used
     var to = '';
     if (used != null) {
@@ -497,7 +508,7 @@ function _bkxFoulsHtml(m) {
     }
     return '<div class="bkf-t' + (bonus ? ' bonus' : '') + '" style="--ta:' + t.colors.accent + '">' +
       '<div class="bkf-hd"><span>' + _escapeHtml(t.abbr) + ' FOULS</span><b>' + n + '</b></div>' +
-      '<div class="bkf-p" role="img" aria-label="' + n + ' team fouls this period">' + pips + '</div>' +
+      '<div class="bkf-p' + (FS.pips > 5 ? ' ten' : '') + '" role="img" aria-label="' + n + ' team fouls this ' + (_bkR(m).half ? 'half' : 'period') + '">' + pips + '</div>' +
       '<div class="bkf-m">' + _escapeHtml(msg.toUpperCase()) + '</div>' + to + '</div>';
   };
   return '<div class="bkf">' + side(m.away, 'a') + side(m.home, 'h') + '</div>';
@@ -506,9 +517,11 @@ function _bkxFoulsHtml(m) {
 // ── v7.66.0: FOUL TROUBLE — anyone carrying more fouls than the quarter
 // allows (2 in Q1, 3 in Q2, 4 in Q3, 5 in Q4/OT), plus anyone fouled out.
 // Six fouls is out in both the NBA and WNBA. Hidden when nobody qualifies.
+// v7.91.0: college — five is out: 2 in the first half, 4 after it.
 function _bkxTroubleHtml(m) {
   if (m.phase !== 'live' || !m.box || !m.period) return '';
-  var cut = Math.min(5, m.period + 1), list = [];
+  var R = _bkR(m), OUT = R.out;
+  var cut = R.half ? (m.period === 1 ? 2 : OUT - 1) : Math.min(OUT - 1, m.period + 1), list = [];
   ['a', 'h'].forEach(function (sd) {
     var box = m.box[sd === 'h' ? 'home' : 'away'], t = _bkxTeam(m, sd);
     if (!box || !t) return;
@@ -523,16 +536,16 @@ function _bkxTroubleHtml(m) {
   });
   if (!list.length) return '';
   list.sort(function (x, y) { return y.pf - x.pf; });
-  var pt = m.period <= 4 ? 'Q' + m.period : 'OT';
+  var pt = R.half && m.period <= R.reg ? (m.period === 1 ? '1st half' : '2nd half') : _bkPerTag(m, m.period);
   var rows = list.slice(0, 4).map(function (x) {
-    var r = x.r, out = x.pf >= 6, pips = '';
-    for (var i = 0; i < 6; i++) pips += '<i' + (i < x.pf ? ' class="' + (x.pf >= 5 ? 'hot' : 'on') + '"' : '') + '></i>';
+    var r = x.r, out = x.pf >= OUT, pips = '';
+    for (var i = 0; i < OUT; i++) pips += '<i' + (i < x.pf ? ' class="' + (x.pf >= OUT - 1 ? 'hot' : 'on') + '"' : '') + '></i>';
     var st = out ? 'Fouled out' : (r.on === 1 ? 'On the floor' : r.on === 0 ? 'On the bench' : '');
     return '<div class="bkt-r' + (out ? ' out' : '') + '"><span class="bkt-av" style="background:' + x.t.colors.bg + '">' + _escapeHtml(x.t.abbr) + '</span>' +
-      '<span class="bkt-n"><span class="bkt-nm">' + _gxPlayerLink(r.name, r.id, m.league, 'text-decoration:none;color:inherit') + '</span>' + (st ? '<span class="bkt-st' + (x.pf >= 5 ? ' hot' : '') + '">' + st + (x.pf === 5 ? ' \u00b7 one from fouling out' : '') + '</span>' : '') + '</span>' +
-      '<span class="bkt-pf"><b>' + x.pf + '<small>PF</small></b><span class="bkt-pp" role="img" aria-label="' + x.pf + ' of 6 fouls">' + pips + '</span></span></div>';
+      '<span class="bkt-n"><span class="bkt-nm">' + _gxPlayerLink(r.name, r.id, m.league, 'text-decoration:none;color:inherit') + '</span>' + (st ? '<span class="bkt-st' + (x.pf >= OUT - 1 ? ' hot' : '') + '">' + st + (x.pf === OUT - 1 ? ' \u00b7 one from fouling out' : '') + '</span>' : '') + '</span>' +
+      '<span class="bkt-pf"><b>' + x.pf + '<small>PF</small></b><span class="bkt-pp" role="img" aria-label="' + x.pf + ' of ' + OUT + ' fouls">' + pips + '</span></span></div>';
   }).join('');
-  return '<div class="bkt"><div class="bkt-hd"><span>FOUL TROUBLE</span><span>' + cut + '+ fouls in ' + pt + ' \u00b7 6 to foul out</span></div>' + rows + '</div>';
+  return '<div class="bkt"><div class="bkt-hd"><span>FOUL TROUBLE</span><span>' + cut + '+ fouls in ' + pt + ' \u00b7 ' + OUT + ' to foul out</span></div>' + rows + '</div>';
 }
 
 // ── v7.55.0: TIMEOUT — a card over the floor in the colors of the team that
@@ -547,9 +560,9 @@ function _bkxTimeoutHtml(m, st) {
   if (st.tmoKey !== t.id) { st.tmoKey = t.id; st.tmoAt = st.seeded && st.m ? now : now - 60000; }
   var t0 = now - st.tmoAt > 2500 ? -60000 : -(now - st.tmoAt);
   var ord = function (n) { return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'); };
-  var when = (t.period ? (t.period <= 4 ? 'Q' + t.period : (t.period === 5 ? 'OT' : (t.period - 4) + 'OT')) : '') + (t.clock ? ' ' + t.clock : '');
+  var when = (t.period ? _bkPerTag(m, t.period) : '') + (t.clock ? ' ' + t.clock : '');
   var bits = [];
-  if (!official) bits.push(t.kind === 'short' ? '20 second' : 'Full');
+  if (!official && !_bkIsCbb(m)) bits.push(t.kind === 'short' ? '20 second' : 'Full'); // (college has one kind)
   if (when) bits.push(when);
   if (!official && t.n) bits.push(ord(t.n) + ' of the game');
   // the run they're trying to stop
@@ -604,7 +617,7 @@ function _bkxBoardHtml(m) {
   };
   var ta = teamBox(A, 'a', B.a), th = teamBox(H, 'h', B.h);
   var live = ta.live || th.live;
-  var pt = m.period ? (m.period <= 4 ? ['1ST', '2ND', '3RD', '4TH'][m.period - 1] + ' QTR' : (m.period === 5 ? 'OT' : (m.period - 4) + 'OT')) : '';
+  var pt = m.period ? _bkPerLong(m, m.period) : '';
   var hdr = function (l, r) { return '<div class="bkb-eye"><span>' + l + '</span><span>' + (r || '') + '</span></div>'; };
   // four factors: a tug-of-war bar each, leader's number lit
   var ff = [['EFG%', B.a.efg, B.h.efg, 0], ['TO%', B.a.toPct, B.h.toPct, 1], ['OREB%', B.a.orebPct, B.h.orebPct, 0], ['FT RATE', B.a.ftRate, B.h.ftRate, 0]].map(function (f) {
@@ -615,7 +628,7 @@ function _bkxBoardHtml(m) {
   }).join('');
   var foot = function (t, side) {
     var tu = c.timeouts ? c.timeouts[side] : null, fl = c.fouls && c.foulsPeriod === m.period ? c.fouls[side] : null;
-    return '<div class="bkb-ft" style="--tb:' + t.colors.bg + ';--ta:' + t.colors.accent + '"><span>TO USED <b>' + (tu != null ? tu : '\u2013') + '</b></span><span>FLS <b>' + (fl != null ? fl : '\u2013') + '</b>' + (fl != null && fl >= 4 ? '<em>BONUS</em>' : '') + '</span></div>';
+    return '<div class="bkb-ft" style="--tb:' + t.colors.bg + ';--ta:' + t.colors.accent + '"><span>TO USED <b>' + (tu != null ? tu : '\u2013') + '</b></span><span>FLS <b>' + (fl != null ? fl : '\u2013') + '</b>' + (fl != null ? (function () { var FS = _bkFoulState(m, fl); return FS.double ? '<em>DBL BONUS</em>' : FS.bonus || (!_bkR(m).half && fl >= 4) ? '<em>BONUS</em>' : ''; })() : '') + '</span></div>';
   };
   return '<div class="bkb">' +
     hdr(live ? 'ON THE FLOOR' : 'STARTERS', pt + (m.clock && m.phase === 'live' ? ' \u00b7 <span class="bkx-gc">' + _escapeHtml(m.clock) + '</span>' : '')) +

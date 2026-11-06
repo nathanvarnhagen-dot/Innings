@@ -41,7 +41,7 @@ function _wlUserMetro() {
   try { var m = localStorage.getItem('innings_metro'); if (m) return m; } catch (e) {}
   // Otherwise the home of your favorite team, baseball first
   var c = window._favTeamsCache || {};
-  var order = ['mlb', 'nfl', 'nba', 'nhl', 'wnba', 'mls', 'nwsl', 'cfb'];
+  var order = ['mlb', 'nfl', 'nba', 'nhl', 'wnba', 'mls', 'nwsl', 'cfb', 'cbb'];
   for (var i = 0; i < order.length; i++) { var f = c[order[i]] && c[order[i]].favorite; var m2 = f && _wlMetroOf(f); if (m2) return m2; }
   return null;
 }

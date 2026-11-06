@@ -267,6 +267,10 @@ function _glanceDetailHtml(box, sport) {
 // checked again once each fetch resolves, since by then the person may
 // have paged to a different day/week or switched sport entirely.
 function _upgradeLiveGlanceCards(games, sport, stillValidFn) {
+  // v7.91.0: only baseball and football draw a glance; every other sport's
+  // fetches came back with nothing to show (a busy college basketball night
+  // would have asked for 80-odd box scores every 20 seconds)
+  if (sport !== 'mlb' && sport !== 'nfl' && sport !== 'cfb') return;
   games.forEach(function (g) {
     if (_isGameConcluded(g.status) || !_isGameStatusLive(g.status) || !g.gamePk) return;
     var idx = window._gamesListCache.indexOf(g);
@@ -352,8 +356,10 @@ function loadGamesList(date, opts) {
       html += '<div style="font-size:11px;font-weight:800;color:#A89FE8;text-transform:uppercase;letter-spacing:.05em;padding:0 2px">' + (split.spotlight.length === watchedGames.length ? 'Your games' : 'Your teams') + '</div>';
       html += split.spotlight.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
     }
-    html += restSplit.upcoming.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
-    if (restSplit.concluded.length) {
+    // v7.91.0: a college basketball day: Top 25 games, then every other game behind a button
+    if (requestedSport === 'cbb' && typeof _cbbListHtml === 'function') html += _cbbListHtml(restSplit, function (g) { return _gamesListCardHtml(g, games.indexOf(g)); });
+    else html += restSplit.upcoming.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
+    if (requestedSport !== 'cbb' && restSplit.concluded.length) {
       html += '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;padding:16px 2px 8px">Concluded games</div>';
       html += restSplit.concluded.map(function (g) { return _gamesListCardHtml(g, games.indexOf(g)); }).join('');
     }
@@ -382,7 +388,7 @@ function loadGamesList(date, opts) {
     return '<div id="glist-card-' + i + '" onclick="openGameFromList(' + i + ')" style="background:' + (watchingNow ? 'rgba(124,242,156,.06)' : psR ? 'linear-gradient(160deg,' + _ghHexAlpha(psR.rc2, .55) + ',rgba(255,255,255,.04) 60%)' : 'rgba(255,255,255,.055)') + ';border:' + (watchingNow ? '1.5px solid #7CF29C;box-shadow:0 0 0 3px rgba(124,242,156,.12)' : psR ? '1px solid ' + _ghHexAlpha(psR.rc, .45) : '1px solid rgba(255,255,255,.09)') + ';border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;cursor:pointer">' +
       (psR ? _psListLineHtml(g) : '') +
       '<div style="display:flex;align-items:center;justify-content:space-between">' +
-      '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + _escapeHtml(g.away || '?') + ' @ ' + _escapeHtml(g.home || '?') + '</div>' +
+      '<div><div style="font-size:14px;font-weight:700;color:#fff">' + _spotlightBadgeHtml(g, favTeams) + (requestedSport === 'cbb' && typeof _cbbRk === 'function' ? _cbbRk(g.awayRank) : '') + _escapeHtml(g.away || '?') + ' @ ' + (requestedSport === 'cbb' && typeof _cbbRk === 'function' ? _cbbRk(g.homeRank) : '') + _escapeHtml(g.home || '?') + '</div>' +
       (wMode ? '<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 8px;border-radius:999px;background:' + (watchingNow ? 'rgba(124,242,156,.16)' : 'rgba(168,159,232,.18)') + ';color:' + (watchingNow ? '#9BE8AC' : '#D9D4FA') + ';font-size:10.5px;font-weight:800;letter-spacing:.04em">' + (wMode === 'attend' ? (gDone ? 'ATTENDED' : 'ATTENDING') : (gDone ? 'WATCHED' : 'WATCHING')) + '</div>' : '') +
       '<div style="font-size:11.5px;color:rgba(255,255,255,.42);margin-top:3px">' + _escapeHtml(g.venue || '') + '</div></div>' +
       _gameBadgeHtml(g) + '</div>' + (requestedSport === 'mlb' && typeof _spCardHtml === 'function' ? _spCardHtml(g) : '') + (!_isGameConcluded(g.status) && (window._glanceCache || {})[requestedSport + ':' + g.gamePk] ? window._glanceCache[requestedSport + ':' + g.gamePk] : '') + '</div>';
@@ -615,6 +621,7 @@ var GAMES_SPORTS = [
   { key:'cfb', name:'College football', emoji:'🏈', live:true, banner:'fb' },
   { key:'nba', name:'NBA', emoji:'🏀', live:true, banner:'bk' },
   { key:'wnba', name:'WNBA', emoji:'🏀', live:true, banner:'bk' },
+  { key:'cbb', name:'College basketball', emoji:'🏀', live:true, banner:'bk' }, // v7.91.0 (js/games/college-hoops.js)
   { key:'nhl', name:'NHL', emoji:'🏒', live:true, banner:'hk' },
   { key:'mls', name:'MLS', emoji:'⚽', live:true, banner:'sc' },
   { key:'nwsl', name:'NWSL', emoji:'⚽', live:true, banner:'sc' }

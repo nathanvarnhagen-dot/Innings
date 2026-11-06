@@ -659,8 +659,10 @@ function _ghScoreboard(m, centerHtml, flash, finalMode) {
     return '<span class="' + cls + '" style="font-size:' + big + 'px;line-height:.95;color:' + color + '">' + (s.score != null ? s.score : '–') + '</span>';
   };
   var sideHtml = function (s, isRight, isFlash, isWin, isLose) {
-    var label = isWin ? '<span style="font-size:11.5px;font-weight:800;white-space:nowrap;color:' + s.colors.accent + '">' + _escapeHtml(s.short) + ' win</span>'
-      : '<span class="gh-sub" style="white-space:nowrap">' + _escapeHtml(s.short) + '</span>';
+    // v7.91.0: a Top 25 college team carries its poll rank beside its name
+    var rk = m.league === 'cbb' && s.rank && typeof _cbbRk === 'function' ? _cbbRk(s.rank) : '';
+    var label = isWin ? '<span style="font-size:11.5px;font-weight:800;white-space:nowrap;color:' + s.colors.accent + '">' + rk + _escapeHtml(s.short) + ' win</span>'
+      : '<span class="gh-sub" style="white-space:nowrap">' + rk + _escapeHtml(s.short) + '</span>';
     var tap = _tmTapAttrs(m.league || 'mlb', s.id, s.name);
     return '<div' + (tap ? ' class="tm-tap"' + tap : '') + ' style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + (isLose ? ';opacity:.85' : '') + '">' +
       _ghBadge(s, 42) +

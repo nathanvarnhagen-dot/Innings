@@ -349,7 +349,7 @@ function gattSave() {
     p = col.doc(id).update(fields).then(function () { return Object.assign({}, s.moment, fields, { _id: id }); });
   } else {
     var sport = g.sport || 'mlb';
-    var emoji = { mlb: '⚾', nfl: '🏈', cfb: '🏈', nba: '🏀', wnba: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[sport] || '🏆';
+    var emoji = { mlb: '⚾', nfl: '🏈', cfb: '🏈', nba: '🏀', wnba: '🏀', cbb: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[sport] || '🏆';
     var name = (g.away && g.home) ? _teamShortName(g.away) + ' @ ' + _teamShortName(g.home) : 'Game';
     // The box score is attached now even before first pitch or kickoff —
     // opening the memory later refreshes it until it's Final.

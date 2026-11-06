@@ -127,7 +127,7 @@
    dashoffset/offset-distance — so nothing there needed to change). Each
    sport only supplies its own ground art, contact-point origin, and ball
    offset-path/skin below. */
-#nfl-flourish,#cfb-flourish,#nba-flourish,#wnba-flourish,#nhl-flourish,#mls-flourish,#nwsl-flourish,#sports-hub-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310;overflow:hidden}
+#nfl-flourish,#cfb-flourish,#nba-flourish,#wnba-flourish,#cbb-flourish,#nhl-flourish,#mls-flourish,#nwsl-flourish,#sports-hub-flourish{display:none;position:absolute;inset:0;z-index:75;opacity:0;transition:opacity 0.3s ease;background:#050310;overflow:hidden}
 .sf-skip{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px) + 18px);left:0;right:0;text-align:center;font-size:12px;color:rgba(237,234,255,.58)}
 .sh-cap{position:absolute;left:0;right:0;top:337px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;z-index:1;pointer-events:none}
 .sh-title{font-family:'Instrument Serif',Georgia,serif;font-size:46px;font-weight:400;letter-spacing:.03em;color:#F5F3FF;line-height:1}
@@ -140,6 +140,9 @@
 .sf-ball-nba{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#F2A75E,#D9762C 70%);box-shadow:0 0 12px 3px rgba(217,118,44,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 700 Q 250 450 195 206');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
 .sf-contact-wnba{transform-origin:195px 700px}
 .sf-ball-wnba{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#F2A75E,#D9762C 70%);box-shadow:0 0 12px 3px rgba(217,118,44,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 700 Q 250 450 195 206');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
+/* v7.91.0: college basketball — the same tip-off arc, a darker leather ball */
+.sf-contact-cbb{transform-origin:195px 700px}
+.sf-ball-cbb{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#E8964A,#B85E1E 70%);box-shadow:0 0 12px 3px rgba(184,94,30,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 700 Q 250 450 195 206');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
 .sf-contact-nhl{transform-origin:195px 690px}
 .sf-ball-nhl{position:absolute;left:0;top:0;width:15px;height:8px;border-radius:50%;background:#141414;box-shadow:0 0 8px 2px rgba(191,227,255,.6),0 0 24px 5px rgba(168,159,232,.3);offset-path:path('M 195 690 Q 225 460 195 211');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
 .sf-contact-mls{transform-origin:195px 690px}
@@ -147,9 +150,9 @@
 .sf-contact-nwsl{transform-origin:195px 690px}
 .sf-ball-nwsl{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFFFFF,#DCD9F0 70%);box-shadow:0 0 12px 3px rgba(212,205,250,.7),0 0 30px 7px rgba(168,159,232,.3);offset-path:path('M 195 690 C 130 520 270 460 195 211');offset-rotate:0deg;offset-anchor:50% 50%;animation:mlbfBall 8s linear both}
 @media (prefers-reduced-motion: reduce){
-  #nfl-flourish .mlbf-stage *,#cfb-flourish .mlbf-stage *,#nba-flourish .mlbf-stage *,#wnba-flourish .mlbf-stage *,#nhl-flourish .mlbf-stage *,#mls-flourish .mlbf-stage *,#nwsl-flourish .mlbf-stage *,#sports-hub-flourish .mlbf-stage *{animation:none!important}
-  #nfl-flourish .mlbf-line,#nfl-flourish .mlbf-arc,#nfl-flourish .mlbf-trail,#cfb-flourish .mlbf-line,#cfb-flourish .mlbf-arc,#cfb-flourish .mlbf-trail,#nba-flourish .mlbf-line,#nba-flourish .mlbf-arc,#nba-flourish .mlbf-trail,#wnba-flourish .mlbf-line,#wnba-flourish .mlbf-arc,#wnba-flourish .mlbf-trail,#nhl-flourish .mlbf-line,#nhl-flourish .mlbf-arc,#nhl-flourish .mlbf-trail,#mls-flourish .mlbf-line,#mls-flourish .mlbf-arc,#mls-flourish .mlbf-trail,#nwsl-flourish .mlbf-line,#nwsl-flourish .mlbf-arc,#nwsl-flourish .mlbf-trail{stroke-dashoffset:0!important}
-  #nfl-flourish .mlbf-ball-vis,#nfl-flourish .mlbf-contact,#nfl-flourish .mlbf-contact-dot,#nfl-flourish .mlbf-wall-hi,#nfl-flourish .mlbf-spark,#nfl-flourish .mlbf-mote,#cfb-flourish .mlbf-ball-vis,#cfb-flourish .mlbf-contact,#cfb-flourish .mlbf-contact-dot,#cfb-flourish .mlbf-wall-hi,#cfb-flourish .mlbf-spark,#cfb-flourish .mlbf-mote,#nba-flourish .mlbf-ball-vis,#nba-flourish .mlbf-contact,#nba-flourish .mlbf-contact-dot,#nba-flourish .mlbf-wall-hi,#nba-flourish .mlbf-spark,#nba-flourish .mlbf-mote,#wnba-flourish .mlbf-ball-vis,#wnba-flourish .mlbf-contact,#wnba-flourish .mlbf-contact-dot,#wnba-flourish .mlbf-wall-hi,#wnba-flourish .mlbf-spark,#wnba-flourish .mlbf-mote,#nhl-flourish .mlbf-ball-vis,#nhl-flourish .mlbf-contact,#nhl-flourish .mlbf-contact-dot,#nhl-flourish .mlbf-wall-hi,#nhl-flourish .mlbf-spark,#nhl-flourish .mlbf-mote,#mls-flourish .mlbf-ball-vis,#mls-flourish .mlbf-contact,#mls-flourish .mlbf-contact-dot,#mls-flourish .mlbf-wall-hi,#mls-flourish .mlbf-spark,#mls-flourish .mlbf-mote,#nwsl-flourish .mlbf-ball-vis,#nwsl-flourish .mlbf-contact,#nwsl-flourish .mlbf-contact-dot,#nwsl-flourish .mlbf-wall-hi,#nwsl-flourish .mlbf-spark,#nwsl-flourish .mlbf-mote{opacity:0!important}
+  #nfl-flourish .mlbf-stage *,#cfb-flourish .mlbf-stage *,#nba-flourish .mlbf-stage *,#wnba-flourish .mlbf-stage *,#cbb-flourish .mlbf-stage *,#nhl-flourish .mlbf-stage *,#mls-flourish .mlbf-stage *,#nwsl-flourish .mlbf-stage *,#sports-hub-flourish .mlbf-stage *{animation:none!important}
+  #nfl-flourish .mlbf-line,#nfl-flourish .mlbf-arc,#nfl-flourish .mlbf-trail,#cfb-flourish .mlbf-line,#cfb-flourish .mlbf-arc,#cfb-flourish .mlbf-trail,#nba-flourish .mlbf-line,#nba-flourish .mlbf-arc,#nba-flourish .mlbf-trail,#wnba-flourish .mlbf-line,#cbb-flourish .mlbf-line,#wnba-flourish .mlbf-arc,#cbb-flourish .mlbf-arc,#wnba-flourish .mlbf-trail,#cbb-flourish .mlbf-trail,#nhl-flourish .mlbf-line,#nhl-flourish .mlbf-arc,#nhl-flourish .mlbf-trail,#mls-flourish .mlbf-line,#mls-flourish .mlbf-arc,#mls-flourish .mlbf-trail,#nwsl-flourish .mlbf-line,#nwsl-flourish .mlbf-arc,#nwsl-flourish .mlbf-trail{stroke-dashoffset:0!important}
+  #nfl-flourish .mlbf-ball-vis,#nfl-flourish .mlbf-contact,#nfl-flourish .mlbf-contact-dot,#nfl-flourish .mlbf-wall-hi,#nfl-flourish .mlbf-spark,#nfl-flourish .mlbf-mote,#cfb-flourish .mlbf-ball-vis,#cfb-flourish .mlbf-contact,#cfb-flourish .mlbf-contact-dot,#cfb-flourish .mlbf-wall-hi,#cfb-flourish .mlbf-spark,#cfb-flourish .mlbf-mote,#nba-flourish .mlbf-ball-vis,#nba-flourish .mlbf-contact,#nba-flourish .mlbf-contact-dot,#nba-flourish .mlbf-wall-hi,#nba-flourish .mlbf-spark,#nba-flourish .mlbf-mote,#wnba-flourish .mlbf-ball-vis,#cbb-flourish .mlbf-ball-vis,#wnba-flourish .mlbf-contact,#cbb-flourish .mlbf-contact,#wnba-flourish .mlbf-contact-dot,#cbb-flourish .mlbf-contact-dot,#wnba-flourish .mlbf-wall-hi,#cbb-flourish .mlbf-wall-hi,#wnba-flourish .mlbf-spark,#cbb-flourish .mlbf-spark,#wnba-flourish .mlbf-mote,#cbb-flourish .mlbf-mote,#nhl-flourish .mlbf-ball-vis,#nhl-flourish .mlbf-contact,#nhl-flourish .mlbf-contact-dot,#nhl-flourish .mlbf-wall-hi,#nhl-flourish .mlbf-spark,#nhl-flourish .mlbf-mote,#mls-flourish .mlbf-ball-vis,#mls-flourish .mlbf-contact,#mls-flourish .mlbf-contact-dot,#mls-flourish .mlbf-wall-hi,#mls-flourish .mlbf-spark,#mls-flourish .mlbf-mote,#nwsl-flourish .mlbf-ball-vis,#nwsl-flourish .mlbf-contact,#nwsl-flourish .mlbf-contact-dot,#nwsl-flourish .mlbf-wall-hi,#nwsl-flourish .mlbf-spark,#nwsl-flourish .mlbf-mote{opacity:0!important}
 }
 /* Watching-together avatar stack — same 2-letter-initials treatment as
    the friends list elsewhere, just sized down to sit inline in the Live
@@ -623,3 +626,20 @@
 .gx-hk-k{align-self:flex-start;font-size:9.5px;font-weight:800;letter-spacing:.1em;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.07);color:#B9B3E6}
 .gx-hk-per{padding:10px 0 6px;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9C95D0;border-top:.5px solid rgba(255,255,255,.07)}
 .gx-hk-more{width:100%;margin-top:8px;height:40px;border-radius:12px;border:1px solid rgba(168,159,232,.22);background:transparent;color:#C9C2F5;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer}
+
+/* ═══ COLLEGE BASKETBALL (v7.91.0, js/games/college-hoops.js) ═══ */
+.cbb-rk{display:inline-block;min-width:15px;padding:0 3px;margin-right:4px;border-radius:5px;background:rgba(242,200,105,.16);color:#F2C869;font-size:10px;font-weight:800;line-height:15px;text-align:center;vertical-align:1px;font-variant-numeric:tabular-nums;letter-spacing:0}
+.cbb-all{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding:13px 14px;border-radius:16px;background:rgba(168,159,232,.08);border:1px dashed rgba(168,159,232,.3);color:#E9E5FF;font-family:inherit;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer}
+.cbb-all span{display:flex;flex-direction:column;gap:2px}
+.cbb-all small{font-size:11px;font-weight:600;color:rgba(255,255,255,.45)}
+.cbb-all svg{flex-shrink:0;color:#A89FE8;transition:transform .2s ease}
+.cbb-all.on svg{transform:rotate(180deg)}
+.cbb-all:focus-visible{outline:2px solid #A89FE8;outline-offset:2px}
+.cbr-hdr,.cbr-row{grid-template-columns:20px 26px minmax(0,1fr) 44px 38px 34px}
+.cbr-rk{color:#F2C869}
+.cbr-fpv{font-size:10px;font-weight:600;color:rgba(255,255,255,.4);margin-left:5px}
+.cbr-tr{text-align:right;font-size:10.5px;font-weight:800;color:rgba(255,255,255,.35);font-variant-numeric:tabular-nums}
+.cbr-tr.up{color:#9be8ac}.cbr-tr.dn{color:#e8917a}.cbr-tr.nw{color:#F2C869;font-size:9px;letter-spacing:.04em}
+.cbr-oth{display:flex;flex-wrap:wrap;gap:6px}
+.cbr-oth button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 10px;min-height:32px;border-radius:10px;border:1px solid rgba(168,159,232,.22);background:rgba(168,159,232,.07);color:#E9E5FF;cursor:pointer}
+.cbr-oth b{color:rgba(255,255,255,.45);font-weight:700;margin-left:3px}

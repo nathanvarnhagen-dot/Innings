@@ -21,6 +21,7 @@ var RC_SPORTS = [
   { key: 'cfb', emoji: '🎓', league: 'cfb' },
   { key: 'nba', emoji: '🏀', league: 'nba' },
   { key: 'wnba', emoji: '🏀', league: 'wnba' },
+  { key: 'cbb', emoji: '🎓', league: 'cbb' }, // v7.91.0
   { key: 'nhl', emoji: '🏒', league: 'nhl' },
   { key: 'mls', emoji: '⚽', league: 'mls' },
   { key: 'nwsl', emoji: '⚽', league: 'nwsl' }
@@ -38,7 +39,7 @@ function _rcWindows(today) {
   var lastSun = _rcAdd(today, -(dow === 0 ? 7 : dow));               // most recent Sunday before today
   var lastSat = _rcAdd(today, -(((dow - 6) + 7) % 7 || 7));          // most recent Saturday before today
   return {
-    mlb: [y, y], nba: [y, y], wnba: [y, y], nhl: [y, y],
+    mlb: [y, y], nba: [y, y], wnba: [y, y], cbb: [y, y], nhl: [y, y],
     mlbw: [_rcAdd(lastSun, -6), lastSun],
     mls: [_rcAdd(lastSun, -6), lastSun], nwsl: [_rcAdd(lastSun, -6), lastSun],
     nfl: [_rcAdd(lastSun, -5), _rcAdd(lastSun, 1)],    // Tue→Mon around the last Sunday; Monday night joins once it's final

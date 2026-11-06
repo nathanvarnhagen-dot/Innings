@@ -44,7 +44,7 @@ function _glShort(name) {
 }
 function _glLeagueName(sport) {
   var s = (typeof GAMES_SPORTS !== 'undefined' ? GAMES_SPORTS : []).filter(function (x) { return x.key === sport; })[0];
-  return s ? (s.key === 'cfb' ? 'CFB' : s.name) : String(sport || '').toUpperCase();
+  return s ? (s.key === 'cfb' ? 'CFB' : s.key === 'cbb' ? 'CBB' : s.name) : String(sport || '').toUpperCase();
 }
 function _glColors(sport, abbr, color, alt) {
   try {
@@ -400,7 +400,7 @@ function _glAmbient(cols) {
 // by sport (baseball first, then the WNBA, …) — live, then upcoming by
 // start time, then finished. With no playoffs it's every live game plus
 // the rest of today's games for your favorite and followed teams.
-var GL_PO_ORDER = ['mlb', 'wnba', 'nfl', 'nba', 'nhl', 'cfb', 'mls', 'nwsl'];
+var GL_PO_ORDER = ['mlb', 'wnba', 'nfl', 'nba', 'nhl', 'cfb', 'cbb', 'mls', 'nwsl'];
 function _glIsPost(sport, g) {
   if (!g) return false;
   if (sport === 'mlb') return !!(g.gameType && /^[FDLW]$/.test(g.gameType));
@@ -432,7 +432,9 @@ function _glLoadLive(force) {
     var live = [], po = [];
     res.forEach(function (x) {
       x.games.forEach(function (g) {
-        if (_glIsLive(x.sport, g)) live.push({ sport: x.sport, g: g });
+        // v7.91.0: of college basketball's 150-odd games a night, Home takes the
+        // Top 25 ones, your teams' and the ones you or a friend are in
+        if (_glIsLive(x.sport, g) && (typeof _cbbWorthy !== 'function' || _cbbWorthy(x.sport, g))) live.push({ sport: x.sport, g: g });
         if (_glIsPost(x.sport, g)) po.push({ sport: x.sport, g: g });
       });
     });

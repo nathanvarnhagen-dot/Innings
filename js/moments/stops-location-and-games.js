@@ -334,6 +334,7 @@ var BS_MODAL_SPORTS = [
   { key: 'nfl', label: '🏈 Football' },
   { key: 'nba', label: '🏀 Basketball' },
   { key: 'wnba', label: '🏀 WNBA' },
+  { key: 'cbb', label: '🏀 College hoops' },
   { key: 'nhl', label: '🏒 Hockey' },
   { key: 'mls', label: '⚽ Soccer (MLS)' },
   { key: 'nwsl', label: '⚽ Soccer (NWSL)' }
@@ -450,7 +451,7 @@ function _applyBoxScoreToContext(box) {
   } else if (ctx.type === 'moment-create') {
     window._momentBoxScore = box;
     var bsSport = window._bsModalSport || 'mlb';
-    var bsEmoji = { mlb: '⚾', nfl: '🏈', nba: '🏀', wnba: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[bsSport] || '🏆';
+    var bsEmoji = { mlb: '⚾', nfl: '🏈', nba: '🏀', wnba: '🏀', cbb: '🏀', nhl: '🏒', mls: '⚽', nwsl: '⚽' }[bsSport] || '🏆';
     _playSportFlourish(_flourishKeyForBsModalSport(bsSport), function(){
       quickVibe(bsEmoji + ' Game');
       if (typeof _renderMomentBoxScoreSelected === 'function') _renderMomentBoxScoreSelected(box);

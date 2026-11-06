@@ -38,6 +38,7 @@ var YW_MARGIN = {
   cfb: { close: 8, great: 3, blow: 24, unit: 'point', gods: 'football' },
   nba: { close: 5, great: 3, blow: 20, unit: 'point', gods: 'basketball' },
   wnba: { close: 5, great: 3, blow: 20, unit: 'point', gods: 'basketball' },
+  cbb: { close: 5, great: 3, blow: 20, unit: 'point', gods: 'basketball' },
   nhl: { close: 1, great: 1, blow: 4, unit: 'goal', gods: 'hockey' },
   mls: { close: 1, great: 1, blow: 3, unit: 'goal', gods: 'soccer' },
   nwsl: { close: 1, great: 1, blow: 3, unit: 'goal', gods: 'soccer' }

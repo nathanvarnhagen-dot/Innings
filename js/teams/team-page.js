@@ -4,7 +4,7 @@
 // Data: /api/espn?mode=team (NFL, CFB, NBA, WNBA, NHL, MLS, NWSL) and
 // /api/mlb?mode=team. v7.54.0: every league. Football is a week-by-week
 // board; everything that plays most days gets the month calendar.
-var _TM_LEAGUES = { nfl: true, cfb: true, mlb: true, nba: true, wnba: true, nhl: true, mls: true, nwsl: true };
+var _TM_LEAGUES = { nfl: true, cfb: true, mlb: true, nba: true, wnba: true, cbb: true, nhl: true, mls: true, nwsl: true };
 function _tmIsWeekly(league) { return league === 'nfl' || league === 'cfb'; }
 var _TM_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 window._tmCache = window._tmCache || {};

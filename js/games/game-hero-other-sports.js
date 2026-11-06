@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════
-var GX_SPORT = { nfl: 'football', cfb: 'football', nba: 'basketball', wnba: 'basketball', nhl: 'hockey', mls: 'soccer', nwsl: 'soccer' };
+var GX_SPORT = { nfl: 'football', cfb: 'football', nba: 'basketball', wnba: 'basketball', cbb: 'basketball', nhl: 'hockey', mls: 'soccer', nwsl: 'soccer' };
 window._gxBox = { side: 'away', open: true };
 window._gxFeedAll = false;
 
@@ -399,10 +399,11 @@ function _gxPreHtml(m, st) {
 // ── LIVE ───────────────────────────────────────────────────────────────
 function _gxPeriodText(m) {
   if (m.sport === 'soccer') return { big: m.clock || '', small: (m.statusDetail && /half/i.test(m.statusDetail)) ? m.statusDetail : (m.period === 1 ? '1st half' : m.period === 2 ? '2nd half' : (m.period ? 'Extra time' : '')) };
-  var tag = m.sport === 'hockey' ? (m.periodTag || (m.period ? 'P' + m.period : '')) : (m.period ? (m.period <= 4 ? 'Q' + m.period : (m.period === 5 ? 'OT' : (m.period - 4) + 'OT')) : '');
+  // v7.91.0: basketball's period tag comes from its league (college plays halves: 1H, 2H)
+  var tag = m.sport === 'hockey' ? (m.periodTag || (m.period ? 'P' + m.period : '')) : m.sport === 'basketball' && typeof _bkPerTag === 'function' ? _bkPerTag(m, m.period) : (m.period ? (m.period <= 4 ? 'Q' + m.period : (m.period === 5 ? 'OT' : (m.period - 4) + 'OT')) : '');
   var small = m.clock || '';
   if (m.intermission) small = 'Intermission';
-  else if (m.statusDetail && /half|end of|intermission/i.test(m.statusDetail)) small = m.statusDetail;
+  else if (m.statusDetail && (m.sport === 'basketball' && typeof _bkAtBreak === 'function' ? _bkAtBreak(m.statusDetail) : /half|end of|intermission/i.test(m.statusDetail))) small = m.statusDetail;
   return { big: tag, small: small };
 }
 function _gxMiniText(m) {
@@ -518,7 +519,7 @@ function _gxLiveHtml(m, st) {
     return '<div style="display:flex;align-items:center;gap:10px;min-width:0;' + (isRight ? 'flex-direction:row-reverse' : '') + '">' +
       '<div class="gh-badge gh-sb-badge' + (String(t.abbr).length > 3 ? ' gh-ab4' : '') + (_tmTapAttrs(m.league, t.id, t.name) ? ' tm-tap' : '') + '"' + _tmTapAttrs(m.league, t.id, t.name) + ' style="background:' + t.colors.bg + ';color:' + t.colors.fg + '">' + _escapeHtml(t.abbr) + '</div>' +
       '<div style="display:flex;flex-direction:column;min-width:0;' + (isRight ? 'align-items:flex-end' : '') + '">' +
-        '<span class="gh-sub gh-sb-name">' + _escapeHtml(t.short || '') + '</span>' +
+        '<span class="gh-sub gh-sb-name">' + (m.league === 'cbb' && t.rank && typeof _cbbRk === 'function' ? _cbbRk(t.rank) : '') + _escapeHtml(t.short || '') + '</span>' + // v7.91.0: poll rank
         '<span class="gh-num gh-sb-score' + ((m.away.score >= 100 || m.home.score >= 100) ? ' gh-sb3' : '') + '" style="color:' + (trailing ? '#C4BFE8' : '#fff') + '"><span class="' + (flash ? 'gh-flash' : '') + '">' + (t.score != null ? t.score : '–') + '</span></span>' +
       (m.sport === 'football' ? _fbbTimeoutsHtml(m, t === m.away ? 'a' : 'h') : '') +
       (m.sport === 'basketball' ? _bkxRunChipHtml(m, t === m.away ? 'a' : 'h') : '') + // v7.53.0
@@ -626,6 +627,7 @@ function _gxFinalHtml(m, st) {
   var labels = _gxPeriodLabels(m);
   var extra = '';
   if (m.sport === 'hockey' && labels.length > 3) extra = labels[labels.length - 1] === 'SO' ? 'SO' : 'OT';
+  else if (m.sport === 'basketball' && typeof _bkR === 'function' && labels.length > _bkR(m).reg) { var rg = _bkR(m).reg; extra = labels.length > rg + 1 ? (labels.length - rg) + 'OT' : 'OT'; }
   else if ((m.sport === 'football' || m.sport === 'basketball') && labels.length > 4) extra = labels.length > 5 ? (labels.length - 4) + 'OT' : 'OT';
   else if (soccer && labels.length > 2) extra = 'AET';
   var center = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><span class="gh-stamp gh-stamp-in">' + (soccer ? 'FT' : 'FINAL') + '</span>' +
@@ -699,6 +701,7 @@ function _gxPeriodLabels(m) {
   var out = [];
   for (var i = 1; i <= n; i++) {
     if (m.sport === 'soccer') out.push(i === 1 ? '1H' : i === 2 ? '2H' : 'ET');
+    else if (m.sport === 'basketball' && typeof _bkPerCol === 'function') out.push(_bkPerCol(m, i)); // v7.91.0
     else out.push(i <= 4 ? String(i) : (i === 5 ? 'OT' : (i - 4) + 'OT'));
   }
   return out;
@@ -1071,7 +1074,7 @@ window._gameLiveRefreshTimer = null;
 function _gameLiveRefreshMs() {
   var sport = (window._activeBrowseGame && window._activeBrowseGame.sport) || 'mlb';
   if (sport === 'mlb' && typeof _gdlFast === 'function' && _gdlFast()) return 3000; // v7.25.0: a delay (or matching your TV) wants finer steps
-  if (sport === 'nba' || sport === 'wnba') return 4000; // v7.50.0: the score moves every few seconds
+  if (sport === 'nba' || sport === 'wnba' || sport === 'cbb') return 4000; // v7.50.0: the score moves every few seconds
   return (sport === 'nfl' || sport === 'cfb') ? 8000 : 6000; // v5.85.0: MLB every 6s (was 15s)
 }
 function _startGameLiveRefresh(gamePk) {

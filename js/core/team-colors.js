@@ -11,7 +11,7 @@
 // whenever it doesn't, so a team is never a plain purple circle with a
 // made-up abbreviation.
 var TC_KEY = 'innings_team_colors_v1', TC_TTL = 14 * 864e5, TC_RETRY = 5 * 60e3;
-var TC_LEAGUES = { nfl: 1, cfb: 1, nba: 1, wnba: 1, nhl: 1, mls: 1, nwsl: 1 };
+var TC_LEAGUES = { nfl: 1, cfb: 1, nba: 1, wnba: 1, cbb: 1, nhl: 1, mls: 1, nwsl: 1 }; // v7.91.0: college basketball
 var TC_MLB_ABBR = {
   'arizona diamondbacks': 'AZ', 'atlanta braves': 'ATL', 'baltimore orioles': 'BAL', 'boston red sox': 'BOS', 'chicago cubs': 'CHC',
   'chicago white sox': 'CWS', 'cincinnati reds': 'CIN', 'cleveland guardians': 'CLE', 'colorado rockies': 'COL', 'detroit tigers': 'DET',

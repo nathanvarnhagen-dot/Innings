@@ -54,7 +54,7 @@ function _mvLook(sport, name, abbr, color, alt) {
 }
 function _mvLeague(sport) {
   var s = (typeof GAMES_SPORTS !== 'undefined' ? GAMES_SPORTS : []).filter(function (x) { return x.key === sport; })[0];
-  return s ? (s.key === 'cfb' ? 'CFB' : s.name) : String(sport || '').toUpperCase();
+  return s ? (s.key === 'cfb' ? 'CFB' : s.key === 'cbb' ? 'CBB' : s.name) : String(sport || '').toUpperCase();
 }
 function _mvLast(full) {
   var p = String(full || '').trim().split(/\s+/);
@@ -149,11 +149,11 @@ function _mvGlanceLoad() {
   if (!window.fetch || !_mvActive()) return;
   var board = _mvBoard().filter(function (e) { return e.g && e.phase === 'live'; });
   var mlb = board.filter(function (e) { return e.sport === 'mlb'; }).map(function (e) { return String(e.gamePk); });
-  var bk = { nba: [], wnba: [] };
+  var bk = { nba: [], wnba: [], cbb: [] };
   board.forEach(function (e) { if (bk[e.sport]) bk[e.sport].push(String(e.gamePk)); });
   var calls = [];
   if (mlb.length) calls.push(fetch('/api/mlb?mode=glance&pks=' + mlb.join(',')).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return { sport: 'mlb', games: (d && d.games) || {} }; }).catch(function () { return null; }));
-  ['nba', 'wnba'].forEach(function (lg) {
+  ['nba', 'wnba', 'cbb'].forEach(function (lg) {
     if (!bk[lg].length) return;
     calls.push(fetch('/api/espn?league=' + lg + '&mode=glance&ids=' + bk[lg].join(',')).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return { sport: lg, games: (d && d.games) || {} }; }).catch(function () { return null; }));
   });
@@ -202,7 +202,7 @@ function multiIngest(res) {
       if (!g || g.gamePk == null || g.awayScore == null || g.homeScore == null) return;
       var k = _mvKey(x.sport, g.gamePk), a = Number(g.awayScore), h = Number(g.homeScore), p = M.prev[k];
       if (isNaN(a) || isNaN(h)) return;
-      if (p && _mvIsLive(x.sport, g) && x.sport !== 'nba' && x.sport !== 'wnba') {
+      if (p && _mvIsLive(x.sport, g) && x.sport !== 'nba' && x.sport !== 'wnba' && x.sport !== 'cbb') {
         var da = a - p.a, dh = h - p.h;
         if (da > 0 || dh > 0) {
           var side = da >= dh ? 'away' : 'home', by = da >= dh ? da : dh, cur = M.flags[k];
@@ -257,7 +257,8 @@ function _mvBoard() {
     if (st.auto) {
       var on = {};
       ids.forEach(function (p) { on[_mvKey(p.sport, p.gamePk)] = true; });
-      var cands = all.filter(function (x) { return _mvIsLive(x.sport, x.g) && !on[_mvKey(x.sport, x.g.gamePk)]; }).sort(_mvRank);
+      // v7.91.0: a college basketball game joins on its own only if it's ranked, your team's or a friend's
+      var cands = all.filter(function (x) { return _mvIsLive(x.sport, x.g) && !on[_mvKey(x.sport, x.g.gamePk)] && (typeof _cbbWorthy !== 'function' || _cbbWorthy(x.sport, x.g)); }).sort(_mvRank);
       while (ids.length < MV_MAX && cands.length) { ids.push(_mvEntry(cands.shift())); changed = true; }
       // a finished game gives its spot to one that's live
       for (var i = 0; i < ids.length && cands.length; i++) {
@@ -276,7 +277,7 @@ function _mvBoard() {
 function _mvAlso(board) {
   var on = {};
   board.forEach(function (e) { on[_mvKey(e.sport, e.gamePk)] = true; });
-  return _mvAll().filter(function (x) { return _mvIsLive(x.sport, x.g) && !on[_mvKey(x.sport, x.g.gamePk)]; }).sort(_mvRank);
+  return _mvAll().filter(function (x) { return _mvIsLive(x.sport, x.g) && !on[_mvKey(x.sport, x.g.gamePk)] && (typeof _cbbWorthy !== 'function' || _cbbWorthy(x.sport, x.g)); }).sort(_mvRank);
 }
 function _mvLiveCount() { return _mvAll().filter(function (x) { return _mvIsLive(x.sport, x.g); }).length; }
 
@@ -296,6 +297,7 @@ function _mvStatus(sport, g, phase) {
   var d = String(g.statusDetail || g.status || 'Live');
   // "8:42 - 3rd" → "Q3 8:42"
   var m = d.match(/^(\d{1,2}:\d{2}(?:\.\d)?)\s*-\s*(\d)(?:st|nd|rd|th)\b/i);
+  if (m && sport === 'cbb') return (Number(m[2]) <= 2 ? m[2] + 'H' : 'OT') + ' ' + m[1]; // v7.91.0: "8:42 - 2nd Half" → "2H 8:42"
   if (m && /^(nfl|cfb|nba|wnba)$/.test(sport)) return 'Q' + m[2] + ' ' + m[1];
   var ot = d.match(/^(\d{1,2}:\d{2}(?:\.\d)?)\s*-\s*(\d?OT)\b/i);
   if (ot) return ot[2].toUpperCase() + ' ' + ot[1];
@@ -340,7 +342,7 @@ function _mvSitHtml(e, ca, ch, flag) {
   if (flag) return '<span class="mv-sit gold"><b>' + _mvEsc(_mvFlagWord(sport, flag)) + '</b><small>' + _mvEsc((flag.side === 'away' ? ca : ch).abbr) + ' · JUST NOW</small></span>';
   if (sport === 'mlb') return _mvBaseballHtml(e, ca, ch, lead);
   if (sport === 'nfl' || sport === 'cfb') return _mvFootballHtml(e, ca, ch, lead);
-  if (sport === 'nba' || sport === 'wnba') return _mvHoopsHtml(e, ca, ch, lead);
+  if (sport === 'nba' || sport === 'wnba' || sport === 'cbb') return _mvHoopsHtml(e, ca, ch, lead);
   if (sport === 'nhl') return _mvHockeyHtml(e, ca, ch, lead);
   if (sport === 'mls' || sport === 'nwsl') return _mvSoccerHtml(e, ca, ch, lead);
   var sit = g.sit;
@@ -418,14 +420,15 @@ function _mvFootballHtml(e, ca, ch, lead) {
 }
 // the shot clock right now, from the glance's last implied reset and the
 // schedule row's clock (the same math the court uses)
-function _mvShotClock(gl, g) {
+function _mvShotClock(gl, g, sport) {
   var sc = gl && gl.sc;
   if (!sc || sc.at == null) return null;
   var m = String(g.statusDetail || '').match(/^(\d{1,2}:\d{2}(?:\.\d)?|\d{1,2}(?:\.\d)?)\s*-\s*(\d)/i);
   if (!m) return null;
   var secs = /:/.test(m[1]) ? Number(m[1].split(':')[0]) * 60 + Number(m[1].split(':')[1]) : Number(m[1]);
-  var per = Number(m[2]), reset = sc.reset || 24, at = sc.at;
-  if (sc.period !== per) { reset = 24; at = per > 4 ? 300 : (gl.periodSecs || 720); }
+  var R = typeof _bkR === 'function' ? _bkR(gl, sport) : { shot: 24, reg: 4, ot: 300, per: 720 };
+  var per = Number(m[2]), reset = sc.reset || R.shot, at = sc.at;
+  if (sc.period !== per) { reset = R.shot; at = per > R.reg ? R.ot : (gl.periodSecs || R.per); }
   var v = reset - (at - secs);
   if (v > reset) v = reset; if (v > secs) v = secs; if (v < 0) v = 0;
   return { v: v, reset: reset };
@@ -433,7 +436,7 @@ function _mvShotClock(gl, g) {
 function _mvHoopsHtml(e, ca, ch, lead) {
   var g = e.g, gl = _mvGlance(_mvKey(e.sport, e.gamePk));
   if (!gl) return '<span class="mv-sit tx"><b>' + _mvEsc(lead || 'LIVE') + '</b>' + (g.sit && g.sit.poss ? '<small>' + _mvEsc(g.sit.poss) + ' BALL</small>' : '') + '</span>';
-  var pt = gl.poss === 'a' ? ca : gl.poss === 'h' ? ch : null, sc = _mvShotClock(gl, g);
+  var pt = gl.poss === 'a' ? ca : gl.poss === 'h' ? ch : null, sc = _mvShotClock(gl, g, e.sport);
   var dial = '';
   if (sc) {
     var r = 21, C = 2 * Math.PI * r, frac = sc.reset ? sc.v / sc.reset : 0, hot = sc.v < 5;

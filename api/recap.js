@@ -7,6 +7,7 @@
 //           mlbw       a Monday–Sunday week of baseball (built from the daily recaps)
 //           nfl, cfb   a football week
 //           nba, wnba  one day of basketball
+//           cbb        one day of men's college basketball (ESPN's featured slate)
 //           nhl        one day of hockey
 //           mls, nwsl  a soccer week
 //
@@ -24,7 +25,7 @@
 const MLB = 'https://statsapi.mlb.com/api/v1';
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/';
 const NHL = 'https://api-web.nhle.com/v1';
-const ESPN_PATH = { nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
+const ESPN_PATH = { nfl: 'football/nfl', cfb: 'football/college-football', nba: 'basketball/nba', wnba: 'basketball/wnba', cbb: 'basketball/mens-college-basketball', mls: 'soccer/usa.1', nwsl: 'soccer/usa.nwsl' };
 
 module.exports = async function handler(req, res) {
   // v7.5.0: the Watch & Listen tab asks this same function where one game is on
@@ -402,7 +403,7 @@ async function espnRecap(sport, start, end) {
     };
     const G = { id: e.id, date: (e.date || '').slice(0, 10), away: tm('away'), home: tm('home'), note: 'Final', ex: 0, comeback: 0, extra: null, wp: null };
     const per = (e.status && e.status.period) || 0;
-    const reg = fam === 'sc' ? 2 : 4;
+    const reg = fam === 'sc' || sport === 'cbb' ? 2 : 4; // v7.91.0: men's college plays halves
     if (per > reg) { G.note = fam === 'sc' ? 'AET' : (per - reg > 1 ? (per - reg) + 'OT' : 'OT'); G.extra = 'overtime'; facts.ot++; G.ex += 20; }
     if (Math.abs(G.home.score - G.away.score) <= (fam === 'fb' ? 3 : fam === 'bk' ? 3 : 0)) { facts.close++; G.ex += 12; }
     const data = sums[gi] || {};
@@ -410,7 +411,7 @@ async function espnRecap(sport, start, end) {
     const wpMap = {}, series = [];
     (data.winprobability || []).forEach(function (w) { if (w && w.playId != null && w.homeWinPercentage != null) { wpMap[String(w.playId)] = w.homeWinPercentage * 100; series.push(Math.round(w.homeWinPercentage * 100)); } });
     if (series.length > 3) G.wp = sample(series, 40);
-    const ctx = { G: G, wpMap: wpMap, facts: facts, cands: cands, sport: sport };
+    const ctx = { G: G, wpMap: wpMap, facts: facts, cands: cands, sport: sport, reg: reg };
     if (fam === 'fb') fbGame(data, ctx);
     else if (fam === 'bk') bkGame(data, ctx);
     else scGame(data, ctx);
@@ -419,7 +420,7 @@ async function espnRecap(sport, start, end) {
   if (fam === 'bk') bkStar(sums, events, games, cands, facts, sport);
   const moments = pickMoments(cands, 4, 2);
   const week = sb && sb.week && sb.week.number;
-  const lg = { nfl: 'the NFL', cfb: 'college football', nba: 'the NBA', wnba: 'the WNBA', mls: 'MLS', nwsl: 'the NWSL' }[sport];
+  const lg = { nfl: 'the NFL', cfb: 'college football', nba: 'the NBA', wnba: 'the WNBA', cbb: 'college hoops', mls: 'MLS', nwsl: 'the NWSL' }[sport];
   const isDay = fam === 'bk';
   const nums = [], dekBits = [];
   if (fam === 'fb') {
@@ -441,7 +442,7 @@ async function espnRecap(sport, start, end) {
   }
   const dek = dekBits.length ? cap(joinList(dekBits.slice(0, 3))) + '.' : games.length + ' games.';
   let kick, title, ring;
-  if (isDay) { kick = kickDay(start); title = wday(start) + ' in ' + lg; ring = { label: sport.toUpperCase(), sub: wday(start).slice(0, 3).toUpperCase() }; }
+  if (isDay) { kick = kickDay(start); title = wday(start) + ' in ' + lg; ring = { label: sport === 'cbb' ? 'College' : sport.toUpperCase(), sub: wday(start).slice(0, 3).toUpperCase() }; }
   else if (fam === 'fb' && week) { kick = 'WEEK ' + week + ' · ' + range(start, end); title = 'Week ' + week + ' in ' + lg; ring = { label: sport === 'cfb' ? 'College' : 'NFL', sub: 'WK ' + week }; }
   else { kick = 'WEEK OF ' + range(start, end); title = 'The week in ' + lg; ring = { label: sport.toUpperCase(), sub: 'WEEK' }; }
   return { sport: sport, league: sport, kind: isDay ? 'day' : 'week', start: start, end: end, id: sport + '-' + start, pending: pending, kick: kick, title: title, dek: dek, ring: ring,
@@ -548,7 +549,8 @@ function bkGame(data, ctx) {
     const home = p.team && String(p.team.id) === G.home.id;
     const per = (p.period && p.period.number) || 1, clock = (p.clock && p.clock.displayValue) || '', secs = clockSecs(clock);
     const diffB = home ? bH - bA : bA - bH, diffA = home ? h - a : a - h;
-    const lastDecided = per >= 4 && secs != null;
+    const REG = ctx.reg || 4;
+    const lastDecided = per >= REG && secs != null;
     const buzzer = lastDecided && secs <= 1.0 && diffB <= 0 && diffA >= 0 && (diffA > 0 || diffB < 0);
     let score = wd.d != null ? Math.abs(wd.d) : 0;
     if (wd.d == null) {
@@ -559,7 +561,7 @@ function bkGame(data, ctx) {
     if (buzzer) ctx.facts.buzzer++;
     if (score < 15) return;
     const team = home ? G.home : G.away;
-    const m = { gameId: G.id, date: G.date, team: { name: team.name, abbr: team.abbr }, when: (per > 4 ? 'OT' : 'Q' + per) + ' ' + clock,
+    const m = { gameId: G.id, date: G.date, team: { name: team.name, abbr: team.abbr }, when: (per > REG ? 'OT' : REG === 2 ? (per === 1 ? '1st half' : '2nd half') : 'Q' + per) + ' ' + clock,
       title: bkTitle(p.text, buzzer, diffB <= 0 && diffA > 0 && lastDecided && secs <= 60), sub: trim(p.text, 140),
       swing: wd.d != null ? Math.round(Math.max(0, forTeam(G, home, wd.d))) : null, anim: bkAnim(p, buzzer, clock) };
     m._score = score;
@@ -601,7 +603,7 @@ function bkStar(sums, events, games, cands, facts, sport) {
   });
   if (!best) return;
   facts.top = { pts: best.pts, who: lastName(best.name) };
-  if (best.pts < (sport === 'wnba' ? 32 : 42)) return;
+  if (best.pts < (sport === 'wnba' ? 32 : sport === 'cbb' ? 30 : 42)) return;
   const data = sums[best.gi], G = games[best.gi];
   const shots = (data.plays || []).filter(function (p) { return p.scoringPlay && p.shootingPlay && !/free throw/i.test(p.text || '') && p.participants && p.participants[0] && String(p.participants[0].athlete && p.participants[0].athlete.id) === best.id; })
     .map(function (p) { const a = bkAnim(p, false, ''); return [a.side, a.dist, a.three ? 1 : 0]; });

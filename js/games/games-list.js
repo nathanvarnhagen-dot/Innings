@@ -176,9 +176,12 @@ function _footballRefLinks(name, espnId, sport) {
 // site-path segment (nba/wnba) is a lower-confidence guess, not tested
 // against a live page.
 function _basketballRefLinks(name, espnId, league) {
-  var out = [{ label: 'BBRef', exact: false, url: 'https://www.basketball-reference.com/search/search.fcgi?search=' + encodeURIComponent(name) }];
+  // v7.91.0: college players live on Sports-Reference's college basketball site
+  var cbb = league === 'cbb';
+  var out = [cbb ? { label: 'CBB Ref', exact: false, url: 'https://www.sports-reference.com/cbb/search/search.fcgi?search=' + encodeURIComponent(name) }
+    : { label: 'BBRef', exact: false, url: 'https://www.basketball-reference.com/search/search.fcgi?search=' + encodeURIComponent(name) }];
   if (espnId) {
-    out.push({ label: 'ESPN', exact: true, url: 'https://www.espn.com/' + league + '/player/_/id/' + espnId + '/' + _pregameSlug(name) });
+    out.push({ label: 'ESPN', exact: true, url: 'https://www.espn.com/' + (cbb ? 'mens-college-basketball' : league) + '/player/_/id/' + espnId + '/' + _pregameSlug(name) });
   }
   return out;
 }
@@ -209,7 +212,7 @@ function _soccerRefLinks(name, espnId) {
 // so those sports were silently falling through to baseball links).
 function _refLinksForLeague(name, id, league) {
   if (league === 'nfl' || league === 'cfb') return _footballRefLinks(name, id, league);
-  if (league === 'nba' || league === 'wnba') return _basketballRefLinks(name, id, league);
+  if (league === 'nba' || league === 'wnba' || league === 'cbb') return _basketballRefLinks(name, id, league);
   if (league === 'mls' || league === 'nwsl') return _soccerRefLinks(name, id);
   if (league === 'nhl') return _hockeyRefLinks(name, id);
   return _pregameLinks(name, id);
@@ -231,7 +234,7 @@ function _cheatSheetLinkChips(name, id, league) { return _refChipsHtml(_refLinks
 // Full-name labels here (vs the compact "BR"/"Savant"/"PFR" used on the
 // small inline chips) since this sheet has room for it and the person
 // tapped a name specifically to find out where it goes.
-var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', BBRef: 'Basketball Reference', FBref: 'FBref', ESPN: 'ESPN Player Page', HockeyRef: 'Hockey Reference', NHL: 'NHL.com Player Page' };
+var PLAYER_LINK_LABELS = { BR: 'Baseball Reference', Savant: 'Baseball Savant', PFR: 'Pro Football Reference', 'CFB Ref': 'College Football Reference', 'CBB Ref': 'College Basketball Reference', BBRef: 'Basketball Reference', FBref: 'FBref', ESPN: 'ESPN Player Page', HockeyRef: 'Hockey Reference', NHL: 'NHL.com Player Page' };
 function openPlayerLinkSheet(name, id, league) {
   var links = _refLinksForLeague(name, id, league);
   var nameEl = document.getElementById('player-link-name');
@@ -312,7 +315,8 @@ window._gamesSport = 'mlb';
 // yet.
 function _refreshPlayoffBtnVisibility() {
   var btn = document.getElementById('games-playoff-btn');
-  if (btn) btn.style.display = (window._gamesSport === 'mlb' || window._gamesSport === 'nfl' || window._gamesSport === 'nba') ? 'flex' : 'none';
+  // v7.91.0: college basketball's trophy opens the Top 25
+  if (btn) btn.style.display = (window._gamesSport === 'mlb' || window._gamesSport === 'nfl' || window._gamesSport === 'nba' || window._gamesSport === 'cbb') ? 'flex' : 'none';
   var teamsBtn = document.getElementById('games-teams-btn');
   if (teamsBtn) teamsBtn.style.display = 'flex';
 }

@@ -274,7 +274,7 @@ function _flourishKeyForMemory(m) {
 }
 function _flourishKeyForBsModalSport(s) {
   if (s === 'nfl') return 'football';
-  if (s === 'nba' || s === 'wnba') return 'basketball';
+  if (s === 'nba' || s === 'wnba' || s === 'cbb') return 'basketball';
   if (s === 'nhl') return 'hockey';
   if (s === 'mls' || s === 'nwsl') return 'soccer';
   return 'mlb';
