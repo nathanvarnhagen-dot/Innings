@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.92.0', at: '2026-11-07T20:30:00-08:00',
+      title: 'How every game ends',
+      sub: 'Overtime, extra innings, shootouts and tiebreaks, for every sport.',
+      items: function () {
+        return [
+          { icon: 'history', title: 'When it’s tied', body: 'The Rules tab now covers how each sport settles a tie: extra innings and walk-offs, NFL and college overtime, basketball overtimes, hockey’s three-on-three, shootout and playoff OT, and soccer’s extra time and penalties.' },
+          { icon: 'trophy', title: 'Playoffs too', body: 'Where the postseason works differently, it says so: no automatic runner in the MLB playoffs, MLS Round One going straight to penalties, golf’s playoff format at each major.' },
+          { icon: 'bars', title: 'Tennis, golf and F1', body: 'Each event has a Rules tab now: tiebreaks and the deciding-set breaker, the cut and playoffs, safety cars, red flags and points for a shortened race.' }
+        ];
+      }
+    },
+    {
       id: 'v7.91.0', at: '2026-11-06T14:45:00-08:00',
       title: 'College basketball',
       sub: 'Every Division I men\u2019s game, on the same live court as the NBA.',

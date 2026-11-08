@@ -181,3 +181,6 @@
 /* v7.65.1: Games page tiles — the grid's columns can't be pushed wider by a long season line, and the newest leagues say they're still being built */
 .gsp{min-width:0}
 .gsp-wip{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;line-height:13px;padding:3px 8px;border-radius:20px;border:1px dashed rgba(242,200,105,.55);color:#F2C869}
+/* v7.92.0: Rules tab on tennis, golf and F1 events — F1's five tabs need tighter caps */
+.fs-tabs.n5 button{font-size:10.5px;letter-spacing:.06em}
+.fs-rules{padding-top:2px}

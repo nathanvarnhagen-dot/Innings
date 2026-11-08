@@ -158,7 +158,8 @@ function _fsF1ListHtml(d) {
 function fsOpenF1(key) { fsOpenEvent({ sport: 'f1', id: String(key) }); }
 
 // ── THE EVENT PAGE ───────────────────────────────────────────────────────
-var FS_TABS = { tennis: ['live', 'chat'], golf: ['live', 'field', 'chat'], f1: ['live', 'tyres', 'standings', 'chat'] };
+// v7.92.0: every event has a Rules tab (js/games/rulebooks.js)
+var FS_TABS = { tennis: ['live', 'rules', 'chat'], golf: ['live', 'field', 'rules', 'chat'], f1: ['live', 'tyres', 'standings', 'rules', 'chat'] };
 function fsOpenEvent(ev) {
   var F = window._fs;
   var same = F.ev && F.ev.sport === ev.sport && String(F.ev.id) === String(ev.id);
@@ -178,6 +179,7 @@ function _fsTabsHtml() {
   var el = document.getElementById('fs-ev-tabs');
   if (!el) return;
   el.style.gridTemplateColumns = 'repeat(' + tabs.length + ', minmax(0,1fr))';
+  el.classList.toggle('n5', tabs.length >= 5);
   el.innerHTML = tabs.map(function (t) { return '<button type="button" class="' + (F.tab === t ? 'on' : '') + '" onclick="fsTab(\'' + t + '\')"' + (F.tab === t ? ' aria-current="page"' : '') + '>' + t.toUpperCase() + '</button>'; }).join('');
 }
 function fsTab(t) {
@@ -289,6 +291,7 @@ function _fsRender() {
   var body = document.getElementById('fs-ev-body');
   if (!body) return;
   if (F.tab === 'chat') { _fsChatRender(); return; }
+  if (F.tab === 'rules') { if (!document.getElementById('fs-rb-results') && typeof renderFieldRules === 'function') renderFieldRules(ev.sport); return; }
   if (!d) { _fsSet('fs-ev-body', '<div class="fs-empty">Loading…</div>', 'body'); return; }
   var shell = '<div id="fs-hero" class="fs-hero"></div><div id="fs-under"></div>';
   if (F.tab === 'live') {
