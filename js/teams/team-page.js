@@ -94,6 +94,10 @@ function _tmLoad() {
 // ESPN hands us its team id; MLB's live/final box score only carries names,
 // so those are matched against the team list.
 function _tmResolveId(league, id, name) {
+  // v7.92.1: NHL game pages come from the NHL's own API, whose team ids
+  // don't line up with ESPN's (NHL 28 = Sharks, ESPN 28 = Jets), so hockey
+  // always matches by name against ESPN's team list, id only as a fallback.
+  if (league === 'nhl' && name) return _tmResolveNhl(id, name);
   if (id != null && id !== '') return Promise.resolve(id);
   if (league !== 'mlb' || !name) return Promise.resolve(null);
   return fetch('/api/mlb?mode=teams').then(function (r) { return r.json(); }).then(function (d) {
@@ -101,6 +105,23 @@ function _tmResolveId(league, id, name) {
     var exact = teams.filter(function (t) { return String(t.name).toLowerCase() === String(name).toLowerCase(); })[0];
     var loose = exact || teams.filter(function (t) { return _ghSameTeamName(t.name, name); })[0];
     return loose ? loose.id : null;
+  });
+}
+function _tmNormName(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function _tmResolveNhl(id, name) {
+  var fallback = (id != null && id !== '') ? id : null;
+  if (!window._tmNhlTeams) {
+    window._tmNhlTeams = fetch('/api/espn?league=nhl&mode=teams').then(function (r) { return r.json(); })
+      .then(function (d) { return (d && d.teams) || []; })
+      .catch(function () { window._tmNhlTeams = null; return []; });
+  }
+  return window._tmNhlTeams.then(function (teams) {
+    var n = _tmNormName(name), last = n.split(' ').pop();
+    var hit = teams.filter(function (t) { return _tmNormName(t.name) === n; })[0] ||
+      teams.filter(function (t) { return _tmNormName(t.name).split(' ').pop() === last; })[0];
+    return hit ? hit.id : fallback;
   });
 }
 function tmTab(key) {
