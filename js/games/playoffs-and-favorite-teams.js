@@ -364,11 +364,14 @@ function openTeamPrefs(sport) {
   window._tpSport = sport;
   var sportMeta = GAMES_SPORTS.filter(function (s) { return s.key === sport; })[0];
   var titleEl = document.getElementById('tp-title');
-  if (titleEl) titleEl.textContent = (sportMeta ? sportMeta.name : sport.toUpperCase()) + ' Teams';
+  if (titleEl) titleEl.textContent = 'Teams';
+  var lgEl = document.getElementById('tp-league');
+  if (lgEl) lgEl.textContent = sportMeta ? sportMeta.name : sport.toUpperCase();
+  window._tpOpen = null;
   var searchEl = document.getElementById('tp-search');
   if (searchEl) searchEl.value = '';
   var listEl = document.getElementById('tp-list');
-  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Loading teams…</div>';
+  if (listEl) listEl.innerHTML = '<div class="tpf-none">Loading teams…</div>';
   nav('team-prefs');
 
   var user = window.currentUser || (window.auth && window.auth.currentUser);
@@ -385,8 +388,10 @@ function openTeamPrefs(sport) {
     if (window._tpSport !== sport) return; // superseded by a later visit
     window._tpTeams = (results[0] && results[0].teams) || [];
     window._tpPrefs = { favorite: results[1].favorite || null, following: results[1].following || [], rivals: results[1].rivals || [] };
+    // v7.94.0: "Yours" is who you had when the screen opened, so a team you follow now stays put under your finger
+    window._tpSnap = { favorite: window._tpPrefs.favorite, following: window._tpPrefs.following.slice(), rivals: window._tpPrefs.rivals.slice() };
     if (!window._tpTeams.length) {
-      if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">Couldn\'t load the team list right now.</div>';
+      if (listEl) listEl.innerHTML = '<div class="tpf-none">Couldn\'t load the team list right now.</div>';
       return;
     }
     _tpRenderList();
@@ -395,23 +400,65 @@ function openTeamPrefs(sport) {
 
 function _tpFilterList() { _tpRenderList(); }
 
+// v7.94.0: one Follow button per team. Following a team (or tapping its
+// name) opens the row with the two rarer choices, Favorite and Rival, and
+// Unfollow. Your teams — favorite first, then followed, then rivals — sit in
+// "Yours" above everyone else. Same screen for every league.
+var TPF_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>';
+var TPF_STAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.8 5.9 6.2.8-4.6 4.3 1.2 6.3L12 17.3 6.4 20.3l1.2-6.3L3 9.7l6.2-.8z"/></svg>';
+function _tpState(name) {
+  var p = window._tpPrefs || {};
+  return { fav: p.favorite === name, fol: (p.following || []).indexOf(name) !== -1, rival: (p.rivals || []).indexOf(name) !== -1 };
+}
+function _tpRowHtml(t) {
+  var name = t.name, st = _tpState(name), mine = st.fav || st.fol, open = window._tpOpen === name;
+  var nm = _escapeHtml(name);
+  var look = null;
+  try { if (typeof _teamLook === 'function') look = _teamLook(window._tpSport, name, t.abbr, t.color, t.alt); } catch (e) {}
+  var abbr = (look && look.abbr) || t.abbr || String(name).replace(/[^A-Za-z ]/g, '').split(' ').map(function (w) { return w.charAt(0); }).join('').slice(0, 3).toUpperCase();
+  var disc = '<span class="tpf-d" style="background:' + ((look && look.bg) || '#3D3580') + ';color:' + ((look && look.fg) || '#fff') + '">' + _escapeHtml(abbr) + '</span>';
+  var sub = st.fav ? '<small class="fav">' + TPF_STAR + 'Favorite</small>' : st.rival ? '<small class="riv">Rival</small>' : '';
+  var pill = mine ? '<button class="tpf-pill on" data-team="' + nm + '" onclick="event.stopPropagation();tpfToggleOpen(this.dataset.team)" aria-expanded="' + open + '">' + TPF_CHECK + 'Following</button>'
+    : st.rival ? '<button class="tpf-pill riv" data-team="' + nm + '" onclick="event.stopPropagation();tpfToggleOpen(this.dataset.team)" aria-expanded="' + open + '">Rival</button>'
+    : '<button class="tpf-pill" data-team="' + nm + '" onclick="event.stopPropagation();tpfFollow(this.dataset.team)" aria-label="Follow the ' + nm + '">Follow</button>';
+  var more = open ? '<div class="tpf-more">' +
+      '<button class="tpf-chip' + (st.fav ? ' gold on' : ' gold') + '" data-team="' + nm + '" aria-pressed="' + st.fav + '" onclick="tpToggleFavorite(this.dataset.team)">' + TPF_STAR + (st.fav ? 'Favorite' : 'Make favorite') + '</button>' +
+      '<button class="tpf-chip' + (st.rival ? ' riv on' : '') + '" data-team="' + nm + '" aria-pressed="' + st.rival + '" onclick="tpToggleRival(this.dataset.team)">Rival</button>' +
+      (mine ? '<button class="tpf-chip quiet" data-team="' + nm + '" onclick="tpfUnfollow(this.dataset.team)">Unfollow</button>' : '') +
+    '</div>' : '';
+  return '<div class="tpf-row' + (open ? ' open' : '') + '"><div class="tpf-main" role="button" tabindex="0" data-team="' + nm + '" onclick="tpfToggleOpen(this.dataset.team)" aria-label="' + nm + ', more choices">' +
+    disc + '<span class="tx"><b>' + nm + '</b>' + sub + '</span>' + pill + '</div>' + more + '</div>';
+}
 function _tpRenderList() {
   var listEl = document.getElementById('tp-list');
   if (!listEl) return;
   var query = ((document.getElementById('tp-search') || {}).value || '').trim().toLowerCase();
   var teams = query ? window._tpTeams.filter(function (t) { return t.name.toLowerCase().indexOf(query) !== -1; }) : window._tpTeams;
-  if (!teams.length) { listEl.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:rgba(255,255,255,.4)">No teams match “' + _escapeHtml(query) + '”.</div>'; return; }
-  listEl.innerHTML = teams.map(function (t) {
-    var isFav = window._tpPrefs.favorite === t.name;
-    var isFollowing = window._tpPrefs.following.indexOf(t.name) !== -1;
-    var isRival = (window._tpPrefs.rivals || []).indexOf(t.name) !== -1;
-    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:0.5px solid rgba(255,255,255,.06)">' +
-      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFavorite(this.dataset.team)" style="cursor:pointer;font-size:19px;width:24px;text-align:center;flex-shrink:0;color:' + (isFav ? '#F2C869' : 'rgba(255,255,255,.25)') + '">' + (isFav ? '★' : '☆') + '</div>' +
-      '<div style="flex:1;font-size:14px;font-weight:600;color:#fff">' + _escapeHtml(t.name) + '</div>' +
-      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleRival(this.dataset.team)" role="button" aria-pressed="' + isRival + '" aria-label="Mark ' + _escapeHtml(t.name) + ' as a rival" style="cursor:pointer;height:24px;padding:0 8px;border-radius:7px;border:1.5px solid ' + (isRival ? 'rgba(255,154,142,.6)' : 'rgba(255,255,255,.2)') + ';background:' + (isRival ? 'rgba(255,154,142,.18)' : 'transparent') + ';display:flex;align-items:center;flex-shrink:0;color:' + (isRival ? '#FF9A8E' : 'rgba(255,255,255,.45)') + ';font-size:10.5px;font-weight:800;letter-spacing:.06em">RIVAL</div>' +
-      '<div data-team="' + _escapeHtml(t.name) + '" onclick="tpToggleFollow(this.dataset.team)" style="cursor:pointer;width:22px;height:22px;border-radius:7px;border:1.5px solid ' + (isFollowing ? 'rgba(124,242,156,.5)' : 'rgba(255,255,255,.2)') + ';background:' + (isFollowing ? 'rgba(124,242,156,.18)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#9be8ac;font-size:13px;font-weight:800">' + (isFollowing ? '✓' : '') + '</div>' +
-    '</div>';
-  }).join('');
+  if (!teams.length) { listEl.innerHTML = '<div class="tpf-none">No teams match “' + _escapeHtml(query) + '”.</div>'; return; }
+  var snap = window._tpSnap || window._tpPrefs || {};
+  var rank = function (t) { return snap.favorite === t.name ? 0 : (snap.following || []).indexOf(t.name) !== -1 ? 1 : (snap.rivals || []).indexOf(t.name) !== -1 ? 2 : 9; };
+  var mine = teams.filter(function (t) { return rank(t) < 9; }).sort(function (a, b) { return rank(a) - rank(b); });
+  var rest = teams.filter(function (t) { return rank(t) === 9; });
+  listEl.innerHTML =
+    (mine.length ? '<div class="tpf-cap">Yours</div>' + mine.map(_tpRowHtml).join('') : '') +
+    (rest.length ? '<div class="tpf-cap">' + (mine.length ? 'All teams' : 'Pick your teams') + '</div>' + rest.map(_tpRowHtml).join('') : '');
+}
+function tpfToggleOpen(teamName) {
+  window._tpOpen = window._tpOpen === teamName ? null : teamName;
+  _tpRenderList();
+}
+function tpfFollow(teamName) {
+  window._tpOpen = teamName; // the row opens with Favorite and Rival once you follow
+  if (window._tpPrefs.following.indexOf(teamName) === -1) { tpToggleFollow(teamName); return; }
+  _tpRenderList();
+}
+function tpfUnfollow(teamName) {
+  var p = window._tpPrefs, i = p.following.indexOf(teamName);
+  if (i !== -1) p.following.splice(i, 1);
+  if (p.favorite === teamName) p.favorite = null;
+  window._tpOpen = null;
+  _tpRenderList();
+  _tpSavePrefs();
 }
 
 function _tpSavePrefs() {
@@ -422,6 +469,7 @@ function _tpSavePrefs() {
     .then(function () {
       if (typeof _invalidateFavTeamsCache === 'function') _invalidateFavTeamsCache(window._tpSport);
       if (window._yw && window._yw.prefs) delete window._yw.prefs[window._tpSport]; // the fan angle reads these
+      if (typeof window.stkTeamsChanged === 'function') window.stkTeamsChanged(); // v7.94.0: Home's pile re-ranks next time it opens
     })
     .catch(function (err) {
       console.error('Save team prefs error:', err);

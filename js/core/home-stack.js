@@ -471,6 +471,7 @@
     clearTimeout(S.sheetT);
     S.sheetT = setTimeout(function () { sh.classList.remove('on'); if (typeof then === 'function') then(); }, 340);
   };
+  window.stkTeamsChanged = function () { S.prefsDirty = true; };
   window.stkAddLeague = function (key) {
     if (S.sheetDrag && Date.now() - S.sheetDrag < 400) return; // that was a drag, not a tap
     S.prefsDirty = true;

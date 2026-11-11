@@ -1,0 +1,41 @@
+/* ══ FOLLOW TEAMS (v7.94.0) ═════════════════════════════════════════════
+   The Teams screen for every league: one Follow button per team; Favorite,
+   Rival and Unfollow open under a team once you follow it or tap its name.
+   Markup comes from _tpRenderList (js/games/playoffs-and-favorite-teams.js). */
+#screen-team-prefs{background:#09061A;color:#F4F2FF;-webkit-font-smoothing:antialiased}
+#screen-team-prefs::before{content:'';position:absolute;left:-90px;top:40px;width:300px;height:300px;border-radius:50%;background:#3D3580;opacity:.45;filter:blur(72px);pointer-events:none}
+.tpf-top{position:relative;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,20px) + 18px) 18px 14px;flex-shrink:0}
+.tpf-back{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;padding:0;color:#F4F2FF;flex-shrink:0;cursor:pointer}
+.tpf-hd{flex:1;min-width:0}
+.tpf-hd small{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:rgba(244,242,255,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpf-hd b{display:block;font-size:26px;font-weight:700;letter-spacing:-.6px;line-height:1.1;margin-top:2px}
+.tpf-done{height:44px;padding:0 6px;border:0;background:none;font-family:inherit;font-size:14px;font-weight:600;color:rgba(244,242,255,.66);cursor:pointer}
+.tpf-search{position:relative;display:flex;align-items:center;gap:10px;height:48px;margin:0 16px 4px;padding:0 16px;border-radius:24px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(244,242,255,.66);flex-shrink:0}
+.tpf-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:#F4F2FF;font-family:inherit;font-size:16px;font-weight:500;-webkit-appearance:none;appearance:none}
+.tpf-search input::placeholder{color:rgba(244,242,255,.6)}
+.tpf-scroll{position:relative;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(40px + env(safe-area-inset-bottom,0px))}
+.tpf-cap{padding:18px 6px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(244,242,255,.66)}
+.tpf-none{text-align:center;padding:28px 0;font-size:13.5px;color:rgba(244,242,255,.66)}
+.tpf-row{border-bottom:1px solid rgba(255,255,255,.07);transition:background .2s ease}
+.tpf-row.open{margin:6px -10px;padding:0 10px 14px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.tpf-main{display:flex;align-items:center;gap:12px;min-height:62px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tpf-d{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),0 6px 16px rgba(0,0,0,.3)}
+.tpf-main .tx{flex:1;min-width:0}
+.tpf-main .tx b{display:block;font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpf-main .tx small{display:flex;align-items:center;gap:5px;margin-top:2px;font-size:12px;font-weight:600}
+.tpf-main .tx small.fav{color:#F2C869}
+.tpf-main .tx small.riv{color:#FFB8AE}
+.tpf-pill{height:36px;padding:0 15px;border-radius:18px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#F4F2FF;font-family:inherit;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;position:relative;transition:transform .15s ease}
+.tpf-pill::after{content:'';position:absolute;left:-4px;right:-4px;top:-5px;bottom:-5px}
+.tpf-pill:active{transform:scale(.95)}
+.tpf-pill.on{background:#F4F2FF;border-color:#F4F2FF;color:#0B0718;padding:0 13px}
+.tpf-pill.riv{border-color:rgba(255,154,142,.55);background:rgba(255,154,142,.14);color:#FFB8AE}
+.tpf-more{display:flex;flex-wrap:wrap;gap:8px;padding-left:52px;animation:tpfIn .28s cubic-bezier(.22,1,.36,1)}
+@keyframes tpfIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.tpf-chip{height:38px;padding:0 13px;border-radius:19px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.22);color:#F4F2FF;font-family:inherit;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.tpf-chip.gold{color:#F2C869}
+.tpf-chip.gold.on{background:#F2C869;border-color:#F2C869;color:#1A1640}
+.tpf-chip.riv.on{background:#FFB8AE;border-color:#FFB8AE;color:#3A0F0A}
+.tpf-chip.quiet{border-color:transparent;background:none;color:rgba(244,242,255,.66);padding:0 8px}
+@media (prefers-reduced-motion:reduce){.tpf-more{animation:none}}
+@media (orientation:landscape){html.is-tablet #screen-team-prefs .tpf-top,html.is-tablet #screen-team-prefs .tpf-search,html.is-tablet #tp-list{max-width:640px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box}}
