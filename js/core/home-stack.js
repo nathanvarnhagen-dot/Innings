@@ -64,6 +64,8 @@
   var S = { day: 0, open: false, order: [], items: {}, els: {}, touched: false, anim: null, busy: 0, swiped: 0,
     prefs: {}, prefsAt: 0, prefsReady: false, prefsDirty: false, cache: {}, loaded: {}, sig: '' };
   var MAX = 24, PEEK = 54, FRONT = 316, STRIP = 120;
+  // v7.94.1: the pile sits in from the edges, leaving a gutter on each side to scroll Home with
+  var SIDE = 14;
   var EASE = 'cubic-bezier(.22,1,.36,1)';
   var T_MOVE = 'top .5s ' + EASE + ',left .5s ' + EASE + ',right .5s ' + EASE + ',height .5s ' + EASE + ',opacity .4s ease,box-shadow .4s ease';
   var T_LIFT = 'top .3s cubic-bezier(.3,.7,.3,1),left .3s ease,right .3s ease,height .3s cubic-bezier(.3,.7,.3,1),opacity .2s ease,box-shadow .2s ease';
@@ -297,12 +299,12 @@
       el.classList.toggle('front', !!front); el.classList.toggle('up', !!st.up);
       if (st.op === 0) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden');
     };
-    var backM = -6 + 8 * Math.max(R, 1);
+    var backM = SIDE + 8 * Math.max(R, 1);
     S.order.forEach(function (id, pos) {
       var el = S.els[id]; if (!el) return;
       var st, tr = T_MOVE, front = pos === 0;
-      if (pos === 0) st = { top: R * PEEK, h: FRONT, m: -6, op: 1, z: 40 };
-      else if (pos <= R && !(strip && pos === R)) st = { top: (R - pos) * PEEK, h: STRIP, m: -6 + 8 * pos, op: [1, 1, 0.85, 0.7][pos], z: 40 - pos * 10 };
+      if (pos === 0) st = { top: R * PEEK, h: FRONT, m: SIDE, op: 1, z: 40 };
+      else if (pos <= R && !(strip && pos === R)) st = { top: (R - pos) * PEEK, h: STRIP, m: SIDE + 8 * pos, op: [1, 1, 0.85, 0.7][pos], z: 40 - pos * 10 };
       else st = { top: 0, h: STRIP, m: backM, op: 0, z: 1 };
       if (a && a.id === id) {
         if (a.kind === 'lift') { st = { top: -78, h: STRIP, m: backM - 4, op: 1, z: 50, up: true }; tr = T_LIFT; front = false; }
@@ -315,7 +317,7 @@
     if (S.strip) {
       var s = S.strip.style;
       s.transition = instant ? 'none' : 'opacity .38s ease,transform .55s ' + EASE + ',top .5s ' + EASE;
-      s.left = s.right = (-6 + 8 * R) + 'px'; s.top = '0px';
+      s.left = s.right = (SIDE + 8 * R) + 'px'; s.top = '0px';
       s.opacity = strip ? 1 : 0; s.transform = strip ? 'none' : 'translateY(-16px) scale(.96)'; s.pointerEvents = strip ? '' : 'none';
       if (strip) S.strip.removeAttribute('aria-hidden'); else S.strip.setAttribute('aria-hidden', 'true');
     }
