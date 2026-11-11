@@ -4,8 +4,10 @@
 //     league's name, a count while games are live). Multi view sits first.
 //     Tapping a league shows it right here instead of leaving the page.
 //   · under it, the league's line — name, date, how many are live, where the
-//     season stands — with "?" (how this page works) and "Full schedule",
-//     which opens the league's own page exactly as its tile used to.
+//     season stands — with search, standings / playoff picture, your teams
+//     and "?" (how this page works). v7.96.0: arrows under it step through
+//     days (football: weeks, listed a day at a time) without leaving the page;
+//     no league opens its old schedule page from here any more.
 //   · THE STACK: only the league's live games and your teams' games, as a
 //     pile of team-color cards. Live games first. Swipe up for the next one
 //     (it glides away and the glow behind the pile turns the next game's
@@ -55,7 +57,7 @@
   var railEl = root.children[0], headEl = root.children[1], stageEl = root.children[2], listEl = root.children[3];
   var glowEl = stageEl.children[0], deckEl = stageEl.children[1];
 
-  var S = { sport: null, picked: false, auto: false, order: [], items: {}, all: [], prefs: {}, prefsAt: 0, glance: {}, glanceAt: {}, more: false, busy: 0, sig: {}, drag: null };
+  var S = { sport: null, picked: false, auto: false, order: [], items: {}, all: [], prefs: {}, prefsAt: 0, glance: {}, glanceAt: {}, more: false, busy: 0, sig: {}, drag: null, off: {}, wk: {}, cache: {}, loading: {} };
   try { S.sport = localStorage.getItem(KEY + '_lg') || null; } catch (e) {}
   var SHORT = { cfb: 'CFB', cbb: 'CBB' }, EMOJI = { cfb: '🎓' };
   var BK = { nba: 1, wnba: 1, cbb: 1 }, FB = { nfl: 1, cfb: 1 }, SOC = { mls: 1, nwsl: 1 };
@@ -138,16 +140,83 @@
     Object.keys(window._fsLive || {}).forEach(function (k) { live[k] = (live[k] || 0) + (Number(window._fsLive[k]) || 0); });
     return { live: live, day: day };
   }
+  // ── v7.96.0: which day (or, for football, which week) of a league is showing ──
+  // Nothing on this page leaves for the league's old schedule page any more:
+  // the arrows under the league's name step through days or weeks right here.
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function today() { return typeof _todayLocal === 'function' ? _todayLocal() : iso(new Date()); }
+  function noon(s) { return new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)), 12); }
+  function addDays(s, n) { var d = noon(s); d.setDate(d.getDate() + n); return iso(d); }
+  function curWk() {
+    if (typeof FOOTBALL_CURRENT_WEEK_TUESDAY !== 'undefined') return FOOTBALL_CURRENT_WEEK_TUESDAY;
+    var d = noon(today()); d.setDate(d.getDate() - ((d.getDay() - 2 + 7) % 7)); return iso(d);
+  }
+  function wkOf(sport) { return S.wk[sport] || curWk(); }
+  function dayOf(sport) { return addDays(today(), S.off[sport] || 0); }
+  function atNow(sport) { return FB[sport] ? wkOf(sport) === curWk() : !(S.off[sport] || 0); }
+  function viewKey(sport) { return FB[sport] ? sport + ':w' + wkOf(sport) : sport + ':' + dayOf(sport); }
+  function viewDates(sport) {
+    if (!FB[sport]) return [dayOf(sport)];
+    var out = [], w = wkOf(sport);
+    for (var i = 0; i < 7; i++) out.push(addDays(w, i));
+    return out;
+  }
+  function needsFetch(sport) { return FB[sport] || !!(S.off[sport] || 0); }
+  function ensure(sport) {
+    if (!needsFetch(sport) || typeof _bsModalScheduleUrl !== 'function' || !window.fetch) return;
+    var key = viewKey(sport), c = S.cache[key], dates = viewDates(sport);
+    var ttl = dates.indexOf(today()) !== -1 ? 60000 : 300000;
+    if (S.loading[key] || (c && Date.now() - c.at < ttl)) return;
+    S.loading[key] = true;
+    Promise.all(dates.map(function (d) {
+      return fetch(_bsModalScheduleUrl(sport, d))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { return { day: d, games: (j && j.games) || [], ok: !!(j && j.games) }; })
+        .catch(function () { return { day: d, games: [], ok: false }; });
+    })).then(function (res) {
+      S.loading[key] = false;
+      if (!res.some(function (x) { return x.ok; }) && S.cache[key]) { S.cache[key].at = Date.now() - ttl + 20000; return; } // every request failed: keep what's there, ask again soon
+      var seen = {}, list = [];
+      res.forEach(function (x) { x.games.forEach(function (g) { if (!g || g.gamePk == null || seen[g.gamePk]) return; seen[g.gamePk] = 1; list.push({ g: g, day: x.day }); }); });
+      S.cache[key] = { at: Date.now(), list: list };
+      render();
+    });
+  }
+  function loaded(sport) { return needsFetch(sport) ? !!S.cache[viewKey(sport)] : hasData(); }
+  // the games of the day or week that's showing → [{ g, day }]
+  function source(sport) {
+    var t = today(), live = [];
+    allGames().forEach(function (x) { if (x.sport === sport) live.push({ g: x.g, day: t }); });
+    if (!needsFetch(sport)) return live;
+    var c = S.cache[viewKey(sport)], list = c ? c.list.slice() : [];
+    // today's games are fresher in the lists Home and Multi view keep
+    if (viewDates(sport).indexOf(t) !== -1) {
+      var at = {};
+      list.forEach(function (x, i) { at[x.g.gamePk] = i; });
+      live.forEach(function (x) { if (at[x.g.gamePk] != null) list[at[x.g.gamePk]] = { g: x.g, day: list[at[x.g.gamePk]].day }; else if (c) list.push(x); });
+    }
+    return list;
+  }
   function build(sport) {
     var out = [];
-    allGames().forEach(function (x) {
+    source(sport).forEach(function (x) {
       var g = x.g;
-      if (x.sport !== sport || !g || g.gamePk == null || !g.away || !g.home) return;
+      if (!g || g.gamePk == null || !g.away || !g.home) return;
       var ph = phase(sport, g), ma = mine(sport, g.away), mh = mine(sport, g.home);
-      out.push({ id: sport + ':' + g.gamePk, sport: sport, g: g, ph: ph, ma: ma, mh: mh, mine: Math.max(ma, mh),
+      out.push({ id: sport + ':' + g.gamePk, sport: sport, g: g, day: x.day, ph: ph, ma: ma, mh: mh, mine: Math.max(ma, mh),
         la: look(sport, g, 'a'), lh: look(sport, g, 'h'), t: Date.parse(g.startTime || '') || 0 });
     });
     return out;
+  }
+  var DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  function dayWord(d, short) {
+    var diff = Math.round((noon(d) - noon(today())) / 864e5);
+    if (diff === 0) return new Date().getHours() >= 17 ? 'Tonight' : 'Today';
+    if (diff === -1) return 'Yesterday';
+    if (diff === 1) return 'Tomorrow';
+    if (short || Math.abs(diff) > 6) return noon(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '');
+    return DOW[noon(d).getDay()];
   }
   // what goes in the pile: live games, and your teams' games whatever their state
   function inStack(it) {
@@ -210,20 +279,50 @@
   }
 
   // ── the league line ──
+  var IC_SEARCH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>';
+  var IC_CUP = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7l-1-3h-5z"/></svg>';
+  var IC_TEAMS = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.6 6.7 19.5l1.1-6L3.4 9.3l6-.8z"/></svg>';
+  var CUP = { mlb: 'Playoff picture', nfl: 'Playoff picture', nba: 'Standings', cbb: 'Top 25' };
   function renderHead(c) {
     var s = league(S.sport); if (!s) { headEl.innerHTML = ''; return; }
-    var d = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '');
-    var n = c.live[s.key] || 0, day = c.day[s.key] || 0, ph = '';
-    try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[s.key] : null; ph = (p && p.label) || ''; } catch (e) {}
-    var word = new Date().getHours() >= 17 ? 'tonight' : 'today';
-    var sub = esc(d) + (n ? ' · <b>' + n + ' live</b>' : '') + (day ? ' · ' + day + ' ' + word : '');
-    var html = '<div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span><span class="sub">' + sub + '</span>' + (ph ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>' +
-      '<div class="bt">' + (typeof window.hiwPlay === 'function' ? '<button class="gdk-q" onclick="hiwPlay(\'games\')" aria-label="How Games works"><span>?</span></button>' : '') +
-      '<button class="gdk-all" data-lg="' + esc(s.key) + '" onclick="gdkLeague(this.dataset.lg)" aria-label="' + esc(s.name + ' full schedule') + '">Full schedule ›</button></div>';
+    var k = s.key, fb = !!FB[k], now = atNow(k), ph = '';
+    try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; } catch (e) {}
+    var live = S.all.filter(function (it) { return it.ph === 'live'; }).length, tot = S.all.length;
+    var lab, sub;
+    if (fb) {
+      var wn = null;
+      try { wn = typeof _footballWeekNumber === 'function' ? _footballWeekNumber(k, wkOf(k)) : null; } catch (e) {}
+      lab = wn != null && wn >= 1 ? 'Week ' + wn : dayWord(wkOf(k), true);
+      var w0 = noon(wkOf(k)), w1 = noon(addDays(wkOf(k), 6)), f = function (d) { return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+      sub = esc(f(w0) + ' – ' + f(w1)) + (live ? ' · <b>' + live + ' live</b>' : '') + (tot ? ' · ' + tot + (tot === 1 ? ' game' : ' games') : '');
+    } else {
+      lab = dayWord(dayOf(k));
+      var d = noon(dayOf(k)).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '');
+      sub = esc(d) + (live ? ' · <b>' + live + ' live</b>' : '') + (tot ? ' · ' + tot + (tot === 1 ? ' game' : ' games') : '');
+    }
+    var ib = function (fn, label, icon) { return '<button class="gdk-ib" data-lg="' + esc(k) + '" onclick="' + fn + '(this.dataset.lg)" aria-label="' + esc(label) + '">' + icon + '</button>'; };
+    var html = '<div class="row"><div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span><span class="sub">' + sub + '</span>' +
+      (ph && !(fb && /^week/i.test(ph)) ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>' +
+      '<div class="bt">' + (typeof openInningsSearch === 'function' ? ib('gdkSearch', 'Search players, teams and rules', IC_SEARCH) : '') +
+      (CUP[k] && typeof openPlayoffPicture === 'function' ? ib('gdkCup', s.name + ' ' + CUP[k], IC_CUP) : '') +
+      (typeof openTeamPrefs === 'function' ? ib('gdkTeams', 'Your ' + s.name + ' teams', IC_TEAMS) : '') +
+      (typeof window.hiwPlay === 'function' ? '<button class="gdk-ib" onclick="hiwPlay(\'games\')" aria-label="How Games works">?</button>' : '') + '</div></div>' +
+      '<div class="gdk-sw"><button class="ar" onclick="gdkShift(-1)" aria-label="' + (fb ? 'Previous week' : 'Previous day') + '">‹</button>' +
+      '<button class="lb" onclick="gdkNow()"' + (now ? ' disabled' : '') + ' aria-label="' + esc(lab + (now ? '' : ', back to ' + (fb ? 'this week' : 'today'))) + '"><b>' + esc(lab) + '</b>' + (now ? '' : '<small>Back to ' + (fb ? 'this week' : 'today') + '</small>') + '</button>' +
+      '<button class="ar" onclick="gdkShift(1)" aria-label="' + (fb ? 'Next week' : 'Next day') + '">›</button></div>';
     if (S.sig.head === html) return;
     S.sig.head = html;
     headEl.innerHTML = html;
   }
+  window.gdkShift = function (dir) {
+    var k = S.sport; if (!k) return;
+    if (FB[k]) S.wk[k] = addDays(wkOf(k), dir * 7); else S.off[k] = Math.max(-365, Math.min(365, (S.off[k] || 0) + dir));
+    S.order = []; S.more = false; render();
+  };
+  window.gdkNow = function () { var k = S.sport; if (!k || atNow(k)) return; delete S.wk[k]; delete S.off[k]; S.order = []; S.more = false; render(); };
+  window.gdkSearch = function () { if (typeof openInningsSearch === 'function') openInningsSearch(); };
+  window.gdkCup = function (k) { if (typeof openPlayoffPicture === 'function') openPlayoffPicture(k); };
+  window.gdkTeams = function (k) { S.prefsAt = 0; if (typeof openTeamPrefs === 'function') openTeamPrefs(k); };
 
   // ── a card ──
   function perHtml(it) {
@@ -299,7 +398,7 @@
     var scored = ph !== 'pre' && g.awayScore != null && g.homeScore != null;
     var cap = ph === 'live' ? '<span class="gdk-st live"><i></i>Live · ' + esc(st) + '</span>'
       : ph === 'post' ? '<span class="gdk-st' + (it.mine ? ' fav' : '') + '">' + (it.mine ? 'Your team · ' : '') + esc(st) + '</span>'
-      : '<span class="gdk-st' + (it.mine ? ' fav' : '') + '">' + (it.mine ? 'Your team · ' : '') + (new Date().getHours() >= 17 ? 'Tonight' : 'Today') + '</span>';
+      : '<span class="gdk-st' + (it.mine ? ' fav' : '') + '">' + (it.mine ? 'Your team · ' : '') + esc(dayWord(it.day || today())) + '</span>';
     var nextBtn = total > 1 ? '<button class="gdk-next" onclick="event.stopPropagation();gdkNext()" aria-label="Next game, ' + pos + ' of ' + total + '">' + pos + ' OF ' + total + UP + '</button>' : '';
     var mid;
     if (scored) {
@@ -362,8 +461,7 @@
   };
   function openItem(it) {
     if (!it || typeof openGameScreen !== 'function') return;
-    var day = typeof _todayLocal === 'function' ? _todayLocal() : null;
-    openGameScreen(it.g.gamePk, it.g.away, it.g.home, it.sport, day);
+    openGameScreen(it.g.gamePk, it.g.away, it.g.home, it.sport, it.day || today());
   }
   window.gdkOpen = function (id) { openItem(S.all.filter(function (it) { return it.id === id; })[0]); };
 
@@ -418,30 +516,47 @@
   }
 
   // ── every game ──
+  function rowHtml(it, top) {
+    var g = it.g, scored = it.ph !== 'pre' && g.awayScore != null && g.homeScore != null, st = statusOf(it.sport, g, it.ph);
+    var aLo = scored && it.ph === 'post' && Number(g.awayScore) < Number(g.homeScore), hLo = scored && it.ph === 'post' && Number(g.homeScore) < Number(g.awayScore);
+    var m = scored
+      ? '<span class="' + (aLo ? 'lo' : '') + '">' + esc(it.la.abbr) + ' ' + esc(g.awayScore) + '</span><i>·</i><span class="' + (hLo ? 'lo' : '') + '">' + esc(it.lh.abbr) + ' ' + esc(g.homeScore) + '</span>'
+      : esc(it.la.abbr) + '<i>@</i>' + esc(it.lh.abbr);
+    var right = (it.mine && it.ph !== 'live' ? '★ ' : '') + st;
+    return '<button class="gdk-row' + (it.id === top ? ' top' : '') + '" data-id="' + esc(it.id) + '" onclick="gdkOpen(this.dataset.id)" style="background:' + rowBg(it) + '" aria-label="' + esc(g.away + ' at ' + g.home + ', ' + st) + '">' +
+      '<span class="m">' + m + '</span><span class="s' + (it.ph === 'live' ? ' live' : it.mine ? ' fav' : '') + '">' + esc(right) + '</span></button>';
+  }
   function renderList() {
-    var s = league(S.sport), all = S.all.slice().sort(listRank);
+    var s = league(S.sport), k = S.sport, fb = !!FB[k], all = S.all.slice();
     if (!all.length) {
       var ph = '';
-      try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[S.sport] : null; ph = (p && p.label) || ''; } catch (e) {}
-      var html0 = '<div class="gdk-empty" style="margin:0">' + (hasData()
-        ? '<b>No ' + esc(s ? label(s) : '') + ' games today</b><small>' + (ph ? esc(ph) + '. ' : '') + 'The full schedule has every other day, the standings and your teams.</small>' +
-          '<button data-lg="' + esc(S.sport) + '" onclick="gdkLeague(this.dataset.lg)">Open ' + esc(s ? label(s) : 'league') + '</button>'
+      try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; } catch (e) {}
+      var o = S.off[k] || 0;
+      var when = fb ? (atNow(k) ? 'this week' : 'that week') : o === 0 ? 'today' : o === -1 ? 'yesterday' : o === 1 ? 'tomorrow' : 'on ' + dayWord(dayOf(k), true);
+      var off = k === 'mlb' && /off/i.test(ph) && typeof pickGamesSport === 'function';
+      var html0 = '<div class="gdk-empty" style="margin:0">' + (loaded(k)
+        ? '<b>No ' + esc(s ? label(s) : '') + ' games ' + esc(when) + '</b><small>' + (ph ? esc(ph) + '. ' : '') + 'Use the arrows above to look at another ' + (fb ? 'week' : 'day') + '.</small>' +
+          (off ? '<button data-lg="mlb" onclick="gdkLeague(this.dataset.lg)">Player search, compare and Hot Stove</button>' : '')
         : '<small>Loading games…</small>') + '</div>';
       if (S.sig.list !== html0) { S.sig.list = html0; listEl.innerHTML = html0; }
       return;
     }
-    var CAP = 14, show = S.more || all.length <= CAP + 2 ? all : all.slice(0, CAP);
-    var top = S.order[0];
-    var html = '<div class="gdk-lh"><span>All ' + all.length + (all.length === 1 ? ' game' : ' games') + '</span></div>' + show.map(function (it) {
-      var g = it.g, scored = it.ph !== 'pre' && g.awayScore != null && g.homeScore != null, st = statusOf(it.sport, g, it.ph);
-      var aLo = scored && it.ph === 'post' && Number(g.awayScore) < Number(g.homeScore), hLo = scored && it.ph === 'post' && Number(g.homeScore) < Number(g.awayScore);
-      var m = scored
-        ? '<span class="' + (aLo ? 'lo' : '') + '">' + esc(it.la.abbr) + ' ' + esc(g.awayScore) + '</span><i>·</i><span class="' + (hLo ? 'lo' : '') + '">' + esc(it.lh.abbr) + ' ' + esc(g.homeScore) + '</span>'
-        : esc(it.la.abbr) + '<i>@</i>' + esc(it.lh.abbr);
-      var right = (it.mine && it.ph !== 'live' ? '★ ' : '') + st;
-      return '<button class="gdk-row' + (it.id === top ? ' top' : '') + '" data-id="' + esc(it.id) + '" onclick="gdkOpen(this.dataset.id)" style="background:' + rowBg(it) + '" aria-label="' + esc(g.away + ' at ' + g.home + ', ' + st) + '">' +
-        '<span class="m">' + m + '</span><span class="s' + (it.ph === 'live' ? ' live' : it.mine ? ' fav' : '') + '">' + esc(right) + '</span></button>';
-    }).join('') + (show.length < all.length ? '<button class="gdk-more" onclick="gdkMore()">Show all ' + all.length + ' games</button>' : '');
+    var top = S.order[0], html;
+    if (fb) {
+      // the week, a day at a time
+      all.sort(function (a, b) { return (a.day < b.day ? -1 : a.day > b.day ? 1 : 0) || (a.t - b.t); });
+      var CAPW = 40, showW = S.more || all.length <= CAPW + 4 ? all : all.slice(0, CAPW), last = null;
+      html = showW.map(function (it) {
+        var hd = it.day !== last ? '<div class="gdk-lh' + (last ? ' gap' : '') + '"><span>' + esc(dayWord(it.day)) + '</span></div>' : '';
+        last = it.day;
+        return hd + rowHtml(it, top);
+      }).join('') + (showW.length < all.length ? '<button class="gdk-more" onclick="gdkMore()">Show all ' + all.length + ' games</button>' : '');
+    } else {
+      all.sort(listRank);
+      var CAP = 14, show = S.more || all.length <= CAP + 2 ? all : all.slice(0, CAP);
+      html = '<div class="gdk-lh"><span>All ' + all.length + (all.length === 1 ? ' game' : ' games') + '</span></div>' + show.map(function (it) { return rowHtml(it, top); }).join('') +
+        (show.length < all.length ? '<button class="gdk-more" onclick="gdkMore()">Show all ' + all.length + ' games</button>' : '');
+    }
     if (S.sig.list !== html) { S.sig.list = html; listEl.innerHTML = html; }
   }
   window.gdkMore = function () { S.more = true; renderList(); };
@@ -454,6 +569,7 @@
     S.sport = pickDefault(c);
     if (hasData()) S.auto = true; // the league it opened on stays put while the page is up
     S.all = build(S.sport);
+    ensure(S.sport);
     var items = {}, ids = [];
     S.all.filter(inStack).sort(stackRank).forEach(function (it) { items[it.id] = it; ids.push(it.id); });
     // keep the pile where you left it; a game that just went live joins at the front
@@ -469,13 +585,23 @@
   window.gdkPick = function (key) {
     var s = league(key); if (!s) return;
     if (!inPage(s)) { if (typeof pickGamesSport === 'function') pickGamesSport(key); return; }
-    if (key === S.sport && S.picked) return;
+    // tapping the league you're on brings it back to today (or this week)
+    if (key === S.sport && S.picked && atNow(key)) return;
+    delete S.wk[key]; delete S.off[key];
     S.sport = key; S.picked = true; S.order = []; S.more = false;
     try { localStorage.setItem(KEY + '_lg', key); } catch (e) {}
     render(); railReveal();
   };
-  // the league's own page: its schedule by day, standings, teams — as its tile always opened
+  // v7.96.0: only baseball's offseason page (player search, compare, Hot Stove) is still opened from here
   window.gdkLeague = function (key) { if (typeof pickGamesSport === 'function') pickGamesSport(key); };
+  // …and the Games tab always lands on this page, never on a league's old schedule
+  if (typeof window.glassGames === 'function') {
+    window.glassGames = function () {
+      if (!window._glGamesOnce && typeof playSportsHub === 'function') { window._glGamesOnce = true; playSportsHub(); return; }
+      window._glGamesOnce = true;
+      nav('games-picker');
+    };
+  }
   window.gdkRender = render;
 
   function load(force) {
@@ -489,7 +615,7 @@
     if (typeof orig !== 'function') return;
     window[name] = function () {
       var r = orig.apply(this, arguments);
-      try { if (name === 'renderGamesSportGrid') { S.auto = false; S.more = false; render(); load(false).then(railReveal); } else render(); } catch (e) { console.error('[games deck]', e); }
+      try { if (name === 'renderGamesSportGrid') { S.auto = false; S.more = false; S.prefsAt = 0; render(); load(false).then(railReveal); } else render(); } catch (e) { console.error('[games deck]', e); }
       return r;
     };
   });

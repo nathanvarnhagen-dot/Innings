@@ -23,18 +23,25 @@ html.gdk-on.glass #screen-games-picker .scroll-bare{padding-top:calc(env(safe-ar
 .gdk-lg .lv i{width:6px;height:6px;border-radius:50%;background:#1E9E52}
 
 /* the league line */
-#gdk-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:18px 18px 0}
-#gdk-head .tx{min-width:0;display:flex;flex-direction:column;gap:2px}
+#gdk-head{padding:18px 18px 0}
+#gdk-head .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+#gdk-head .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 #gdk-head .nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:44px;line-height:40px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #gdk-head .nm.long{font-size:30px;line-height:34px}
-#gdk-head .tx{flex:1}
 #gdk-head .sub{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#B9B3E0;white-space:nowrap}
-#gdk-head .ph{font-size:11.5px;font-weight:600;color:#D9D5F5}
 #gdk-head .sub b{color:#8CF0B8;font-weight:700}
-#gdk-head .bt{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.gdk-q{width:44px;height:44px;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.gdk-q span{width:26px;height:26px;border-radius:50%;border:1px solid rgba(168,159,232,.45);color:#B9B3E0;font:600 13px/26px -apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
-.gdk-all{height:36px;padding:0 13px;border-radius:18px;border:1px solid rgba(168,159,232,.4);background:rgba(255,255,255,.05);color:#F3F1FF;font-family:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+#gdk-head .ph{font-size:11.5px;font-weight:600;color:#D9D5F5}
+#gdk-head .bt{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.gdk-ib{width:40px;height:44px;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;color:#D9D5F5;font:600 15px/1 -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gdk-ib::before{content:'';position:absolute;width:36px;height:36px;border-radius:50%;border:1px solid rgba(168,159,232,.38);background:rgba(255,255,255,.05)}
+.gdk-ib{position:relative}
+.gdk-ib svg{position:relative}
+.gdk-sw{display:flex;align-items:center;gap:8px;margin-top:14px;height:48px;padding:0 4px;border-radius:24px;background:rgba(255,255,255,.055);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.gdk-sw .ar{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#F3F1FF;font:400 24px/1 -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer}
+.gdk-sw .lb{flex:1;height:44px;border:0;background:transparent;color:#F3F1FF;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer}
+.gdk-sw .lb:disabled{cursor:default;opacity:1}
+.gdk-sw .lb b{font-size:16px;font-weight:700}
+.gdk-sw .lb small{font-size:10.5px;font-weight:600;color:#C9C2F5}
 
 /* the stack */
 #gdk-stage{position:relative;margin-top:14px}
@@ -94,6 +101,7 @@ html.gdk-on.glass #screen-games-picker .scroll-bare{padding-top:calc(env(safe-ar
 
 /* every game */
 #gdk-list{display:flex;flex-direction:column;gap:6px;padding:18px 16px 4px}
+.gdk-lh.gap{margin-top:10px}
 .gdk-lh{display:flex;justify-content:space-between;align-items:baseline;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1.6px;text-transform:uppercase;color:#B9B3E0;padding:0 4px 2px}
 .gdk-row{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0 16px;box-sizing:border-box;border:0;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);font-family:inherit;color:#F3F1FF;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .gdk-row.top{box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 0 0 1.5px #F3F1FF}

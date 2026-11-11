@@ -171,7 +171,7 @@
       sub: 'Pick a league along the top. Its live games and your teams are a stack of cards.',
       items: function () {
         return [
-          { icon: 'bars', title: 'Leagues along the top', body: 'Tap a league to see it right here. A count shows how many of its games are live. Multi view is first in the row, and Full schedule opens the league\u2019s own page.' },
+          { icon: 'bars', title: 'Leagues along the top', body: 'Tap a league to see it right here. A count shows how many of its games are live. Multi view is first in the row. The arrows under the league\u2019s name step through days, or weeks for football, without leaving the page.' },
           { icon: 'trophy', title: 'Live games and your teams, stacked', body: 'Swipe up for the next game and down to go back. Tap a card to open the game. Only live games and your teams\u2019 games are in the stack.' },
           { icon: 'history', title: 'More on a live card', body: 'The score by quarter, period or inning, the win chance when it\u2019s available, and where the game stands: fouls and timeouts, down and distance, shots, outs and runners.' },
           { icon: 'friends', title: 'Every game underneath', body: 'All of the day\u2019s games are listed under the stack in the teams\u2019 colors. Tap one to open it. Prefer the old tiles? Open Innings with ?games=tiles.' }
