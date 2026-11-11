@@ -63,6 +63,7 @@
 <link rel="stylesheet" href="css/you-were-there.css?v=7.50.1">
 <link rel="stylesheet" href="css/glass.css?v=7.50.1">
 <link rel="stylesheet" href="css/home-stack.css?v=7.94.2">
+<link rel="stylesheet" href="css/games-deck.css?v=7.95.0">
 <link rel="stylesheet" href="css/team-follow.css?v=7.94.0">
 <link rel="stylesheet" href="css/multi-view.css?v=7.59.0">
 <link rel="stylesheet" href="css/msg-spotlight.css?v=7.50.1">
@@ -589,7 +590,8 @@
   </div>
   <div class="scroll-bare" style="flex:1;overflow-y:auto;background:var(--bg);padding:18px 16px 24px">
     <div id="games-picker-recaps" class="rc-rings-wrap" style="display:none"></div>
-    <div style="font-size:14.5px;color:var(--mid);line-height:1.5;padding:0 4px 14px">Which league are we watching tonight?</div>
+    <!-- v7.95.0: the league rail, the stack and the game list are added above this by js/games/games-deck.js -->
+    <div id="games-picker-ask" style="font-size:14.5px;color:var(--mid);line-height:1.5;padding:0 4px 14px">Which league are we watching tonight?</div>
     <!-- v7.41.0: a league in the playoffs gets a card here instead of a tile (js/games/breaks-weeks-and-flourishes.js) -->
     <div id="games-playoff-cards" style="display:none"></div>
     <div id="games-sport-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"></div>
@@ -4316,7 +4318,7 @@
     </div>
   </div>
 </div>
-<script src="js/core/build.js?v=7.94.2"></script>
+<script src="js/core/build.js?v=7.95.0"></script>
 <script src="js/core/no-zoom.js?v=7.64.0"></script>
 <script src="js/core/native-bridge.js?v=7.50.1"></script>
 <script src="js/core/navigation.js?v=7.75.1"></script>
@@ -4367,7 +4369,7 @@
 <script src="js/events/osl-photos.js?v=7.50.1"></script>
 <script src="js/social/notifications.js?v=7.58.0"></script>
 <script src="js/social/friends-and-profiles.js?v=7.75.0"></script>
-<script src="js/social/presence.js?v=7.92.0"></script>
+<script src="js/social/presence.js?v=7.95.0"></script>
 <script src="js/games/rulebooks.js?v=7.92.0"></script>
 <script src="js/games/memory-ticket.js?v=7.82.0"></script>
 <script src="js/core/desktop-layout.js?v=7.91.0"></script>
@@ -4416,6 +4418,7 @@
 <script src="js/games/field-sports.js?v=7.92.0"></script>
 <script src="js/games/compare.js?v=7.89.1"></script>
 <script src="js/games/offseason.js?v=7.89.1"></script>
+<script src="js/games/games-deck.js?v=7.95.0"></script>
 <script src="js/core/overlay-home.js?v=7.50.1"></script>
 <script src="js/core/update-check.js?v=7.50.1"></script>
 <script src="js/core/how-it-works.js?v=7.85.0"></script>

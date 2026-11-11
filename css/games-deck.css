@@ -1,0 +1,113 @@
+/* ══ GAMES · THE LEAGUE RAIL AND THE STACK (v7.95.0) ══════════════════════
+   js/games/games-deck.js. The Games page is a rail of leagues on top, the
+   picked league's live games and your teams' games as a stack of cards, and
+   every game of the day in a list under it. The old tiles are still drawn
+   (hidden) — ?games=tiles brings them back. */
+#gdk{display:none}
+html.gdk-on #gdk{display:block;margin:0 -16px;color:#F3F1FF}
+html.gdk-on #games-picker-ask,html.gdk-on #games-sport-grid{display:none!important}
+html.gdk-on.glass #screen-games-picker>div:first-child{display:none!important}
+html.gdk-on.glass #screen-games-picker .scroll-bare{padding-top:calc(env(safe-area-inset-top,20px) + 10px)!important;background:radial-gradient(120% 420px at 50% 0,#2A2466 0,#130F30 60%,#0D0A22 100%)}
+
+/* the rail */
+#gdk-rail{display:flex;gap:6px;padding:4px 14px 2px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#gdk-rail::-webkit-scrollbar{display:none}
+.gdk-lg{position:relative;flex:0 0 60px;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;padding:0;font-family:inherit;color:#B9B3E0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gdk-lg .em{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font-size:25px;line-height:1;background:rgba(255,255,255,.06);border:1px solid rgba(168,159,232,.25);color:#D9D5F5}
+.gdk-lg .nm{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.gdk-lg .wip{font-size:8.5px;font-weight:600;letter-spacing:.04em;color:#B9B3E0;margin-top:-4px;white-space:nowrap}
+.gdk-lg.on{color:#fff}
+.gdk-lg.on .em{background:rgba(168,159,232,.3);border:2px solid #F3F1FF;box-shadow:0 0 0 3px rgba(168,159,232,.3)}
+.gdk-lg.quiet .em{opacity:.6}
+.gdk-lg .lv{position:absolute;top:-3px;right:-2px;display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:9px;background:#F3F1FF;color:#1A1640;font-size:10px;font-weight:700;white-space:nowrap}
+.gdk-lg .lv i{width:6px;height:6px;border-radius:50%;background:#1E9E52}
+
+/* the league line */
+#gdk-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:18px 18px 0}
+#gdk-head .tx{min-width:0;display:flex;flex-direction:column;gap:2px}
+#gdk-head .nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:44px;line-height:40px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gdk-head .nm.long{font-size:30px;line-height:34px}
+#gdk-head .tx{flex:1}
+#gdk-head .sub{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#B9B3E0;white-space:nowrap}
+#gdk-head .ph{font-size:11.5px;font-weight:600;color:#D9D5F5}
+#gdk-head .sub b{color:#8CF0B8;font-weight:700}
+#gdk-head .bt{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.gdk-q{width:44px;height:44px;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.gdk-q span{width:26px;height:26px;border-radius:50%;border:1px solid rgba(168,159,232,.45);color:#B9B3E0;font:600 13px/26px -apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
+.gdk-all{height:36px;padding:0 13px;border-radius:18px;border:1px solid rgba(168,159,232,.4);background:rgba(255,255,255,.05);color:#F3F1FF;font-family:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+
+/* the stack */
+#gdk-stage{position:relative;margin-top:14px}
+#gdk-glow{position:absolute;left:0;right:0;top:-16px;height:300px;pointer-events:none;overflow:hidden}
+#gdk-glow i{position:absolute;top:10px;width:190px;height:270px;border-radius:50%;filter:blur(46px);opacity:.6;transition:background-color .6s ease;background-color:transparent}
+#gdk-glow i:first-child{left:-20px}
+#gdk-glow i:last-child{right:-20px}
+#gdk-deck{position:relative;margin:0 16px;touch-action:none;-webkit-user-select:none;user-select:none}
+#gdk-deck.has-peek{margin-bottom:34px}
+.gdk-card{position:relative;z-index:3;box-sizing:border-box;min-height:150px;padding:12px 18px 14px;border-radius:26px;display:flex;flex-direction:column;gap:10px;color:#F3F1FF;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 22px 44px rgba(0,0,0,.5);cursor:pointer;-webkit-tap-highlight-color:transparent;will-change:transform,opacity}
+.gdk-card.behind{position:absolute;left:0;right:0;top:0;bottom:0;z-index:1;overflow:hidden;transform:translateY(12px) scale(.94);transition:transform .5s cubic-bezier(.34,1.4,.64,1);pointer-events:none}
+.gdk-card.behind.fwd{transform:none}
+.gdk-card.out{transform:translateY(-96px) scale(.84)!important;opacity:0;filter:blur(10px);transition:transform .38s cubic-bezier(.4,0,.2,1),opacity .38s ease,filter .38s ease!important}
+.gdk-card.settle{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.gdk-card.in{animation:gdk-in .34s cubic-bezier(.22,1,.36,1)}
+@keyframes gdk-in{from{transform:translateY(-96px) scale(.84);opacity:0;filter:blur(10px)}to{transform:none;opacity:1;filter:none}}
+.gdk-pk{position:absolute;height:44px;border-radius:0 0 24px 24px;box-shadow:inset 0 -1px 0 rgba(255,255,255,.1);z-index:0}
+.gdk-pk.p1{left:12px;right:12px;bottom:-14px;opacity:.8}
+.gdk-pk.p2{left:24px;right:24px;bottom:-28px;opacity:.5}
+.gdk-top{display:flex;align-items:center;justify-content:space-between;min-height:32px}
+.gdk-st{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#D9D5F5}
+.gdk-st.live{color:#8CF0B8}
+.gdk-st.live i{width:7px;height:7px;border-radius:50%;background:#8CF0B8}
+.gdk-st.fav{color:#FFD66B}
+.gdk-next{height:44px;margin:-6px -8px -6px 0;padding:0 10px 0 12px;border:0;border-radius:22px;background:transparent;display:flex;align-items:center;gap:6px;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.11em;color:#D9D5F5;cursor:pointer}
+.gdk-board{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gdk-tm{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gdk-tm.r{align-items:flex-end;text-align:right}
+.gdk-tm b{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;line-height:28px;letter-spacing:.6px}
+.gdk-tm small{font-size:12px;color:#D9D5F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
+.gdk-tm small.fav{color:#FFD66B;font-weight:700}
+.gdk-sc{display:flex;align-items:baseline;gap:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:50px;line-height:50px;font-variant-numeric:tabular-nums;flex-shrink:0}
+.gdk-sc i{font-style:normal;font-size:20px;font-weight:600;color:#B9B3E0}
+.gdk-sc .dim{color:rgba(243,241,255,.62)}
+.gdk-sc.big3{font-size:42px;gap:8px}
+.gdk-when{display:flex;flex-direction:column;align-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;flex-shrink:0}
+.gdk-when small{font-size:14px;font-weight:600;color:#D9D5F5;letter-spacing:.06em}
+.gdk-when span{font-size:42px;line-height:42px}
+.gdk-when span em{font-style:normal;font-size:18px;margin-left:3px;color:#D9D5F5}
+.gdk-pn{border-radius:14px;background:rgba(0,0,0,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.gdk-ls{display:flex;align-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;line-height:20px;font-variant-numeric:tabular-nums}
+.gdk-ls.hd{font-family:inherit;font-size:10px;letter-spacing:.11em;color:#B9B3E0;line-height:14px}
+.gdk-ls .t{width:48px;letter-spacing:.6px;flex-shrink:0}
+.gdk-ls .c{flex:1;text-align:center;color:#D9D5F5;min-width:0}
+.gdk-ls .tot{width:40px;text-align:right;flex-shrink:0}
+.gdk-rule{height:1px;margin:6px 0;background:rgba(243,241,255,.14)}
+.gdk-wp{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}
+.gdk-wp .l{width:70px;white-space:nowrap}
+.gdk-wp .r{width:70px;text-align:right;white-space:nowrap}
+.gdk-wp .bar{flex:1;height:5px;border-radius:3px;background:rgba(243,241,255,.3);overflow:hidden}
+.gdk-wp .bar i{display:block;height:5px;background:#F3F1FF}
+.gdk-fx{display:flex;justify-content:space-between;gap:10px;padding-top:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#D9D5F5}
+.gdk-fx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gdk-fx .gold{color:#FFD66B}
+.gdk-pn>.gdk-fx:first-child{padding-top:0}
+.gdk-last{font-size:12px;font-weight:600;color:#F3F1FF;padding-left:2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* every game */
+#gdk-list{display:flex;flex-direction:column;gap:6px;padding:18px 16px 4px}
+.gdk-lh{display:flex;justify-content:space-between;align-items:baseline;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1.6px;text-transform:uppercase;color:#B9B3E0;padding:0 4px 2px}
+.gdk-row{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0 16px;box-sizing:border-box;border:0;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);font-family:inherit;color:#F3F1FF;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gdk-row.top{box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 0 0 1.5px #F3F1FF}
+.gdk-row .m{flex:1;min-width:0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;letter-spacing:.6px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gdk-row .m i{font-style:normal;color:rgba(243,241,255,.6);margin:0 6px}
+.gdk-row .m .lo{color:rgba(243,241,255,.66)}
+.gdk-row .s{flex-shrink:0;font-size:12px;font-weight:700;letter-spacing:.05em;color:#D9D5F5;text-align:right}
+.gdk-row .s.live{color:#8CF0B8}
+.gdk-row .s.fav{color:#FFD66B}
+.gdk-more{height:44px;border:1px solid rgba(168,159,232,.3);border-radius:16px;background:transparent;color:#F3F1FF;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.gdk-empty{margin:14px 16px 0;padding:22px 18px;border-radius:22px;background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.gdk-empty b{font-size:16px;font-weight:700}
+.gdk-empty small{font-size:13px;color:#B9B3E0;line-height:1.45}
+.gdk-empty button{margin-top:8px;height:44px;padding:0 18px;border:0;border-radius:22px;background:#F3F1FF;color:#1A1640;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+html.gdk-on #games-playoff-cards{margin-top:18px}
+html.gdk-on #games-picker-recaps{margin-top:18px}
+@media (prefers-reduced-motion:reduce){.gdk-card,.gdk-card.behind,.gdk-card.out{transition:opacity .2s ease!important;filter:none!important}.gdk-card.out{transform:none!important}.gdk-card.in{animation:none}}

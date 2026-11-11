@@ -397,6 +397,25 @@ function _schedRow(g) {
     sit: state === 'in' ? { sogA: a.sog != null ? a.sog : null, sogH: h.sog != null ? h.sog : null, pp: null,
       last: last ? ((_d(last.name) || _lastName((_d(last.firstName) + ' ' + _d(last.lastName)).trim())) + ' · ' + (last.teamAbbrev && (last.teamAbbrev.default || last.teamAbbrev) || '') + ' · ' + _periodTag({ number: last.period, periodType: last.periodDescriptor && last.periodDescriptor.periodType }) + ' ' + _clock(last.timeInPeriod) + (last.strength && last.strength !== 'ev' ? ' · ' + String(last.strength).toUpperCase() : '')).replace(/ · $/, '') : null } : null
   };
+  // v7.95.0: goals by period, for the cards on the Games page
+  try {
+    if (state !== 'pre') {
+      var cur = Number(g.periodDescriptor && g.periodDescriptor.number) || 0;
+      var n = Math.max(state === 'post' ? 3 : 1, Math.min(cur, 8));
+      var pa = [], ph = [];
+      for (var i = 0; i < n; i++) { pa.push(i < cur || state === 'post' ? 0 : null); ph.push(i < cur || state === 'post' ? 0 : null); }
+      goals.forEach(function (x) {
+        var d = x.periodDescriptor || {}, num = Number(x.period || d.number);
+        if (!num || String(d.periodType || '').toUpperCase() === 'SO') return;
+        while (pa.length < num && pa.length < 8) { pa.push(0); ph.push(0); }
+        if (num > pa.length) return;
+        var ab = x.teamAbbrev && (x.teamAbbrev.default || x.teamAbbrev);
+        if (ab && ab === a.abbrev) pa[num - 1] = (pa[num - 1] || 0) + 1;
+        else if (ab && ab === h.abbrev) ph[num - 1] = (ph[num - 1] || 0) + 1;
+      });
+      row.per = { a: pa, h: ph };
+    }
+  } catch (e) {}
   return row;
 }
 function _schedLanding(row, land, raw) {

@@ -56,7 +56,9 @@ module.exports = async function handler(req, res) {
             // v7.16.1: playoff games often go up before their time is set
             startTimeTBD: !!(g.status && g.status.startTimeTBD),
             // v7.93.0: where to watch, for Home's upcoming cards
-            network: _schedNetwork(g.broadcasts)
+            network: _schedNetwork(g.broadcasts),
+            // v7.95.0: runs by inning, for the cards on the Games page
+            per: _schedInnings(g.linescore)
           }, _postponementFields(g, d), _postseasonFields(g)));
         });
       });
@@ -3028,6 +3030,14 @@ function _schedBases(ls) {
   var o = ls && ls.offense;
   if (!o) return null;
   return { first: !!o.first, second: !!o.second, third: !!o.third };
+}
+function _schedInnings(ls) {
+  try {
+    var inn = (ls && ls.innings) || [];
+    if (!inn.length) return null;
+    var f = function (k) { return inn.map(function (i) { var v = i && i[k] && i[k].runs; return v == null ? null : Number(v); }); };
+    return { a: f('away'), h: f('home') };
+  } catch (e) { return null; }
 }
 function _schedPerson(p) { return (p && (p.fullName || p.name)) || null; }
 

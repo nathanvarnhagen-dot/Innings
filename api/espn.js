@@ -342,8 +342,27 @@ function summarizeEvent(event) {
     awayRank: _eventRank(parts.away),
     homeRank: _eventRank(parts.home),
     // v7.93.0: where to watch, for Home's upcoming cards
-    network: _eventNetwork(parts.comp)
+    network: _eventNetwork(parts.comp),
+    // v7.95.0: each side's points by period and, while ESPN sends it, the home
+    // side's live win chance (0-100) — for the cards on the Games page
+    per: _eventPer(parts),
+    wp: _eventWp(parts)
   };
+}
+function _eventPer(parts) {
+  try {
+    var f = function (c) { return ((c && c.linescores) || []).map(function (l) { var v = l && (l.value != null ? l.value : l.displayValue); v = v == null || v === '' ? NaN : Number(v); return isFinite(v) ? v : null; }); };
+    var a = f(parts.away), h = f(parts.home);
+    return a.length || h.length ? { a: a, h: h } : null;
+  } catch (e) { return null; }
+}
+function _eventWp(parts) {
+  try {
+    var p = parts.comp && parts.comp.situation && parts.comp.situation.lastPlay && parts.comp.situation.lastPlay.probability;
+    if (!p || p.homeWinPercentage == null) return null;
+    var v = Number(p.homeWinPercentage);
+    return isFinite(v) && v >= 0 && v <= 1 ? Math.round(v * 100) : null;
+  } catch (e) { return null; }
 }
 // v7.93.0: the TV / streaming channels ESPN lists for a game — national
 // first, otherwise the local ones. US only; radio is left out.

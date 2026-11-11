@@ -108,3 +108,6 @@ phones fetch the new files instead of an old copy. The build stamp lives in
 | `js/core/resume-refresh.js` | 1 KB |
 | `js/games/statcast.js` | 28 KB |
 | `js/players/player-sheet-drag.js` | 2 KB |
+
+### Games page (v7.95.0)
+`js/games/games-deck.js` + `css/games-deck.css` draw the Games page: the league rail, the stack of live games and your teams' games, and the day's game list. The old tiles are still built by `js/games/breaks-weeks-and-flourishes.js` and are hidden while it is on; `?games=tiles` brings them back, `?games=deck` turns it on again.
