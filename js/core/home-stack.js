@@ -359,10 +359,10 @@
     S.swiped = Date.now();
     if (dy < 0) next(); else prev();
   }
-  deck.addEventListener('pointerdown', function (e) { if (e.target.closest('.stk-card')) down(e.clientY, e.clientX); });
+  deck.addEventListener('pointerdown', function (e) { if (e.target.closest('.stk-card.front')) down(e.clientY, e.clientX); });
   deck.addEventListener('pointerup', function (e) { up(e.clientY, e.clientX); });
   deck.addEventListener('pointercancel', function () { startY = null; });
-  deck.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t && e.target.closest('.stk-card')) down(t.clientY, t.clientX); }, { passive: true });
+  deck.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t && e.target.closest('.stk-card.front')) down(t.clientY, t.clientX); }, { passive: true });
   deck.addEventListener('touchend', function (e) { var t = e.changedTouches[0]; if (t) up(t.clientY, t.clientX); }, { passive: true });
   function tap(e) {
     if (Date.now() - S.swiped < 450) return;
@@ -409,24 +409,72 @@
       });
   };
 
-  // ── Add a team: pick a league, then the Teams screen you already know ──
-  window.stkAdd = function () {
+  // ── Add a team (v7.93.1): a glass sheet of league tiles, each showing the
+  // teams you already have there. It slides up, follows your finger when you
+  // drag it down, and slides away (or tap Done / outside it). ──
+  function leagueTile(s) {
+    var p = S.prefs[s.key] || {}, fav = p.favorite, n = (p.following || []).filter(function (t) { return t !== fav; }).length;
+    var dot = fav ? _glTeam(s.key, fav).bg : null;
+    var sub = fav ? '<span class="fav">' + IC.star + esc(_glShort(fav)) + '</span>' + (n ? '<span> +' + n + '</span>' : '')
+      : n ? '<span>' + n + (n === 1 ? ' team' : ' teams') + '</span>' : '<span class="none">None yet</span>';
+    return '<button class="stk-lg" onclick="stkAddLeague(\'' + s.key + '\')"><i style="background:' + (dot || 'rgba(207,199,255,.22)') + '"></i>' +
+      '<span class="tx"><b>' + esc(s.key === 'cfb' ? 'College FB' : s.key === 'cbb' ? 'College BB' : s.name) + '</b><small>' + sub + '</small></span>' + IC.plus + '</button>';
+  }
+  function sheetEl() {
     var sh = document.getElementById('stk-sheet');
-    if (!sh) {
-      sh = document.createElement('div'); sh.id = 'stk-sheet';
-      sh.innerHTML = '<div class="stk-shade" onclick="stkAddClose()"></div><div class="stk-panel" role="dialog" aria-modal="true" aria-label="Add a team"><div class="grab"></div>' +
-        '<b>Add a team</b><small>Pick a league. Star your favorite, check any team to follow it.</small><div class="lst">' +
-        GAMES_SPORTS.map(function (s) { return '<button onclick="stkAddLeague(\'' + s.key + '\')"><span>' + esc(s.name) + '</span>' + IC.chev + '</button>'; }).join('') +
-        '</div></div>';
-      (document.querySelector('.app') || document.body).appendChild(sh);
-    }
+    if (sh) return sh;
+    sh = document.createElement('div'); sh.id = 'stk-sheet';
+    sh.innerHTML = '<div class="stk-shade"></div><div class="stk-panel" role="dialog" aria-modal="true" aria-label="Add a team">' +
+      '<div class="stk-grabz"><div class="grab"></div></div>' +
+      '<div class="hd"><span><b>Add a team</b><small>Pick a league</small></span><button class="done" onclick="stkAddClose()">Done</button></div>' +
+      '<div class="grid"></div></div>';
+    (document.querySelector('.app') || document.body).appendChild(sh);
+    var panel = sh.querySelector('.stk-panel'), shade = sh.querySelector('.stk-shade');
+    shade.addEventListener('click', function () { stkAddClose(); });
+    // drag the sheet down to put it away
+    var y0 = null, t0 = 0, dy = 0;
+    var start = function (y) { y0 = y; t0 = Date.now(); dy = 0; panel.style.transition = 'none'; shade.style.transition = 'none'; };
+    var move = function (y) {
+      if (y0 == null) return;
+      dy = Math.max(0, y - y0);
+      panel.style.transform = 'translateY(' + dy + 'px)';
+      shade.style.opacity = Math.max(0, 1 - dy / (panel.offsetHeight || 400));
+    };
+    var end = function () {
+      if (y0 == null) return;
+      var v = dy / Math.max(1, Date.now() - t0); y0 = null;
+      panel.style.transition = ''; shade.style.transition = '';
+      if (dy > 90 || (dy > 24 && v > 0.5)) { S.sheetDrag = Date.now(); stkAddClose(); }
+      else { panel.style.transform = ''; shade.style.opacity = ''; }
+    };
+    panel.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) start(t.clientY); }, { passive: true });
+    panel.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) { move(t.clientY); if (dy > 0 && e.cancelable) e.preventDefault(); } }, { passive: false });
+    panel.addEventListener('touchend', end);
+    panel.addEventListener('touchcancel', end);
+    panel.addEventListener('mousedown', function (e) { start(e.clientY); var mm = function (ev) { move(ev.clientY); }, mu = function () { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); end(); }; document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); });
+    return sh;
+  }
+  window.stkAdd = function () {
+    var sh = sheetEl(), panel = sh.querySelector('.stk-panel'), shade = sh.querySelector('.stk-shade');
+    sh.querySelector('.grid').innerHTML = GAMES_SPORTS.map(leagueTile).join('');
+    clearTimeout(S.sheetT);
+    panel.style.transform = ''; shade.style.opacity = '';
     sh.classList.add('on');
+    void sh.offsetHeight; // start from below the screen, then slide up
+    sh.classList.add('show');
   };
-  window.stkAddClose = function () { var sh = document.getElementById('stk-sheet'); if (sh) sh.classList.remove('on'); };
+  window.stkAddClose = function (then) {
+    var sh = document.getElementById('stk-sheet'); if (!sh) return;
+    var panel = sh.querySelector('.stk-panel'), shade = sh.querySelector('.stk-shade');
+    panel.style.transform = ''; shade.style.opacity = '';
+    sh.classList.remove('show');
+    clearTimeout(S.sheetT);
+    S.sheetT = setTimeout(function () { sh.classList.remove('on'); if (typeof then === 'function') then(); }, 340);
+  };
   window.stkAddLeague = function (key) {
-    stkAddClose();
+    if (S.sheetDrag && Date.now() - S.sheetDrag < 400) return; // that was a drag, not a tap
     S.prefsDirty = true;
-    if (typeof openTeamPrefs === 'function') openTeamPrefs(key);
+    stkAddClose(function () { if (typeof openTeamPrefs === 'function') openTeamPrefs(key); });
   };
 
   // ── under the pile: last night's recaps, your plans ──
