@@ -166,6 +166,19 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.93.0', at: '2026-11-10T23:55:00-08:00',
+      title: 'A new Home',
+      sub: 'Your games as a pile of cards, the one that matters most on top.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Swipe up for the next game', body: 'The top card lifts and slips to the back of the pile. Swipe down to go back, tap the top card to open the game, or tap any card behind it to bring it forward.' },
+          { icon: 'trophy', title: 'It knows your games', body: 'Your favorite teams come first, then games you or a friend are in, teams you follow, playoff games and everything else that\u2019s live, in every sport.' },
+          { icon: 'friends', title: 'Follow from the card', body: 'Tap + Follow under any team to put it on your Home. Add at the top right opens every league.' },
+          { icon: 'history', title: 'Yesterday and tomorrow', body: 'Tap Tonight to switch days. Upcoming games show their start time and the network. Prefer the old tiles? Profile \u203a Home \u203a Tiles.' }
+        ];
+      }
+    },
+    {
       id: 'v7.92.0', at: '2026-11-07T20:30:00-08:00',
       title: 'How every game ends',
       sub: 'Overtime, extra innings, shootouts and tiebreaks, for every sport.',

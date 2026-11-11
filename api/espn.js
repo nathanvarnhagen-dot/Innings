@@ -340,8 +340,30 @@ function summarizeEvent(event) {
     goals: _eventGoals(parts), // v7.59.0: soccer only
     // v7.91.0: a Top 25 team's poll rank (college), null for everyone else
     awayRank: _eventRank(parts.away),
-    homeRank: _eventRank(parts.home)
+    homeRank: _eventRank(parts.home),
+    // v7.93.0: where to watch, for Home's upcoming cards
+    network: _eventNetwork(parts.comp)
   };
+}
+// v7.93.0: the TV / streaming channels ESPN lists for a game — national
+// first, otherwise the local ones. US only; radio is left out.
+function _eventNetwork(comp) {
+  try {
+    var nat = [], loc = [];
+    var add = function (name, market) {
+      name = String(name || '').trim(); if (!name) return;
+      var arr = /home|away/i.test(String(market || '')) ? loc : nat;
+      if (arr.indexOf(name) === -1) arr.push(name);
+    };
+    ((comp && comp.geoBroadcasts) || []).forEach(function (b) {
+      if (!b || (b.region && String(b.region).toLowerCase() !== 'us')) return;
+      if (String((b.type && b.type.shortName) || 'TV').toLowerCase() === 'radio') return;
+      add(b.media && b.media.shortName, b.market && b.market.type);
+    });
+    if (!nat.length && !loc.length) ((comp && comp.broadcasts) || []).forEach(function (b) { ((b && b.names) || []).forEach(function (n) { add(n, b.market); }); });
+    var pick = nat.length ? nat : loc;
+    return pick.length ? pick.slice(0, 2).join(' · ') : null;
+  } catch (e) { return null; }
 }
 function _eventRank(c) {
   var r = c && c.curatedRank && Number(c.curatedRank.current);

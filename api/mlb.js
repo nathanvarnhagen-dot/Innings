@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
       const date = req.query.date;
       if (!date) { res.status(400).json({ error: 'Missing date' }); return; }
       // v6.8.0: team + seriesStatus hydrated for postseason games
-      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus,probablePitcher,linescore&date=' + encodeURIComponent(date);
+      const url = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,seriesStatus,probablePitcher,linescore,broadcasts(all)&date=' + encodeURIComponent(date);
       const r = await fetch(url);
       const data = await r.json();
       const games = [];
@@ -54,7 +54,9 @@ module.exports = async function handler(req, res) {
             batter: _schedPerson(g.linescore && g.linescore.offense && g.linescore.offense.batter),
             pitcher: _schedPerson(g.linescore && g.linescore.defense && g.linescore.defense.pitcher),
             // v7.16.1: playoff games often go up before their time is set
-            startTimeTBD: !!(g.status && g.status.startTimeTBD)
+            startTimeTBD: !!(g.status && g.status.startTimeTBD),
+            // v7.93.0: where to watch, for Home's upcoming cards
+            network: _schedNetwork(g.broadcasts)
           }, _postponementFields(g, d), _postseasonFields(g)));
         });
       });
@@ -3005,6 +3007,23 @@ function _mlbSeriesList(data, type) {
 // v7.38.0: a schedule row's runners and names, from the hydrated linescore.
 // A game that isn't live has no offense to speak of, so these come back
 // empty rather than wrong.
+// v7.93.0: the TV channels for a game — national first, otherwise the two
+// local broadcasts. MLB.TV is left out (every game is on it).
+function _schedNetwork(list) {
+  try {
+    var nat = [], loc = [];
+    (list || []).forEach(function (b) {
+      if (!b || String(b.type || '').toUpperCase() !== 'TV') return;
+      var name = String(b.name || b.callSign || '').trim();
+      if (!name || /^MLB\.?TV$/i.test(name)) return;
+      if (b.language && !/^en/i.test(b.language)) return;
+      var arr = b.isNational ? nat : loc;
+      if (arr.indexOf(name) === -1) arr.push(name);
+    });
+    var pick = nat.length ? nat : loc;
+    return pick.length ? pick.slice(0, 2).join(' · ') : null;
+  } catch (e) { return null; }
+}
 function _schedBases(ls) {
   var o = ls && ls.offense;
   if (!o) return null;

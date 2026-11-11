@@ -368,6 +368,20 @@ function _schedDetail(g, state) {
   if (ck.inIntermission) return 'END ' + tag;
   return tag + ' ' + _clock(ck.timeRemaining);
 }
+// v7.93.0: US channels for a game — national first, otherwise the local ones
+function _schedNetwork(list) {
+  try {
+    var nat = [], loc = [];
+    (list || []).forEach(function (b) {
+      if (!b || (b.countryCode && b.countryCode !== 'US')) return;
+      var name = String(b.network || '').trim(); if (!name) return;
+      var arr = b.market === 'H' || b.market === 'A' ? loc : nat;
+      if (arr.indexOf(name) === -1) arr.push(name);
+    });
+    var pick = nat.length ? nat : loc;
+    return pick.length ? pick.slice(0, 2).join(' · ') : null;
+  } catch (e) { return null; }
+}
 function _schedRow(g) {
   var state = _schedState(g), a = g.awayTeam || {}, h = g.homeTeam || {};
   var off = /PPD|POSTPONED|CNCL|CANCEL|SUSP/i.test(String(g.gameScheduleState || ''));
@@ -379,6 +393,7 @@ function _schedRow(g) {
     away: _schedName(a), home: _schedName(h), awayAbbr: a.abbrev || null, homeAbbr: h.abbrev || null,
     awayScore: state === 'pre' ? null : (a.score != null ? a.score : null), homeScore: state === 'pre' ? null : (h.score != null ? h.score : null),
     venue: _d(g.venue) || null, startTime: g.startTimeUTC || null, postponed: off || undefined,
+    network: _schedNetwork(g.tvBroadcasts), // v7.93.0: where to watch, for Home's upcoming cards
     sit: state === 'in' ? { sogA: a.sog != null ? a.sog : null, sogH: h.sog != null ? h.sog : null, pp: null,
       last: last ? ((_d(last.name) || _lastName((_d(last.firstName) + ' ' + _d(last.lastName)).trim())) + ' · ' + (last.teamAbbrev && (last.teamAbbrev.default || last.teamAbbrev) || '') + ' · ' + _periodTag({ number: last.period, periodType: last.periodDescriptor && last.periodDescriptor.periodType }) + ' ' + _clock(last.timeInPeriod) + (last.strength && last.strength !== 'ev' ? ' · ' + String(last.strength).toUpperCase() : '')).replace(/ · $/, '') : null } : null
   };
