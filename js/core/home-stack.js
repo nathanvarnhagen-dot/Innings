@@ -67,9 +67,9 @@
   // v7.94.1: the pile sits in from the edges, leaving a gutter on each side to scroll Home with
   var SIDE = 14;
   var EASE = 'cubic-bezier(.22,1,.36,1)';
-  var T_MOVE = 'top .5s ' + EASE + ',left .5s ' + EASE + ',right .5s ' + EASE + ',height .5s ' + EASE + ',opacity .4s ease,box-shadow .4s ease';
-  var T_LIFT = 'top .3s cubic-bezier(.3,.7,.3,1),left .3s ease,right .3s ease,height .3s cubic-bezier(.3,.7,.3,1),opacity .2s ease,box-shadow .2s ease';
-  var T_TUCK = 'top .42s ' + EASE + ',left .42s ' + EASE + ',right .42s ' + EASE + ',opacity .42s ease,box-shadow .3s ease';
+  var T_MOVE = 'top .32s ' + EASE + ',left .32s ' + EASE + ',right .32s ' + EASE + ',height .32s ' + EASE + ',opacity .26s ease,box-shadow .26s ease';
+  var T_LIFT = 'top .15s cubic-bezier(.3,.7,.3,1),left .15s ease,right .15s ease,height .15s cubic-bezier(.3,.7,.3,1),opacity .12s ease,box-shadow .12s ease';
+  var T_TUCK = 'top .24s ' + EASE + ',left .24s ' + EASE + ',right .24s ' + EASE + ',opacity .24s ease,box-shadow .2s ease';
   var IC = {
     down: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>',
     plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>',
@@ -323,26 +323,38 @@
     }
     if (!a) amb(S.items[S.order[0]]);
   }
+  // v7.94.2: a flip starts the moment your finger moves, takes about a third
+  // of a second, and never blocks the next one — a new swipe cuts the last
+  // animation short instead of waiting for it
+  function settle() {
+    clearTimeout(S.t1); clearTimeout(S.t2);
+    if (S.pend) { var p = S.pend; S.pend = null; p(); }
+    S.anim = null;
+  }
   function next() {
-    var N = S.order.length; if (N < 2 || Date.now() < S.busy) return;
-    S.busy = Date.now() + 760; S.touched = true;
+    var N = S.order.length; if (N < 2) return;
+    settle();
+    S.busy = Date.now() + 400; S.touched = true; deck.classList.add('flip');
     var f = S.order[0];
     S.order = S.order.slice(1).concat(f);
     S.anim = { id: f, kind: 'lift' }; layout();
-    setTimeout(function () { S.anim = { id: f, kind: 'tuck' }; layout(); }, 300);
-    setTimeout(function () { S.anim = null; layout(); }, 740);
+    S.t1 = setTimeout(function () { S.anim = { id: f, kind: 'tuck' }; layout(); }, 140);
+    S.t2 = setTimeout(function () { S.anim = null; deck.classList.remove('flip'); layout(); }, 390);
   }
   function prev() {
-    var N = S.order.length; if (N < 2 || Date.now() < S.busy) return;
-    S.busy = Date.now() + 760; S.touched = true;
+    var N = S.order.length; if (N < 2) return;
+    settle();
+    S.busy = Date.now() + 400; S.touched = true; deck.classList.add('flip');
     var b = S.order[N - 1];
     S.anim = { id: b, kind: 'rise' }; layout();
-    setTimeout(function () { S.order = [b].concat(S.order.slice(0, N - 1)); S.anim = { id: b, kind: 'land' }; layout(); }, 240);
-    setTimeout(function () { S.anim = null; layout(); }, 740);
+    S.pend = function () { S.order = [b].concat(S.order.filter(function (id) { return id !== b; })); };
+    S.t1 = setTimeout(function () { var p = S.pend; S.pend = null; if (p) p(); S.anim = { id: b, kind: 'land' }; layout(); }, 120);
+    S.t2 = setTimeout(function () { S.anim = null; deck.classList.remove('flip'); layout(); }, 390);
   }
   function bring(id) {
-    var i = S.order.indexOf(id); if (i < 1 || Date.now() < S.busy) return;
-    S.busy = Date.now() + 520; S.touched = true;
+    settle();
+    var i = S.order.indexOf(id); if (i < 1) return;
+    S.busy = Date.now() + 340; S.touched = true;
     S.order = S.order.slice(i).concat(S.order.slice(0, i));
     layout();
   }
@@ -354,17 +366,22 @@
   // ── touch: up for the next game, down for the last one ──
   var startY = null, startX = null;
   function down(y, x) { startY = y; startX = x; }
-  function up(y, x) {
+  function move(y, x) {
     if (startY == null) return;
-    var dy = y - startY, dx = x - startX; startY = null;
-    if (Math.abs(dy) < 30 || Math.abs(dy) < Math.abs(dx)) return;
+    var dy = y - startY, dx = x - startX;
+    if (Math.abs(dy) < 16 || Math.abs(dy) < Math.abs(dx)) return;
+    startY = null; // one flip per swipe
     S.swiped = Date.now();
     if (dy < 0) next(); else prev();
   }
-  deck.addEventListener('pointerdown', function (e) { if (e.target.closest('.stk-card.front')) down(e.clientY, e.clientX); });
+  function up(y, x) { move(y, x); startY = null; }
+  var grab = function (el) { return el.closest(S.anim ? '.stk-card' : '.stk-card.front'); }; // mid-flip, whichever card is under your finger takes the next swipe
+  deck.addEventListener('pointerdown', function (e) { if (grab(e.target)) down(e.clientY, e.clientX); });
+  deck.addEventListener('pointermove', function (e) { move(e.clientY, e.clientX); });
   deck.addEventListener('pointerup', function (e) { up(e.clientY, e.clientX); });
   deck.addEventListener('pointercancel', function () { startY = null; });
-  deck.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t && e.target.closest('.stk-card.front')) down(t.clientY, t.clientX); }, { passive: true });
+  deck.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t && grab(e.target)) down(t.clientY, t.clientX); }, { passive: true });
+  deck.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientY, t.clientX); }, { passive: true });
   deck.addEventListener('touchend', function (e) { var t = e.changedTouches[0]; if (t) up(t.clientY, t.clientX); }, { passive: true });
   function tap(e) {
     if (Date.now() - S.swiped < 450) return;
@@ -382,7 +399,7 @@
   window.stkDays = function () { S.open = true; renderHead(); };
   window.stkDay = function (off) {
     S.open = false;
-    if (off !== S.day) { S.day = off; S.order = []; S.items = {}; S.sig = ''; S.anim = null; S.busy = 0; }
+    if (off !== S.day) { clearTimeout(S.t1); clearTimeout(S.t2); S.pend = null; S.day = off; S.order = []; S.items = {}; S.sig = ''; S.anim = null; S.busy = 0; }
     render();
     refresh();
   };
