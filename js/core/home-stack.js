@@ -10,7 +10,8 @@
 //     none of those it's the day's games by start time.
 //   · "+ Follow" sits under any team you don't follow, and an "Add a team"
 //     card waits at the back of the pile until your first swipe.
-//   · tap "Tonight" for a drop-down: Yesterday / Tomorrow and a calendar (v7.97.0). Upcoming cards show the start
+//   · tap "Tonight" for a drop-down: Yesterday / Tomorrow and a calendar (v7.97.0).
+//   · "Guide" beside Add opens the TV guide: every game by channel (v7.98.0). Upcoming cards show the start
 //     time and the network (js: g.network, sent by the schedule endpoints).
 //
 // Nothing was removed: the tiles this replaces (the friends' game, the live
@@ -255,7 +256,7 @@
   function renderHead() {
     var w = dayWord(S.day);
     head.innerHTML = '<div class="stk-days"><button class="stk-day cur' + (S.open ? ' open' : '') + '" onclick="stkDays()" aria-label="' + esc(w) + ', change the day" aria-haspopup="dialog" aria-expanded="' + S.open + '">' + esc(w) + IC.down + '</button></div>' +
-      '<button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button>' + (S.open ? popHtml() : '');
+      '<span class="stk-hr"><button class="stk-gb" onclick="stkGuide()" aria-label="TV guide">' + IC.tv + 'Guide</button><button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button></span>' + (S.open ? popHtml() : '');
     head.classList.toggle('open', !!S.open); wrap.classList.toggle('pop', !!S.open);
     if (S.open) loadDots();
   }
@@ -513,6 +514,160 @@
     refresh();
   };
 
+  // ── v7.98.0: the TV guide ──
+  // "Guide" beside Add opens a sheet over Home: every game of the day you're
+  // on, one row per channel (the channels your teams are on first, then the
+  // ones with live games), time running left to right with a red line at now.
+  // Every game says its network on it. Tap a game for its card; Open goes in.
+  var GD = { open: false, sel: null, drag: null };
+  var GPX = 104; // px per hour
+  var GDUR = { mlb: 3, nfl: 3.25, cfb: 3.5, nba: 2.4, wnba: 2, cbb: 2, nhl: 2.6, mls: 2, nwsl: 2 };
+  function gdRoot() {
+    var el = document.getElementById('stk-gd');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'stk-gd';
+    el.innerHTML = '<div class="stk-gd-shade" onclick="stkGuideClose()"></div><div class="stk-gd-sheet" role="dialog" aria-modal="true" aria-label="TV guide"><div class="stk-gd-top"><span class="grab"></span><div class="hd"><div><b></b><small></small></div><button class="x" onclick="stkGuideClose()" aria-label="Close the guide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div></div><div class="stk-gd-body"></div><div class="stk-gd-det"></div></div>';
+    document.body.appendChild(el);
+    // drag the top of the sheet down to close it
+    var top = el.querySelector('.stk-gd-top'), sheet = el.querySelector('.stk-gd-sheet');
+    var y0 = null, dy = 0;
+    var start = function (y) { y0 = y; dy = 0; sheet.style.transition = 'none'; };
+    var move = function (y) { if (y0 == null) return; dy = Math.max(0, y - y0); sheet.style.transform = 'translateY(' + dy + 'px)'; };
+    var end = function () { if (y0 == null) return; y0 = null; sheet.style.transition = ''; sheet.style.transform = ''; if (dy > 90) stkGuideClose(); };
+    top.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) start(t.clientY); }, { passive: true });
+    top.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientY); }, { passive: true });
+    top.addEventListener('touchend', end, { passive: true });
+    top.addEventListener('mousedown', function (e) { if (e.target.closest('.x')) return; start(e.clientY); var mm = function (ev) { move(ev.clientY); }, mu = function () { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); end(); }; document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); });
+    return el;
+  }
+  function gdGames(cb) {
+    var date = dateFor(S.day), c = S.cache[date];
+    var res = (S.day === 0 && window._glSched) || (c && c.res);
+    if (!res) { fetchDay(S.day).then(function () { if (GD.open) cb(); }); return null; }
+    var out = [], d0 = new Date(); d0.setDate(d0.getDate() + S.day); d0.setHours(0, 0, 0, 0);
+    res.forEach(function (x) {
+      (x.games || []).forEach(function (g) {
+        if (!g || g.gamePk == null || !g.away || !g.home) return;
+        if (typeof _cbbWorthy === 'function' && !_cbbWorthy(x.sport, g)) return;
+        var t = Date.parse(g.startTime || ''); if (!t) return;
+        var ta = tag(x.sport, g.away), th = tag(x.sport, g.home);
+        var nets = String(g.network || '').split(' · ').filter(Boolean);
+        out.push({ id: x.sport + ':' + g.gamePk, sport: x.sport, g: g, h: (t - d0) / 3600000, dur: GDUR[x.sport] || 2.5, ph: _glPhase(x.sport, g),
+          net: nets[0] || '', nets: nets.join(' · '), mine: ta === 'fav' || th === 'fav' ? 2 : (ta === 'fol' || th === 'fol') ? 1 : 0, ta: ta, th: th });
+      });
+    });
+    return out;
+  }
+  function gdHour(h) { var x = ((Math.floor(h) % 24) + 24) % 24; return (x % 12 || 12) + (x < 12 ? ' AM' : ' PM'); }
+  function gdBlockStatus(it) {
+    var g = it.g;
+    if (it.ph === 'live') return (g.awayScore != null ? g.awayScore + '–' + g.homeScore + ' · ' : '') + _glRowStatus(it.sport, g, 'live');
+    if (it.ph === 'post') return (g.awayScore != null ? g.awayScore + '–' + g.homeScore + ' · ' : '') + 'Final';
+    return _glOff(g) ? _glRowStatus(it.sport, g, 'pre') : _glTbd(g) ? 'TBD' : when(it);
+  }
+  function gdLook(it, side) { var g = it.g; return side === 'a' ? _glTeam(it.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt) : _glTeam(it.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt); }
+  function renderGuide() {
+    var el = gdRoot(), body = el.querySelector('.stk-gd-body');
+    var w = dayWord(S.day);
+    el.querySelector('.hd b').textContent = 'On TV ' + (S.day === 0 ? (w === 'Tonight' ? 'tonight' : 'today') : relWord(S.day));
+    var list = gdGames(renderGuide);
+    if (!list) { el.querySelector('.hd small').textContent = 'Loading the day’s games…'; body.innerHTML = '<div class="stk-gd-empty">Loading…</div>'; renderDet(null); return; }
+    var nNet = {};
+    list.forEach(function (it) { nNet[it.net || '~'] = 1; });
+    el.querySelector('.hd small').textContent = list.length ? list.length + ' game' + (list.length === 1 ? '' : 's') + ' on ' + Object.keys(nNet).filter(function (k) { return k !== '~'; }).length + ' channels · your teams’ channels first' : 'No games';
+    if (!list.length) { body.innerHTML = '<div class="stk-gd-empty">No games on ' + esc(relWord(S.day)) + '.</div>'; renderDet(null); return; }
+    // rows: one per channel
+    var rows = {}, keys = [];
+    list.forEach(function (it) { var k = it.net || '~'; if (!rows[k]) { rows[k] = []; keys.push(k); } rows[k].push(it); });
+    var score = function (k) {
+      var r = rows[k], m = Math.max.apply(null, r.map(function (it) { return it.mine; })), lv = r.some(function (it) { return it.ph === 'live'; });
+      return k === '~' ? 1e6 : (2 - m) * 1000 + (lv ? 0 : 100) - r.length;
+    };
+    keys.sort(function (a, b) { return score(a) - score(b) || a.localeCompare(b); });
+    // the hours shown
+    var lo = Math.floor(Math.min.apply(null, list.map(function (it) { return it.h; })));
+    var hi = Math.ceil(Math.max.apply(null, list.map(function (it) { return it.h + it.dur; })));
+    if (hi - lo < 4) hi = lo + 4;
+    var W = (hi - lo) * GPX;
+    var hours = '';
+    for (var hh = lo; hh < hi; hh++) hours += '<span style="left:' + ((hh - lo) * GPX + 6) + 'px">' + gdHour(hh) + '</span>';
+    var labs = '', lanesHtml = '';
+    if (!GD.sel || !list.some(function (it) { return it.id === GD.sel; })) {
+      var pick = list.filter(function (it) { return it.mine && it.ph !== 'post'; }).sort(function (a, b) { return (b.mine - a.mine) || (a.h - b.h); })[0];
+      GD.sel = pick ? pick.id : null;
+    }
+    keys.forEach(function (k) {
+      var r = rows[k].sort(function (a, b) { return a.h - b.h; }), lanes = [];
+      r.forEach(function (it) {
+        var x = (it.h - lo) * GPX, wd = Math.max(it.dur * GPX - 4, 96), L = 0;
+        while (lanes[L] != null && lanes[L] > x) L++;
+        lanes[L] = x + wd + 4; it._x = x; it._w = wd; it._l = L;
+      });
+      var nL = Math.max(1, lanes.length), H = nL * 64 + 4;
+      var my = r.filter(function (it) { return it.mine; })[0];
+      var mineName = my ? _glShort(my.ta === 'fav' || my.ta === 'fol' ? my.g.away : my.g.home) : '';
+      labs += '<div class="lr' + (my ? ' mine' : '') + '" style="height:' + H + 'px"><b>' + esc(k === '~' ? 'No TV listed' : k) + '</b>' + (mineName ? '<small>' + esc(mineName) + '</small>' : '') + '</div>';
+      lanesHtml += '<div class="gr" style="height:' + H + 'px">' + r.map(function (it) {
+        var a = gdLook(it, 'a'), h = gdLook(it, 'h');
+        return '<button class="blk' + (it.ph === 'live' ? ' live' : '') + (it.ph === 'post' ? ' post' : '') + (it.mine ? ' mine' : '') + (it.id === GD.sel ? ' on' : '') + '" style="left:' + (it._x + 2) + 'px;width:' + it._w + 'px;top:' + (it._l * 64 + 4) + 'px;background:linear-gradient(rgba(12,9,32,.28),rgba(12,9,32,.28)),linear-gradient(100deg,' + a.bg + ',' + h.bg + ')" onclick="stkGuidePick(\'' + esc(it.id) + '\')" aria-label="' + esc(_glShort(it.g.away) + ' at ' + _glShort(it.g.home) + ', ' + gdBlockStatus(it) + ', on ' + (it.nets || 'no TV listed')) + '">' +
+          '<b>' + (it.mine === 2 ? IC.star : '') + esc(a.abbr + ' at ' + h.abbr) + '</b>' +
+          '<small>' + (it.ph === 'live' ? '<i class="ld"></i>' : '') + esc(gdBlockStatus(it)) + '</small>' +
+          '<em>' + IC.tv + esc(it.nets || 'No TV listed') + '</em></button>';
+      }).join('') + '</div>';
+    });
+    var nowX = null;
+    if (S.day === 0) { var n = new Date(), nh = n.getHours() + n.getMinutes() / 60; if (nh >= lo && nh <= hi) nowX = (nh - lo) * GPX; }
+    var scr = body.querySelector('.scr'), keepL = scr ? scr.scrollLeft : null, keepT = body.scrollTop;
+    body.innerHTML = '<div class="gd"><div class="lab"><div class="lh"></div>' + labs + '</div>' +
+      '<div class="scr"><div class="cv" style="width:' + W + 'px"><div class="hrs">' + hours + '</div>' + lanesHtml +
+      (nowX != null ? '<div class="nowl" style="left:' + nowX + 'px"><span>Now</span></div>' : '') + '</div></div></div>';
+    scr = body.querySelector('.scr');
+    if (keepL != null) { scr.scrollLeft = keepL; body.scrollTop = keepT; }
+    else scr.scrollLeft = Math.max(0, (nowX != null ? nowX : 0) - GPX * 0.6);
+    GD.list = list;
+    renderDet(list.filter(function (it) { return it.id === GD.sel; })[0] || null);
+  }
+  function renderDet(it) {
+    var el = gdRoot().querySelector('.stk-gd-det');
+    if (!it) { el.innerHTML = '<div class="tip">Tap a game for its channel and to open it.</div>'; return; }
+    var g = it.g, a = gdLook(it, 'a'), h = gdLook(it, 'h'), lg = _glLeagueName(it.sport);
+    var st = it.ph === 'live' ? 'Live · ' + lg + ' · ' + _glRowStatus(it.sport, g, 'live') : it.ph === 'post' ? 'Final · ' + lg : lg + ' · ' + gdBlockStatus(it);
+    var sc = it.ph !== 'pre' && g.awayScore != null ? esc(g.awayScore) + '–' + esc(g.homeScore) : '';
+    el.innerHTML = '<div class="dc" style="background:linear-gradient(rgba(12,9,32,.35),rgba(12,9,32,.35)),linear-gradient(120deg,' + a.bg + ',' + h.bg + ')">' +
+      '<div class="dl"><span class="bds"><span class="bd" style="' + _glBadgeStyle(a) + '">' + esc(a.abbr) + '</span><span class="bd" style="' + _glBadgeStyle(h) + '">' + esc(h.abbr) + '</span></span>' +
+      '<span class="nm"><b>' + esc(_glShort(g.away) + ' at ' + _glShort(g.home)) + '</b><small>' + (it.ph === 'live' ? '<i class="ld"></i>' : '') + esc(st) + '</small></span>' + (sc ? '<span class="sc gl-num">' + sc + '</span>' : '') + '</div>' +
+      '<div class="ex"><span class="tv">' + IC.tv + (it.nets ? 'Watch on <b>' + esc(it.nets) + '</b>' : 'No TV listed') + '</span><button class="gl-join" onclick="stkGuideOpenGame()">Open</button></div></div>';
+  }
+  window.stkGuide = function () {
+    if (S.open) { S.open = false; renderHead(); }
+    var el = gdRoot();
+    GD.open = true; GD.sel = null;
+    var body = el.querySelector('.stk-gd-body'); body.innerHTML = ''; body.scrollTop = 0;
+    renderGuide();
+    document.documentElement.classList.add('stk-gd-on');
+    requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('on'); }); });
+  };
+  window.stkGuideClose = function () {
+    var el = document.getElementById('stk-gd');
+    GD.open = false;
+    document.documentElement.classList.remove('stk-gd-on');
+    if (el) el.classList.remove('on');
+  };
+  window.stkGuidePick = function (id) {
+    GD.sel = id;
+    var el = gdRoot();
+    Array.prototype.forEach.call(el.querySelectorAll('.blk'), function (b) { b.classList.toggle('on', b.getAttribute('onclick').indexOf("'" + id + "'") !== -1); });
+    renderDet((GD.list || []).filter(function (it) { return it.id === id; })[0] || null);
+  };
+  window.stkGuideOpenGame = function () {
+    var it = (GD.list || []).filter(function (x) { return x.id === GD.sel; })[0];
+    if (!it) return;
+    stkGuideClose();
+    if (typeof openGameScreen === 'function') setTimeout(function () { openGameScreen(it.g.gamePk, it.g.away, it.g.home, it.sport, dateFor(S.day)); }, 220);
+  };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && GD.open) stkGuideClose(); });
+
   // ── following a team from its card ──
   window.stkFollow = function (sport, team) {
     var u = user();
@@ -637,7 +792,7 @@
   }
   // the ambient glow follows the top card, not the (hidden) friends' tile
   if (typeof _glAmbient === 'function') { S.amb = _glAmbient; window._glAmbient = function () {}; }
-  wrapFn('_glRenderLive', function () { if (S.day === 0) { if (S.prefsReady) ingest(window._glSched || []); else loadPrefs().then(refresh); } });
+  wrapFn('_glRenderLive', function () { if (S.day === 0) { if (S.prefsReady) ingest(window._glSched || []); else loadPrefs().then(refresh); if (GD.open) renderGuide(); } });
   wrapFn('_glRenderRecaps', renderRows);
   wrapFn('_glRenderComing', renderRows);
   wrapFn('_glHomeOpen', function () {

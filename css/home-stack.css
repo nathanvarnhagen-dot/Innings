@@ -144,3 +144,63 @@ html.stk-on #gl-hero,html.stk-on #gl-live,html.stk-on #gl-gamescta,html.stk-on #
 .stk-lg small .none{color:rgba(244,242,255,.6)}
 .stk-lg>svg{flex-shrink:0;color:rgba(244,242,255,.5)}
 @media (orientation:landscape){html.is-tablet .stk-panel{left:50%;right:auto;width:520px;margin-left:-260px;bottom:24px}}
+
+/* ── v7.98.0: Guide beside Add, and the TV guide sheet ── */
+.stk-hr{display:flex;align-items:center;gap:2px}
+.stk-gb{height:32px;display:flex;align-items:center;gap:6px;padding:0 12px;margin-right:2px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);font-family:inherit;font-size:13px;font-weight:600;color:rgba(244,242,255,.85);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stk-gb svg{width:14px;height:14px;opacity:.85}
+html.stk-gd-on,html.stk-gd-on body{overflow:hidden}
+#stk-gd{position:fixed;inset:0;z-index:9000;pointer-events:none}
+#stk-gd.on{pointer-events:auto}
+.stk-gd-shade{position:absolute;inset:0;background:rgba(6,4,18,.55);opacity:0;transition:opacity .3s ease}
+#stk-gd.on .stk-gd-shade{opacity:1}
+.stk-gd-sheet{position:absolute;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top,0px) + 52px);max-width:640px;margin:0 auto;display:flex;flex-direction:column;border-radius:30px 30px 0 0;background:linear-gradient(180deg,#2E2668,#140F30);border:1px solid rgba(255,255,255,.14);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.6);color:#F4F2FF;transform:translateY(104%);transition:transform .42s cubic-bezier(.22,1,.36,1)}
+#stk-gd.on .stk-gd-sheet{transform:none}
+.stk-gd-top{flex-shrink:0;padding:10px 16px 12px;touch-action:none;cursor:grab}
+.stk-gd-top .grab{display:block;width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:0 auto 12px}
+.stk-gd-top .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stk-gd-top .hd b{display:block;font-size:21px;font-weight:700;letter-spacing:-.01em}
+.stk-gd-top .hd small{display:block;margin-top:3px;font-size:12px;color:rgba(244,242,255,.58)}
+.stk-gd-top .x{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.stk-gd-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px}
+.stk-gd-empty{padding:60px 0;text-align:center;font-size:14px;color:rgba(244,242,255,.55)}
+.stk-gd-body .gd{display:flex;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);overflow:hidden}
+.stk-gd-body .lab{width:96px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.1);background:rgba(13,10,34,.5)}
+.stk-gd-body .lh{height:30px;border-bottom:1px solid rgba(255,255,255,.08)}
+.stk-gd-body .lr{box-sizing:border-box;padding:0 10px;display:flex;flex-direction:column;justify-content:center;gap:2px;border-bottom:1px solid rgba(255,255,255,.06)}
+.stk-gd-body .lr b{font-size:12.5px;font-weight:700;line-height:1.2;word-break:break-word}
+.stk-gd-body .lr small{font-size:10.5px;font-weight:600;color:#FFE08A}
+.stk-gd-body .lr.mine{background:rgba(207,199,255,.09)}
+.stk-gd-body .scr{flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.stk-gd-body .scr::-webkit-scrollbar{display:none}
+.stk-gd-body .cv{position:relative}
+.stk-gd-body .hrs{height:30px;position:relative;border-bottom:1px solid rgba(255,255,255,.08)}
+.stk-gd-body .hrs span{position:absolute;top:8px;font-size:11px;font-weight:600;color:rgba(244,242,255,.55);white-space:nowrap}
+.stk-gd-body .gr{position:relative;border-bottom:1px solid rgba(255,255,255,.06)}
+.stk-gd-body .blk{position:absolute;height:58px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);padding:5px 9px;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:left;color:#fff;font-family:inherit;cursor:pointer;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.stk-gd-body .blk b{display:flex;align-items:center;gap:4px;font-size:12.5px;white-space:nowrap}
+.stk-gd-body .blk b svg{color:#FFE08A;flex-shrink:0}
+.stk-gd-body .blk small{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap}
+.stk-gd-body .blk em{display:flex;align-items:center;gap:4px;font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stk-gd-body .blk em svg{width:11px;height:11px;flex-shrink:0;opacity:.85}
+.stk-gd-body .blk.post{opacity:.55}
+.stk-gd-body .blk.mine{border-color:rgba(255,224,138,.6)}
+.stk-gd-body .blk.on{box-shadow:0 0 0 2px #F4F2FF}
+.stk-gd-sheet .ld{width:6px;height:6px;border-radius:50%;background:#FF5A6E;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,90,110,.3)}
+.stk-gd-body .nowl{position:absolute;top:0;bottom:0;width:2px;background:#FF5A6E;pointer-events:none}
+.stk-gd-body .nowl span{position:absolute;top:6px;left:-17px;background:#FF5A6E;color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 5px}
+.stk-gd-det{flex-shrink:0;padding:0 12px calc(env(safe-area-inset-bottom,0px) + 14px)}
+.stk-gd-det .tip{padding:16px;text-align:center;font-size:13px;color:rgba(244,242,255,.5)}
+.stk-gd-det .dc{padding:14px;border-radius:22px;border:1px solid rgba(255,255,255,.18);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.stk-gd-det .dl{display:flex;align-items:center;gap:12px}
+.stk-gd-det .bds{display:flex;flex-shrink:0}
+.stk-gd-det .bd{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px}
+.stk-gd-det .bd+.bd{margin-left:-10px}
+.stk-gd-det .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.stk-gd-det .nm b{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stk-gd-det .nm small{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.75)}
+.stk-gd-det .sc{font-size:26px;flex-shrink:0}
+.stk-gd-det .ex{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18)}
+.stk-gd-det .tv{display:flex;align-items:center;gap:8px;min-width:0;font-size:14px;color:rgba(255,255,255,.85)}
+.stk-gd-det .tv b{color:#fff}
+.stk-gd-det .tv svg{flex-shrink:0}
