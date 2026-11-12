@@ -10,7 +10,7 @@
 //     none of those it's the day's games by start time.
 //   · "+ Follow" sits under any team you don't follow, and an "Add a team"
 //     card waits at the back of the pile until your first swipe.
-//   · tap "Tonight" for Yesterday / Tomorrow. Upcoming cards show the start
+//   · tap "Tonight" for a drop-down: Yesterday / Tomorrow and a calendar (v7.97.0). Upcoming cards show the start
 //     time and the network (js: g.network, sent by the schedule endpoints).
 //
 // Nothing was removed: the tiles this replaces (the friends' game, the live
@@ -81,7 +81,16 @@
   // ── dates ──
   function pad(n) { return n < 10 ? '0' + n : String(n); }
   function dateFor(off) { var d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
-  function dayWord(off) { return off < 0 ? 'Yesterday' : off > 0 ? 'Tomorrow' : (new Date().getHours() >= 17 ? 'Tonight' : 'Today'); }
+  // v7.97.0: any day can be picked from the calendar, so past ±1 a day is named by its weekday (this week) or its date
+  function dayWord(off) {
+    if (off === 0) return new Date().getHours() >= 17 ? 'Tonight' : 'Today';
+    if (off === -1) return 'Yesterday';
+    if (off === 1) return 'Tomorrow';
+    var d = new Date(); d.setDate(d.getDate() + off);
+    if (off > 1 && off < 7) return d.toLocaleDateString(undefined, { weekday: 'long' });
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '');
+  }
+  function relWord(off) { return off >= -1 && off <= 1 ? dayWord(off).toLowerCase() : dayWord(off); }
   function shortDate(off) { var d = new Date(); d.setDate(d.getDate() + off); return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
 
   // ── colors: a card is its team's color, deep enough for white type ──
@@ -199,7 +208,7 @@
     var pkSc = scored ? esc(g.awayScore) + '–' + esc(g.homeScore) : (ph === 'pre' && !off && !_glTbd(g) ? esc(tm.replace(/\s?(AM|PM)$/, '')) : '');
     var peek = '<span class="stk-pk"><span class="nm">' + esc(title) + '</span><span class="st' + (ph === 'live' ? ' live' : '') + '">' + esc(pkSt) + '</span><span class="sc gl-num">' + pkSc + '</span></span>';
     // the full card
-    var capL = ph === 'live' ? '<span class="gl-ldot"></span>Live · ' + esc(lg) : ph === 'post' ? 'Final · ' + esc(lg) : esc(dayWord(S.day)) + ' · ' + esc(lg);
+    var capL = ph === 'live' ? '<span class="gl-ldot"></span>Live · ' + esc(lg) : ph === 'post' ? 'Final · ' + esc(lg) : (S.day >= -1 && S.day < 7 ? esc(dayWord(S.day)) + ' · ' : '') + esc(lg);
     var capR = ph === 'live' ? esc(status) : ph === 'post' ? (/^final$/i.test(status) ? (S.day !== 0 ? esc(shortDate(S.day)) : '') : esc(status)) : (S.day !== 0 ? esc(shortDate(S.day)) : '');
     var mid;
     if (scored) {
@@ -240,16 +249,102 @@
   }
 
   // ── the label row: Tonight ⌄ · Add ──
+  // v7.97.0: tapping the day opens a drop-down — Yesterday / Today / Tomorrow
+  // up top, then a two-week calendar (Sun–Sat) with a dot in a team's colors
+  // on every day one of your teams plays. ‹ › pages two weeks at a time.
   function renderHead() {
-    var w = dayWord(0), days;
-    if (S.open) {
-      days = [[-1, 'Yesterday'], [0, w], [1, 'Tomorrow']].map(function (d) {
-        return '<button class="stk-day' + (d[0] === S.day ? ' on' : '') + '" aria-pressed="' + (d[0] === S.day) + '" onclick="stkDay(' + d[0] + ')"><span>' + d[1] + '</span></button>';
-      }).join('');
-    } else {
-      days = '<button class="stk-day cur" onclick="stkDays()" aria-label="' + esc(dayWord(S.day)) + ', change the day" aria-expanded="false">' + esc(dayWord(S.day)) + IC.down + '</button>';
+    var w = dayWord(S.day);
+    head.innerHTML = '<div class="stk-days"><button class="stk-day cur' + (S.open ? ' open' : '') + '" onclick="stkDays()" aria-label="' + esc(w) + ', change the day" aria-haspopup="dialog" aria-expanded="' + S.open + '">' + esc(w) + IC.down + '</button></div>' +
+      '<button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button>' + (S.open ? popHtml() : '');
+    head.classList.toggle('open', !!S.open); wrap.classList.toggle('pop', !!S.open);
+    if (S.open) loadDots();
+  }
+  var DAY = 86400000;
+  function mid0(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
+  function offOf(d) { return Math.round((mid0(d) - mid0(new Date())) / DAY); }
+  function weekStart(page) { var d = mid0(new Date()); d.setDate(d.getDate() - d.getDay() + page * 14); return d; }
+  function popHtml() {
+    var q = [[-1, 'Yesterday'], [0, dayWord(0)], [1, 'Tomorrow']].map(function (d) {
+      return '<button class="stk-q' + (d[0] === S.day ? ' on' : '') + '" aria-pressed="' + (d[0] === S.day) + '" onclick="stkDay(' + d[0] + ')">' + d[1] + '</button>';
+    }).join('');
+    var st = weekStart(S.page || 0), end = new Date(st); end.setDate(end.getDate() + 13);
+    var m1 = st.toLocaleDateString(undefined, { month: 'long' }), m2 = end.toLocaleDateString(undefined, { month: 'long' });
+    var mon = m1 === m2 ? m1 + ' ' + st.getFullYear() : st.toLocaleDateString(undefined, { month: 'short' }) + ' – ' + end.toLocaleDateString(undefined, { month: 'short' }) + ' ' + end.getFullYear();
+    var dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<span>' + x + '</span>'; }).join('');
+    var cells = '';
+    for (var i = 0; i < 14; i++) {
+      var d = new Date(st); d.setDate(st.getDate() + i);
+      var o = offOf(d), key = dateFor(o);
+      var full = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      cells += '<button class="stk-cd' + (o === 0 ? ' now' : '') + (o === S.day ? ' on' : '') + (o < 0 ? ' past' : '') + '" data-date="' + key + '" onclick="stkDay(' + o + ')" aria-label="' + esc(full) + '" aria-pressed="' + (o === S.day) + '">' +
+        '<b class="gl-num">' + d.getDate() + '</b><span class="dots">' + dotsHtml(key) + '</span></button>';
     }
-    head.innerHTML = '<div class="stk-days">' + days + '</div><button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button>';
+    var any = mySports().length, a = S.popAnim; S.popAnim = false;
+    return '<div class="stk-pop-shade' + (a ? ' anim' : '') + '"></div>' +
+      '<div class="stk-pop' + (a ? ' anim' : '') + '" role="dialog" aria-label="Pick a day">' +
+        '<div class="stk-qs">' + q + '</div>' +
+        '<div class="stk-cal-hd"><button class="ar" onclick="stkPage(-1)" aria-label="Earlier two weeks">‹</button><b>' + esc(mon) + '</b><button class="ar" onclick="stkPage(1)" aria-label="Next two weeks">›</button></div>' +
+        '<div class="stk-dow">' + dow + '</div>' +
+        '<div class="stk-cal">' + cells + '</div>' +
+        '<div class="stk-cal-ft">' + (any ? '<span class="dot"></span>Your teams play' : 'Follow a team to see its games here') +
+          ((S.page || 0) !== 0 || S.day !== 0 ? '<button onclick="stkDay(0)">Back to today</button>' : '') + '</div>' +
+      '</div>';
+  }
+
+  // the dots: your favorite and followed teams' games on each day showing
+  var DOTS = {}, DQ = [], DRUN = 0;
+  function mySports() { return GAMES_SPORTS.filter(function (s) { var p = S.prefs[s.key]; return p && (p.favorite || (p.following || []).length); }); }
+  function dotsHtml(date) {
+    var list = [], seen = {};
+    mySports().forEach(function (s) {
+      var c = S.cache[date], games = null;
+      if (c) c.res.forEach(function (x) { if (x.sport === s.key) games = x.games; });
+      if (!games && DOTS[date + '|' + s.key]) games = DOTS[date + '|' + s.key].games;
+      (games || []).forEach(function (g) {
+        if (!g || !g.away || !g.home) return;
+        [['a', g.away, g.awayAbbr, g.awayColor, g.awayAlt], ['h', g.home, g.homeAbbr, g.homeColor, g.homeAlt]].forEach(function (t) {
+          var tg = tag(s.key, t[1]);
+          if ((tg !== 'fav' && tg !== 'fol') || seen[s.key + t[1]]) return;
+          seen[s.key + t[1]] = 1;
+          var lk = _glTeam(s.key, t[1], t[2], t[3], t[4]);
+          list.push({ fav: tg === 'fav', bg: lk.bg, ab: lk.abbr });
+        });
+      });
+    });
+    list.sort(function (a, b) { return (b.fav ? 1 : 0) - (a.fav ? 1 : 0); });
+    var h = list.slice(0, 3).map(function (x) { return '<i class="' + (x.fav ? 'fav' : '') + '" style="background:' + x.bg + '" title="' + esc(x.ab) + '"></i>'; }).join('');
+    return h + (list.length > 3 ? '<em>+' + (list.length - 3) + '</em>' : '');
+  }
+  function loadDots() {
+    if (!S.prefsReady) return;
+    var st = weekStart(S.page || 0), sp = mySports();
+    for (var i = 0; i < 14; i++) {
+      var d = new Date(st); d.setDate(st.getDate() + i);
+      var date = dateFor(offOf(d));
+      if (S.cache[date]) continue;
+      sp.forEach(function (s) {
+        var k = date + '|' + s.key, c = DOTS[k];
+        if (c && (c.busy || Date.now() - c.at < 600000)) return;
+        DOTS[k] = { busy: true, at: 0, games: c ? c.games : [] };
+        DQ.push([date, s.key]);
+      });
+    }
+    pump();
+  }
+  function pump() {
+    while (DRUN < 4 && DQ.length) (function (job) {
+      DRUN++;
+      fetch(_bsModalScheduleUrl(job[1], job[0]))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { DOTS[job[0] + '|' + job[1]] = { at: Date.now(), games: (d && d.games) || [] }; })
+        .catch(function () { DOTS[job[0] + '|' + job[1]] = { at: Date.now() - 540000, games: [] }; })
+        .then(function () {
+          DRUN--;
+          var cell = S.open && head.querySelector('.stk-cd[data-date="' + job[0] + '"] .dots');
+          if (cell) cell.innerHTML = dotsHtml(job[0]);
+          pump();
+        });
+    })(DQ.shift());
   }
 
   // ── the pile ──
@@ -262,10 +357,10 @@
     if (!S.order.length) {
       S.els = {};
       deck.style.height = '';
-      var w = dayWord(S.day).toLowerCase();
+      var w = relWord(S.day);
       deck.innerHTML = '<div class="stk-empty">' + (S.loaded[S.day]
         ? '<b>Nothing on ' + esc(w) + '</b><small>No games for your teams, your friends or anyone else' + (S.day === 0 ? ' right now' : '') + '.</small>' +
-          '<span class="bt">' + (S.day < 1 ? '<button onclick="stkDay(1)">See tomorrow</button>' : '') + '<button onclick="glassGames()">All leagues</button><button onclick="stkAdd()">Add a team</button></span>'
+          '<span class="bt">' + (S.day < 1 ? '<button onclick="stkDay(1)">See tomorrow</button>' : '<button onclick="stkDays()">Pick a day</button>') + '<button onclick="glassGames()">All leagues</button><button onclick="stkAdd()">Add a team</button></span>'
         : '<small>Loading games…</small>') + '</div>';
       amb(null);
       return;
@@ -396,7 +491,21 @@
   });
 
   // ── the day ──
-  window.stkDays = function () { S.open = true; renderHead(); };
+  window.stkDays = function () {
+    S.open = !S.open;
+    if (S.open) { S.popAnim = true; S.page = Math.floor((S.day + new Date().getDay()) / 14); } // open on the two weeks holding the day you're on
+    renderHead();
+  };
+  window.stkDaysClose = function () { if (!S.open) return; S.open = false; renderHead(); };
+  window.stkPage = function (n) { S.page = (S.page || 0) + n; renderHead(); };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.open) stkDaysClose(); });
+  // a tap anywhere outside the drop-down closes it (and only closes it)
+  var swallow = false;
+  document.addEventListener('pointerdown', function (e) {
+    if (!S.open || e.target.closest('.stk-pop') || e.target.closest('.stk-day.cur')) return;
+    swallow = true; stkDaysClose();
+  }, true);
+  document.addEventListener('click', function (e) { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   window.stkDay = function (off) {
     S.open = false;
     if (off !== S.day) { clearTimeout(S.t1); clearTimeout(S.t2); S.pend = null; S.day = off; S.order = []; S.items = {}; S.sig = ''; S.anim = null; S.busy = 0; }

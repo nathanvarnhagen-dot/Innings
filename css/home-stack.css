@@ -18,6 +18,44 @@ html.stk-on #gl-hero,html.stk-on #gl-live,html.stk-on #gl-gamescta,html.stk-on #
 .stk-day span{padding:4px 0 5px;border-bottom:2px solid transparent}
 .stk-day.on{color:#F4F2FF}
 .stk-day.on span{border-bottom-color:#CFC7FF}
+/* v7.97.0: the day drop-down — quick days, then a two-week calendar with your teams' dots */
+#stk-head{position:relative}
+#stk-head.open{z-index:60}
+#stk-wrap.pop{position:relative;z-index:30}
+.stk-day.cur svg{transition:transform .25s cubic-bezier(.22,1,.36,1)}
+.stk-day.cur.open svg{transform:rotate(180deg);opacity:.85}
+.stk-pop-shade{position:fixed;inset:0;z-index:1;background:rgba(8,6,24,.28);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.stk-pop-shade.anim{animation:stkShade .22s ease both}
+.stk-pop{position:absolute;z-index:2;top:46px;left:0;width:min(340px,calc(100vw - 40px));box-sizing:border-box;padding:12px 12px 10px;border-radius:24px;
+  background:linear-gradient(180deg,rgba(58,50,120,.92),rgba(28,22,66,.94));border:1px solid rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px rgba(0,0,0,.55);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);transform-origin:24px 0}
+.stk-pop.anim{animation:stkDrop .32s cubic-bezier(.22,1,.36,1) both}
+@keyframes stkDrop{from{opacity:0;transform:translateY(-8px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes stkShade{from{opacity:0}to{opacity:1}}
+.stk-qs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:rgba(0,0,0,.22)}
+.stk-q{height:38px;border:0;border-radius:12px;background:none;font-family:inherit;font-size:14px;font-weight:600;color:rgba(244,242,255,.7);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
+.stk-q.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.stk-cal-hd{display:flex;align-items:center;justify-content:space-between;margin:12px 0 4px}
+.stk-cal-hd b{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#F4F2FF}
+.stk-cal-hd .ar{width:38px;height:34px;border:0;border-radius:12px;background:rgba(255,255,255,.07);color:#F4F2FF;font-size:20px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stk-dow,.stk-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.stk-dow span{text-align:center;font-size:11px;font-weight:700;letter-spacing:.06em;color:rgba(244,242,255,.42);padding:4px 0}
+.stk-cd{height:50px;border:0;border-radius:14px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;color:#F4F2FF;font-family:inherit;-webkit-tap-highlight-color:transparent;transition:background .18s,transform .12s}
+.stk-cd:active{transform:scale(.94)}
+.stk-cd b{font-size:17px;line-height:1;font-weight:700}
+.stk-cd.past b{color:rgba(244,242,255,.5)}
+.stk-cd.now{box-shadow:inset 0 0 0 1.5px rgba(207,199,255,.6)}
+.stk-cd.on{background:#F4F2FF;color:#1A1640}
+.stk-cd.on b{color:#1A1640}
+.stk-cd .dots{display:flex;align-items:center;gap:3px;height:7px}
+.stk-cd .dots i{width:6px;height:6px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.35)}
+.stk-cd .dots i.fav{width:7px;height:7px}
+.stk-cd.on .dots i{box-shadow:0 0 0 1px rgba(26,22,64,.35)}
+.stk-cd .dots em{font-style:normal;font-size:9px;font-weight:700;color:rgba(244,242,255,.6)}
+.stk-cd.on .dots em{color:rgba(26,22,64,.6)}
+.stk-cal-ft{display:flex;align-items:center;gap:7px;min-height:30px;margin-top:8px;padding:0 4px;font-size:12px;color:rgba(244,242,255,.55)}
+.stk-cal-ft .dot{width:6px;height:6px;border-radius:50%;background:#CFC7FF}
+.stk-cal-ft button{margin-left:auto;border:0;background:none;font-family:inherit;font-size:12px;font-weight:600;color:#CFC7FF;cursor:pointer;padding:6px 0}
 .stk-add{height:44px;padding:0 12px;border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:rgba(244,242,255,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 /* ── the pile ── */
