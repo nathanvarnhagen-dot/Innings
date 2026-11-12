@@ -166,6 +166,19 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.99.0', at: '2026-11-12T14:30:00-08:00',
+      title: 'Your games, sorted',
+      sub: 'A row of tiles over Home\u2019s pile picks which games are in it.',
+      items: function () {
+        return [
+          { icon: 'trophy', title: 'Yours comes first', body: 'Your favorite teams, the teams you follow and the games your friends are in. Home opens on it whenever one of them plays.' },
+          { icon: 'bars', title: 'All, or one sport', body: 'All is every game of the day. Each sport playing that day gets its own tile, with a red count while its games are live. The pile shows which card you\u2019re on, like 2 of 7.' },
+          { icon: 'history', title: 'A TV guide', body: 'Every game by channel, with the network on each one. Open it from the TV button on any league in Games, from Multi view, or from Yours on Home when two or more of your teams play the same day.' },
+          { icon: 'friends', title: 'Pick a day', body: 'Tap Tonight for Yesterday, Tomorrow or a two-week calendar with dots on the days your teams play.' }
+        ];
+      }
+    },
+    {
       id: 'v7.95.0', at: '2026-11-11T12:30:00-08:00',
       title: 'A new Games page',
       sub: 'Pick a league along the top. Its live games and your teams are a stack of cards.',

@@ -282,6 +282,7 @@
   var IC_SEARCH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>';
   var IC_CUP = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7l-1-3h-5z"/></svg>';
   var IC_TEAMS = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.6 6.7 19.5l1.1-6L3.4 9.3l6-.8z"/></svg>';
+  var IC_TV = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
   var CUP = { mlb: 'Playoff picture', nfl: 'Playoff picture', nba: 'Standings', cbb: 'Top 25' };
   function renderHead(c) {
     var s = league(S.sport); if (!s) { headEl.innerHTML = ''; return; }
@@ -303,7 +304,8 @@
     var ib = function (fn, label, icon) { return '<button class="gdk-ib" data-lg="' + esc(k) + '" onclick="' + fn + '(this.dataset.lg)" aria-label="' + esc(label) + '">' + icon + '</button>'; };
     var html = '<div class="row"><div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span><span class="sub">' + sub + '</span>' +
       (ph && !(fb && /^week/i.test(ph)) ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>' +
-      '<div class="bt">' + (typeof openInningsSearch === 'function' ? ib('gdkSearch', 'Search players, teams and rules', IC_SEARCH) : '') +
+      '<div class="bt">' + (typeof innGuide === 'function' && GAMES_SPORTS.some(function (x) { return x.key === k; }) ? ib('gdkGuide', s.name + ' on TV', IC_TV) : '') +
+      (typeof openInningsSearch === 'function' ? ib('gdkSearch', 'Search players, teams and rules', IC_SEARCH) : '') +
       (CUP[k] && typeof openPlayoffPicture === 'function' ? ib('gdkCup', s.name + ' ' + CUP[k], IC_CUP) : '') +
       (typeof openTeamPrefs === 'function' ? ib('gdkTeams', 'Your ' + s.name + ' teams', IC_TEAMS) : '') +
       (typeof window.hiwPlay === 'function' ? '<button class="gdk-ib" onclick="hiwPlay(\'games\')" aria-label="How Games works">?</button>' : '') + '</div></div>' +
@@ -314,6 +316,19 @@
     S.sig.head = html;
     headEl.innerHTML = html;
   }
+  // v7.99.0: the TV guide for the league and day showing (football: the week, a day at a time)
+  window.gdkGuide = function (k) {
+    if (typeof innGuide !== 'function' || !k) return;
+    var s = league(k), opts = { sports: [k], label: s ? s.name : k.toUpperCase() };
+    if (FB[k]) {
+      var days = {};
+      build(k).forEach(function (it) { if (it.day) days[it.day] = 1; });
+      var ds = Object.keys(days).sort();
+      opts.dates = ds.length ? ds : viewDates(k);
+      opts.date = opts.dates.indexOf(today()) !== -1 ? today() : (opts.dates.filter(function (d) { return d >= today(); })[0] || opts.dates[0]);
+    } else opts.date = dayOf(k);
+    innGuide(opts);
+  };
   window.gdkShift = function (dir) {
     var k = S.sport; if (!k) return;
     if (FB[k]) S.wk[k] = addDays(wkOf(k), dir * 7); else S.off[k] = Math.max(-365, Math.min(365, (S.off[k] || 0) + dir));

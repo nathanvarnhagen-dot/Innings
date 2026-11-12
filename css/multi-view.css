@@ -206,3 +206,6 @@
 .mvh .gl-lf{padding-top:12px}
 .mvh-open{border:0;height:44px;font-family:inherit;cursor:pointer}
 @media (prefers-reduced-motion: reduce){.mv-open:active,.mvh-t:active{transform:none}}
+
+/* v7.99.0: the TV guide, beside Edit board */
+.mv-guide{display:inline-flex;align-items:center;gap:6px}

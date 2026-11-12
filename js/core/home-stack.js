@@ -56,13 +56,13 @@
   document.documentElement.classList.add('stk-on');
   var wrap = document.createElement('div');
   wrap.className = 'gl-c2'; wrap.id = 'stk-wrap';
-  wrap.innerHTML = '<div id="stk-head"></div><div id="stk-deck"></div><div id="stk-rows"></div>';
+  wrap.innerHTML = '<div id="stk-head"></div><div id="stk-rail" role="group" aria-label="Which games"></div><div id="stk-phd"></div><div id="stk-deck"></div><div id="stk-rows"></div>';
   var multi = document.getElementById('gl-multi');
   if (multi && multi.nextSibling) bento.insertBefore(wrap, multi.nextSibling); else bento.insertBefore(wrap, bento.firstChild);
-  var head = wrap.children[0], deck = wrap.children[1], rowsEl = wrap.children[2];
+  var head = wrap.children[0], railEl = wrap.children[1], phdEl = wrap.children[2], deck = wrap.children[3], rowsEl = wrap.children[4];
 
   var esc = _glEsc;
-  var S = { day: 0, open: false, order: [], items: {}, els: {}, touched: false, anim: null, busy: 0, swiped: 0,
+  var S = { day: 0, f: null, fUser: false, all: [], ids: [], res: null, open: false, order: [], items: {}, els: {}, touched: false, anim: null, busy: 0, swiped: 0,
     prefs: {}, prefsAt: 0, prefsReady: false, prefsDirty: false, cache: {}, loaded: {}, sig: '' };
   var MAX = 24, PEEK = 54, FRONT = 316, STRIP = 120;
   // v7.94.1: the pile sits in from the edges, leaving a gutter on each side to scroll Home with
@@ -133,8 +133,8 @@
   }
 
   // ── the day's games, ranked ──
-  function rank(res, off) {
-    var top = [], rest = [];
+  function allItems(res, off) {
+    var out = [];
     (res || []).forEach(function (x) {
       (x.games || []).forEach(function (g) {
         if (!g || g.gamePk == null || !g.away || !g.home) return;
@@ -144,24 +144,40 @@
         var ph = _glPhase(x.sport, g), po = _glIsPost(x.sport, g);
         var worthy = typeof _cbbWorthy !== 'function' || _cbbWorthy(x.sport, g);
         var tier = fav ? 0 : (fw.names.length || fw.mine) ? 1 : fol ? 2 : (po && worthy) ? 3 : (off === 0 && ph === 'live' && worthy) ? 4 : 9;
-        var it = { id: x.sport + ':' + g.gamePk, sport: x.sport, g: g, ph: ph, ta: ta, th: th, fw: fw, tier: tier, worthy: worthy, t: Date.parse(g.startTime || '') || 0 };
-        (tier < 9 ? top : rest).push(it);
+        out.push({ id: x.sport + ':' + g.gamePk, sport: x.sport, g: g, ph: ph, ta: ta, th: th, fw: fw, tier: tier, worthy: worthy, t: Date.parse(g.startTime || '') || 0 });
       });
     });
-    // none of your teams, no friends, no playoffs, nothing live: the day's games
-    if (!top.length) top = rest.filter(function (it) { return it.worthy; });
-    var phR = { live: 0, pre: 1, post: 2 };
-    top.sort(function (a, b) { return (a.tier - b.tier) || (phR[a.ph] - phR[b.ph]) || (b.fw.names.length - a.fw.names.length) || (a.t - b.t); });
-    return top.slice(0, MAX);
+    return out;
+  }
+  // v7.99.0: the rail picks what's in the pile.
+  //   Yours — your favorite teams, games you or a friend are in, teams you follow
+  //   All   — the pile as before (yours, playoffs, everything live), then the rest of the day
+  //   a sport — that sport's games (college basketball: the Top 25 ones and yours)
+  function pick(all, f) {
+    if (f === 'Yours') return all.filter(function (it) { return it.tier <= 2; });
+    if (f && f !== 'All') return all.filter(function (it) { return it.sport === f && (it.worthy || it.tier <= 2); });
+    var top = all.filter(function (it) { return it.tier < 9; });
+    var rest = all.filter(function (it) { return it.tier === 9 && it.worthy; });
+    return top.concat(rest);
+  }
+  var PHR = { live: 0, pre: 1, post: 2 };
+  function cmp(a, b) { return (Math.min(a.tier, 5) - Math.min(b.tier, 5)) || (PHR[a.ph] - PHR[b.ph]) || (b.fw.names.length - a.fw.names.length) || (a.t - b.t); }
+  function rank(res, off) {
+    var all = allItems(res, off);
+    S.all = all;
+    if (!S.fUser || !S.f) S.f = all.some(function (it) { return it.tier <= 2; }) ? 'Yours' : 'All';
+    if (S.f !== 'Yours' && S.f !== 'All' && !all.some(function (it) { return it.sport === S.f; })) S.f = 'All';
+    return pick(all, S.f).sort(cmp).slice(0, MAX);
   }
   function ingest(res) {
     if (!S.prefsReady) return;
+    S.res = res;
     var list = rank(res, S.day), items = {}, ids = [];
     list.forEach(function (it) { items[it.id] = it; ids.push(it.id); });
     // keep the pile in the order you left it; new games join by rank
     var keep = S.order.filter(function (id) { return items[id]; });
     var order = keep.length ? keep.concat(ids.filter(function (id) { return keep.indexOf(id) === -1; })) : ids;
-    S.items = items; S.order = order; S.loaded[S.day] = true;
+    S.items = items; S.order = order; S.ids = ids; S.loaded[S.day] = true;
     render();
   }
   function fetchDay(off) {
@@ -256,7 +272,7 @@
   function renderHead() {
     var w = dayWord(S.day);
     head.innerHTML = '<div class="stk-days"><button class="stk-day cur' + (S.open ? ' open' : '') + '" onclick="stkDays()" aria-label="' + esc(w) + ', change the day" aria-haspopup="dialog" aria-expanded="' + S.open + '">' + esc(w) + IC.down + '</button></div>' +
-      '<span class="stk-hr"><button class="stk-gb" onclick="stkGuide()" aria-label="TV guide">' + IC.tv + 'Guide</button><button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button></span>' + (S.open ? popHtml() : '');
+      '<button class="stk-add" onclick="stkAdd()" aria-label="Add a team">Add</button>' + (S.open ? popHtml() : '');
     head.classList.toggle('open', !!S.open); wrap.classList.toggle('pop', !!S.open);
     if (S.open) loadDots();
   }
@@ -348,18 +364,86 @@
     })(DQ.shift());
   }
 
+  // ── v7.99.0: the rail (Yours · All · each sport playing) and the line over the pile ──
+  var SHORT = { cfb: 'CFB', cbb: 'CBB' }, EMO = { cfb: '🎓' };
+  var GRID = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>';
+  function lgName(k) { var s = GAMES_SPORTS.filter(function (x) { return x.key === k; })[0]; return s ? s.name : k.toUpperCase(); }
+  function lgShort(k) { var s = GAMES_SPORTS.filter(function (x) { return x.key === k; })[0]; return SHORT[k] || (s && s.name.length <= 5 ? s.name : k.toUpperCase()); }
+  function myTeams() { // distinct favorite / followed teams playing on the day showing
+    var seen = {}, out = [];
+    S.all.forEach(function (it) {
+      [['a', it.g.away, it.ta], ['h', it.g.home, it.th]].forEach(function (t) {
+        if ((t[2] !== 'fav' && t[2] !== 'fol') || seen[it.sport + t[1]]) return;
+        seen[it.sport + t[1]] = 1;
+        var g = it.g, lk = t[0] === 'a' ? _glTeam(it.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt) : _glTeam(it.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt);
+        out.push({ fav: t[2] === 'fav', bg: lk.bg });
+      });
+    });
+    return out.sort(function (a, b) { return (b.fav ? 1 : 0) - (a.fav ? 1 : 0); });
+  }
+  function renderRail() {
+    if (!S.loaded[S.day]) { railEl.innerHTML = ''; return; }
+    var all = S.all, tiles = [], liveOf = function (L) { return L.filter(function (it) { return it.ph === 'live'; }).length; };
+    var mineL = pick(all, 'Yours'), mt = myTeams();
+    var minis = mt.length ? mt.slice(0, 3).map(function (t) { return '<i style="background:' + t.bg + '"></i>'; }).join('') : '<i class="none">' + IC.star + '</i>';
+    tiles.push({ k: 'Yours', icon: '<span class="minis">' + minis + '</span>', nm: 'Yours', n: mineL.length, lv: liveOf(mineL) });
+    var allL = pick(all, 'All');
+    tiles.push({ k: 'All', icon: GRID, nm: 'All', n: allL.length, lv: liveOf(allL) });
+    GAMES_SPORTS.forEach(function (sp) {
+      var L = pick(all, sp.key); if (!L.length) return;
+      tiles.push({ k: sp.key, icon: '<span class="emo">' + (EMO[sp.key] || sp.emoji) + '</span>', nm: lgShort(sp.key), n: L.length, lv: liveOf(L), full: sp.name });
+    });
+    var html = tiles.map(function (t) {
+      var on = t.k === S.f;
+      return '<button class="stk-tile' + (on ? ' on' : '') + (t.k === 'Yours' ? ' yours' : '') + '" data-k="' + esc(t.k) + '" onclick="stkFilter(this.dataset.k)" aria-pressed="' + on + '" aria-label="' + esc((t.full || t.nm) + ', ' + t.n + (t.n === 1 ? ' game' : ' games') + (t.lv ? ', ' + t.lv + ' live' : '')) + '">' +
+        '<span class="ic">' + t.icon + '</span><span class="nm">' + esc(t.nm) + '</span>' + (t.lv ? '<span class="lv">' + t.lv + '</span>' : '') + '</button>';
+    }).join('');
+    if (S.railSig === html) return;
+    S.railSig = html;
+    var left = railEl.scrollLeft;
+    railEl.innerHTML = html;
+    railEl.scrollLeft = left;
+  }
+  function renderPhd() {
+    if (!S.loaded[S.day] || !S.order.length) { phdEl.innerHTML = ''; return; }
+    var L = S.ids.map(function (id) { return S.items[id]; }), lv = L.filter(function (it) { return it.ph === 'live'; }).length;
+    var nm = S.f === 'Yours' ? 'Your games' : S.f === 'All' ? 'Every sport' : lgName(S.f);
+    var at = S.ids.indexOf(S.order[0]) + 1, N = S.ids.length;
+    // the TV guide lives here only when two or more of your teams play that day
+    var guide = S.f === 'Yours' && myTeams().length >= 2 && typeof innGuide === 'function';
+    var html = '<span class="cap">' + esc(nm) + (lv ? ' · <b>' + lv + ' live</b>' : '') + '</span><span class="r">' +
+      (guide ? '<button class="stk-gb" onclick="stkGuide()" aria-label="TV guide for your teams">' + IC.tv + 'Guide</button>' : '') +
+      (N > 1 ? '<span class="cnt">' + at + ' of ' + N + '</span>' : '') + '</span>';
+    if (S.phdSig !== html) { S.phdSig = html; phdEl.innerHTML = html; }
+  }
+  window.stkFilter = function (k) {
+    if (k === S.f && S.fUser) return;
+    clearTimeout(S.t1); clearTimeout(S.t2); S.pend = null;
+    S.f = k; S.fUser = true; S.order = []; S.sig = ''; S.anim = null; S.busy = 0;
+    if (S.res) ingest(S.res); else render();
+  };
+  window.stkGuide = function () {
+    if (typeof innGuide !== 'function') return;
+    innGuide({ date: dateFor(S.day), label: 'Your teams', filter: function (it) { return it.mine > 0; } });
+  };
+
   // ── the pile ──
   function render() {
     if (Date.now() < S.busy) { clearTimeout(S.later); S.later = setTimeout(render, S.busy - Date.now() + 30); return; }
     renderHead();
-    var sig = S.day + '|' + S.order.map(function (id) { return id + JSON.stringify([S.items[id].ph, S.items[id].g.awayScore, S.items[id].g.homeScore, S.items[id].g.statusDetail || S.items[id].g.status, S.items[id].g.inning, S.items[id].g.inningHalf, S.items[id].ta, S.items[id].th, S.items[id].fw.names, S.items[id].fw.mine, S.items[id].g.network, S.items[id].g.sit && S.items[id].g.sit.dd]); }).join('|');
+    renderRail();
+    renderPhd();
+    var sig = S.day + '|' + S.f + '|' + S.order.map(function (id) { return id + JSON.stringify([S.items[id].ph, S.items[id].g.awayScore, S.items[id].g.homeScore, S.items[id].g.statusDetail || S.items[id].g.status, S.items[id].g.inning, S.items[id].g.inningHalf, S.items[id].ta, S.items[id].th, S.items[id].fw.names, S.items[id].fw.mine, S.items[id].g.network, S.items[id].g.sit && S.items[id].g.sit.dd]); }).join('|');
     if (sig === S.sig && deck.firstChild) { layout(); return; }
     S.sig = sig;
     if (!S.order.length) {
       S.els = {};
       deck.style.height = '';
       var w = relWord(S.day);
-      deck.innerHTML = '<div class="stk-empty">' + (S.loaded[S.day]
+      deck.innerHTML = '<div class="stk-empty">' + (S.loaded[S.day] && S.f === 'Yours' && S.all.length
+        ? '<b>None of your teams play ' + esc(w) + '</b><small>No games for your teams or your friends.</small>' +
+          '<span class="bt"><button onclick="stkFilter(\'All\')">Every game</button><button onclick="stkAdd()">Add a team</button></span>'
+        : S.loaded[S.day]
         ? '<b>Nothing on ' + esc(w) + '</b><small>No games for your teams, your friends or anyone else' + (S.day === 0 ? ' right now' : '') + '.</small>' +
           '<span class="bt">' + (S.day < 1 ? '<button onclick="stkDay(1)">See tomorrow</button>' : '<button onclick="stkDays()">Pick a day</button>') + '<button onclick="glassGames()">All leagues</button><button onclick="stkAdd()">Add a team</button></span>'
         : '<small>Loading games…</small>') + '</div>';
@@ -385,6 +469,7 @@
   }
   function layout(instant) {
     var N = S.order.length; if (!N) return;
+    renderPhd();
     var vis = Math.min(N - 1, 3), strip = !S.touched, R = strip ? Math.min(vis + 1, 3) : vis;
     var a = S.anim;
     deck.style.height = (R * PEEK + FRONT) + 'px';
@@ -509,164 +594,10 @@
   document.addEventListener('click', function (e) { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   window.stkDay = function (off) {
     S.open = false;
-    if (off !== S.day) { clearTimeout(S.t1); clearTimeout(S.t2); S.pend = null; S.day = off; S.order = []; S.items = {}; S.sig = ''; S.anim = null; S.busy = 0; }
+    if (off !== S.day) { clearTimeout(S.t1); clearTimeout(S.t2); S.pend = null; S.day = off; S.order = []; S.items = {}; S.ids = []; S.all = []; S.res = null; S.f = null; S.fUser = false; S.sig = ''; S.anim = null; S.busy = 0; }
     render();
     refresh();
   };
-
-  // ── v7.98.0: the TV guide ──
-  // "Guide" beside Add opens a sheet over Home: every game of the day you're
-  // on, one row per channel (the channels your teams are on first, then the
-  // ones with live games), time running left to right with a red line at now.
-  // Every game says its network on it. Tap a game for its card; Open goes in.
-  var GD = { open: false, sel: null, drag: null };
-  var GPX = 104; // px per hour
-  var GDUR = { mlb: 3, nfl: 3.25, cfb: 3.5, nba: 2.4, wnba: 2, cbb: 2, nhl: 2.6, mls: 2, nwsl: 2 };
-  function gdRoot() {
-    var el = document.getElementById('stk-gd');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'stk-gd';
-    el.innerHTML = '<div class="stk-gd-shade" onclick="stkGuideClose()"></div><div class="stk-gd-sheet" role="dialog" aria-modal="true" aria-label="TV guide"><div class="stk-gd-top"><span class="grab"></span><div class="hd"><div><b></b><small></small></div><button class="x" onclick="stkGuideClose()" aria-label="Close the guide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div></div><div class="stk-gd-body"></div><div class="stk-gd-det"></div></div>';
-    document.body.appendChild(el);
-    // drag the top of the sheet down to close it
-    var top = el.querySelector('.stk-gd-top'), sheet = el.querySelector('.stk-gd-sheet');
-    var y0 = null, dy = 0;
-    var start = function (y) { y0 = y; dy = 0; sheet.style.transition = 'none'; };
-    var move = function (y) { if (y0 == null) return; dy = Math.max(0, y - y0); sheet.style.transform = 'translateY(' + dy + 'px)'; };
-    var end = function () { if (y0 == null) return; y0 = null; sheet.style.transition = ''; sheet.style.transform = ''; if (dy > 90) stkGuideClose(); };
-    top.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) start(t.clientY); }, { passive: true });
-    top.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientY); }, { passive: true });
-    top.addEventListener('touchend', end, { passive: true });
-    top.addEventListener('mousedown', function (e) { if (e.target.closest('.x')) return; start(e.clientY); var mm = function (ev) { move(ev.clientY); }, mu = function () { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); end(); }; document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); });
-    return el;
-  }
-  function gdGames(cb) {
-    var date = dateFor(S.day), c = S.cache[date];
-    var res = (S.day === 0 && window._glSched) || (c && c.res);
-    if (!res) { fetchDay(S.day).then(function () { if (GD.open) cb(); }); return null; }
-    var out = [], d0 = new Date(); d0.setDate(d0.getDate() + S.day); d0.setHours(0, 0, 0, 0);
-    res.forEach(function (x) {
-      (x.games || []).forEach(function (g) {
-        if (!g || g.gamePk == null || !g.away || !g.home) return;
-        if (typeof _cbbWorthy === 'function' && !_cbbWorthy(x.sport, g)) return;
-        var t = Date.parse(g.startTime || ''); if (!t) return;
-        var ta = tag(x.sport, g.away), th = tag(x.sport, g.home);
-        var nets = String(g.network || '').split(' · ').filter(Boolean);
-        out.push({ id: x.sport + ':' + g.gamePk, sport: x.sport, g: g, h: (t - d0) / 3600000, dur: GDUR[x.sport] || 2.5, ph: _glPhase(x.sport, g),
-          net: nets[0] || '', nets: nets.join(' · '), mine: ta === 'fav' || th === 'fav' ? 2 : (ta === 'fol' || th === 'fol') ? 1 : 0, ta: ta, th: th });
-      });
-    });
-    return out;
-  }
-  function gdHour(h) { var x = ((Math.floor(h) % 24) + 24) % 24; return (x % 12 || 12) + (x < 12 ? ' AM' : ' PM'); }
-  function gdBlockStatus(it) {
-    var g = it.g;
-    if (it.ph === 'live') return (g.awayScore != null ? g.awayScore + '–' + g.homeScore + ' · ' : '') + _glRowStatus(it.sport, g, 'live');
-    if (it.ph === 'post') return (g.awayScore != null ? g.awayScore + '–' + g.homeScore + ' · ' : '') + 'Final';
-    return _glOff(g) ? _glRowStatus(it.sport, g, 'pre') : _glTbd(g) ? 'TBD' : when(it);
-  }
-  function gdLook(it, side) { var g = it.g; return side === 'a' ? _glTeam(it.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt) : _glTeam(it.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt); }
-  function renderGuide() {
-    var el = gdRoot(), body = el.querySelector('.stk-gd-body');
-    var w = dayWord(S.day);
-    el.querySelector('.hd b').textContent = 'On TV ' + (S.day === 0 ? (w === 'Tonight' ? 'tonight' : 'today') : relWord(S.day));
-    var list = gdGames(renderGuide);
-    if (!list) { el.querySelector('.hd small').textContent = 'Loading the day’s games…'; body.innerHTML = '<div class="stk-gd-empty">Loading…</div>'; renderDet(null); return; }
-    var nNet = {};
-    list.forEach(function (it) { nNet[it.net || '~'] = 1; });
-    el.querySelector('.hd small').textContent = list.length ? list.length + ' game' + (list.length === 1 ? '' : 's') + ' on ' + Object.keys(nNet).filter(function (k) { return k !== '~'; }).length + ' channels · your teams’ channels first' : 'No games';
-    if (!list.length) { body.innerHTML = '<div class="stk-gd-empty">No games on ' + esc(relWord(S.day)) + '.</div>'; renderDet(null); return; }
-    // rows: one per channel
-    var rows = {}, keys = [];
-    list.forEach(function (it) { var k = it.net || '~'; if (!rows[k]) { rows[k] = []; keys.push(k); } rows[k].push(it); });
-    var score = function (k) {
-      var r = rows[k], m = Math.max.apply(null, r.map(function (it) { return it.mine; })), lv = r.some(function (it) { return it.ph === 'live'; });
-      return k === '~' ? 1e6 : (2 - m) * 1000 + (lv ? 0 : 100) - r.length;
-    };
-    keys.sort(function (a, b) { return score(a) - score(b) || a.localeCompare(b); });
-    // the hours shown
-    var lo = Math.floor(Math.min.apply(null, list.map(function (it) { return it.h; })));
-    var hi = Math.ceil(Math.max.apply(null, list.map(function (it) { return it.h + it.dur; })));
-    if (hi - lo < 4) hi = lo + 4;
-    var W = (hi - lo) * GPX;
-    var hours = '';
-    for (var hh = lo; hh < hi; hh++) hours += '<span style="left:' + ((hh - lo) * GPX + 6) + 'px">' + gdHour(hh) + '</span>';
-    var labs = '', lanesHtml = '';
-    if (!GD.sel || !list.some(function (it) { return it.id === GD.sel; })) {
-      var pick = list.filter(function (it) { return it.mine && it.ph !== 'post'; }).sort(function (a, b) { return (b.mine - a.mine) || (a.h - b.h); })[0];
-      GD.sel = pick ? pick.id : null;
-    }
-    keys.forEach(function (k) {
-      var r = rows[k].sort(function (a, b) { return a.h - b.h; }), lanes = [];
-      r.forEach(function (it) {
-        var x = (it.h - lo) * GPX, wd = Math.max(it.dur * GPX - 4, 96), L = 0;
-        while (lanes[L] != null && lanes[L] > x) L++;
-        lanes[L] = x + wd + 4; it._x = x; it._w = wd; it._l = L;
-      });
-      var nL = Math.max(1, lanes.length), H = nL * 64 + 4;
-      var my = r.filter(function (it) { return it.mine; })[0];
-      var mineName = my ? _glShort(my.ta === 'fav' || my.ta === 'fol' ? my.g.away : my.g.home) : '';
-      labs += '<div class="lr' + (my ? ' mine' : '') + '" style="height:' + H + 'px"><b>' + esc(k === '~' ? 'No TV listed' : k) + '</b>' + (mineName ? '<small>' + esc(mineName) + '</small>' : '') + '</div>';
-      lanesHtml += '<div class="gr" style="height:' + H + 'px">' + r.map(function (it) {
-        var a = gdLook(it, 'a'), h = gdLook(it, 'h');
-        return '<button class="blk' + (it.ph === 'live' ? ' live' : '') + (it.ph === 'post' ? ' post' : '') + (it.mine ? ' mine' : '') + (it.id === GD.sel ? ' on' : '') + '" style="left:' + (it._x + 2) + 'px;width:' + it._w + 'px;top:' + (it._l * 64 + 4) + 'px;background:linear-gradient(rgba(12,9,32,.28),rgba(12,9,32,.28)),linear-gradient(100deg,' + a.bg + ',' + h.bg + ')" onclick="stkGuidePick(\'' + esc(it.id) + '\')" aria-label="' + esc(_glShort(it.g.away) + ' at ' + _glShort(it.g.home) + ', ' + gdBlockStatus(it) + ', on ' + (it.nets || 'no TV listed')) + '">' +
-          '<b>' + (it.mine === 2 ? IC.star : '') + esc(a.abbr + ' at ' + h.abbr) + '</b>' +
-          '<small>' + (it.ph === 'live' ? '<i class="ld"></i>' : '') + esc(gdBlockStatus(it)) + '</small>' +
-          '<em>' + IC.tv + esc(it.nets || 'No TV listed') + '</em></button>';
-      }).join('') + '</div>';
-    });
-    var nowX = null;
-    if (S.day === 0) { var n = new Date(), nh = n.getHours() + n.getMinutes() / 60; if (nh >= lo && nh <= hi) nowX = (nh - lo) * GPX; }
-    var scr = body.querySelector('.scr'), keepL = scr ? scr.scrollLeft : null, keepT = body.scrollTop;
-    body.innerHTML = '<div class="gd"><div class="lab"><div class="lh"></div>' + labs + '</div>' +
-      '<div class="scr"><div class="cv" style="width:' + W + 'px"><div class="hrs">' + hours + '</div>' + lanesHtml +
-      (nowX != null ? '<div class="nowl" style="left:' + nowX + 'px"><span>Now</span></div>' : '') + '</div></div></div>';
-    scr = body.querySelector('.scr');
-    if (keepL != null) { scr.scrollLeft = keepL; body.scrollTop = keepT; }
-    else scr.scrollLeft = Math.max(0, (nowX != null ? nowX : 0) - GPX * 0.6);
-    GD.list = list;
-    renderDet(list.filter(function (it) { return it.id === GD.sel; })[0] || null);
-  }
-  function renderDet(it) {
-    var el = gdRoot().querySelector('.stk-gd-det');
-    if (!it) { el.innerHTML = '<div class="tip">Tap a game for its channel and to open it.</div>'; return; }
-    var g = it.g, a = gdLook(it, 'a'), h = gdLook(it, 'h'), lg = _glLeagueName(it.sport);
-    var st = it.ph === 'live' ? 'Live · ' + lg + ' · ' + _glRowStatus(it.sport, g, 'live') : it.ph === 'post' ? 'Final · ' + lg : lg + ' · ' + gdBlockStatus(it);
-    var sc = it.ph !== 'pre' && g.awayScore != null ? esc(g.awayScore) + '–' + esc(g.homeScore) : '';
-    el.innerHTML = '<div class="dc" style="background:linear-gradient(rgba(12,9,32,.35),rgba(12,9,32,.35)),linear-gradient(120deg,' + a.bg + ',' + h.bg + ')">' +
-      '<div class="dl"><span class="bds"><span class="bd" style="' + _glBadgeStyle(a) + '">' + esc(a.abbr) + '</span><span class="bd" style="' + _glBadgeStyle(h) + '">' + esc(h.abbr) + '</span></span>' +
-      '<span class="nm"><b>' + esc(_glShort(g.away) + ' at ' + _glShort(g.home)) + '</b><small>' + (it.ph === 'live' ? '<i class="ld"></i>' : '') + esc(st) + '</small></span>' + (sc ? '<span class="sc gl-num">' + sc + '</span>' : '') + '</div>' +
-      '<div class="ex"><span class="tv">' + IC.tv + (it.nets ? 'Watch on <b>' + esc(it.nets) + '</b>' : 'No TV listed') + '</span><button class="gl-join" onclick="stkGuideOpenGame()">Open</button></div></div>';
-  }
-  window.stkGuide = function () {
-    if (S.open) { S.open = false; renderHead(); }
-    var el = gdRoot();
-    GD.open = true; GD.sel = null;
-    var body = el.querySelector('.stk-gd-body'); body.innerHTML = ''; body.scrollTop = 0;
-    renderGuide();
-    document.documentElement.classList.add('stk-gd-on');
-    requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('on'); }); });
-  };
-  window.stkGuideClose = function () {
-    var el = document.getElementById('stk-gd');
-    GD.open = false;
-    document.documentElement.classList.remove('stk-gd-on');
-    if (el) el.classList.remove('on');
-  };
-  window.stkGuidePick = function (id) {
-    GD.sel = id;
-    var el = gdRoot();
-    Array.prototype.forEach.call(el.querySelectorAll('.blk'), function (b) { b.classList.toggle('on', b.getAttribute('onclick').indexOf("'" + id + "'") !== -1); });
-    renderDet((GD.list || []).filter(function (it) { return it.id === id; })[0] || null);
-  };
-  window.stkGuideOpenGame = function () {
-    var it = (GD.list || []).filter(function (x) { return x.id === GD.sel; })[0];
-    if (!it) return;
-    stkGuideClose();
-    if (typeof openGameScreen === 'function') setTimeout(function () { openGameScreen(it.g.gamePk, it.g.away, it.g.home, it.sport, dateFor(S.day)); }, 220);
-  };
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && GD.open) stkGuideClose(); });
 
   // ── following a team from its card ──
   window.stkFollow = function (sport, team) {
@@ -792,7 +723,7 @@
   }
   // the ambient glow follows the top card, not the (hidden) friends' tile
   if (typeof _glAmbient === 'function') { S.amb = _glAmbient; window._glAmbient = function () {}; }
-  wrapFn('_glRenderLive', function () { if (S.day === 0) { if (S.prefsReady) ingest(window._glSched || []); else loadPrefs().then(refresh); if (GD.open) renderGuide(); } });
+  wrapFn('_glRenderLive', function () { if (S.day === 0) { if (S.prefsReady) ingest(window._glSched || []); else loadPrefs().then(refresh); } });
   wrapFn('_glRenderRecaps', renderRows);
   wrapFn('_glRenderComing', renderRows);
   wrapFn('_glHomeOpen', function () {
