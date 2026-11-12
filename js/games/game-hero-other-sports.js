@@ -770,6 +770,7 @@ function _gxBoxHtml(m) {
       sec.rows.map(function (r) {
         var indent = r.sub ? 'padding-left:10px;border-left:1.5px solid rgba(168,159,232,.35);margin-left:2px;' : '';
         return '<div class="gh-boxrow gh-num" style="' + grid + '"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0;' + indent + '">' +
+          (r.num ? '<span style="display:inline-block;min-width:22px;font-size:11px;color:#9C95D0;font-weight:600">' + _escapeHtml(r.num) + '</span>' : '') +
           _gxPlayerLink(r.name, r.id, m.league) + (r.pos ? ' <span style="font-size:10px;color:#9C95D0;font-weight:500">' + _escapeHtml(r.pos) + '</span>' : '') + '</span>' +
           r.cells.map(function (v) { return '<span style="text-align:right;' + (r.dnp ? 'color:#9C95D0;font-weight:500' : '') + '">' + _escapeHtml(v == null ? '' : String(v)) + '</span>'; }).join('') + '</div>';
       }).join('') +

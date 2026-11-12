@@ -1214,7 +1214,8 @@ function _gcForm(data, away, home) {
 }
 function _gcPlayer(a) {
   a = a || {};
-  return { name: a.displayName || a.shortName || '', id: a.id || null, pos: (a.position && a.position.abbreviation) || null };
+  // v7.96.1: jersey number rides along for the Box tab
+  return { name: a.displayName || a.shortName || '', id: a.id || null, pos: (a.position && a.position.abbreviation) || null, num: a.jersey != null && a.jersey !== '' ? String(a.jersey) : null };
 }
 
 // ── Football
@@ -1468,7 +1469,7 @@ function _fbBox(data) {
         cols: (st.labels || []).slice(0, n),
         rows: st.athletes.slice(0, 8).map(function (a) {
           var p = _gcPlayer(a.athlete);
-          return { name: p.name, id: p.id, pos: null, cells: (a.stats || []).slice(0, n), sub: false };
+          return { name: p.name, id: p.id, num: p.num, pos: null, cells: (a.stats || []).slice(0, n), sub: false };
         })
       });
     });
@@ -1818,7 +1819,7 @@ function _bbBoard(data, away, home) {
   if (a.fga == null && h.fga == null && a.ast == null) return null;
   return { a: a, h: h };
 }
-function _bbBox(data) {
+function _bbBox(data, phase) {
   var want = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG'];
   var out = {};
   ((data.boxscore && data.boxscore.players) || []).forEach(function (tp) {
@@ -1832,13 +1833,17 @@ function _bbBox(data) {
     var toRow = function (a) {
       var p = _gcPlayer(a.athlete);
       var dnp = a.didNotPlay || !(a.stats || []).length;
+      // v7.96.1: before tip nobody has played yet, so no-stat rows stay blank instead of reading DNP
+      var dnpTxt = (phase === 'pre' && !a.didNotPlay) ? '' : 'DNP';
       // v7.55.0: on the floor right now (ESPN's active flag; the starters when it isn't there) and personal fouls, for the arena board
-      return { name: p.name, id: p.id, pos: p.pos, cells: dnp ? cols.map(function (c, i) { return i === 0 ? 'DNP' : ''; }) : idx.filter(function (x) { return x !== -1; }).map(function (x) { return a.stats[x]; }), sub: false, dnp: dnp,
+      return { name: p.name, id: p.id, num: p.num || (a.jersey != null ? String(a.jersey) : null), pos: p.pos, cells: dnp ? cols.map(function (c, i) { return i === 0 ? dnpTxt : ''; }) : idx.filter(function (x) { return x !== -1; }).map(function (x) { return a.stats[x]; }), sub: false, dnp: dnp,
         on: anyActive ? (a.active === true ? 1 : 0) : null, pf: (!dnp && pfI >= 0) ? _num(a.stats[pfI]) : null };
     };
     var athletes = st.athletes || [];
     var starters = athletes.filter(function (a) { return a.starter; }).map(toRow);
-    var bench = athletes.filter(function (a) { return !a.starter; }).map(toRow).filter(function (r) { return !r.dnp; });
+    // v7.96.1: the whole bench — everyone who played, then everyone who hasn't (DNP)
+    var benchAll = athletes.filter(function (a) { return !a.starter; }).map(toRow);
+    var bench = benchAll.filter(function (r) { return !r.dnp; }).concat(benchAll.filter(function (r) { return r.dnp; }));
     var sections = [];
     if (starters.length) sections.push({ title: 'Starters', cols: cols, rows: starters });
     if (bench.length) sections.push({ title: 'Bench', cols: cols, rows: bench });
@@ -1889,7 +1894,7 @@ function _scBox(data) {
       var s = r.stats || [];
       var gk = /^G(K)?$/.test(String(pos || ''));
       return {
-        name: p.name, id: p.id, pos: pos, sub: isSub, gk: gk,
+        name: p.name, id: p.id, num: r.jersey != null && r.jersey !== '' ? String(r.jersey) : p.num, pos: pos, sub: isSub, gk: gk,
         cells: gk
           ? [_scStat(s, ['saves', 'SV']), _scStat(s, ['goalsConceded', 'GA']), '', '', _scStat(s, ['foulsCommitted', 'FC']), _scStat(s, ['yellowCards', 'YC'])]
           : [_scStat(s, ['totalGoals', 'G']), _scStat(s, ['goalAssists', 'A']), _scStat(s, ['totalShots', 'SH']), _scStat(s, ['shotsOnTarget', 'ST']), _scStat(s, ['foulsCommitted', 'FC']), _scStat(s, ['yellowCards', 'YC'])]
@@ -1979,7 +1984,7 @@ function summarizeGamecast(data, league, eventId, wantAllPlays) {
       if (phase === 'live') model.situation = { momA: bb.momA, momH: bb.momH, run: bb.run || null };
       if (phase !== 'pre') { try { model.court = _bbCourt(data, away, home, league); } catch (e) { model.court = null; } } // v7.46.0
       try { model.board = _bbBoard(data, away, home); } catch (e) { model.board = null; } // v7.55.0: the arena board's numbers
-      boxById = _bbBox(data);
+      boxById = _bbBox(data, phase);
     } else if (sport === 'soccer') {
       var sc = _scEvents(data, away, home);
       model.highlights = sc.highlights;
