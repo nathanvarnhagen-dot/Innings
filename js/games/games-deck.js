@@ -302,13 +302,14 @@
       sub = esc(d) + (live ? ' · <b>' + live + ' live</b>' : '') + (tot ? ' · ' + tot + (tot === 1 ? ' game' : ' games') : '');
     }
     var ib = function (fn, label, icon) { return '<button class="gdk-ib" data-lg="' + esc(k) + '" onclick="' + fn + '(this.dataset.lg)" aria-label="' + esc(label) + '">' + icon + '</button>'; };
-    var html = '<div class="row"><div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span><span class="sub">' + sub + '</span>' +
-      (ph && !(fb && /^week/i.test(ph)) ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>' +
+    // v7.99.1: the date line sits under the name and the buttons, full width, so it never runs under them
+    var meta = '<div class="meta"><span class="sub">' + sub + '</span>' + (ph && !(fb && /^week/i.test(ph)) ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>';
+    var html = '<div class="row"><div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span></div>' +
       '<div class="bt">' + (typeof innGuide === 'function' && GAMES_SPORTS.some(function (x) { return x.key === k; }) ? ib('gdkGuide', s.name + ' on TV', IC_TV) : '') +
       (typeof openInningsSearch === 'function' ? ib('gdkSearch', 'Search players, teams and rules', IC_SEARCH) : '') +
       (CUP[k] && typeof openPlayoffPicture === 'function' ? ib('gdkCup', s.name + ' ' + CUP[k], IC_CUP) : '') +
       (typeof openTeamPrefs === 'function' ? ib('gdkTeams', 'Your ' + s.name + ' teams', IC_TEAMS) : '') +
-      (typeof window.hiwPlay === 'function' ? '<button class="gdk-ib" onclick="hiwPlay(\'games\')" aria-label="How Games works">?</button>' : '') + '</div></div>' +
+      (typeof window.hiwPlay === 'function' ? '<button class="gdk-ib" onclick="hiwPlay(\'games\')" aria-label="How Games works">?</button>' : '') + '</div></div>' + meta +
       '<div class="gdk-sw"><button class="ar" onclick="gdkShift(-1)" aria-label="' + (fb ? 'Previous week' : 'Previous day') + '">‹</button>' +
       '<button class="lb" onclick="gdkNow()"' + (now ? ' disabled' : '') + ' aria-label="' + esc(lab + (now ? '' : ', back to ' + (fb ? 'this week' : 'today'))) + '"><b>' + esc(lab) + '</b>' + (now ? '' : '<small>Back to ' + (fb ? 'this week' : 'today') + '</small>') + '</button>' +
       '<button class="ar" onclick="gdkShift(1)" aria-label="' + (fb ? 'Next week' : 'Next day') + '">›</button></div>';

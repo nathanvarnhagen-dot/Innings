@@ -24,7 +24,7 @@ html.gdk-on.glass #screen-games-picker .scroll-bare{padding-top:calc(env(safe-ar
 
 /* the league line */
 #gdk-head{padding:18px 18px 0}
-#gdk-head .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+#gdk-head .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #gdk-head .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 #gdk-head .nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:44px;line-height:40px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #gdk-head .nm.long{font-size:30px;line-height:34px}
@@ -119,3 +119,7 @@ html.gdk-on.glass #screen-games-picker .scroll-bare{padding-top:calc(env(safe-ar
 html.gdk-on #games-playoff-cards{margin-top:18px}
 html.gdk-on #games-picker-recaps{margin-top:18px}
 @media (prefers-reduced-motion:reduce){.gdk-card,.gdk-card.behind,.gdk-card.out{transition:opacity .2s ease!important;filter:none!important}.gdk-card.out{transform:none!important}.gdk-card.in{animation:none}}
+
+/* v7.99.1: the date line under the name and buttons, never under the buttons */
+#gdk-head .meta{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:2px;margin-top:4px}
+#gdk-head .meta .sub{white-space:normal}
