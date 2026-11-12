@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.100.0', at: '2026-11-12T15:45:00-08:00',
+      title: 'A top for every sport',
+      sub: 'Each league on the Games page now opens on its own drawing.',
+      items: function () {
+        return [
+          { icon: 'trophy', title: 'Nine leagues, nine tops', body: 'Oracle Park from the upper deck for MLB, the whole field for the NFL, a painted end zone for college football, the half court for the NBA and WNBA, the bracket for college basketball, the whole rink for the NHL and the whole pitch for MLS and NWSL.' },
+          { icon: 'bars', title: 'The leagues in a glass oval', body: 'Multi view and every league sit in one purple glass oval at the top. Scroll it sideways, the same in every sport.' },
+          { icon: 'history', title: 'It follows the game on top', body: 'The NFL end zones and the NBA key take the colors of the game on top of the stack and change as you swipe. The college football end zone is painted with the day that game is played.' }
+        ];
+      }
+    },
+    {
       id: 'v7.99.0', at: '2026-11-12T14:30:00-08:00',
       title: 'Your games, sorted',
       sub: 'A row of tiles over Home\u2019s pile picks which games are in it.',

@@ -123,3 +123,32 @@ html.gdk-on #games-picker-recaps{margin-top:18px}
 /* v7.99.1: the date line under the name and buttons, never under the buttons */
 #gdk-head .meta{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:2px;margin-top:4px}
 #gdk-head .meta .sub{white-space:normal}
+
+/* ══ v7.100.0: a top for every sport (js/games/league-art.js) ══
+   The league's drawing sits behind the top of the page; the league rail
+   rides over it in a purple glass oval, the same in every sport. */
+html.gdk-on #gdk{position:relative}
+#gdk-art{position:absolute;left:0;right:0;top:calc(-1 * (env(safe-area-inset-top,20px) + 10px));z-index:0;pointer-events:none;overflow:hidden;max-height:640px}
+/* the drawing starts where the oval does, whatever the notch; its ground runs up under the status bar */
+#gdk-art svg{display:block;width:100%;aspect-ratio:390/440;overflow:visible;margin-top:calc(env(safe-area-inset-top,20px) - 4px)}
+#gdk-art .la-a,#gdk-art .la-h{transition:fill .6s ease}
+#gdk-band,#gdk-head,#gdk-stage,#gdk-list{position:relative;z-index:1}
+#gdk-band{margin:0 10px;padding:9px 0 8px;border-radius:44px;overflow:hidden;background:linear-gradient(180deg,rgba(46,38,104,.72),rgba(30,24,72,.62));border:1px solid rgba(168,159,232,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 12px 32px rgba(0,0,0,.4);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3)}
+#gdk-band #gdk-rail{padding:4px 12px 2px}
+/* over the art: the name and lines keep their edge, the buttons and the switch go to dark glass */
+#gdk.art #gdk-head .nm{text-shadow:0 2px 16px rgba(0,0,0,.7)}
+#gdk.art #gdk-head .sub,#gdk.art #gdk-head .ph{text-shadow:0 1px 8px rgba(0,0,0,.85);color:#EDEAFF}
+#gdk.art .gdk-ib::before{background:rgba(13,10,34,.55);border-color:rgba(168,159,232,.5)}
+#gdk.art .gdk-sw{background:rgba(13,10,34,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+/* NFL: the week as the chain gang's sticks */
+.gdk-chain{display:flex;align-items:center;margin-top:8px}
+.gdk-chain i{width:4px;height:20px;border-radius:2px;background:#FF8A1E}
+.gdk-chain u{width:110px;height:2px;background:repeating-linear-gradient(90deg,#fff 0 6px,transparent 6px 9px)}
+.gdk-chain b{margin-left:12px;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 8px rgba(0,0,0,.85)}
+/* NBA: the day in shot-clock LEDs.  NHL: on the dasher boards */
+#gdk-head[data-lg="nba"] .gdk-sw .lb b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:17px;letter-spacing:.14em;text-transform:uppercase;color:#FF5A3C;text-shadow:0 0 10px rgba(255,90,60,.7)}
+#gdk-head[data-lg="nhl"] .gdk-sw .lb b{display:inline-flex;align-items:center;height:28px;padding:0 16px;border-radius:6px;background:#F4F7FA;color:#14223a;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;box-shadow:inset 0 -4px 0 #FFC72C}
+/* a long league name takes two lines beside the buttons instead of being cut off */
+#gdk-head .nm.long{white-space:normal;font-size:28px;line-height:28px;overflow:visible}
+/* the drawing always melts into the page at its foot */
+#gdk-art::after{content:'';position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,rgba(13,10,34,0),#0D0A22 78%)}

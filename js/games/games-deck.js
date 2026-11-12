@@ -51,10 +51,11 @@
 
   var root = document.createElement('div');
   root.id = 'gdk';
-  root.innerHTML = '<div id="gdk-rail" role="tablist" aria-label="Leagues"></div><div id="gdk-head"></div>' +
+  // v7.100.0: the league's art sits behind the top; the rail rides in a purple glass oval over it
+  root.innerHTML = '<div id="gdk-art" aria-hidden="true"></div><div id="gdk-band"><div id="gdk-rail" role="tablist" aria-label="Leagues"></div></div><div id="gdk-head"></div>' +
     '<div id="gdk-stage"><div id="gdk-glow" aria-hidden="true"><i></i><i></i></div><div id="gdk-deck"></div></div><div id="gdk-list"></div>';
   sc.insertBefore(root, sc.firstChild);
-  var railEl = root.children[0], headEl = root.children[1], stageEl = root.children[2], listEl = root.children[3];
+  var artEl = root.children[0], railEl = root.children[1].firstChild, headEl = root.children[2], stageEl = root.children[3], listEl = root.children[4];
   var glowEl = stageEl.children[0], deckEl = stageEl.children[1];
 
   var S = { sport: null, picked: false, auto: false, order: [], items: {}, all: [], prefs: {}, prefsAt: 0, glance: {}, glanceAt: {}, more: false, busy: 0, sig: {}, drag: null, off: {}, wk: {}, cache: {}, loading: {} };
@@ -286,6 +287,7 @@
   var CUP = { mlb: 'Playoff picture', nfl: 'Playoff picture', nba: 'Standings', cbb: 'Top 25' };
   function renderHead(c) {
     var s = league(S.sport); if (!s) { headEl.innerHTML = ''; return; }
+    headEl.dataset.lg = s.key;
     var k = s.key, fb = !!FB[k], now = atNow(k), ph = '';
     try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; } catch (e) {}
     var live = S.all.filter(function (it) { return it.ph === 'live'; }).length, tot = S.all.length;
@@ -304,6 +306,8 @@
     var ib = function (fn, label, icon) { return '<button class="gdk-ib" data-lg="' + esc(k) + '" onclick="' + fn + '(this.dataset.lg)" aria-label="' + esc(label) + '">' + icon + '</button>'; };
     // v7.99.1: the date line sits under the name and the buttons, full width, so it never runs under them
     var meta = '<div class="meta"><span class="sub">' + sub + '</span>' + (ph && !(fb && /^week/i.test(ph)) ? '<span class="ph">' + esc(ph) + '</span>' : '') + '</div>';
+    // v7.100.0: the NFL's week as the chain gang's sticks
+    if (k === 'nfl' && wn != null && wn >= 1 && wn <= 18) meta += '<div class="gdk-chain" aria-hidden="true"><i></i><u></u><i></i><b>Week ' + wn + ' of 18</b></div>';
     var html = '<div class="row"><div class="tx"><span class="nm' + (s.name.length > 6 ? ' long' : '') + '">' + esc(s.name) + '</span></div>' +
       '<div class="bt">' + (typeof innGuide === 'function' && GAMES_SPORTS.some(function (x) { return x.key === k; }) ? ib('gdkGuide', s.name + ' on TV', IC_TV) : '') +
       (typeof openInningsSearch === 'function' ? ib('gdkSearch', 'Search players, teams and rules', IC_SEARCH) : '') +
@@ -437,6 +441,7 @@
 
   // ── the pile ──
   function glow(it) {
+    try { if (window.gdkArt) gdkArt.game(artEl, S.sport, it ? it.la.c : null, it ? it.lh.c : null, it ? it.day : null); } catch (e) { console.error('[gdk] art', e); }
     var a = glowEl.children[0], b = glowEl.children[1];
     a.style.backgroundColor = it ? css(it.la.c) : 'transparent';
     b.style.backgroundColor = it ? css(it.lh.c) : 'transparent';
@@ -596,6 +601,7 @@
       S.order = [keep[0]].concat(S.order.filter(function (id) { return id !== keep[0]; }));
     }
     S.items = items;
+    try { if (window.gdkArt) { gdkArt.show(artEl, S.sport); root.classList.toggle('art', gdkArt.has(S.sport)); } } catch (e) { console.error('[gdk] art', e); }
     renderRail(c); renderHead(c); renderDeck(); renderList();
   }
   window.gdkPick = function (key) {
