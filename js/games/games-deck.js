@@ -250,7 +250,8 @@
   function renderRail(c) {
     var ls = leagues().slice();
     // leagues with something live lead, then leagues playing today; the rest keep their order
-    var w = function (s) { return c.live[s.key] ? 0 : c.day[s.key] ? 1 : 2; };
+    // v7.100.1: tennis, golf and F1 are still in progress, so they always sit at the back of the rail
+    var w = function (s) { return s.ev ? 3 : c.live[s.key] ? 0 : c.day[s.key] ? 1 : 2; };
     ls = ls.map(function (s, i) { return { s: s, i: i }; }).sort(function (a, b) { return (w(a.s) - w(b.s)) || (a.i - b.i); }).map(function (x) { return x.s; });
     var mvLive = 0;
     try { mvLive = typeof _mvLiveCount === 'function' ? _mvLiveCount() : 0; } catch (e) {}
