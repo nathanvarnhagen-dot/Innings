@@ -293,7 +293,8 @@
     var s = league(S.sport); if (!s) { headEl.innerHTML = ''; return; }
     headEl.dataset.lg = s.key;
     var k = s.key, fb = !!FB[k], now = atNow(k), ph = '';
-    try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; } catch (e) {}
+    var phOff = false;
+      try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; phOff = !!(p && p.phase === 'off'); } catch (e) {}
     var live = S.all.filter(function (it) { return it.ph === 'live'; }).length, tot = S.all.length;
     var lab, sub;
     if (fb) {
@@ -564,15 +565,19 @@
     var s = league(S.sport), k = S.sport, fb = !!FB[k], all = S.all.slice();
     if (!all.length) {
       var ph = '';
-      try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; } catch (e) {}
+      var phOff = false;
+      try { var p = typeof _gsPhaseState === 'function' ? _gsPhaseState().by[k] : null; ph = (p && p.label) || ''; phOff = !!(p && p.phase === 'off'); } catch (e) {}
       var o = S.off[k] || 0;
       var when = fb ? (atNow(k) ? 'this week' : 'that week') : o === 0 ? 'today' : o === -1 ? 'yesterday' : o === 1 ? 'tomorrow' : 'on ' + dayWord(dayOf(k), true);
-      var off = k === 'mlb' && /off/i.test(ph) && typeof pickGamesSport === 'function';
+      var off = k === 'mlb' && (phOff || /off/i.test(ph));
       var html0 = '<div class="gdk-empty" style="margin:0">' + (loaded(k)
         ? '<b>No ' + esc(s ? label(s) : '') + ' games ' + esc(when) + '</b><small>' + (ph ? esc(ph) + '. ' : '') + 'Use the arrows above to look at another ' + (fb ? 'week' : 'day') + '.</small>' +
-          (off ? '<button data-lg="mlb" onclick="gdkLeague(this.dataset.lg)">Player search, compare and Hot Stove</button>' : '')
+          ''
         : '<small>Loading games…</small>') + '</div>';
+      // v7.102.0: no baseball for a while, so its page is the offseason one — player search, compare and the Hot Stove
+      if (off && loaded(k) && typeof hsDeck === 'function') html0 = '<div id="gdk-hs"></div>';
       if (S.sig.list !== html0) { S.sig.list = html0; listEl.innerHTML = html0; }
+      if (off && document.getElementById('gdk-hs')) { try { hsDeck(); } catch (e) { console.error('[games-deck] offseason:', e); } }
       return;
     }
     var top = S.order[0], html;

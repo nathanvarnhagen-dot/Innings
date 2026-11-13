@@ -19,6 +19,8 @@
 // mode=phase. Depends on: cmpOpen (compare.js), openPlayerLinkSheet
 // (games-list.js), _loadFavTeams, _teamLook (team-colors.js), _gsPhaseState
 // (breaks-weeks-and-flourishes.js), _escapeHtml, _todayLocal, _ghLastName.
+// v7.102.0: games-deck.js calls hsDeck() to put this page on the MLB Games
+// page whenever baseball is off and the day has no games.
 
 window._hs = window._hs || { data: null, at: 0, loading: false, filter: 'all', more: false, pick: 0, base: null, rep: {}, picks: null, picksAt: 0, fav: null, q: '' };
 var HS_TTL = 5 * 60e3, HS_RECENT = 'innings_hs_recent';
@@ -427,8 +429,30 @@ function hsSearch(q) {
 // ── The page ──────────────────────────────────────────────────────────────
 function hsFilter(f) { var H = window._hs; H.filter = f; H.more = false; _hsRender(); }
 function hsMore() { window._hs.more = true; _hsRender(); }
+// v7.102.0: the Games page shows this page itself while baseball is off —
+// it hands over a #gdk-hs box and everything here draws into that one
+function _hsEl() {
+  var d = document.getElementById('gdk-hs');
+  return d && d.isConnected ? d : _hsHost();
+}
+function hsDeck() {
+  var el = document.getElementById('gdk-hs');
+  if (!el) return;
+  var old = document.getElementById('games-offseason');
+  if (old && old !== el && old.firstChild) old.innerHTML = '';   // one search box on the page, not two
+  if (!el.firstChild) _hsRender();
+  _hsLoad();
+  _hsPicksLoad();
+  if (typeof _loadFavTeams === 'function') {
+    _loadFavTeams('mlb').then(function (f) {
+      var was = JSON.stringify(window._hs.fav || null);
+      window._hs.fav = f || { favorite: null, following: [] };
+      if (window._hs.filter === 'mine' && was !== JSON.stringify(window._hs.fav)) _hsRender();
+    }).catch(function () {});
+  }
+}
 function _hsRender() {
-  var el = _hsHost(), H = window._hs, D = H.data;
+  var el = _hsEl(), H = window._hs, D = H.data;
   if (!el || el.style.display === 'none') return;
   // the search box keeps its text and focus across redraws
   var keepFocus = document.activeElement && document.activeElement.id === 'hs-q';

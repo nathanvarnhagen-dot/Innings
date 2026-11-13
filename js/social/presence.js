@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.102.0', at: '2026-11-13T12:00:00-08:00',
+      title: 'Baseball in the offseason',
+      sub: 'The MLB page is the Hot Stove until there are games again.',
+      items: function () {
+        return [
+          { icon: 'history', title: 'Hot Stove on the MLB page', body: 'With no games for a while, Games › MLB now opens straight to the signings, trades and free agents, with the countdown to spring training.' },
+          { icon: 'bars', title: 'Search and compare, same page', body: 'Search any player, active or retired, and compare two of them without leaving the page.' },
+          { icon: 'trophy', title: 'A real ballpark', body: 'The stands in the MLB art are a seating bowl now: two decks, a suite level, a quiet crowd and lights on the roof.' }
+        ];
+      }
+    },
+    {
       id: 'v7.101.0', at: '2026-11-13T11:45:00-08:00',
       title: 'Flip through every game',
       sub: 'In every sport, the whole day is in the stack now.',
