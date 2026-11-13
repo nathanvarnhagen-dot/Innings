@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.101.0', at: '2026-11-13T11:45:00-08:00',
+      title: 'Flip through every game',
+      sub: 'In every sport, the whole day is in the stack now.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Every game in the stack', body: 'Swipe up for the next game and down to go back, in any league. Live games and your teams come first, then the rest of the day.' },
+          { icon: 'history', title: 'The list shows where you are', body: 'Every game is still listed under the stack. The one on top is outlined and the others stand back.' },
+          { icon: 'trophy', title: 'Tap a row to jump', body: 'Tap any game in the list to bring it to the top of the stack. Tap the outlined row, or the top card, to open the game.' }
+        ];
+      }
+    },
+    {
       id: 'v7.100.0', at: '2026-11-12T15:45:00-08:00',
       title: 'A top for every sport',
       sub: 'Each league on the Games page now opens on its own drawing.',

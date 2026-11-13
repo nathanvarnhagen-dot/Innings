@@ -152,3 +152,7 @@ html.gdk-on #gdk{position:relative}
 #gdk-head .nm.long{white-space:normal;font-size:28px;line-height:28px;overflow:visible}
 /* the drawing always melts into the page at its foot */
 #gdk-art::after{content:'';position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,rgba(13,10,34,0),#0D0A22 78%)}
+
+/* v7.101.0: the list under the pile marks the game on top — outlined and full strength, the rest stand back */
+#gdk-list.has-top .gdk-row{opacity:.7;transition:opacity .2s ease,box-shadow .2s ease,transform .2s ease}
+#gdk-list.has-top .gdk-row.top{opacity:1;transform:scale(1.012);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 0 0 2px #F3F1FF,0 8px 20px rgba(0,0,0,.4)}

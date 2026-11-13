@@ -220,7 +220,10 @@
     return DOW[noon(d).getDay()];
   }
   // what goes in the pile: live games, and your teams' games whatever their state
+  // v7.101.0: every game of the day (or week) is in the pile now, live games and your teams first;
+  // the list under it marks the one on top, and a tap on a row brings that game up
   function inStack(it) {
+    return true;
     if (it.mine) return true;
     if (it.ph !== 'live') return false;
     try { return typeof _cbbWorthy !== 'function' || _cbbWorthy(it.sport, it.g); } catch (e) { return true; }
@@ -465,7 +468,8 @@
   function frontEl() { return deckEl.querySelector('.gdk-card.front'); }
   function markTop() {
     var id = S.order[0];
-    Array.prototype.forEach.call(listEl.querySelectorAll('.gdk-row'), function (r) { r.classList.toggle('top', r.dataset.id === id); });
+    Array.prototype.forEach.call(listEl.querySelectorAll('.gdk-row'), function (r) { var on = r.dataset.id === id; r.classList.toggle('top', on); r.setAttribute('aria-current', on); });
+    listEl.classList.toggle('has-top', !!id);
   }
   window.gdkNext = function () {
     if (S.order.length < 2 || Date.now() < S.busy) return;
@@ -485,6 +489,14 @@
     if (!it || typeof openGameScreen !== 'function') return;
     openGameScreen(it.g.gamePk, it.g.away, it.g.home, it.sport, it.day || today());
   }
+  // a row in the list: bring its game to the top of the pile; the row already on top opens the game
+  window.gdkRow = function (id) {
+    if (!S.items[id] || S.order[0] === id) { gdkOpen(id); return; }
+    if (Date.now() < S.busy) return;
+    S.order = [id].concat(S.order.filter(function (x) { return x !== id; }));
+    renderDeck('in'); markTop();
+    try { var r = stageEl.getBoundingClientRect(); if (r.top < 60 || r.top > window.innerHeight * 0.6) stageEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+  };
   window.gdkOpen = function (id) { openItem(S.all.filter(function (it) { return it.id === id; })[0]); };
 
   // drag the top card: up for the next game, down for the last one, a tap opens it
@@ -545,7 +557,7 @@
       ? '<span class="' + (aLo ? 'lo' : '') + '">' + esc(it.la.abbr) + ' ' + esc(g.awayScore) + '</span><i>·</i><span class="' + (hLo ? 'lo' : '') + '">' + esc(it.lh.abbr) + ' ' + esc(g.homeScore) + '</span>'
       : esc(it.la.abbr) + '<i>@</i>' + esc(it.lh.abbr);
     var right = (it.mine && it.ph !== 'live' ? '★ ' : '') + st;
-    return '<button class="gdk-row' + (it.id === top ? ' top' : '') + '" data-id="' + esc(it.id) + '" onclick="gdkOpen(this.dataset.id)" style="background:' + rowBg(it) + '" aria-label="' + esc(g.away + ' at ' + g.home + ', ' + st) + '">' +
+    return '<button class="gdk-row' + (it.id === top ? ' top' : '') + '" data-id="' + esc(it.id) + '" onclick="gdkRow(this.dataset.id)" aria-current="' + (it.id === top) + '" style="background:' + rowBg(it) + '" aria-label="' + esc(g.away + ' at ' + g.home + ', ' + st + (it.id === top ? ', on top of the stack, open the game' : ', bring to the top of the stack')) + '">' +
       '<span class="m">' + m + '</span><span class="s' + (it.ph === 'live' ? ' live' : it.mine ? ' fav' : '') + '">' + esc(right) + '</span></button>';
   }
   function renderList() {
@@ -580,6 +592,7 @@
         (show.length < all.length ? '<button class="gdk-more" onclick="gdkMore()">Show all ' + all.length + ' games</button>' : '');
     }
     if (S.sig.list !== html) { S.sig.list = html; listEl.innerHTML = html; }
+    listEl.classList.toggle('has-top', !!top);
   }
   window.gdkMore = function () { S.more = true; renderList(); };
 
