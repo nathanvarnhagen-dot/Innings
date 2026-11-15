@@ -972,7 +972,7 @@ function summarizeNflStandings(data) {
       var divName = (div.name || div.abbreviation || '').replace(/^((American|National) Football Conference|AFC|NFC)\s+/i, '');
       var entries = (div.standings && div.standings.entries) || [];
       var teams = entries.map(function (e) {
-        return { name: (e.team && (e.team.displayName || e.team.name)) || '', w: _nflStatValue(e, 'wins'), l: _nflStatValue(e, 'losses') };
+        return { name: (e.team && (e.team.displayName || e.team.name)) || '', id: (e.team && e.team.id) || null, w: _nflStatValue(e, 'wins'), l: _nflStatValue(e, 'losses') };
       });
       teams.sort(function (a, b) { return _winPctNfl(b) - _winPctNfl(a); });
       divisions.push({ conf: confKey, name: divName, teams: teams });
@@ -1001,13 +1001,13 @@ function summarizeNflStandings(data) {
 
     result[confKey] = {
       seeds: seeds,
-      wildcardRace: wildCards.map(function (t) { return { team: _nflTeamShortName(t.name), w: t.w, l: t.l, status: 'in' }; })
-        .concat(chasers.map(function (t) { return { team: _nflTeamShortName(t.name), w: t.w, l: t.l, status: 'out' }; })),
+      wildcardRace: wildCards.map(function (t) { return { team: _nflTeamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, status: 'in' }; })
+        .concat(chasers.map(function (t) { return { team: _nflTeamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, status: 'out' }; })),
       divisions: confDivisions.map(function (d) {
         return {
           name: (confKey === 'afc' ? 'AFC ' : 'NFC ') + d.name,
           teams: d.teams.map(function (t) {
-            return { name: _nflTeamShortName(t.name), w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
+            return { name: _nflTeamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
           })
         };
       })

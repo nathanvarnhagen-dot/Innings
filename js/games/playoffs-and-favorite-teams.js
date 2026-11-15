@@ -229,6 +229,15 @@ function _ppBracketHtml(league) {
   return html;
 }
 
+// v7.103.0: every standings row opens that team's page. MLB can match a
+// name if an id is missing (an old cached payload); the NFL needs the id.
+function _ppTeamTap(t) {
+  if (typeof _tmTapAttrs !== 'function') return '';
+  var lg = window._ppSport === 'nfl' ? 'nfl' : 'mlb';
+  if (lg === 'nfl' && !t.id) return '';
+  return _tmTapAttrs(lg, t.id || null, t.full || t.name || t.team);
+}
+
 function _ppWildCardStandingsHtml(league) {
   var race = (window._ppData[league] || {}).wildcardRace || [];
   var cutIn = race.filter(function (t) { return t.status === 'in'; });
@@ -238,12 +247,12 @@ function _ppWildCardStandingsHtml(league) {
   var html = '<div class="pp-section-title" style="margin-top:22px">Wild Card Standings</div>';
   cutIn.forEach(function (t, i) {
     var g = cutOut.length ? _ppGb(t.w, t.l, cutOut[0].w, cutOut[0].l) : '–';
-    html += '<div class="pp-wc-row in"><div class="rk">' + (i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + (cutOut.length ? '+' + g : '+–') + '</div></div>';
+    html += '<div class="pp-wc-row in"' + _ppTeamTap(t) + '><div class="rk">' + (i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + (cutOut.length ? '+' + g : '+–') + '</div></div>';
   });
   if (cutOut.length) {
     html += '<div class="pp-wc-cutline"><span>Cut line</span></div>';
     cutOut.forEach(function (t, i) {
-      html += '<div class="pp-wc-row out"><div class="rk">' + (cutIn.length + i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + _ppGb(lastIn.w, lastIn.l, t.w, t.l) + '</div></div>';
+      html += '<div class="pp-wc-row out"' + _ppTeamTap(t) + '><div class="rk">' + (cutIn.length + i + 1) + '</div><div class="nm">' + _escapeHtml(t.team) + '</div><div class="wl">' + t.w + '-' + t.l + '</div><div class="gbv">' + _ppGb(lastIn.w, lastIn.l, t.w, t.l) + '</div></div>';
     });
   }
   return html;
@@ -330,7 +339,7 @@ function _ppStandingsHtml(league) {
     html += '<div class="pp-col-hdr"><span class="sp"></span><span class="w1">W-L</span><span class="w2">GB</span></div>';
     div.teams.forEach(function (t, i) {
       var tagHtml = t.tag ? '<span class="pp-tag ' + t.tag + '">' + (t.tag === 'div' ? 'Div' : 'WC') + '</span>' : '';
-      html += '<div class="pp-row' + (i === 0 ? ' leader' : '') + '"><div class="pp-rank">' + (i + 1) + '</div><div class="pp-name">' + _escapeHtml(t.name) + tagHtml + '</div><div class="pp-wl">' + t.w + '-' + t.l + '</div><div class="pp-gb">' + _ppGb(leader.w, leader.l, t.w, t.l) + '</div></div>';
+      html += '<div class="pp-row' + (i === 0 ? ' leader' : '') + '"' + _ppTeamTap(t) + '><div class="pp-rank">' + (i + 1) + '</div><div class="pp-name">' + _escapeHtml(t.name) + tagHtml + '</div><div class="pp-wl">' + t.w + '-' + t.l + '</div><div class="pp-gb">' + _ppGb(leader.w, leader.l, t.w, t.l) + '</div></div>';
     });
     html += '</div>';
   });

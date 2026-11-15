@@ -1979,7 +1979,7 @@ function summarizeStandings(data) {
     if (!league) return;
     var divName = ((rec.division && rec.division.name) || '').replace('American League', 'AL').replace('National League', 'NL');
     var teams = (rec.teamRecords || []).map(function (tr) {
-      return { name: (tr.team && tr.team.name) || '', w: tr.wins != null ? tr.wins : 0, l: tr.losses != null ? tr.losses : 0 };
+      return { name: (tr.team && tr.team.name) || '', id: (tr.team && tr.team.id) || null, w: tr.wins != null ? tr.wins : 0, l: tr.losses != null ? tr.losses : 0 };
     });
     teams.sort(function (a, b) { return _winPct(b) - _winPct(a); });
     divisions.push({ league: league, name: divName, teams: teams });
@@ -2009,13 +2009,13 @@ function summarizeStandings(data) {
 
     result[leagueKey] = {
       seeds: seeds,
-      wildcardRace: wildCards.map(function (t) { return { team: _teamShortName(t.name), w: t.w, l: t.l, status: 'in' }; })
-        .concat(chasers.map(function (t) { return { team: _teamShortName(t.name), w: t.w, l: t.l, status: 'out' }; })),
+      wildcardRace: wildCards.map(function (t) { return { team: _teamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, status: 'in' }; })
+        .concat(chasers.map(function (t) { return { team: _teamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, status: 'out' }; })),
       divisions: leagueDivisions.map(function (d) {
         return {
           name: d.name,
           teams: d.teams.map(function (t) {
-            return { name: _teamShortName(t.name), w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
+            return { name: _teamShortName(t.name), id: t.id, full: t.name, w: t.w, l: t.l, tag: (t.name === d.teams[0].name) ? 'div' : (wcNames[t.name] ? 'wc' : null) };
           })
         };
       })
