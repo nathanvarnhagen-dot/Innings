@@ -217,3 +217,65 @@
 .mv-hd .mv-title .mv-tt{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .mv-hd .mv-live{font-size:11px;letter-spacing:.12em}
 .mv-hd .mv-edit{height:34px;padding:0 14px;border-radius:17px}
+
+/* ══ v7.104.0 — mock BE1 "Frosted split": glass tiles, the two teams as
+   frosted bands in their colors across the top; swipe a tile sideways to
+   take it off, swipe an Also live card up to put it on ══ */
+#screen-multi{background-color:#0B0820;background-image:radial-gradient(420px 420px at -10% 4%,rgba(61,53,128,.75),rgba(61,53,128,0) 70%),radial-gradient(380px 380px at 115% 58%,rgba(90,63,168,.42),rgba(90,63,168,0) 70%);background-repeat:no-repeat}
+#screen-multi .mv-hd{background:rgba(11,8,32,.62);border-bottom-color:rgba(255,255,255,.06);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+#screen-multi .mv-body{background:transparent}
+#screen-multi .mv-hd .mv-title{font-weight:600;letter-spacing:.03em}
+/* the tile */
+.mv-tile.be{border-radius:20px;background:rgba(255,255,255,.055);box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),inset 0 1px 0 rgba(255,255,255,.14),0 14px 30px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);touch-action:pan-y;will-change:transform}
+.mv-tile.be.scored{box-shadow:inset 0 0 0 1.5px #E8C766,0 0 22px rgba(232,199,102,.28),0 14px 30px rgba(0,0,0,.35)}
+.mv-tile.be .mv-open{padding:0;gap:0;border-radius:20px;overflow:hidden}
+.mv-tile.be .mv-in{display:flex;flex-direction:column;gap:8px;padding:10px 11px 12px;min-width:0}
+.mv-bands{display:flex;flex-direction:column;border-bottom:1px solid rgba(255,255,255,.1)}
+.mvb{position:relative;display:flex;align-items:center;gap:8px;height:46px;padding:0 12px;overflow:hidden;font-family:'Barlow Condensed',sans-serif;color:#fff}
+.mvb+.mvb{border-top:1px solid rgba(255,255,255,.12)}
+.mvb::before{content:'';position:absolute;inset:0;background:var(--tc,#3D3580);opacity:.62}
+.mvb::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%)}
+.mvb.lo::before{opacity:.32}
+.mvb .ab{position:relative;z-index:1;flex:1;min-width:0;font-size:21px;font-weight:800;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.mvb .sc{position:relative;z-index:1;font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mvb.lo .ab{color:rgba(255,255,255,.7)}
+.mvb.lo .sc{color:rgba(255,255,255,.6)}
+.mv-tile.be .mv-top .lg{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;color:rgba(233,229,255,.66)}
+.mv-tile.be .mv-top .st.live{padding:3px 8px;border-radius:999px;background:rgba(255,122,107,.14);color:#FFB4AA;font-size:12px}
+.mv-tile.be .mv-sit{background:rgba(8,5,26,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);border-radius:12px}
+.mv-tile.be .mv-sit.gold,.mv-tile.be .mv-sit.mvto{box-shadow:none}
+.mv-tile.be .mv-sit.hp2 .dial,.mv-tile.be .mv-sit.hp2 .dial svg{width:46px;height:46px}
+.mv-tile.be .mv-note{color:rgba(233,229,255,.76)}
+/* the swipe */
+.mv-tile.mv-drag,.mv-ac.mv-drag{transition:none;z-index:5;position:relative}
+.mv-editing .mv-tile.be .mvb:first-child .sc{margin-right:22px}
+.mv-tile.mv-snap,.mv-ac.mv-snap{transition:transform .32s cubic-bezier(.22,1.2,.36,1),opacity .2s}
+.mv-tile.mv-fly,.mv-ac.mv-fly{transition:transform .26s cubic-bezier(.4,0,.8,.4),opacity .26s}
+.mv-tile.mv-new{animation:mvNew .5s cubic-bezier(.22,1.2,.36,1) both}
+@keyframes mvNew{from{opacity:0;transform:translateY(40px) scale(.9)}to{opacity:1;transform:none}}
+.mv-tip{margin-top:-6px;text-align:center;font-size:11.5px;color:rgba(233,229,255,.55)}
+/* Also live: a rail of glass cards */
+.mv-rail{display:flex;gap:10px;overflow-x:auto;overflow-y:visible;margin:0 -16px;padding:4px 16px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+.mv-rail::-webkit-scrollbar{display:none}
+.mv-ac{flex:0 0 148px;scroll-snap-align:start;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.055);box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),0 10px 22px rgba(0,0,0,.3);touch-action:pan-x;-webkit-user-select:none;user-select:none;will-change:transform}
+.mv-ac .mvb{height:34px;padding:0 10px}
+.mv-ac .mvb .ab{font-size:16px}
+.mv-ac .mvb .sc{font-size:22px}
+.mv-ac-ft{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 4px 0 10px;font-family:'Barlow Condensed',sans-serif;white-space:nowrap}
+.mv-ac-ft .lg{font-size:11.5px;font-weight:700;letter-spacing:.14em;color:rgba(233,229,255,.62)}
+.mv-ac-ft .st{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:700;letter-spacing:.08em;color:#FFB4AA}
+.mv-ac-add{width:40px;height:40px;flex-shrink:0;border:0;border-radius:50%;background:transparent;color:#E9E5FF;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.mv-ac-add svg{width:28px;height:28px;padding:7px;box-sizing:border-box;border-radius:50%;background:rgba(168,159,232,.24)}
+.mv-ac-add:focus-visible{outline:2px solid #A89FE8;outline-offset:-2px}
+.mv-rail.full .mv-ac{opacity:.72}
+/* the note at the bottom */
+.mv-toast{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 6px 0 16px;border-radius:24px;background:rgba(26,22,64,.86);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 14px 30px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);color:#F5F3FF;font-size:13px;font-weight:600;transform:translateY(140%);opacity:0;transition:transform .32s cubic-bezier(.22,1,.36,1),opacity .2s;pointer-events:none}
+.mv-toast.on{transform:none;opacity:1;pointer-events:auto}
+.mv-toast span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mv-toast button{height:40px;padding:0 16px;border:0;border-radius:20px;background:#A89FE8;color:#1A1640;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+@media (prefers-reduced-motion: reduce){.mv-tile.mv-new{animation:none}.mv-tile.mv-snap,.mv-ac.mv-snap,.mv-tile.mv-fly,.mv-ac.mv-fly,.mv-toast{transition:none}}
+/* football's down & distance and spot on two lines, so neither is cut off */
+.mv-tile.be .mv-sit.fb2 .dd{flex-direction:column;align-items:flex-start;gap:2px}
+.mv-tile.be .mv-sit.fb2 .dd small{font-size:10.5px}
+.mv-tile.be .mv-sit.fb2 .fld{height:20px}
+.mv-editing .mv-tile.be .mv-top{padding-right:0}

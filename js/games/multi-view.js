@@ -443,10 +443,13 @@ function _mvHoopsHtml(e, ca, ch, lead) {
     dial = '<span class="dial' + (hot ? ' hot' : '') + '"><svg viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="' + r + '"/><circle class="arc" cx="25" cy="25" r="' + r + '" style="stroke:' + ((pt && pt.accent) || '#A89FE8') + ';stroke-dasharray:' + C.toFixed(1) + ';stroke-dashoffset:' + (C * (1 - frac)).toFixed(1) + '"/></svg><b>' + (hot ? sc.v.toFixed(1) : Math.ceil(sc.v)) + '<small>SHOT</small></b></span>';
   }
   var run = gl.run && gl.run.pts >= 8 ? (gl.run.side === 'a' ? ca : ch).abbr + ' ' + gl.run.pts + '–' + (gl.run.opp || 0) + ' run' : '';
+  // v7.104.0: short rows that fit the tile — the bands above carry the score,
+  // and "a · h" follows the bands' order (away, then home)
+  if (run) run = (gl.run.side === 'a' ? ca : ch).abbr + ' ' + gl.run.pts + '–' + (gl.run.opp || 0);
   var rows = [];
-  rows.push(pt ? '<span><em>' + _mvEsc(pt.abbr) + ' ball</em><b>' + _mvEsc(lead || 'TIED') + '</b></span>' : '<span><em>Score</em><b>' + _mvEsc(lead || 'TIED') + '</b></span>');
+  rows.push('<span><em>Ball</em><b>' + _mvEsc(pt ? pt.abbr : '—') + '</b></span>');
   if (run) rows.push('<span><em>Run</em><b class="run">' + _mvEsc(run) + '</b></span>');
-  else if (gl.fouls) rows.push('<span><em>Fouls</em><b>' + _mvEsc(ca.abbr) + ' ' + gl.fouls.a + ' · ' + _mvEsc(ch.abbr) + ' ' + gl.fouls.h + '</b></span>');
+  else if (gl.fouls) rows.push('<span><em>Fouls</em><b>' + gl.fouls.a + ' · ' + gl.fouls.h + '</b></span>');
   if (gl.timeouts) rows.push('<span><em>TO used</em><b>' + gl.timeouts.a + ' · ' + gl.timeouts.h + '</b></span>');
   return '<span class="mv-sit pn hp2">' + dial + '<span class="kv">' + rows.slice(0, 3).join('') + '</span></span>';
 }
@@ -517,16 +520,36 @@ function _mvTeams(e, cls) {
   };
   return { ca: ca, ch: ch, html: row(ca, as, scored && Number(as) < Number(hs)) + row(ch, hs, scored && Number(hs) < Number(as)) };
 }
+// v7.104.0: a team's band color — its main color, unless that's too dark to
+// read as a color on the glass, then its second one
+function _mvBand(c) {
+  var lum = typeof _gxLum === 'function' ? _gxLum : null;
+  if (!lum) return c.bg || '#3D3580';
+  return lum(c.bg) < 0.035 && c.accent && lum(c.accent) > lum(c.bg) ? c.accent : (c.bg || '#3D3580');
+}
+// v7.104.0 (mock BE1): the two teams as frosted bands in their colors across
+// the top of the tile, the trailing team stepped back
+function _mvBandsHtml(e) {
+  var g = e.g || {}, ph = e.phase;
+  var ca = _mvLook(e.sport, e.away, g.awayAbbr, g.awayColor, g.awayAlt), ch = _mvLook(e.sport, e.home, g.homeAbbr, g.homeColor, g.homeAlt);
+  var as = g.awayScore, hs = g.homeScore, scored = !!ph && ph !== 'pre' && as != null && hs != null;
+  var band = function (c, sc, lo) {
+    return '<span class="mvb' + (lo ? ' lo' : '') + '" style="--tc:' + _mvBand(c) + '"><span class="ab">' + _mvEsc(c.abbr) + '</span><span class="sc">' + (scored ? _mvEsc(sc) : '') + '</span></span>';
+  };
+  return { ca: ca, ch: ch, html: band(ca, as, scored && Number(as) < Number(hs)) + band(ch, hs, scored && Number(hs) < Number(as)) };
+}
 function _mvTileHtml(e, i) {
-  var t = _mvTeams(e, 'mv'), flag = e.phase === 'live' ? _mvFlag(_mvKey(e.sport, e.gamePk)) : null;
+  var M = window._mv, key = _mvKey(e.sport, e.gamePk), t = _mvBandsHtml(e), flag = e.phase === 'live' ? _mvFlag(key) : null;
   var label = (e.away || 'Away') + ' at ' + (e.home || 'Home');
-  return '<div class="mv-tile' + (flag ? ' scored' : '') + '">' +
+  return '<div class="mv-tile be' + (flag ? ' scored' : '') + (M.justAdded === key ? ' mv-new' : '') + '" data-i="' + i + '">' +
     '<button class="mv-open" onclick="multiOpenGame(' + i + ')" aria-label="' + _mvEsc(label) + '">' +
+      '<span class="mv-bands">' + t.html + '</span>' +
+      '<span class="mv-in">' +
       '<span class="mv-top"><span class="lg">' + _mvEsc(_mvLeague(e.sport)) + '</span><span class="st' + (e.phase === 'live' ? ' live' : '') + '">' + (e.phase === 'live' ? '<i></i>' : '') + _mvEsc(_mvStatus(e.sport, e.g, e.phase)) + '</span></span>' +
-      '<span class="mv-tm">' + t.html + '</span>' +
       _mvSitHtml(e, t.ca, t.ch, flag) +
       '<span class="mv-note">' + _mvEsc(_mvNoteText(e)) + '</span>' +
       _mvFriendsHtml(e.gamePk) +
+      '</span>' +
     '</button>' +
     '<button class="mv-x" onclick="multiRemove(' + i + ')" aria-label="Take ' + _mvEsc(label) + ' off the board">' + MV_X + '</button>' +
   '</div>';
@@ -536,6 +559,8 @@ function _mvTileHtml(e, i) {
 function _mvRender() {
   var body = _mv$('mv-body');
   if (!body) return;
+  if (window._mv.drag) { window._mv.renderPending = true; return; } // v7.104.0: never under a finger
+  _mvSwipeInit(body);
   var M = window._mv, board = _mvBoard(), also = _mvAlso(board), loaded = _mvHasData();
   M.shown = board; M.also = also;
   var liveN = board.filter(function (e) { return e.phase === 'live'; }).length;
@@ -546,21 +571,32 @@ function _mvRender() {
   if (eb) { eb.style.display = board.length ? '' : 'none'; eb.textContent = M.edit ? 'Done' : 'Edit'; eb.setAttribute('aria-pressed', M.edit ? 'true' : 'false'); }
   body.classList.toggle('mv-editing', !!M.edit);
   var h = '';
-  if (board.length) h += '<div class="mv-grid">' + board.map(_mvTileHtml).join('') + '</div>';
+  if (board.length) {
+    h += '<div class="mv-grid">' + board.map(_mvTileHtml).join('') + '</div>';
+    if (!M.edit && !_mvSwiped()) h += '<div class="mv-tip">Swipe a game sideways to take it off the board</div>';
+  }
   else if (!loaded) h += '<div class="mv-empty"><b>Loading today’s games…</b></div>';
   else if (!also.length) h += '<div class="mv-empty"><b>Nothing’s live right now</b><span>When games are on, up to four of them show here side by side.</span><button class="mv-cta" onclick="multiTodaysGames()">Today’s games</button></div>';
   else h += '<div class="mv-empty"><b>Your board’s empty</b><span>Add a live game from the list below.</span></div>';
   if (also.length) {
+    // v7.104.0: a rail of cards — swipe one up onto the board (or tap +)
     var full = board.length >= MV_MAX;
-    h += '<div class="mv-sec"><div class="mv-lab">ALSO LIVE' + (full ? '<small>The board holds four. Take one off to add another.</small>' : '') + '</div>' +
+    h += '<div class="mv-sec"><div class="mv-lab">ALSO LIVE<small>' + (full ? 'The board holds four. Swipe a game off it to make room.' : 'Swipe a game up onto the board') + '</small></div>' +
+      '<div class="mv-rail scroll-bare' + (full ? ' full' : '') + '">' +
       also.map(function (x, i) {
         var g = x.g, ca = _mvLook(x.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt), ch = _mvLook(x.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt);
-        var sc = g.awayScore != null && g.homeScore != null;
-        return '<div class="mv-also"><span class="sc"><span>' + _mvEsc(ca.abbr) + (sc ? ' ' + _mvEsc(g.awayScore) : '') + '</span><span>' + _mvEsc(ch.abbr) + (sc ? ' ' + _mvEsc(g.homeScore) : '') + '</span><small>' + _mvEsc(_mvStatus(x.sport, g, 'live')) + '</small></span>' +
-          (full ? '' : '<button onclick="multiAdd(' + i + ')" aria-label="Add ' + _mvEsc((g.away || '') + ' at ' + (g.home || '')) + ' to the board">Add to board</button>') + '</div>';
-      }).join('') + '</div>';
+        var sc = g.awayScore != null && g.homeScore != null, lo = function (a, b) { return sc && Number(a) < Number(b) ? ' lo' : ''; };
+        var row = function (c, s, l) { return '<span class="mvb' + l + '" style="--tc:' + _mvBand(c) + '"><span class="ab">' + _mvEsc(c.abbr) + '</span><span class="sc">' + (sc ? _mvEsc(s) : '') + '</span></span>'; };
+        return '<div class="mv-ac" data-i="' + i + '"><span class="mv-bands">' + row(ca, g.awayScore, lo(g.awayScore, g.homeScore)) + row(ch, g.homeScore, lo(g.homeScore, g.awayScore)) + '</span>' +
+          '<span class="mv-ac-ft"><span class="lg">' + _mvEsc(_mvLeague(x.sport)) + '</span><span class="st">' + _mvEsc(_mvStatus(x.sport, g, 'live')) + '</span>' +
+          (full ? '' : '<button class="mv-ac-add" onclick="multiAdd(' + i + ')" aria-label="Add ' + _mvEsc((g.away || '') + ' at ' + (g.home || '')) + ' to the board"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="8" y1="2.5" x2="8" y2="13.5"/><line x1="2.5" y1="8" x2="13.5" y2="8"/></svg></button>') +
+          '</span></div>';
+      }).join('') + '</div></div>';
   }
+  var rail = body.querySelector('.mv-rail'), railX = rail ? rail.scrollLeft : 0;
   body.innerHTML = h;
+  if (railX) { var r2 = body.querySelector('.mv-rail'); if (r2) r2.scrollLeft = railX; }
+  M.justAdded = null;
 }
 function _mvRenderAll() {
   try { if (_mvActive()) _mvRender(); } catch (e) { console.error('[multi view] render', e); }
@@ -603,6 +639,7 @@ function multiOpenFromGame() {
   multiOpen();
 }
 function multiBack() {
+  _mvToastHide();
   var st = _mvState();
   st.on = false; _mvSave();
   window._mv.edit = false;
@@ -626,9 +663,27 @@ function multiToggleEdit() {
 function multiRemove(i) {
   var M = window._mv, st = _mvState(), e = M.shown[i];
   if (!e) return;
-  var key = _mvKey(e.sport, e.gamePk);
-  st.ids = st.ids.filter(function (p) { return _mvKey(p.sport, p.gamePk) !== key; });
+  var key = _mvKey(e.sport, e.gamePk), at = -1;
+  st.ids.forEach(function (p, j) { if (_mvKey(p.sport, p.gamePk) === key) at = j; });
+  if (at < 0) return;
+  // v7.104.0: a few seconds to take it back
+  M.undo = { entry: st.ids[at], at: at, auto: st.auto };
+  st.ids.splice(at, 1);
   st.auto = false; st.day = _mvToday();
+  _mvSave();
+  _mvRender();
+  var g = e.g || {};
+  _mvToast((_mvLook(e.sport, e.away, g.awayAbbr).abbr + ' – ' + _mvLook(e.sport, e.home, g.homeAbbr).abbr) + ' off the board', 'Undo', multiUndo);
+}
+function multiUndo() {
+  var M = window._mv, st = _mvState(), u = M.undo;
+  M.undo = null; _mvToastHide();
+  if (!u || st.ids.length >= MV_MAX) return;
+  var key = _mvKey(u.entry.sport, u.entry.gamePk);
+  if (st.ids.some(function (p) { return _mvKey(p.sport, p.gamePk) === key; })) return;
+  st.ids.splice(Math.min(u.at, st.ids.length), 0, u.entry);
+  st.auto = u.auto; st.day = _mvToday();
+  M.justAdded = key;
   _mvSave();
   _mvRender();
 }
@@ -637,9 +692,123 @@ function multiAdd(i) {
   if (!x || st.ids.length >= MV_MAX) return;
   st.ids.push(_mvEntry(x));
   st.auto = false; st.day = _mvToday();
+  M.justAdded = _mvKey(x.sport, x.g.gamePk);
+  _mvToastHide();
   _mvSave();
   _mvRender();
 }
+
+// ── v7.104.0: swiping — a tile sideways takes it off the board, an Also
+// live card up puts it on. Tiles let the page scroll up and down
+// (touch-action: pan-y); the rail lets itself scroll sideways (pan-x), so
+// each only ever hears the direction it acts on. A tap still opens a game. ──
+var MV_SWIPED_KEY = 'innings_mv_swiped';
+function _mvSwiped() { try { return localStorage.getItem(MV_SWIPED_KEY) === '1'; } catch (e) { return true; } }
+function _mvSwipeInit(body) {
+  if (body._mvSw) return;
+  body._mvSw = true;
+  // the click that ends a drag never opens the game under it
+  body.addEventListener('click', function (ev) {
+    if (Date.now() - (window._mv.noClick || 0) < 450) { ev.stopPropagation(); ev.preventDefault(); }
+  }, true);
+  body.addEventListener('pointerdown', function (ev) {
+    var M = window._mv;
+    if (M.edit || M.drag || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    if (ev.target.closest('.mv-x,.mv-ac-add')) return;
+    var tile = ev.target.closest('.mv-tile'), card = tile ? null : ev.target.closest('.mv-ac');
+    var el = tile || card;
+    if (!el) return;
+    var d = { el: el, tile: !!tile, i: Number(el.getAttribute('data-i')), x0: ev.clientX, y0: ev.clientY, t0: Date.now(), id: ev.pointerId, axis: null, dx: 0, dy: 0, lx: ev.clientX, ly: ev.clientY, lt: Date.now(), vx: 0, vy: 0 };
+    var full = _mvState().ids.length >= MV_MAX;
+    var move = function (e) {
+      if (e.pointerId !== d.id) return;
+      d.dx = e.clientX - d.x0; d.dy = e.clientY - d.y0;
+      var now = Date.now(), dt = Math.max(1, now - d.lt);
+      d.vx = (e.clientX - d.lx) / dt; d.vy = (e.clientY - d.ly) / dt; d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
+      if (!d.axis) {
+        if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) < 8) return;
+        if (d.tile && Math.abs(d.dx) > Math.abs(d.dy) * 1.2) d.axis = 'x';
+        else if (!d.tile && -d.dy > Math.abs(d.dx) * 1.2) d.axis = 'y';
+        else { end(); return; }
+        M.drag = true; el.classList.add('mv-drag');
+        try { el.setPointerCapture(d.id); } catch (x) {}
+      }
+      if (e.cancelable) e.preventDefault();
+      if (d.axis === 'x') {
+        el.style.transform = 'translateX(' + d.dx + 'px) rotate(' + (d.dx / 22).toFixed(2) + 'deg)';
+        el.style.opacity = String(Math.max(.35, 1 - Math.abs(d.dx) / 320));
+      } else {
+        var ty = Math.min(0, d.dy) * (full ? .3 : 1);
+        el.style.transform = 'translateY(' + ty + 'px) scale(' + (1 + Math.min(.06, -ty / 900)).toFixed(3) + ')';
+      }
+    };
+    var up = function (e) {
+      if (e && e.pointerId !== d.id) return;
+      var was = d.axis;
+      end();
+      if (!was) return;
+      M.noClick = Date.now();
+      if (was === 'x') {
+        var go = Math.abs(d.dx) > 96 || (Math.abs(d.dx) > 36 && Math.abs(d.vx) > .55 && (d.vx > 0) === (d.dx > 0));
+        if (go) {
+          var dir = d.dx > 0 ? 1 : -1;
+          el.classList.add('mv-fly');
+          el.style.transform = 'translateX(' + (dir * (window.innerWidth + 80)) + 'px) rotate(' + (dir * 14) + 'deg)';
+          el.style.opacity = '0';
+          try { localStorage.setItem(MV_SWIPED_KEY, '1'); } catch (x) {}
+          setTimeout(function () { multiRemove(d.i); }, 230);
+          return;
+        }
+      } else {
+        var add = !full && (-d.dy > 80 || (-d.dy > 30 && d.vy < -.5));
+        if (add) {
+          el.classList.add('mv-fly');
+          el.style.transform = 'translateY(-' + (window.innerHeight * .6) + 'px) scale(.9)';
+          el.style.opacity = '0';
+          setTimeout(function () { multiAdd(d.i); }, 240);
+          return;
+        }
+        if (full && -d.dy > 40) _mvToast('The board holds four. Swipe a game off it first.');
+      }
+      el.classList.add('mv-snap');
+      el.style.transform = ''; el.style.opacity = '';
+      setTimeout(function () { el.classList.remove('mv-snap'); }, 320);
+    };
+    var end = function () {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      el.classList.remove('mv-drag');
+      if (M.drag) {
+        M.drag = false;
+        // anything that came in while the finger was down draws once the tile has settled
+        if (M.renderPending) { M.renderPending = false; setTimeout(_mvRender, 260); }
+      }
+    };
+    var cancel = function (e) {
+      if (e.pointerId !== d.id) return;
+      var was = d.axis;
+      end();
+      if (was) { el.classList.add('mv-snap'); el.style.transform = ''; el.style.opacity = ''; }
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+  }, { passive: true });
+}
+// a small glass note at the bottom of the board, with one action at most
+function _mvToast(text, act, fn) {
+  var scr = _mv$('screen-multi');
+  if (!scr) return;
+  var t = _mv$('mv-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'mv-toast'; t.className = 'mv-toast'; t.setAttribute('role', 'status'); scr.appendChild(t); }
+  t.innerHTML = '<span>' + _mvEsc(text) + '</span>' + (act ? '<button type="button">' + _mvEsc(act) + '</button>' : '');
+  if (act && fn) t.querySelector('button').onclick = fn;
+  t.classList.add('on');
+  clearTimeout(window._mv.toastT);
+  window._mv.toastT = setTimeout(_mvToastHide, act ? 4500 : 2600);
+}
+function _mvToastHide() { var t = _mv$('mv-toast'); if (t) t.classList.remove('on'); }
 
 // ── Games (the league picker): the first tile ──
 function multiPickTileHtml() {

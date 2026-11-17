@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.104.0', at: '2026-11-17T13:30:00-08:00',
+      title: 'A new Multi view',
+      sub: 'Glass tiles in each team’s colors, and a board you change with a swipe.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Teams in their colors', body: 'Every game on the board opens with both teams in frosted bands of their own colors. The team that’s behind steps back.' },
+          { icon: 'history', title: 'Swipe a game away', body: 'Swipe any game sideways and it comes off the board. Changed your mind? Tap Undo.' },
+          { icon: 'trophy', title: 'Swipe a game up', body: 'Everything else that’s live sits in a row under the board. Swipe a game up and it joins the board, or tap its +.' }
+        ];
+      }
+    },
+    {
       id: 'v7.102.0', at: '2026-11-13T12:00:00-08:00',
       title: 'Baseball in the offseason',
       sub: 'The MLB page is the Hot Stove until there are games again.',
