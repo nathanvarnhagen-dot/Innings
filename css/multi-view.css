@@ -207,5 +207,13 @@
 .mvh-open{border:0;height:44px;font-family:inherit;cursor:pointer}
 @media (prefers-reduced-motion: reduce){.mv-open:active,.mvh-t:active{transform:none}}
 
-/* v7.99.0: the TV guide, beside Edit board */
-.mv-guide{display:inline-flex;align-items:center;gap:6px}
+/* v7.99.0: the TV guide, beside Edit board
+   v7.103.1: the header never overlaps — Guide is a 34px icon button like
+   the ?, the live count sits under the title, and the title truncates
+   instead of running under the buttons. */
+.mv-guide{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#E9E5FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;padding:0}
+.mv-guide svg{width:16px;height:16px}
+.mv-hd .mv-title{flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;overflow:hidden;line-height:1}
+.mv-hd .mv-title .mv-tt{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.mv-hd .mv-live{font-size:11px;letter-spacing:.12em}
+.mv-hd .mv-edit{height:34px;padding:0 14px;border-radius:17px}

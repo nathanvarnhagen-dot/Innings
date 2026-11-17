@@ -543,7 +543,7 @@ function _mvRender() {
   if (lv) { lv.style.display = liveN ? '' : 'none'; lv.innerHTML = '<i></i>' + liveN + ' LIVE'; }
   if (!board.length) M.edit = false;
   var eb = _mv$('mv-edit');
-  if (eb) { eb.style.display = board.length ? '' : 'none'; eb.textContent = M.edit ? 'Done' : 'Edit board'; eb.setAttribute('aria-pressed', M.edit ? 'true' : 'false'); }
+  if (eb) { eb.style.display = board.length ? '' : 'none'; eb.textContent = M.edit ? 'Done' : 'Edit'; eb.setAttribute('aria-pressed', M.edit ? 'true' : 'false'); }
   body.classList.toggle('mv-editing', !!M.edit);
   var h = '';
   if (board.length) h += '<div class="mv-grid">' + board.map(_mvTileHtml).join('') + '</div>';
