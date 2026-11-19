@@ -541,7 +541,7 @@ function _mvBandsHtml(e) {
 function _mvTileHtml(e, i) {
   var M = window._mv, key = _mvKey(e.sport, e.gamePk), t = _mvBandsHtml(e), flag = e.phase === 'live' ? _mvFlag(key) : null;
   var label = (e.away || 'Away') + ' at ' + (e.home || 'Home');
-  return '<div class="mv-tile be' + (flag ? ' scored' : '') + (M.justAdded === key ? ' mv-new' : '') + '" data-i="' + i + '">' +
+  return '<div class="mv-tile be' + (flag ? ' scored' : '') + '" data-i="' + i + '" data-k="' + _mvEsc(key) + '">' +
     '<button class="mv-open" onclick="multiOpenGame(' + i + ')" aria-label="' + _mvEsc(label) + '">' +
       '<span class="mv-bands">' + t.html + '</span>' +
       '<span class="mv-in">' +
@@ -559,9 +559,14 @@ function _mvTileHtml(e, i) {
 function _mvRender() {
   var body = _mv$('mv-body');
   if (!body) return;
-  if (window._mv.drag) { window._mv.renderPending = true; return; } // v7.104.0: never under a finger
+  if (window._mv.drag || window._mv.hold) { window._mv.renderPending = true; return; } // never under a finger, or mid-flight
   _mvSwipeInit(body);
   var M = window._mv, board = _mvBoard(), also = _mvAlso(board), loaded = _mvHasData();
+  // v7.104.1: games you just took off the board lead the rail, newest first
+  if (M.benched && M.benched.length) {
+    var bo = function (x) { var n = M.benched.indexOf(_mvKey(x.sport, x.g.gamePk)); return n < 0 ? 99 : n; };
+    also = also.map(function (x, n) { return { x: x, n: n }; }).sort(function (a, b) { return (bo(a.x) - bo(b.x)) || (a.n - b.n); }).map(function (o) { return o.x; });
+  }
   M.shown = board; M.also = also;
   var liveN = board.filter(function (e) { return e.phase === 'live'; }).length;
   var lv = _mv$('mv-live');
@@ -573,7 +578,7 @@ function _mvRender() {
   var h = '';
   if (board.length) {
     h += '<div class="mv-grid">' + board.map(_mvTileHtml).join('') + '</div>';
-    if (!M.edit && !_mvSwiped()) h += '<div class="mv-tip">Swipe a game sideways to take it off the board</div>';
+    if (!M.edit && !_mvSwiped()) h += '<div class="mv-tip">Swipe a game sideways to move it off the board</div>';
   }
   else if (!loaded) h += '<div class="mv-empty"><b>Loading today’s games…</b></div>';
   else if (!also.length) h += '<div class="mv-empty"><b>Nothing’s live right now</b><span>When games are on, up to four of them show here side by side.</span><button class="mv-cta" onclick="multiTodaysGames()">Today’s games</button></div>';
@@ -587,7 +592,7 @@ function _mvRender() {
         var g = x.g, ca = _mvLook(x.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt), ch = _mvLook(x.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt);
         var sc = g.awayScore != null && g.homeScore != null, lo = function (a, b) { return sc && Number(a) < Number(b) ? ' lo' : ''; };
         var row = function (c, s, l) { return '<span class="mvb' + l + '" style="--tc:' + _mvBand(c) + '"><span class="ab">' + _mvEsc(c.abbr) + '</span><span class="sc">' + (sc ? _mvEsc(s) : '') + '</span></span>'; };
-        return '<div class="mv-ac" data-i="' + i + '"><span class="mv-bands">' + row(ca, g.awayScore, lo(g.awayScore, g.homeScore)) + row(ch, g.homeScore, lo(g.homeScore, g.awayScore)) + '</span>' +
+        return '<div class="mv-ac" data-i="' + i + '" data-k="' + _mvEsc(_mvKey(x.sport, g.gamePk)) + '"><span class="mv-bands">' + row(ca, g.awayScore, lo(g.awayScore, g.homeScore)) + row(ch, g.homeScore, lo(g.homeScore, g.awayScore)) + '</span>' +
           '<span class="mv-ac-ft"><span class="lg">' + _mvEsc(_mvLeague(x.sport)) + '</span><span class="st">' + _mvEsc(_mvStatus(x.sport, g, 'live')) + '</span>' +
           (full ? '' : '<button class="mv-ac-add" onclick="multiAdd(' + i + ')" aria-label="Add ' + _mvEsc((g.away || '') + ' at ' + (g.home || '')) + ' to the board"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="8" y1="2.5" x2="8" y2="13.5"/><line x1="2.5" y1="8" x2="13.5" y2="8"/></svg></button>') +
           '</span></div>';
@@ -596,7 +601,6 @@ function _mvRender() {
   var rail = body.querySelector('.mv-rail'), railX = rail ? rail.scrollLeft : 0;
   body.innerHTML = h;
   if (railX) { var r2 = body.querySelector('.mv-rail'); if (r2) r2.scrollLeft = railX; }
-  M.justAdded = null;
 }
 function _mvRenderAll() {
   try { if (_mvActive()) _mvRender(); } catch (e) { console.error('[multi view] render', e); }
@@ -660,50 +664,210 @@ function multiToggleEdit() {
   if (!M.edit && !st.ids.length) { st.auto = true; _mvSave(); }
   _mvRender();
 }
-function multiRemove(i) {
+
+// ── v7.104.1: moving a game between the board and Also live ──────────────
+// Taking a game off the board and putting one on are the same move run in
+// opposite directions. A copy of the tile or card (the "flyer") rides under
+// the finger, above everything; on release it springs to the game's new
+// home, its team bands and scores growing or shrinking to fit on the way,
+// while everything else on the screen glides to make room.
+var MV_FLY_MS = 560, MV_TOSS_AT = 110, MV_LIFT_AT = 90;
+var MV_PILL = '<span class="mv-bp" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>BENCHED</span>';
+function _mvCalm() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+function _mvElFor(sel, key) {
+  var body = _mv$('mv-body'), els = body ? body.querySelectorAll(sel) : [];
+  for (var i = 0; i < els.length; i++) if (els[i].getAttribute('data-k') === key) return els[i];
+  return null;
+}
+// where every tile and card is right now, by game
+function _mvRects() {
+  var out = {}, body = _mv$('mv-body');
+  if (!body) return out;
+  [].forEach.call(body.querySelectorAll('.mv-tile[data-k],.mv-ac[data-k]'), function (el) { out[el.getAttribute('data-k')] = el.getBoundingClientRect(); });
+  return out;
+}
+// after a redraw: everything that moved glides from where it was
+function _mvGlide(before, skip) {
+  var body = _mv$('mv-body');
+  if (!body || _mvCalm()) return;
+  var moved = [];
+  [].forEach.call(body.querySelectorAll('.mv-tile[data-k],.mv-ac[data-k]'), function (el) {
+    var k = el.getAttribute('data-k'), a = before[k];
+    if (!a || k === skip) return;
+    var b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    el.style.transition = 'none';
+    el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    moved.push(el);
+  });
+  if (!moved.length) return;
+  void body.offsetWidth;
+  moved.forEach(function (el) {
+    el.classList.add('mv-glide');
+    el.style.transition = ''; el.style.transform = '';
+    setTimeout(function () { el.classList.remove('mv-glide'); }, 520);
+  });
+}
+// a copy of a tile or a card, fixed right over the original
+function _mvFlyer(src, kind) {
+  var r = src.getBoundingClientRect(), f = src.cloneNode(true);
+  f.removeAttribute('data-i'); f.removeAttribute('data-k');
+  f.classList.remove('mv-new', 'mv-land', 'mv-glide', 'mv-drag', 'mv-snap', 'mv-fly');
+  f.classList.add('mv-flyer', 'fl-' + kind);
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px';
+  [].forEach.call(f.querySelectorAll('button'), function (b) { b.tabIndex = -1; });
+  if (kind === 'tile') f.insertAdjacentHTML('beforeend', MV_PILL);
+  document.body.appendChild(f);
+  return f;
+}
+// the flyer springs to `to` (a rect), turning into a tile or a card on the way
+function _mvFly(f, to, kind, done) {
+  void f.offsetWidth;
+  f.classList.remove('armed');
+  f.classList.add('go');
+  f.style.boxShadow = '';
+  var inn = f.querySelector('.mv-in');
+  if (inn) inn.style.opacity = '';
+  var pill = f.querySelector('.mv-bp');
+  if (pill) pill.style.opacity = '';
+  if (!to) {
+    // nowhere to land (a game that's no longer live): it sinks away
+    f.style.transform = 'translateY(70px) scale(.6)'; f.style.opacity = '0';
+    setTimeout(function () { f.remove(); if (done) done(); }, 320);
+    return;
+  }
+  f.classList.remove('fl-tile', 'fl-card');
+  f.classList.add('fl-' + kind, 'to-' + kind);
+  f.style.left = to.left + 'px'; f.style.top = to.top + 'px'; f.style.width = to.width + 'px'; f.style.height = to.height + 'px';
+  f.style.transform = 'none';
+  setTimeout(function () { f.remove(); if (done) done(); }, MV_FLY_MS);
+}
+// the flyer goes back where it came from
+function _mvFlyBack(f, src, done) {
+  f.classList.remove('armed');
+  f.classList.add('back');
+  f.style.transform = 'none'; f.style.boxShadow = '';
+  var inn = f.querySelector('.mv-in'), pill = f.querySelector('.mv-bp');
+  if (inn) inn.style.opacity = '';
+  if (pill) pill.style.opacity = '';
+  setTimeout(function () { f.remove(); if (src) src.style.visibility = ''; if (done) done(); }, _mvCalm() ? 0 : 440);
+}
+// draws again once a flight is over, if anything came in meanwhile
+function _mvRelease(after) {
+  var M = window._mv;
+  setTimeout(function () {
+    M.hold = false;
+    if (M.renderPending && !M.drag) { M.renderPending = false; _mvRender(); }
+  }, after || 0);
+}
+// the game `key` now has a new element (a tile or a card): the flyer lands on it
+function _mvSettle(key, sel, kind, f, before) {
+  var M = window._mv, dst = _mvElFor(sel, key);
+  if (kind === 'card') { var rail = dst && dst.parentNode; if (rail && rail.scrollLeft) rail.scrollLeft = 0; }
+  if (!f) { _mvGlide(before, key); if (dst) dst.classList.add('mv-land'); return; }
+  var to = dst ? dst.getBoundingClientRect() : null;
+  _mvGlide(before, key);
+  if (dst) dst.style.visibility = 'hidden';
+  M.hold = true; M.fly = true;
+  _mvFly(f, to, kind, function () {
+    M.fly = false;
+    if (dst) { dst.style.visibility = ''; dst.classList.add('mv-land'); }
+    _mvRelease(900);
+  });
+}
+// `f` (optional) is the flyer already under the finger
+function multiRemove(i, f) {
   var M = window._mv, st = _mvState(), e = M.shown[i];
-  if (!e) return;
-  var key = _mvKey(e.sport, e.gamePk), at = -1;
+  var key = e ? _mvKey(e.sport, e.gamePk) : '', at = -1;
   st.ids.forEach(function (p, j) { if (_mvKey(p.sport, p.gamePk) === key) at = j; });
-  if (at < 0) return;
+  if (!e || at < 0) { if (f && f.remove) f.remove(); return; }
+  if (!(f && f.nodeType === 1)) {
+    var src = _mvElFor('.mv-tile', key);
+    f = src && !_mvCalm() ? _mvFlyer(src, 'tile') : null;
+  }
+  var before = _mvRects();
   // v7.104.0: a few seconds to take it back
   M.undo = { entry: st.ids[at], at: at, auto: st.auto };
   st.ids.splice(at, 1);
   st.auto = false; st.day = _mvToday();
+  // the game just benched leads Also live, so it lands where the slot opened
+  M.benched = [key].concat((M.benched || []).filter(function (k) { return k !== key; })).slice(0, 12);
   _mvSave();
+  M.hold = false;
   _mvRender();
-  var g = e.g || {};
-  _mvToast((_mvLook(e.sport, e.away, g.awayAbbr).abbr + ' – ' + _mvLook(e.sport, e.home, g.homeAbbr).abbr) + ' off the board', 'Undo', multiUndo);
+  _mvSettle(key, '.mv-ac', 'card', f, before);
+  var g = e.g || {}, live = e.phase === 'live';
+  _mvToast((_mvLook(e.sport, e.away, g.awayAbbr).abbr + ' – ' + _mvLook(e.sport, e.home, g.homeAbbr).abbr) + (live ? ' moved to Also live' : ' off the board'), 'Undo', multiUndo);
 }
 function multiUndo() {
   var M = window._mv, st = _mvState(), u = M.undo;
   M.undo = null; _mvToastHide();
-  if (!u || st.ids.length >= MV_MAX) return;
+  if (!u || st.ids.length >= MV_MAX || M.fly || M.drag) return;
   var key = _mvKey(u.entry.sport, u.entry.gamePk);
   if (st.ids.some(function (p) { return _mvKey(p.sport, p.gamePk) === key; })) return;
+  var src = _mvElFor('.mv-ac', key), f = src && !_mvCalm() ? _mvFlyer(src, 'card') : null, before = _mvRects();
   st.ids.splice(Math.min(u.at, st.ids.length), 0, u.entry);
   st.auto = u.auto; st.day = _mvToday();
-  M.justAdded = key;
+  M.benched = (M.benched || []).filter(function (k) { return k !== key; });
   _mvSave();
+  M.hold = false;
   _mvRender();
+  _mvSettle(key, '.mv-tile', 'tile', f, before);
 }
-function multiAdd(i) {
+function multiAdd(i, f) {
   var M = window._mv, st = _mvState(), x = M.also[i];
-  if (!x || st.ids.length >= MV_MAX) return;
+  if (!x || st.ids.length >= MV_MAX) { if (f && f.remove) f.remove(); return; }
+  var key = _mvKey(x.sport, x.g.gamePk);
+  if (!(f && f.nodeType === 1)) {
+    var src = _mvElFor('.mv-ac', key);
+    f = src && !_mvCalm() ? _mvFlyer(src, 'card') : null;
+  }
+  var before = _mvRects();
   st.ids.push(_mvEntry(x));
   st.auto = false; st.day = _mvToday();
-  M.justAdded = _mvKey(x.sport, x.g.gamePk);
+  M.benched = (M.benched || []).filter(function (k) { return k !== key; });
   _mvToastHide();
   _mvSave();
+  M.hold = false;
   _mvRender();
+  _mvSettle(key, '.mv-tile', 'tile', f, before);
 }
 
-// ── v7.104.0: swiping — a tile sideways takes it off the board, an Also
-// live card up puts it on. Tiles let the page scroll up and down
-// (touch-action: pan-y); the rail lets itself scroll sideways (pan-x), so
-// each only ever hears the direction it acts on. A tap still opens a game. ──
+// ── swiping. A tile: start sideways (or on a diagonal) and it comes up
+// under your finger and goes wherever you take it; far enough, or a quick
+// flick, and it moves down to Also live. An Also live card: swipe it up and
+// it joins the board. Tiles let the page scroll up and down (touch-action:
+// pan-y) and the rail scrolls sideways (pan-x), so a straight up-and-down
+// drag on a tile is still the page scrolling. A tap still opens a game. ──
 var MV_SWIPED_KEY = 'innings_mv_swiped';
 function _mvSwiped() { try { return localStorage.getItem(MV_SWIPED_KEY) === '1'; } catch (e) { return true; } }
+function _mvSlotOff(body) {
+  [].forEach.call(body.querySelectorAll('.mv-slot'), function (s) { s.remove(); });
+  var lab = body.querySelector('.mv-lab small');
+  if (lab && lab._was != null) { lab.textContent = lab._was; lab._was = null; }
+}
+// while a tile is far enough to go: a place opens at the front of Also live
+function _mvRailSlot(body, on) {
+  var rail = body.querySelector('.mv-rail'), has = body.querySelector('.mv-ac.mv-slot');
+  if (!on) { _mvSlotOff(body); return; }
+  if (has || !rail) return;
+  rail.insertAdjacentHTML('afterbegin', '<div class="mv-ac mv-slot" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg><span>Drop here</span></div>');
+  try { rail.scrollTo({ left: 0, behavior: 'smooth' }); } catch (e) { rail.scrollLeft = 0; }
+  var lab = body.querySelector('.mv-lab small');
+  if (lab) { if (lab._was == null) lab._was = lab.textContent; lab.textContent = 'Let go to move it here'; }
+}
+// while a card is far enough to go: its place opens on the board
+function _mvGridSlot(body, on) {
+  var has = body.querySelector('.mv-tile.mv-slot'), lab = body.querySelector('.mv-lab small');
+  if (!on) { _mvSlotOff(body); return; }
+  if (lab) { if (lab._was == null) lab._was = lab.textContent; lab.textContent = 'Let go to add it'; }
+  var grid = body.querySelector('.mv-grid');
+  if (has || !grid) return;
+  var first = grid.querySelector('.mv-tile'), n = grid.querySelectorAll('.mv-tile').length;
+  var h = first ? first.offsetHeight : 300;
+  grid.insertAdjacentHTML('beforeend', '<div class="mv-tile mv-slot' + (n % 2 === 0 ? ' row' : '') + '" aria-hidden="true" style="height:' + h + 'px;--h:' + h + 'px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Drop to add</span></div>');
+}
 function _mvSwipeInit(body) {
   if (body._mvSw) return;
   body._mvSw = true;
@@ -713,83 +877,98 @@ function _mvSwipeInit(body) {
   }, true);
   body.addEventListener('pointerdown', function (ev) {
     var M = window._mv;
-    if (M.edit || M.drag || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-    if (ev.target.closest('.mv-x,.mv-ac-add')) return;
+    if (M.edit || M.drag || M.fly || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    if (ev.target.closest('.mv-x,.mv-ac-add,.mv-slot')) return;
     var tile = ev.target.closest('.mv-tile'), card = tile ? null : ev.target.closest('.mv-ac');
     var el = tile || card;
     if (!el) return;
-    var d = { el: el, tile: !!tile, i: Number(el.getAttribute('data-i')), x0: ev.clientX, y0: ev.clientY, t0: Date.now(), id: ev.pointerId, axis: null, dx: 0, dy: 0, lx: ev.clientX, ly: ev.clientY, lt: Date.now(), vx: 0, vy: 0 };
+    var r0 = el.getBoundingClientRect();
+    // grab a tile near its top and it leans one way, near its bottom the other
+    var lean = -2 * ((ev.clientY - r0.top) / (r0.height || 1) - .5);
+    if (Math.abs(lean) < .4) lean = lean < 0 ? -.4 : .4;
+    var d = { el: el, tile: !!tile, i: Number(el.getAttribute('data-i')), x0: ev.clientX, y0: ev.clientY, id: ev.pointerId, on: false, dx: 0, dy: 0, lx: ev.clientX, ly: ev.clientY, lt: Date.now(), vx: 0, vy: 0, f: null, armed: false, lean: lean };
     var full = _mvState().ids.length >= MV_MAX;
+    var grid = body.querySelector('.mv-grid');
+    var arm = function (on) {
+      if (on === d.armed) return;
+      d.armed = on;
+      d.f.classList.toggle('armed', on);
+      if (d.tile) _mvRailSlot(body, on); else _mvGridSlot(body, on);
+    };
     var move = function (e) {
       if (e.pointerId !== d.id) return;
       d.dx = e.clientX - d.x0; d.dy = e.clientY - d.y0;
       var now = Date.now(), dt = Math.max(1, now - d.lt);
-      d.vx = (e.clientX - d.lx) / dt; d.vy = (e.clientY - d.ly) / dt; d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
-      if (!d.axis) {
+      d.vx = d.vx * .5 + ((e.clientX - d.lx) / dt) * .5; d.vy = d.vy * .5 + ((e.clientY - d.ly) / dt) * .5;
+      d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
+      if (!d.on) {
         if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) < 8) return;
-        if (d.tile && Math.abs(d.dx) > Math.abs(d.dy) * 1.2) d.axis = 'x';
-        else if (!d.tile && -d.dy > Math.abs(d.dx) * 1.2) d.axis = 'y';
-        else { end(); return; }
-        M.drag = true; el.classList.add('mv-drag');
+        var ok = d.tile ? Math.abs(d.dx) > Math.abs(d.dy) * .8 : -d.dy > Math.abs(d.dx) * 1.1;
+        if (!ok) { end(); return; }
+        d.on = true; M.drag = true;
+        d.f = _mvFlyer(el, d.tile ? 'tile' : 'card');
+        el.style.visibility = 'hidden';
+        if (grid && d.tile) grid.classList.add('mv-focus');
         try { el.setPointerCapture(d.id); } catch (x) {}
       }
       if (e.cancelable) e.preventDefault();
-      if (d.axis === 'x') {
-        el.style.transform = 'translateX(' + d.dx + 'px) rotate(' + (d.dx / 22).toFixed(2) + 'deg)';
-        el.style.opacity = String(Math.max(.35, 1 - Math.abs(d.dx) / 320));
+      var f = d.f, p;
+      if (d.tile) {
+        var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy);
+        p = Math.min(1, dist / MV_TOSS_AT);
+        f.style.transform = 'translate(' + d.dx + 'px,' + d.dy + 'px) rotate(' + (d.dx * .05 * d.lean).toFixed(2) + 'deg) scale(' + (1 - .12 * p).toFixed(3) + ')';
+        var inn = f.querySelector('.mv-in'), pill = f.querySelector('.mv-bp');
+        if (inn) inn.style.opacity = (1 - .85 * p).toFixed(2);
+        if (pill) pill.style.opacity = Math.max(0, (p - .25) / .75).toFixed(2);
+        arm(dist >= MV_TOSS_AT);
       } else {
-        var ty = Math.min(0, d.dy) * (full ? .3 : 1);
-        el.style.transform = 'translateY(' + ty + 'px) scale(' + (1 + Math.min(.06, -ty / 900)).toFixed(3) + ')';
+        var k = full ? .3 : 1, tx = d.dx * k, ty = Math.min(0, d.dy) * k;
+        p = Math.min(1, -ty / 120);
+        f.style.transform = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + (tx * .05).toFixed(2) + 'deg) scale(' + (1 + .14 * p).toFixed(3) + ')';
+        arm(!full && -ty >= MV_LIFT_AT);
       }
+      f.style.boxShadow = '0 ' + Math.round(10 + 26 * p) + 'px ' + Math.round(24 + 40 * p) + 'px rgba(0,0,0,.6),0 0 0 ' + (d.armed ? 2 : 0) + 'px rgba(201,184,255,.85)';
+    };
+    var back = function () {
+      if (grid) grid.classList.remove('mv-focus');
+      _mvSlotOff(body);
+      M.fly = true;
+      _mvFlyBack(d.f, el, function () { M.fly = false; _mvRelease(0); });
     };
     var up = function (e) {
       if (e && e.pointerId !== d.id) return;
-      var was = d.axis;
+      var was = d.on;
       end();
       if (!was) return;
       M.noClick = Date.now();
-      if (was === 'x') {
-        var go = Math.abs(d.dx) > 96 || (Math.abs(d.dx) > 36 && Math.abs(d.vx) > .55 && (d.vx > 0) === (d.dx > 0));
+      if (Date.now() - d.lt > 90) { d.vx = 0; d.vy = 0; } // held still before letting go: no flick
+      var go;
+      if (d.tile) {
+        var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy), sp = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+        go = dist >= MV_TOSS_AT || (sp > .6 && dist > 24 && d.vx * d.dx + d.vy * d.dy > 0);
         if (go) {
-          var dir = d.dx > 0 ? 1 : -1;
-          el.classList.add('mv-fly');
-          el.style.transform = 'translateX(' + (dir * (window.innerWidth + 80)) + 'px) rotate(' + (dir * 14) + 'deg)';
-          el.style.opacity = '0';
           try { localStorage.setItem(MV_SWIPED_KEY, '1'); } catch (x) {}
-          setTimeout(function () { multiRemove(d.i); }, 230);
+          multiRemove(d.i, d.f);
           return;
         }
       } else {
-        var add = !full && (-d.dy > 80 || (-d.dy > 30 && d.vy < -.5));
-        if (add) {
-          el.classList.add('mv-fly');
-          el.style.transform = 'translateY(-' + (window.innerHeight * .6) + 'px) scale(.9)';
-          el.style.opacity = '0';
-          setTimeout(function () { multiAdd(d.i); }, 240);
-          return;
-        }
+        go = !full && (d.armed || (-d.dy > 30 && d.vy < -.5));
+        if (go) { multiAdd(d.i, d.f); return; }
         if (full && -d.dy > 40) _mvToast('The board holds four. Swipe a game off it first.');
       }
-      el.classList.add('mv-snap');
-      el.style.transform = ''; el.style.opacity = '';
-      setTimeout(function () { el.classList.remove('mv-snap'); }, 320);
+      back();
     };
     var end = function () {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
-      el.classList.remove('mv-drag');
-      if (M.drag) {
-        M.drag = false;
-        // anything that came in while the finger was down draws once the tile has settled
-        if (M.renderPending) { M.renderPending = false; setTimeout(_mvRender, 260); }
-      }
+      M.drag = false;
     };
     var cancel = function (e) {
       if (e.pointerId !== d.id) return;
-      var was = d.axis;
+      var was = d.on;
       end();
-      if (was) { el.classList.add('mv-snap'); el.style.transform = ''; el.style.opacity = ''; }
+      if (was) back();
     };
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', up);

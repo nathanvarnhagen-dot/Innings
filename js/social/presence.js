@@ -172,7 +172,7 @@
       items: function () {
         return [
           { icon: 'bars', title: 'Teams in their colors', body: 'Every game on the board opens with both teams in frosted bands of their own colors. The team that’s behind steps back.' },
-          { icon: 'history', title: 'Swipe a game away', body: 'Swipe any game sideways and it comes off the board. Changed your mind? Tap Undo.' },
+          { icon: 'history', title: 'Swipe a game away', body: 'Swipe any game sideways and it drops down into Also live. Changed your mind? Tap Undo.' },
           { icon: 'trophy', title: 'Swipe a game up', body: 'Everything else that’s live sits in a row under the board. Swipe a game up and it joins the board, or tap its +.' }
         ];
       }

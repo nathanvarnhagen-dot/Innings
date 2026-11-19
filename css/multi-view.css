@@ -279,3 +279,50 @@
 .mv-tile.be .mv-sit.fb2 .dd small{font-size:10.5px}
 .mv-tile.be .mv-sit.fb2 .fld{height:20px}
 .mv-editing .mv-tile.be .mv-top{padding-right:0}
+
+/* ══ v7.104.1 — moving a game between the board and Also live. A copy of the
+   tile or card (the flyer) rides under the finger above everything, then
+   springs to its new home while its bands and scores resize to fit; the rest
+   of the screen glides to make room. Taking a game off mirrors putting one on. ══ */
+.mv-flyer.mv-flyer{position:fixed;z-index:9000;margin:0;box-sizing:border-box;overflow:hidden;pointer-events:none;flex:none;opacity:1;visibility:visible;animation:none;touch-action:none;will-change:transform,left,top,width,height;background:rgba(27,22,62,.9);box-shadow:0 10px 24px rgba(0,0,0,.6),0 0 0 0 rgba(201,184,255,0);transition:box-shadow .2s ease;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif;color:#F5F3FF}
+.mv-flyer.fl-tile{--bh:46px;--bp:12px;--af:21px;--sf:34px;border-radius:20px}
+.mv-flyer.fl-card{--bh:34px;--bp:10px;--af:16px;--sf:22px;border-radius:16px}
+.mv-flyer.mv-flyer .mvb{height:var(--bh);padding:0 var(--bp);flex-shrink:0}
+.mv-flyer.mv-flyer .mvb .ab{font-size:var(--af)}
+.mv-flyer.mv-flyer .mvb .sc{font-size:var(--sf)}
+.mv-flyer .mv-open{height:auto;border-radius:0}
+.mv-flyer .mv-x{display:none}
+.mv-flyer.go{transition:left .56s cubic-bezier(.2,1.18,.35,1),top .56s cubic-bezier(.2,1.18,.35,1),width .56s cubic-bezier(.2,1.18,.35,1),height .56s cubic-bezier(.2,1.18,.35,1),transform .56s cubic-bezier(.2,1.18,.35,1),border-radius .4s ease,box-shadow .56s ease,opacity .3s ease}
+.mv-flyer.go .mvb{transition:height .56s cubic-bezier(.2,1.18,.35,1),padding .56s cubic-bezier(.2,1.18,.35,1)}
+.mv-flyer.go .mvb .ab,.mv-flyer.go .mvb .sc{transition:font-size .56s cubic-bezier(.2,1.18,.35,1)}
+.mv-flyer.go .mv-in,.mv-flyer.go .mv-ac-ft{transition:opacity .22s ease}
+.mv-flyer.go.to-card .mv-in,.mv-flyer.go.to-tile .mv-ac-ft{opacity:0}
+.mv-flyer.back{transition:transform .44s cubic-bezier(.2,1.18,.35,1),box-shadow .3s ease}
+.mv-flyer.back .mv-in,.mv-flyer.back .mv-bp{transition:opacity .25s ease}
+/* the quiet word on a tile that's on its way off */
+.mv-bp{position:absolute;left:50%;top:calc(46px + 50%);z-index:3;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:rgba(15,12,29,.55);box-shadow:inset 0 0 0 1px rgba(201,184,255,.32);color:#D9CEFF;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;white-space:nowrap;opacity:0;transform:translate(-50%,-50%) translateY(4px) scale(.94);transition:transform .16s ease;pointer-events:none}
+.mv-flyer.armed .mv-bp{transform:translate(-50%,-50%)}
+.mv-flyer.go .mv-bp{opacity:0;transition:opacity .22s ease}
+/* the rest of the board steps back while a tile is up */
+.mv-grid .mv-tile.be{transition:opacity .18s ease}
+.mv-grid.mv-focus .mv-tile.be{opacity:.68}
+.mv-tile.mv-glide,.mv-ac.mv-glide,.mv-grid .mv-tile.be.mv-glide{transition:transform .48s cubic-bezier(.22,1,.36,1),opacity .18s ease}
+/* where it's about to land */
+.mv-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;color:#D9CEFF;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;overflow:hidden;pointer-events:none}
+.mv-tile.mv-slot{border-radius:20px;border:1.5px dashed rgba(201,184,255,.7);background:rgba(201,184,255,.07);box-shadow:none;font-size:10.5px;animation:mvSlotIn .28s cubic-bezier(.2,1.2,.4,1) both,mvBreath 1.2s ease-in-out .28s infinite}
+.mv-tile.mv-slot.row{animation:mvSlotRow .34s cubic-bezier(.22,1,.36,1) both,mvBreath 1.2s ease-in-out .34s infinite}
+.mv-ac.mv-slot{flex:0 0 148px;height:108px;border:1.5px dashed rgba(201,184,255,.7);background:rgba(201,184,255,.07);box-shadow:none;font-size:9.5px;gap:6px;animation:mvSlotCard .32s cubic-bezier(.2,1.2,.4,1) both,mvBreath 1.2s ease-in-out .32s infinite}
+@keyframes mvSlotIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+@keyframes mvSlotRow{from{opacity:0;height:0}to{opacity:1;height:var(--h,300px)}}
+@keyframes mvSlotCard{from{opacity:0;flex-basis:0;margin-right:-10px}to{opacity:1;flex-basis:148px;margin-right:0}}
+@keyframes mvBreath{0%,100%{border-color:rgba(201,184,255,.45)}50%{border-color:rgba(201,184,255,.95)}}
+/* landed */
+.mv-tile.mv-land::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;animation:mvPulse .9s ease-out both}
+.mv-tile.mv-land .mv-in{animation:mvBodyIn .42s ease-out .04s both}
+.mv-ac.mv-land{animation:mvPulseAc .8s ease-out both}
+.mv-ac.mv-land .mv-ac-ft{animation:mvBodyIn .36s ease-out both}
+@keyframes mvPulse{from{box-shadow:0 0 0 0 rgba(201,184,255,.75)}to{box-shadow:0 0 0 16px rgba(201,184,255,0)}}
+@keyframes mvPulseAc{from{box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),0 10px 22px rgba(0,0,0,.3),0 0 0 0 rgba(201,184,255,.8)}to{box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),0 10px 22px rgba(0,0,0,.3),0 0 0 12px rgba(201,184,255,0)}}
+@keyframes mvBodyIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.mv-rail{padding-top:12px;padding-bottom:14px}
+@media (prefers-reduced-motion: reduce){.mv-slot,.mv-tile.mv-land::after,.mv-tile.mv-land .mv-in,.mv-ac.mv-land,.mv-ac.mv-land .mv-ac-ft{animation:none}.mv-tile.mv-glide,.mv-ac.mv-glide,.mv-flyer.go,.mv-flyer.back{transition:none}}
