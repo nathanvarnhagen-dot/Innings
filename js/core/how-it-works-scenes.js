@@ -275,7 +275,7 @@
   // ════ GAMES (league picker) ═══════════════════════════════════════════
   function leagueTiles(opts) {
     opts = opts || {};
-    var mv = R(function () { return multiPickTileHtml(); }, '<button class="mv-pick"><span class="nm">Multi view</span><span class="pill">Up to 4 at once</span></button>');
+    var mv = R(function () { return multiPickTileHtml(); }, '<button class="mv-pick"><span class="nm">Multi view</span><span class="pill">Up to 6 at once</span></button>');
     mv = mv.replace('<button class="mv-pick"', '<button class="mv-pick" id="hiw-mvpick"').replace(/<span class="gsp-lv"[^>]*>[\s\S]*?<\/span>/, '<span class="gsp-lv" style="display:flex"><i></i>4 live</span>');
     var t = function (key, em, nm, ph, phc, lv) {
       return '<button class="gsp" id="hiw-gsp-' + key + '"><span class="em">' + em + '</span><span class="nm">' + nm + '</span>' +

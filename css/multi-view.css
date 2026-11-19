@@ -326,3 +326,56 @@
 @keyframes mvBodyIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .mv-rail{padding-top:12px;padding-bottom:14px}
 @media (prefers-reduced-motion: reduce){.mv-slot,.mv-tile.mv-land::after,.mv-tile.mv-land .mv-in,.mv-ac.mv-land,.mv-ac.mv-land .mv-ac-ft{animation:none}.mv-tile.mv-glide,.mv-ac.mv-glide,.mv-flyer.go,.mv-flyer.back{transition:none}}
+
+/* ══ v7.104.2 — the board fits the screen. Nothing on it scrolls, so a tile
+   can be swiped any direction and Also live is always in reach under it. The
+   board holds six; the tiles show less as they get shorter (four: the note
+   goes; six: the glance panel becomes one line). ══ */
+#screen-multi .mv-body{gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);overscroll-behavior:contain}
+#screen-multi .mv-grid{flex:1 1 0;grid-auto-rows:minmax(104px,1fr);align-content:start}
+#screen-multi .mv-grid.r1{min-height:104px;max-height:300px}
+#screen-multi .mv-grid.r2{min-height:218px;max-height:610px}
+#screen-multi .mv-grid.r3{min-height:332px;max-height:920px}
+#screen-multi .mv-grid .mv-tile{min-height:0;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#screen-multi .mv-grid .mv-tile.be{container-type:size}
+#screen-multi .mv-empty{flex:1 1 0}
+.mv-line{display:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.06em;line-height:1.15;color:#F5F3FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-tile.mv-resized{animation:mvResized .32s ease-out both}
+@keyframes mvResized{from{opacity:.25}to{opacity:1}}
+@container (max-height:297px){
+  .mv-tile.be .mv-note{display:none}
+}
+@container (max-height:267px){
+  .mv-tile.be .mvb{height:38px}
+  .mv-tile.be .mvb .ab{font-size:19px}
+  .mv-tile.be .mvb .sc{font-size:30px}
+  .mv-tile.be .mv-in{gap:6px;padding:8px 10px}
+}
+@container (max-height:239px){
+  .mv-tile.be .mv-fr{display:none}
+  .mv-tile.be .mvb{height:36px}
+  .mv-tile.be .mv-in{padding:7px 10px}
+}
+@container (max-height:203px){
+  .mv-tile.be .mvb{height:34px}
+  .mv-tile.be .mvb .ab{font-size:17px}
+  .mv-tile.be .mvb .sc{font-size:26px}
+  .mv-tile.be .mv-in{gap:5px;padding:7px 10px 8px}
+  .mv-tile.be .mv-sit{display:none}
+  .mv-tile.be .mv-line{display:block}
+  .mv-tile.be .mv-fr{display:flex}
+}
+@container (max-height:153px){
+  .mv-tile.be .mv-fr{display:none}
+}
+.mv-tile.mv-slot{animation:mvSlotIn .28s cubic-bezier(.2,1.2,.4,1) both,mvBreath 1.2s ease-in-out .28s infinite}
+.mv-bp{top:calc(var(--bh,46px) + 50%)}
+/* Also live, docked under the board: the label on one line, shorter cards */
+#screen-multi .mv-sec{gap:6px}
+#screen-multi .mv-lab{flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;white-space:nowrap}
+#screen-multi .mv-lab small{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+#screen-multi .mv-rail{padding-top:6px;padding-bottom:8px;scroll-padding-left:16px}
+#screen-multi .mv-ac .mvb{height:30px}
+.mv-ac.mv-slot{height:auto;align-self:stretch}
+#screen-multi .mv-tip{margin-top:-4px}
+@media (prefers-reduced-motion: reduce){.mv-tile.mv-resized{animation:none}}

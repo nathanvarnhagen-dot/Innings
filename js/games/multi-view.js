@@ -1,5 +1,5 @@
 // ══ MULTI VIEW (v7.38.0) ══════════════════════════════════════════════
-// Up to four live games on one board — any sport, side by side. Each tile
+// Up to six live games on one board (four on its own; you can add two more) — any sport, side by side. Each tile
 // is a game: the score, where it stands (count and runners, down and
 // distance, who's ahead), who's up, and which friends are in its room. A
 // tile turns gold for a minute and a half when that game scores. Tap a tile
@@ -32,7 +32,7 @@
 // so the board asks /api/mlb?mode=glance and /api/espn?mode=glance for the
 // live games on it, on the same 20 s clock.
 
-var MV_KEY = 'innings_multi_v1', MV_MAX = 4, MV_FLAG_MS = 90000, MV_TICK_MS = 20000, MV_PA_MS = 90000;
+var MV_KEY = 'innings_multi_v1', MV_MAX = 6, MV_AUTO = 4, MV_FLAG_MS = 90000, MV_TICK_MS = 20000, MV_PA_MS = 90000;
 window._mv = window._mv || { st: null, sched: null, at: 0, loaded: false, loading: null, edit: false, prev: {}, flags: {}, timer: null, shown: [], also: [], glance: {}, pa: {}, paSeen: {}, glanceAt: 0, glancing: null };
 
 var MV_ICON = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="2" width="6.5" height="6.5" rx="2"/><rect x="11.5" y="2" width="6.5" height="6.5" rx="2"/><rect x="2" y="11.5" width="6.5" height="6.5" rx="2"/><rect x="11.5" y="11.5" width="6.5" height="6.5" rx="2"/></svg>';
@@ -259,7 +259,7 @@ function _mvBoard() {
       ids.forEach(function (p) { on[_mvKey(p.sport, p.gamePk)] = true; });
       // v7.91.0: a college basketball game joins on its own only if it's ranked, your team's or a friend's
       var cands = all.filter(function (x) { return _mvIsLive(x.sport, x.g) && !on[_mvKey(x.sport, x.g.gamePk)] && (typeof _cbbWorthy !== 'function' || _cbbWorthy(x.sport, x.g)); }).sort(_mvRank);
-      while (ids.length < MV_MAX && cands.length) { ids.push(_mvEntry(cands.shift())); changed = true; }
+      while (ids.length < MV_AUTO && cands.length) { ids.push(_mvEntry(cands.shift())); changed = true; }
       // a finished game gives its spot to one that's live
       for (var i = 0; i < ids.length && cands.length; i++) {
         var cur = by[_mvKey(ids[i].sport, ids[i].gamePk)];
@@ -547,6 +547,7 @@ function _mvTileHtml(e, i) {
       '<span class="mv-in">' +
       '<span class="mv-top"><span class="lg">' + _mvEsc(_mvLeague(e.sport)) + '</span><span class="st' + (e.phase === 'live' ? ' live' : '') + '">' + (e.phase === 'live' ? '<i></i>' : '') + _mvEsc(_mvStatus(e.sport, e.g, e.phase)) + '</span></span>' +
       _mvSitHtml(e, t.ca, t.ch, flag) +
+      '<span class="mv-line">' + _mvEsc(_mvSitLine(e, t.ca, t.ch, flag)) + '</span>' +
       '<span class="mv-note">' + _mvEsc(_mvNoteText(e)) + '</span>' +
       _mvFriendsHtml(e.gamePk) +
       '</span>' +
@@ -577,16 +578,16 @@ function _mvRender() {
   body.classList.toggle('mv-editing', !!M.edit);
   var h = '';
   if (board.length) {
-    h += '<div class="mv-grid">' + board.map(_mvTileHtml).join('') + '</div>';
-    if (!M.edit && !_mvSwiped()) h += '<div class="mv-tip">Swipe a game sideways to move it off the board</div>';
+    h += '<div class="mv-grid r' + Math.ceil(board.length / 2) + '">' + board.map(_mvTileHtml).join('') + '</div>';
+    if (!M.edit && !_mvSwiped()) h += '<div class="mv-tip">Swipe a game away to move it off the board</div>';
   }
   else if (!loaded) h += '<div class="mv-empty"><b>Loading today’s games…</b></div>';
-  else if (!also.length) h += '<div class="mv-empty"><b>Nothing’s live right now</b><span>When games are on, up to four of them show here side by side.</span><button class="mv-cta" onclick="multiTodaysGames()">Today’s games</button></div>';
+  else if (!also.length) h += '<div class="mv-empty"><b>Nothing’s live right now</b><span>When games are on, up to six of them show here side by side.</span><button class="mv-cta" onclick="multiTodaysGames()">Today’s games</button></div>';
   else h += '<div class="mv-empty"><b>Your board’s empty</b><span>Add a live game from the list below.</span></div>';
   if (also.length) {
     // v7.104.0: a rail of cards — swipe one up onto the board (or tap +)
     var full = board.length >= MV_MAX;
-    h += '<div class="mv-sec"><div class="mv-lab">ALSO LIVE<small>' + (full ? 'The board holds four. Swipe a game off it to make room.' : 'Swipe a game up onto the board') + '</small></div>' +
+    h += '<div class="mv-sec"><div class="mv-lab">ALSO LIVE<small>' + (full ? 'The board holds six. Swipe one off to make room.' : 'Swipe a game up onto the board') + '</small></div>' +
       '<div class="mv-rail scroll-bare' + (full ? ' full' : '') + '">' +
       also.map(function (x, i) {
         var g = x.g, ca = _mvLook(x.sport, g.away, g.awayAbbr, g.awayColor, g.awayAlt), ch = _mvLook(x.sport, g.home, g.homeAbbr, g.homeColor, g.homeAlt);
@@ -695,6 +696,8 @@ function _mvGlide(before, skip) {
     var k = el.getAttribute('data-k'), a = before[k];
     if (!a || k === skip) return;
     var b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    // one that changed size (the board went from two rows to three) fades in at its new size
+    if (Math.abs(a.width - b.width) > 2 || Math.abs(a.height - b.height) > 2) { el.classList.remove('mv-resized'); void el.offsetWidth; el.classList.add('mv-resized'); }
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
     el.style.transition = 'none';
     el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
@@ -718,11 +721,21 @@ function _mvFlyer(src, kind) {
   f.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px';
   [].forEach.call(f.querySelectorAll('button'), function (b) { b.tabIndex = -1; });
   if (kind === 'tile') f.insertAdjacentHTML('beforeend', MV_PILL);
+  _mvFlyerFit(f, src);
   document.body.appendChild(f);
   return f;
 }
+// the flyer's bands and scores take the size of `like`'s (a tile's change
+// with how many games are on the board)
+function _mvFlyerFit(f, like) {
+  var b = like && like.querySelector('.mvb'), ab = b && b.querySelector('.ab'), sc = b && b.querySelector('.sc');
+  if (!b || !ab || !sc) return;
+  var cs = getComputedStyle(b);
+  f.style.setProperty('--bh', cs.height); f.style.setProperty('--bp', cs.paddingLeft);
+  f.style.setProperty('--af', getComputedStyle(ab).fontSize); f.style.setProperty('--sf', getComputedStyle(sc).fontSize);
+}
 // the flyer springs to `to` (a rect), turning into a tile or a card on the way
-function _mvFly(f, to, kind, done) {
+function _mvFly(f, to, kind, done, dst) {
   void f.offsetWidth;
   f.classList.remove('armed');
   f.classList.add('go');
@@ -739,6 +752,7 @@ function _mvFly(f, to, kind, done) {
   }
   f.classList.remove('fl-tile', 'fl-card');
   f.classList.add('fl-' + kind, 'to-' + kind);
+  if (dst) _mvFlyerFit(f, dst);
   f.style.left = to.left + 'px'; f.style.top = to.top + 'px'; f.style.width = to.width + 'px'; f.style.height = to.height + 'px';
   f.style.transform = 'none';
   setTimeout(function () { f.remove(); if (done) done(); }, MV_FLY_MS);
@@ -774,7 +788,7 @@ function _mvSettle(key, sel, kind, f, before) {
     M.fly = false;
     if (dst) { dst.style.visibility = ''; dst.classList.add('mv-land'); }
     _mvRelease(900);
-  });
+  }, dst);
 }
 // `f` (optional) is the flyer already under the finger
 function multiRemove(i, f) {
@@ -834,39 +848,146 @@ function multiAdd(i, f) {
   _mvSettle(key, '.mv-tile', 'tile', f, before);
 }
 
-// ── swiping. A tile: start sideways (or on a diagonal) and it comes up
-// under your finger and goes wherever you take it; far enough, or a quick
-// flick, and it moves down to Also live. An Also live card: swipe it up and
-// it joins the board. Tiles let the page scroll up and down (touch-action:
-// pan-y) and the rail scrolls sideways (pan-x), so a straight up-and-down
-// drag on a tile is still the page scrolling. A tap still opens a game. ──
+// ── swiping (v7.104.2). The board fits the screen now, so nothing on it
+// scrolls: put a finger on a tile and it comes up and goes wherever you take
+// it — any direction; far enough, or a quick flick, and it moves down to
+// Also live. An Also live card: swipe it up and it joins the board; sideways
+// still scrolls the row. Touches are read as touch events (and claimed with
+// preventDefault the moment a swipe is ours), a mouse as pointer events.
+// A tap still opens a game. ──
 var MV_SWIPED_KEY = 'innings_mv_swiped';
 function _mvSwiped() { try { return localStorage.getItem(MV_SWIPED_KEY) === '1'; } catch (e) { return true; } }
+function _mvGridRows(grid) {
+  if (!grid) return;
+  var n = grid.querySelectorAll('.mv-tile').length;
+  grid.className = grid.className.replace(/\br\d\b/g, '').trim() + ' r' + Math.max(1, Math.ceil(n / 2));
+}
 function _mvSlotOff(body) {
-  [].forEach.call(body.querySelectorAll('.mv-slot'), function (s) { s.remove(); });
+  var any = body.querySelector('.mv-slot');
+  if (any) {
+    var before = _mvRects();
+    [].forEach.call(body.querySelectorAll('.mv-slot'), function (s) { s.remove(); });
+    _mvGridRows(body.querySelector('.mv-grid'));
+    _mvGlide(before);
+  }
   var lab = body.querySelector('.mv-lab small');
   if (lab && lab._was != null) { lab.textContent = lab._was; lab._was = null; }
 }
+function _mvLabel(body, text) {
+  var lab = body.querySelector('.mv-lab small');
+  if (lab) { if (lab._was == null) lab._was = lab.textContent; lab.textContent = text; }
+}
 // while a tile is far enough to go: a place opens at the front of Also live
 function _mvRailSlot(body, on) {
-  var rail = body.querySelector('.mv-rail'), has = body.querySelector('.mv-ac.mv-slot');
   if (!on) { _mvSlotOff(body); return; }
-  if (has || !rail) return;
+  var rail = body.querySelector('.mv-rail');
+  if (!rail || body.querySelector('.mv-ac.mv-slot')) return;
   rail.insertAdjacentHTML('afterbegin', '<div class="mv-ac mv-slot" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg><span>Drop here</span></div>');
   try { rail.scrollTo({ left: 0, behavior: 'smooth' }); } catch (e) { rail.scrollLeft = 0; }
-  var lab = body.querySelector('.mv-lab small');
-  if (lab) { if (lab._was == null) lab._was = lab.textContent; lab.textContent = 'Let go to move it here'; }
+  _mvLabel(body, 'Let go to move it here');
 }
-// while a card is far enough to go: its place opens on the board
+// while a card is far enough to go: its place opens on the board, and the
+// tiles make room for it
 function _mvGridSlot(body, on) {
-  var has = body.querySelector('.mv-tile.mv-slot'), lab = body.querySelector('.mv-lab small');
   if (!on) { _mvSlotOff(body); return; }
-  if (lab) { if (lab._was == null) lab._was = lab.textContent; lab.textContent = 'Let go to add it'; }
   var grid = body.querySelector('.mv-grid');
-  if (has || !grid) return;
-  var first = grid.querySelector('.mv-tile'), n = grid.querySelectorAll('.mv-tile').length;
-  var h = first ? first.offsetHeight : 300;
-  grid.insertAdjacentHTML('beforeend', '<div class="mv-tile mv-slot' + (n % 2 === 0 ? ' row' : '') + '" aria-hidden="true" style="height:' + h + 'px;--h:' + h + 'px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Drop to add</span></div>');
+  if (!grid || body.querySelector('.mv-tile.mv-slot')) return;
+  var before = _mvRects();
+  grid.insertAdjacentHTML('beforeend', '<div class="mv-tile mv-slot" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Drop to add</span></div>');
+  _mvGridRows(grid);
+  _mvGlide(before);
+  _mvLabel(body, 'Let go to add it');
+}
+// one swipe, from the first touch to letting go
+function _mvGesture(body, target, x, y) {
+  var M = window._mv;
+  if (M.edit || M.drag || M.fly || M.g) return null;
+  if (target.closest('.mv-x,.mv-ac-add,.mv-slot')) return null;
+  var tile = target.closest('.mv-tile'), card = tile ? null : target.closest('.mv-ac');
+  var el = tile || card;
+  if (!el || !body.contains(el)) return null;
+  var r0 = el.getBoundingClientRect();
+  // grab a tile near its top and it leans one way, near its bottom the other
+  var lean = -2 * ((y - r0.top) / (r0.height || 1) - .5);
+  if (Math.abs(lean) < .4) lean = lean < 0 ? -.4 : .4;
+  var d = { el: el, tile: !!tile, i: Number(el.getAttribute('data-i')), x0: x, y0: y, on: false, dead: false, dx: 0, dy: 0, lx: x, ly: y, lt: Date.now(), vx: 0, vy: 0, f: null, armed: false, lean: lean };
+  var full = _mvState().ids.length >= MV_MAX;
+  var grid = body.querySelector('.mv-grid');
+  var arm = function (on) {
+    if (on === d.armed) return;
+    d.armed = on;
+    d.f.classList.toggle('armed', on);
+    if (d.tile) _mvRailSlot(body, on); else _mvGridSlot(body, on);
+  };
+  var stop = function () { d.dead = true; if (M.g === d) M.g = null; M.drag = false; };
+  var back = function () {
+    if (grid) grid.classList.remove('mv-focus');
+    _mvSlotOff(body);
+    M.fly = true;
+    _mvFlyBack(d.f, el, function () { M.fly = false; _mvRelease(0); });
+  };
+  // → true once the swipe is ours (the caller then keeps the page still)
+  d.move = function (cx, cy) {
+    if (d.dead) return false;
+    d.dx = cx - d.x0; d.dy = cy - d.y0;
+    var now = Date.now(), dt = Math.max(1, now - d.lt);
+    d.vx = d.vx * .5 + ((cx - d.lx) / dt) * .5; d.vy = d.vy * .5 + ((cy - d.ly) / dt) * .5;
+    d.lx = cx; d.ly = cy; d.lt = now;
+    if (!d.on) {
+      if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) < 8) return false;
+      // a card only comes up; anything else is the row scrolling sideways
+      if (!d.tile && !(-d.dy > Math.abs(d.dx) * .9)) { stop(); return false; }
+      d.on = true; M.drag = true;
+      d.f = _mvFlyer(el, d.tile ? 'tile' : 'card');
+      el.style.visibility = 'hidden';
+      if (grid && d.tile) grid.classList.add('mv-focus');
+    }
+    var f = d.f, p;
+    if (d.tile) {
+      var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy);
+      p = Math.min(1, dist / MV_TOSS_AT);
+      f.style.transform = 'translate(' + d.dx + 'px,' + d.dy + 'px) rotate(' + (d.dx * .05 * d.lean).toFixed(2) + 'deg) scale(' + (1 - .12 * p).toFixed(3) + ')';
+      var inn = f.querySelector('.mv-in'), pill = f.querySelector('.mv-bp');
+      if (inn) inn.style.opacity = (1 - .85 * p).toFixed(2);
+      if (pill) pill.style.opacity = Math.max(0, (p - .25) / .75).toFixed(2);
+      arm(dist >= MV_TOSS_AT);
+    } else {
+      var k = full ? .3 : 1, tx = d.dx * k, ty = Math.min(0, d.dy) * k;
+      p = Math.min(1, -ty / 120);
+      f.style.transform = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + (tx * .05).toFixed(2) + 'deg) scale(' + (1 + .14 * p).toFixed(3) + ')';
+      arm(!full && -ty >= MV_LIFT_AT);
+    }
+    f.style.boxShadow = '0 ' + Math.round(10 + 26 * p) + 'px ' + Math.round(24 + 40 * p) + 'px rgba(0,0,0,.6),0 0 0 ' + (d.armed ? 2 : 0) + 'px rgba(201,184,255,.85)';
+    return true;
+  };
+  d.up = function () {
+    if (d.dead) return;
+    var was = d.on;
+    stop();
+    if (!was) return;
+    M.noClick = Date.now();
+    if (Date.now() - d.lt > 90) { d.vx = 0; d.vy = 0; } // held still before letting go: no flick
+    if (d.tile) {
+      var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy), sp = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+      if (dist >= MV_TOSS_AT || (sp > .6 && dist > 24 && d.vx * d.dx + d.vy * d.dy > 0)) {
+        try { localStorage.setItem(MV_SWIPED_KEY, '1'); } catch (x) {}
+        multiRemove(d.i, d.f);
+        return;
+      }
+    } else {
+      if (!full && (d.armed || (-d.dy > 30 && d.vy < -.5))) { multiAdd(d.i, d.f); return; }
+      if (full && -d.dy > 40) _mvToast('The board holds six. Swipe a game off it first.');
+    }
+    back();
+  };
+  d.cancel = function () {
+    if (d.dead) return;
+    var was = d.on;
+    stop();
+    if (was) back();
+  };
+  M.g = d;
+  return d;
 }
 function _mvSwipeInit(body) {
   if (body._mvSw) return;
@@ -875,105 +996,50 @@ function _mvSwipeInit(body) {
   body.addEventListener('click', function (ev) {
     if (Date.now() - (window._mv.noClick || 0) < 450) { ev.stopPropagation(); ev.preventDefault(); }
   }, true);
-  body.addEventListener('pointerdown', function (ev) {
+  // ── fingers ──
+  var tid = null;
+  var touchOf = function (ev) { for (var i = 0; i < ev.changedTouches.length; i++) if (ev.changedTouches[i].identifier === tid) return ev.changedTouches[i]; return null; };
+  body.addEventListener('touchstart', function (ev) {
     var M = window._mv;
-    if (M.edit || M.drag || M.fly || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-    if (ev.target.closest('.mv-x,.mv-ac-add,.mv-slot')) return;
-    var tile = ev.target.closest('.mv-tile'), card = tile ? null : ev.target.closest('.mv-ac');
-    var el = tile || card;
-    if (!el) return;
-    var r0 = el.getBoundingClientRect();
-    // grab a tile near its top and it leans one way, near its bottom the other
-    var lean = -2 * ((ev.clientY - r0.top) / (r0.height || 1) - .5);
-    if (Math.abs(lean) < .4) lean = lean < 0 ? -.4 : .4;
-    var d = { el: el, tile: !!tile, i: Number(el.getAttribute('data-i')), x0: ev.clientX, y0: ev.clientY, id: ev.pointerId, on: false, dx: 0, dy: 0, lx: ev.clientX, ly: ev.clientY, lt: Date.now(), vx: 0, vy: 0, f: null, armed: false, lean: lean };
-    var full = _mvState().ids.length >= MV_MAX;
-    var grid = body.querySelector('.mv-grid');
-    var arm = function (on) {
-      if (on === d.armed) return;
-      d.armed = on;
-      d.f.classList.toggle('armed', on);
-      if (d.tile) _mvRailSlot(body, on); else _mvGridSlot(body, on);
-    };
-    var move = function (e) {
-      if (e.pointerId !== d.id) return;
-      d.dx = e.clientX - d.x0; d.dy = e.clientY - d.y0;
-      var now = Date.now(), dt = Math.max(1, now - d.lt);
-      d.vx = d.vx * .5 + ((e.clientX - d.lx) / dt) * .5; d.vy = d.vy * .5 + ((e.clientY - d.ly) / dt) * .5;
-      d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
-      if (!d.on) {
-        if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) < 8) return;
-        var ok = d.tile ? Math.abs(d.dx) > Math.abs(d.dy) * .8 : -d.dy > Math.abs(d.dx) * 1.1;
-        if (!ok) { end(); return; }
-        d.on = true; M.drag = true;
-        d.f = _mvFlyer(el, d.tile ? 'tile' : 'card');
-        el.style.visibility = 'hidden';
-        if (grid && d.tile) grid.classList.add('mv-focus');
-        try { el.setPointerCapture(d.id); } catch (x) {}
-      }
-      if (e.cancelable) e.preventDefault();
-      var f = d.f, p;
-      if (d.tile) {
-        var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy);
-        p = Math.min(1, dist / MV_TOSS_AT);
-        f.style.transform = 'translate(' + d.dx + 'px,' + d.dy + 'px) rotate(' + (d.dx * .05 * d.lean).toFixed(2) + 'deg) scale(' + (1 - .12 * p).toFixed(3) + ')';
-        var inn = f.querySelector('.mv-in'), pill = f.querySelector('.mv-bp');
-        if (inn) inn.style.opacity = (1 - .85 * p).toFixed(2);
-        if (pill) pill.style.opacity = Math.max(0, (p - .25) / .75).toFixed(2);
-        arm(dist >= MV_TOSS_AT);
-      } else {
-        var k = full ? .3 : 1, tx = d.dx * k, ty = Math.min(0, d.dy) * k;
-        p = Math.min(1, -ty / 120);
-        f.style.transform = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + (tx * .05).toFixed(2) + 'deg) scale(' + (1 + .14 * p).toFixed(3) + ')';
-        arm(!full && -ty >= MV_LIFT_AT);
-      }
-      f.style.boxShadow = '0 ' + Math.round(10 + 26 * p) + 'px ' + Math.round(24 + 40 * p) + 'px rgba(0,0,0,.6),0 0 0 ' + (d.armed ? 2 : 0) + 'px rgba(201,184,255,.85)';
-    };
-    var back = function () {
-      if (grid) grid.classList.remove('mv-focus');
-      _mvSlotOff(body);
-      M.fly = true;
-      _mvFlyBack(d.f, el, function () { M.fly = false; _mvRelease(0); });
-    };
-    var up = function (e) {
-      if (e && e.pointerId !== d.id) return;
-      var was = d.on;
-      end();
-      if (!was) return;
-      M.noClick = Date.now();
-      if (Date.now() - d.lt > 90) { d.vx = 0; d.vy = 0; } // held still before letting go: no flick
-      var go;
-      if (d.tile) {
-        var dist = Math.sqrt(d.dx * d.dx + d.dy * d.dy), sp = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
-        go = dist >= MV_TOSS_AT || (sp > .6 && dist > 24 && d.vx * d.dx + d.vy * d.dy > 0);
-        if (go) {
-          try { localStorage.setItem(MV_SWIPED_KEY, '1'); } catch (x) {}
-          multiRemove(d.i, d.f);
-          return;
-        }
-      } else {
-        go = !full && (d.armed || (-d.dy > 30 && d.vy < -.5));
-        if (go) { multiAdd(d.i, d.f); return; }
-        if (full && -d.dy > 40) _mvToast('The board holds four. Swipe a game off it first.');
-      }
-      back();
-    };
-    var end = function () {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', cancel);
-      M.drag = false;
-    };
-    var cancel = function (e) {
-      if (e.pointerId !== d.id) return;
-      var was = d.on;
-      end();
-      if (was) back();
-    };
-    window.addEventListener('pointermove', move, { passive: false });
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', cancel);
-  }, { passive: true });
+    if (ev.touches.length !== 1) { if (M.g) { M.g.cancel(); tid = null; } return; }
+    var t = ev.changedTouches[0], g = _mvGesture(body, ev.target, t.clientX, t.clientY);
+    if (!g) return;
+    tid = t.identifier;
+    // a swipe that starts on a tile or a card is never a pull-to-refresh
+    ev.stopPropagation();
+  }, { capture: true, passive: true });
+  window.addEventListener('touchmove', function (ev) {
+    var g = window._mv.g;
+    if (!g || tid == null) return;
+    var t = touchOf(ev);
+    if (!t) return;
+    if (g.move(t.clientX, t.clientY) && ev.cancelable) ev.preventDefault();
+  }, { passive: false });
+  var touchDone = function (ev) {
+    var g = window._mv.g;
+    if (!g || tid == null || !touchOf(ev)) return;
+    tid = null;
+    if (ev.type === 'touchcancel') g.cancel(); else g.up();
+  };
+  window.addEventListener('touchend', touchDone);
+  window.addEventListener('touchcancel', touchDone);
+  // ── a mouse ──
+  var mouse = false;
+  body.addEventListener('pointerdown', function (ev) {
+    if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
+    mouse = !!_mvGesture(body, ev.target, ev.clientX, ev.clientY);
+  });
+  window.addEventListener('pointermove', function (ev) {
+    var g = window._mv.g;
+    if (!mouse || !g || ev.pointerType !== 'mouse') return;
+    if (g.move(ev.clientX, ev.clientY)) ev.preventDefault();
+  });
+  window.addEventListener('pointerup', function (ev) {
+    var g = window._mv.g;
+    if (!mouse || ev.pointerType !== 'mouse') return;
+    mouse = false;
+    if (g) g.up();
+  });
 }
 // a small glass note at the bottom of the board, with one action at most
 function _mvToast(text, act, fn) {
@@ -993,7 +1059,7 @@ function _mvToastHide() { var t = _mv$('mv-toast'); if (t) t.classList.remove('o
 function multiPickTileHtml() {
   return '<button class="mv-pick" onclick="multiOpen()">' +
     '<svg width="34" height="36" viewBox="0 0 34 36" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="4" width="12" height="12" rx="3.5"/><rect x="19" y="4" width="12" height="12" rx="3.5"/><rect x="3" y="20" width="12" height="12" rx="3.5"/><rect x="19" y="20" width="12" height="12" rx="3.5"/></svg>' +
-    '<span class="nm">Multi view</span><span class="pill">Up to 4 at once</span>' +
+    '<span class="nm">Multi view</span><span class="pill">Up to 6 at once</span>' +
     '<span class="gsp-lv" id="mv-pick-lv" style="display:none"></span></button>';
 }
 // v7.40.0: like the league tiles beside it — a green count, top right, while
@@ -1013,7 +1079,7 @@ function multiPickSync() { _mvPickPill(); _mvLoad(false); }
 // ── inside a game: the row in the pull-down scoreboard ──
 function multiDropRowHtml() {
   return '<button class="gsbd-multi" onclick="multiOpenFromGame()"><span class="ic">' + MV_ICON + '</span>' +
-    '<span class="tx"><b>Multi view</b><small id="gsbd-multi-sub">Watch this game next to up to three more</small></span>' + MV_CHEV + '</button>';
+    '<span class="tx"><b>Multi view</b><small id="gsbd-multi-sub">Watch this game next to up to five more</small></span>' + MV_CHEV + '</button>';
 }
 function _mvDropText() {
   var el = _mv$('gsbd-multi-sub');
