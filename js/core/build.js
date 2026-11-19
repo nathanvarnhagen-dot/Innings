@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.106.0-rail-options-every-league';
+window.INNINGS_BUILD = 'v7.106.1-rail-smooth-arcs';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

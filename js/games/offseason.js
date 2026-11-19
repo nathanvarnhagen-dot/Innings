@@ -717,12 +717,14 @@ function _hsRailEls() {
 function _hsRailBuild(E) {
   var R = window._hsRailS, m = E.menu;
   if (!m) { m = document.createElement('div'); m.id = 'hsm'; E.band.appendChild(m); E.band.classList.add('hsm'); E.menu = m; }
-  var fx = HS_FX[R.sport] || 'roll', on = E.rail.querySelector('.gdk-lg.on .em');
+  var fx = HS_FX[R.sport] || 'roll', on = E.rail.querySelector('.gdk-lg.on .em'), lab = E.rail.querySelector('.gdk-lg.on .nm');
+  var T = { roll: 1100, pass: 1250, hoop: 1600, puck: 1400, kick: 1600 }[fx];
+  R.dur = T;
+  m.style.setProperty('--d', Math.round(T * (fx === 'roll' ? 0.5 : fx === 'pass' ? 0.6 : 0.8)) + 'ms'); // the options wait for the ball to land
   R.opts = _hsRailOpts(R.sport, R.off);
   m.setAttribute('data-fx', fx);
-  E.band.classList.toggle('fx-hoop', fx === 'hoop');
   m.innerHTML = (fx === 'hoop' ? '<i class="hsm-fx" aria-hidden="true">' + HS_HOOP + '</i>' : fx === 'puck' ? '<i class="hsm-fx" aria-hidden="true">' + _hsGoalSvg('#E5484D', '2.5') + '</i>' : fx === 'kick' ? '<i class="hsm-fx" aria-hidden="true">' + _hsGoalSvg('#F3F1FF', '2.2') + '</i>' : '') +
-    '<button type="button" class="hsm-back" aria-label="Back to all sports" onclick="hsRailBack()"><span class="em" aria-hidden="true"><b>' + (on ? on.innerHTML : '') + '</b></span><span class="nm">Sports</span></button><i class="hsm-div" aria-hidden="true"></i>' +
+    '<button type="button" class="hsm-back" aria-label="Back to all sports" onclick="hsRailBack()"><span class="em" aria-hidden="true"><b>' + (on ? on.innerHTML : '') + '</b></span><span class="nm"><span class="a">' + _hsE(lab ? lab.textContent : '') + '</span><span class="z">Sports</span></span></button><i class="hsm-div" aria-hidden="true"></i>' +
     R.opts.map(function (o, i) {
       return '<button type="button" class="hsm-o" data-v="' + o[0] + '" style="--i:' + i + '" onclick="hsRailGo(' + i + ')"><span class="em"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + o[2] + '"/></svg></span><span class="nm">' + o[1] + '</span></button>';
     }).join('');
@@ -743,11 +745,9 @@ function _hsRailMark() {
 function _hsRailDx(E) {
   var sel = E.rail.querySelector('.gdk-lg.on'), back = E.menu.querySelector('.hsm-back');
   if (!sel || !back) return 0;
-  var was = back.style.transform;
-  back.style.transform = 'none';
-  var dx = sel.getBoundingClientRect().left - back.getBoundingClientRect().left;
-  back.style.transform = was;
-  return Math.round(dx);
+  // from layout, not from where an animation has it right now
+  var bandL = E.band.getBoundingClientRect().left;
+  return Math.round(sel.getBoundingClientRect().left - (bandL + E.band.clientLeft + back.offsetLeft));
 }
 function _hsRailTuck() {
   var R = window._hsRailS, E = _hsRailEls();
@@ -757,13 +757,14 @@ function _hsRailTuck() {
   var m = _hsRailBuild(E), back = m.querySelector('.hsm-back');
   clearTimeout(R.u);
   E.band.classList.remove('untucking');
-  // it starts where the league sits in the rail, then travels to the left edge
-  back.style.transition = 'none';
-  back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
+  // it starts where the league sits in the rail (--dx), then travels to the left edge;
+  // the travel and the flight are keyframes on one clock (css/offseason.css)
+  back.style.setProperty('--dx', _hsRailDx(E) + 'px');
   void back.offsetWidth;
+  // the basketball's arc clears the top of the rail for a moment
+  clearTimeout(R.f);
+  if (m.getAttribute('data-fx') === 'hoop') { E.band.classList.add('fxfly'); R.f = setTimeout(function () { E.band.classList.remove('fxfly'); }, (R.dur || 1600) + 60); }
   E.band.classList.add('tuck');
-  back.style.transition = '';
-  back.style.transform = '';
   R.tucked = true;
 }
 function hsRailBack() {
@@ -772,11 +773,14 @@ function hsRailBack() {
   if (!E || !E.menu || !R.tucked) return;
   var back = E.menu.querySelector('.hsm-back');
   R.tucked = false;
+  clearTimeout(R.f);
+  E.band.classList.remove('fxfly');
+  back.style.setProperty('--dx', _hsRailDx(E) + 'px');
   E.band.classList.add('untucking');
   E.band.classList.remove('tuck');
-  back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
   clearTimeout(R.u);
-  R.u = setTimeout(function () { E.band.classList.remove('untucking'); back.style.transform = ''; }, 620);
+  // the ball is home: the rail's own button takes over in the same frame
+  R.u = setTimeout(function () { E.band.classList.remove('untucking'); }, 710);
 }
 // sport: the league showing on the Games page (null when the page isn't a league's); off: baseball's offseason page is up
 function hsRail(sport, off) {
@@ -791,7 +795,7 @@ function hsRail(sport, off) {
   if (!key) {
     clearTimeout(R.u);
     R.tucked = false;
-    E.band.classList.remove('tuck', 'untucking', 'hsm', 'fx-hoop');
+    E.band.classList.remove('tuck', 'untucking', 'hsm', 'fxfly');
     if (E.menu && E.menu.parentNode) E.menu.parentNode.removeChild(E.menu);
     return;
   }

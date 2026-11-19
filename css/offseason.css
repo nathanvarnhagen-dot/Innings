@@ -152,16 +152,16 @@ html.gdk-on #gdk{overflow-x:clip;max-width:calc(100% + 32px)}
 #gdk-band.hsm #gdk-rail .gdk-lg{transition:opacity .25s ease .12s,transform .4s cubic-bezier(.22,1,.36,1) .12s}
 #gdk-band.tuck #gdk-rail{overflow:hidden;pointer-events:none}
 #gdk-band.tuck #gdk-rail .gdk-lg{opacity:0;transform:translateY(14px) scale(.86);transition-delay:0s}
+#gdk-band.hsm #gdk-rail .gdk-lg.on{transition:none}
 #gdk-band.tuck #gdk-rail .gdk-lg.on,#gdk-band.untucking #gdk-rail .gdk-lg.on{opacity:0;transform:none;transition:none}
 #hsm{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:flex-start;padding:13px 10px 0 12px;box-sizing:border-box;pointer-events:none}
 #hsm button{border:0;background:transparent;padding:0;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px;color:#D9D5F5;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #hsm .em{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font-size:25px;line-height:1}
 #hsm .nm{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
-.hsm-back{flex:0 0 60px;color:#fff!important;opacity:0;pointer-events:none;transition:transform .6s cubic-bezier(.22,1,.36,1)}
-.hsm-back .em{background:rgba(168,159,232,.3);border:2px solid #F3F1FF;box-shadow:0 0 0 3px rgba(168,159,232,.3);transition:transform .6s cubic-bezier(.22,1,.36,1)}
+.hsm-back{flex:0 0 60px;color:#fff!important;opacity:0;pointer-events:none}
+.hsm-back .em{background:rgba(168,159,232,.3);border:2px solid #F3F1FF;box-shadow:0 0 0 3px rgba(168,159,232,.3)}
 #gdk-band.tuck .hsm-back,#gdk-band.untucking .hsm-back{opacity:1}
 #gdk-band.tuck .hsm-back{pointer-events:auto}
-#gdk-band.tuck #hsm[data-fx="roll"] .hsm-back .em{transform:rotate(-360deg)}
 .hsm-div{flex:0 0 1px;align-self:flex-start;height:44px;margin:2px 4px 0 6px;background:linear-gradient(180deg,rgba(243,241,255,0),rgba(243,241,255,.34),rgba(243,241,255,0));opacity:0;transition:opacity .25s ease}
 #gdk-band.tuck .hsm-div{opacity:1;transition:opacity .4s ease calc(var(--d,260ms) + 60ms)}
 .hsm-o{flex:1 1 0;min-width:0;opacity:0;transform:translateY(-16px);pointer-events:none;transition:opacity .2s ease,transform .3s ease}
@@ -172,43 +172,74 @@ html.gdk-on #gdk{overflow-x:clip;max-width:calc(100% + 32px)}
 #gdk-band.tuck .hsm-o{opacity:1;transform:none;pointer-events:auto;transition:opacity .32s ease calc(var(--d,260ms) + var(--i)*45ms),transform .5s cubic-bezier(.22,1,.36,1) calc(var(--d,260ms) + var(--i)*45ms)}
 @media (prefers-reduced-motion:reduce){#gdk-band.hsm #gdk-rail .gdk-lg,.hsm-back,.hsm-back .em,.hsm-div,.hsm-o,#gdk-band.tuck .hsm-o,#gdk-band.tuck .hsm-div{transition:none!important}#gdk-band.tuck .hsm-back .em{transform:none}}
 
-/* ══ v7.106.0: the rail tucks in every league, each sport its own way ══
-   data-fx on #hsm: roll (baseball), pass (football), hoop (basketball),
-   puck (hockey), kick (soccer). The prop (.hsm-fx: a hoop or a net) only
-   shows while the ball is on its way; tapping Sports sends the ball back. */
+/* ══ v7.106.1: the rail tucks in every league, each sport its own way — one clock, real arcs ══
+   data-fx on #hsm: roll (baseball), pass (football), hoop (basketball), puck
+   (hockey), kick (soccer). The ball's sideways travel (.hsm-back, from --dx to
+   the left edge) and its flight (.em) are keyframes on the same duration, each
+   stretch with its own easing, so it moves on a curve instead of in straight
+   pieces. The league's name fades to "Sports" as it lands. The prop (.hsm-fx:
+   a hoop or a net) is only there while the ball is on its way. Tapping Sports
+   plays it back: the ball rolls (or is thrown) home and the name returns. */
+#hsm{--t:1.1s}
+#hsm[data-fx="pass"]{--t:1.25s}
+#hsm[data-fx="hoop"]{--t:1.6s}
+#hsm[data-fx="puck"]{--t:1.4s}
+#hsm[data-fx="kick"]{--t:1.6s}
+#hsm .hsm-back{position:relative;z-index:2;will-change:transform}
+#hsm .hsm-back .em{will-change:transform}
 #hsm .hsm-back .em b{display:flex;align-items:center;justify-content:center;font-weight:400}
-#hsm[data-fx="hoop"],#hsm[data-fx="puck"],#hsm[data-fx="kick"]{--d:900ms}
-#gdk-band.fx-hoop.tuck{overflow:visible}
+#hsm .hsm-back .nm{position:relative;display:block}
+#hsm .hsm-back .nm .z{position:absolute;left:50%;top:0;transform:translateX(-50%);opacity:0}
+#gdk-band.tuck #hsm .hsm-back .nm .a{animation:hsmOut var(--t) linear both}
+#gdk-band.tuck #hsm .hsm-back .nm .z{animation:hsmIn var(--t) linear both}
+#gdk-band.untucking #hsm .hsm-back .nm .a{animation:hsmIn .7s linear both}
+#gdk-band.untucking #hsm .hsm-back .nm .z{animation:hsmOut .7s linear both}
+#gdk-band.fxfly{overflow:visible}
 .hsm-fx{position:absolute;display:block;opacity:0;pointer-events:none;transform-origin:100% 50%}
 .hsm-fx svg{display:block}
 #hsm[data-fx="hoop"] .hsm-fx{left:20px;top:7px;z-index:3}
 #hsm[data-fx="puck"] .hsm-fx{left:27px;top:31px;z-index:0}
 #hsm[data-fx="kick"] .hsm-fx{left:25px;top:29px;z-index:0}
-#hsm .hsm-back{position:relative;z-index:2}
-#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back{transition-duration:.7s;transition-timing-function:cubic-bezier(.4,0,.2,1)}
-#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPass .7s cubic-bezier(.4,0,.2,1) both}
-#gdk-band.untucking #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPassBack .6s cubic-bezier(.4,0,.2,1) both}
-#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back{transition-timing-function:cubic-bezier(.3,.1,.3,1)}
-#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em{animation:hsmHoop 1s linear both}
-#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em b,#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em b{animation:hsmBig 1s linear both}
-#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-fx{animation:hsmProp 1s linear both}
-#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back{transition-duration:.42s;transition-timing-function:cubic-bezier(.2,.7,.3,1)}
-#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em{animation:hsmPuck 1s linear both}
-#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em b{animation:hsmGone 1s linear both}
-#gdk-band.tuck #hsm[data-fx="puck"] .hsm-fx{animation:hsmGoal 1s linear both}
-#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back{transition-timing-function:cubic-bezier(.3,.1,.3,1)}
-#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em{animation:hsmKick 1s linear both}
-#gdk-band.tuck #hsm[data-fx="kick"] .hsm-fx{animation:hsmGoalLate 1s linear both}
-#gdk-band.untucking #hsm[data-fx="hoop"] .hsm-back .em,#gdk-band.untucking #hsm[data-fx="puck"] .hsm-back .em,#gdk-band.untucking #hsm[data-fx="kick"] .hsm-back .em{animation:hsmRollBack .6s cubic-bezier(.3,.1,.3,1) both}
-@keyframes hsmPass{0%{transform:translateY(0) rotate(0)}18%{transform:translateY(-5px) rotate(-24deg)}50%{transform:translateY(-8px) rotate(-10deg)}82%{transform:translateY(-3px) rotate(10deg)}100%{transform:translateY(0) rotate(0)}}
-@keyframes hsmPassBack{0%{transform:translateY(0) rotate(0)}18%{transform:translateY(-5px) rotate(24deg)}50%{transform:translateY(-8px) rotate(10deg)}82%{transform:translateY(-3px) rotate(-10deg)}100%{transform:translateY(0) rotate(0)}}
-@keyframes hsmHoop{0%{transform:translateY(0) scale(1)}14%{transform:translateY(-10px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}46%{transform:translateY(-30px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}66%{transform:translateY(-25px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}80%{transform:translateY(-12px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}90%{transform:translateY(0) scale(.5);background:transparent;border-color:transparent;box-shadow:none}100%{transform:translateY(0) scale(1)}}
-@keyframes hsmBig{0%{transform:scale(1)}14%{transform:scale(1.7)}90%{transform:scale(1.7)}100%{transform:scale(1)}}
-@keyframes hsmProp{0%{opacity:0}16%{opacity:1}86%{opacity:1}100%{opacity:0}}
-@keyframes hsmPuck{0%{transform:translateY(0) scale(1)}8%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:none}86%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:none}100%{transform:translateY(0) scale(1)}}
-@keyframes hsmGone{0%{opacity:1}8%{opacity:0}86%{opacity:0}100%{opacity:1}}
-@keyframes hsmGoal{0%{opacity:0;transform:none}12%{opacity:1;transform:none}42%{opacity:1;transform:none}48%{opacity:1;transform:translateX(-2px) scaleX(1.06)}58%{opacity:1;transform:none}86%{opacity:1}100%{opacity:0}}
-@keyframes hsmGoalLate{0%{opacity:0;transform:none}12%{opacity:1;transform:none}60%{opacity:1;transform:none}66%{opacity:1;transform:translateX(-2px) scaleX(1.06)}76%{opacity:1;transform:none}86%{opacity:1}100%{opacity:0}}
-@keyframes hsmKick{0%{transform:translateY(0) scale(1) rotate(0)}10%{transform:translateY(4px) scale(.4) rotate(-60deg);background:transparent;border-color:transparent;box-shadow:none}35%{transform:translateY(-8px) scale(.4) rotate(-220deg);background:transparent;border-color:transparent;box-shadow:none}62%{transform:translateY(8px) scale(.4) rotate(-400deg);background:transparent;border-color:transparent;box-shadow:none}86%{transform:translateY(9px) scale(.4) rotate(-430deg);background:transparent;border-color:transparent;box-shadow:none}100%{transform:translateY(0) scale(1) rotate(-720deg)}}
-@keyframes hsmRollBack{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){#hsm .hsm-back .em,#hsm .hsm-back .em b,.hsm-fx{animation:none!important}}
+/* going in */
+#gdk-band.tuck #hsm[data-fx="roll"] .hsm-back{animation:hsmXEase var(--t) cubic-bezier(.45,0,.15,1) both}
+#gdk-band.tuck #hsm[data-fx="roll"] .hsm-back .em{animation:hsmRoll var(--t) cubic-bezier(.45,0,.15,1) both}
+#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back{animation:hsmXPass var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPass var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back{animation:hsmXHoop var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em{animation:hsmHoop var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em b,#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em b{animation:hsmBig var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-fx,#gdk-band.tuck #hsm[data-fx="kick"] .hsm-fx{animation:hsmProp var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back{animation:hsmXPuck var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em{animation:hsmPuck var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em b{animation:hsmGone var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-fx{animation:hsmGoal var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back{animation:hsmXKick var(--t) linear both}
+#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em{animation:hsmKick var(--t) linear both}
+/* coming back */
+#gdk-band.untucking #hsm .hsm-back{animation:hsmXBack .7s cubic-bezier(.45,0,.15,1) both}
+#gdk-band.untucking #hsm .hsm-back .em{animation:hsmRollBack .7s cubic-bezier(.45,0,.15,1) both}
+#gdk-band.untucking #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPassBack .7s linear both}
+@keyframes hsmOut{0%{opacity:1}22%{opacity:0}100%{opacity:0}}
+@keyframes hsmIn{0%{opacity:0}78%{opacity:0}100%{opacity:1}}
+@keyframes hsmXEase{from{transform:translateX(var(--dx,0px))}to{transform:translateX(0)}}
+@keyframes hsmXBack{from{transform:translateX(0)}to{transform:translateX(var(--dx,0px))}}
+@keyframes hsmRoll{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+@keyframes hsmRollBack{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+/* football: cocked back, thrown nose-first on an arc, settles */
+@keyframes hsmXPass{0%{transform:translateX(var(--dx,0px));animation-timing-function:ease-in-out}12%{transform:translateX(calc(var(--dx,0px) + 5px));animation-timing-function:cubic-bezier(.3,.2,.45,1)}84%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes hsmPass{0%{transform:translateY(0) rotate(0);animation-timing-function:ease-in-out}12%{transform:translateY(2px) rotate(16deg);animation-timing-function:cubic-bezier(.2,.6,.5,1)}48%{transform:translateY(-12px) rotate(-12deg);animation-timing-function:cubic-bezier(.5,0,.8,.45)}84%{transform:translateY(0) rotate(10deg);animation-timing-function:cubic-bezier(.3,1.4,.5,1)}100%{transform:translateY(0) rotate(0)}}
+@keyframes hsmPassBack{0%{transform:translateY(0) rotate(0);animation-timing-function:cubic-bezier(.2,.6,.5,1)}45%{transform:translateY(-11px) rotate(12deg);animation-timing-function:cubic-bezier(.5,0,.8,.45)}88%{transform:translateY(0) rotate(-8deg);animation-timing-function:ease-out}100%{transform:translateY(0) rotate(0)}}
+/* basketball: leaves the button as a ball, rises and falls on a true arc (steady sideways, eased up and down), drops through the rim and net, then grows back into the button */
+@keyframes hsmXHoop{0%{transform:translateX(var(--dx,0px));animation-timing-function:ease-in}10%{transform:translateX(var(--dx,0px));animation-timing-function:linear}60%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes hsmHoop{0%{transform:translateY(0) scale(1);animation-timing-function:cubic-bezier(.4,0,.6,1)}10%{transform:translateY(-4px) scale(.46);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.2,.55,.45,1)}36%{transform:translateY(-31px) scale(.46);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.55,0,.85,.5)}60%{transform:translateY(-19px) scale(.46);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:linear}70%{transform:translateY(-3px) scale(.46);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:ease-out}78%{transform:translateY(1px) scale(.46);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.3,0,.2,1)}100%{transform:translateY(0) scale(1)}}
+@keyframes hsmBig{0%{transform:scale(1);animation-timing-function:ease-in-out}10%{transform:scale(1.7)}78%{transform:scale(1.7);animation-timing-function:cubic-bezier(.3,0,.2,1)}100%{transform:scale(1)}}
+@keyframes hsmProp{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+/* hockey: flattens into a puck, a short wind-up, one hard shot along the ice, the net gives, then it grows back */
+@keyframes hsmXPuck{0%{transform:translateX(var(--dx,0px));animation-timing-function:ease-in-out}18%{transform:translateX(var(--dx,0px));animation-timing-function:ease-out}30%{transform:translateX(calc(var(--dx,0px) + 7px));animation-timing-function:cubic-bezier(.5,0,.15,1)}56%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes hsmPuck{0%{transform:translateY(0) scale(1);animation-timing-function:cubic-bezier(.4,0,.6,1)}18%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:0 0 0 3px rgba(168,159,232,0)}80%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.3,0,.2,1)}100%{transform:translateY(0) scale(1)}}
+@keyframes hsmGone{0%{opacity:1}14%{opacity:0}82%{opacity:0}100%{opacity:1}}
+@keyframes hsmGoal{0%{opacity:0;transform:none}12%{opacity:1;transform:none}54%{opacity:1;transform:none;animation-timing-function:ease-out}60%{opacity:1;transform:translateX(-3px) scaleX(1.07);animation-timing-function:ease-in-out}70%{opacity:1;transform:none}82%{opacity:1}100%{opacity:0}}
+/* soccer: struck low, lifts and dips with a steady spin into the net, then grows back */
+@keyframes hsmXKick{0%{transform:translateX(var(--dx,0px));animation-timing-function:ease-in}10%{transform:translateX(var(--dx,0px));animation-timing-function:cubic-bezier(.25,.4,.6,1)}62%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes hsmKick{0%{transform:translateY(0) scale(1) rotate(0);animation-timing-function:cubic-bezier(.4,0,.6,1)}10%{transform:translateY(3px) scale(.4) rotate(-40deg);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.2,.55,.45,1)}34%{transform:translateY(-10px) scale(.4) rotate(-230deg);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.55,0,.85,.55)}62%{transform:translateY(9px) scale(.4) rotate(-450deg);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:ease-out}78%{transform:translateY(9px) scale(.4) rotate(-520deg);background:rgba(168,159,232,0);border-color:rgba(243,241,255,0);box-shadow:0 0 0 3px rgba(168,159,232,0);animation-timing-function:cubic-bezier(.3,0,.2,1)}100%{transform:translateY(0) scale(1) rotate(-720deg)}}
+@media (prefers-reduced-motion:reduce){#hsm .hsm-back,#hsm .hsm-back .em,#hsm .hsm-back .em b,#hsm .hsm-back .nm span,.hsm-fx{animation-duration:.01s!important}}
