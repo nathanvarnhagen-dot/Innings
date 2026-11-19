@@ -622,10 +622,13 @@
     S.items = items;
     try { if (window.gdkArt) { gdkArt.show(artEl, S.sport); root.classList.toggle('art', gdkArt.has(S.sport)); } } catch (e) { console.error('[gdk] art', e); }
     renderRail(c); renderHead(c); renderDeck(); renderList();
+    // v7.105.0: on baseball's offseason page the rail tucks into that page's options (js/games/offseason.js)
+    try { if (typeof hsRail === 'function') hsRail(S.sport === 'mlb' && !!document.getElementById('gdk-hs')); } catch (e) { console.error('[gdk] rail options', e); }
   }
   window.gdkPick = function (key) {
     var s = league(key); if (!s) return;
     if (!inPage(s)) { if (typeof pickGamesSport === 'function') pickGamesSport(key); return; }
+    try { if (typeof hsRailPick === 'function') hsRailPick(key); } catch (e) {}
     // tapping the league you're on brings it back to today (or this week)
     if (key === S.sport && S.picked && atNow(key)) return;
     delete S.wk[key]; delete S.off[key];

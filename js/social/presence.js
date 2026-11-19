@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.105.0', at: '2026-11-18T23:50:00-08:00',
+      title: 'The Board',
+      sub: 'Baseball’s offseason page, rebuilt around who’s still unsigned.',
+      items: function () {
+        return [
+          { icon: 'trophy', title: 'Every free agent, ranked', body: 'Games › MLB opens on the Board: each unsigned player on a card lit in his last team’s color. Tap Pick to call where he signs, or vs to compare him.' },
+          { icon: 'bars', title: 'The rail tucks away', body: 'After a moment the league rail rolls up into the baseball on the left, and Board, Players, Compare, Stove and Teams take its place. Tap the ball for every sport.' },
+          { icon: 'history', title: 'One team at a time', body: 'Tap All teams (or Teams) and pick a club to see who came in, who left and which of its free agents are still out there.' }
+        ];
+      }
+    },
+    {
       id: 'v7.104.0', at: '2026-11-17T13:30:00-08:00',
       title: 'A new Multi view',
       sub: 'Glass tiles in each team’s colors, and a board you change with a swipe.',

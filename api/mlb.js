@@ -2901,7 +2901,7 @@ async function _hsFeed(today) {
   const hyd = 'stats(group=[hitting,pitching],type=[season],season=' + season + ')';
   const got = await Promise.all(chunks.map(c => _tpGetJson(_CMP_API + '/people?personIds=' + c.join(',') + '&hydrate=' + encodeURIComponent(hyd))));
   got.forEach(j => ((j && j.people) || []).forEach(p => { people[p.id] = _hsPerson(p); }));
-  const fas = Object.keys(lastBy).filter(id => lastBy[id].kind === 'fa' && people[id]).sort((a, b) => people[b].score - people[a].score).slice(0, 40).map(Number);
+  const fas = Object.keys(lastBy).filter(id => lastBy[id].kind === 'fa' && people[id]).sort((a, b) => people[b].score - people[a].score).slice(0, 150).map(Number); // v7.105.0: the Board shows them all, by position and by team
   return { today: today, season: season, spring: spring, moves: moves.slice(0, 250), people: people, fas: fas };
 }
 async function _hsReplaces(teamId, pos, role, exclude, season) {

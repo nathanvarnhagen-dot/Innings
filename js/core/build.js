@@ -1,4 +1,4 @@
-window.INNINGS_BUILD = 'v7.104.4-mlb-no-sideways-drift';
+window.INNINGS_BUILD = 'v7.105.0-mlb-board-and-rail-options';
 console.log('%cInnings build ' + window.INNINGS_BUILD + ' loaded ' + new Date().toISOString(), 'color:#6B63B5;font-weight:700');
 document.addEventListener('DOMContentLoaded', function(){
   var t = document.getElementById('build-stamp');

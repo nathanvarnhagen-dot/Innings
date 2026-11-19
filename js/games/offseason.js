@@ -22,7 +22,7 @@
 // v7.102.0: games-deck.js calls hsDeck() to put this page on the MLB Games
 // page whenever baseball is off and the day has no games.
 
-window._hs = window._hs || { data: null, at: 0, loading: false, filter: 'all', more: false, pick: 0, base: null, rep: {}, picks: null, picksAt: 0, fav: null, q: '' };
+window._hs = window._hs || { view: 'board', pos: 'all', team: null, boardMore: false, data: null, at: 0, loading: false, filter: 'all', more: false, pick: 0, base: null, rep: {}, picks: null, picksAt: 0, fav: null, q: '' };
 var HS_TTL = 5 * 60e3, HS_RECENT = 'innings_hs_recent';
 var HS_KIND = { sign: 'SIGNED', trade: 'TRADE', fa: 'FREE AGENT', claim: 'CLAIMED', release: 'RELEASED', retire: 'RETIRED', dfa: 'DFA' };
 
@@ -466,31 +466,302 @@ function _hsRender() {
     if (first) { var dn = Math.round((Date.parse(today + 'T12:00:00') - Date.parse(first + 'T12:00:00')) / 864e5) + 1; if (dn >= 1 && dn <= 120) faDay = 'FREE AGENCY · DAY ' + dn; }
   }
   var out = '<div class="hs"><div class="hs-top"><div><div class="hs-eb">' + _hsE(faDay || 'MLB · OFFSEASON') + '</div><h2 class="hs-h1">Offseason</h2></div>' + cd + '</div>';
-  out += '<label class="hs-q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="hs-sr">Search MLB players</span>' +
-    '<input id="hs-q" type="search" autocomplete="off" placeholder="Any player, active or retired" value="' + _hsE(H.q) + '" oninput="hsSearch(this.value)"></label>';
-  if (H.base) out += '<div class="hs-base" role="status"><span>Comparing ' + _hsE(_hsLast(H.base.name)) + ' with… tap Compare on another ' + (H.base.kind === 'pit' ? 'pitcher' : 'hitter') + '</span><button type="button" onclick="hsCmpCancel()">Cancel</button></div>';
-  out += '<div id="hs-res" class="hs-res" style="display:' + resShow + '">' + resHtml + '</div>';
-  out += _hsQuickHtml();
-  out += '<div class="hs-hd"><h3 class="hs-h2">Hot Stove</h3><span class="hs-mut">' + (D ? (function () { var c = D.moves.filter(function (m) { return m.date === today; }).length; return c ? c + (c === 1 ? ' move today' : ' moves today') : ''; })() : '') + '</span></div>';
-  var F = [['all', 'All'], ['mine', 'My teams'], ['sign', 'Signings'], ['trade', 'Trades'], ['fa', 'Free agents']];
-  out += '<div class="hs-chips" role="group" aria-label="Show">' + F.map(function (f) { return '<button type="button" class="hs-chip' + (H.filter === f[0] ? ' on' : '') + '" aria-pressed="' + (H.filter === f[0]) + '" onclick="hsFilter(' + _hsA(f[0]) + ')">' + f[1] + '</button>'; }).join('') + '</div>';
-  if (!D) {
-    out += H.failed ? '<div class="hs-list"><div class="hs-empty">Couldn’t load the Hot Stove right now. <button type="button" class="hs-chip" onclick="window._hs.failed=false;_hsLoad(true);_hsRender()">Try again</button></div></div>' : '<div class="hs-skel" aria-label="Loading the Hot Stove"></div>';
+  // v7.105.0: one job per view — the Board (unsigned free agents), Players (search), Compare, and the Hot Stove.
+  // The rail's options (hsView) switch between them; Teams opens the team sheet over the Board.
+  var view = H.view || 'board';
+  var baseHtml = H.base ? '<div class="hs-base" role="status"><span>Comparing ' + _hsE(_hsLast(H.base.name)) + ' with… tap vs or Compare on another ' + (H.base.kind === 'pit' ? 'pitcher' : 'hitter') + '</span><button type="button" onclick="hsCmpCancel()">Cancel</button></div>' : '';
+  if (view === 'board') {
+    out += _hsBoardHtml(baseHtml);
+  } else if (view === 'players' || view === 'compare') {
+    if (view === 'compare') {
+      out += '<div class="hb-slots"><div class="hb-slot' + (H.base ? ' on' : '') + '"><div><small>' + (H.base ? (H.base.kind === 'pit' ? 'PITCHER' : 'HITTER') : 'FIRST') + '</small><b>' + _hsE(H.base ? H.base.name : 'Pick a player') + '</b></div>' + (H.base ? '<button type="button" class="hb-x" aria-label="Clear ' + _hsE(H.base.name) + '" onclick="hsCmpCancel()">✕</button>' : '') + '</div>' +
+        '<div class="hb-slot"><div><small>SECOND</small><b>' + (H.base ? 'Pick another' : 'Then one more') + '</b></div></div></div>';
+    }
+    out += '<label class="hs-q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="hs-sr">Search MLB players</span>' +
+      '<input id="hs-q" type="search" autocomplete="off" placeholder="Any player, active or retired" value="' + _hsE(H.q) + '" oninput="hsSearch(this.value)"></label>';
+    if (view !== 'compare') out += baseHtml;
+    out += '<div id="hs-res" class="hs-res" style="display:' + resShow + '">' + resHtml + '</div>';
+    out += _hsQuickHtml();
+    if (H.q.trim().length < 2) out += '<div class="hs-hint">' + (view === 'compare' ? 'Search two players and tap Compare on each. Hitters go with hitters, pitchers with pitchers — retired players too.' : 'Search any MLB player, past or present. Tap one for his card, or Compare to line two up.') + '</div>';
   } else {
-    var list = _hsFiltered(), hero = H.filter === 'fa' ? null : _hsHero(list);
-    if (hero) out += _hsHeroHtml(hero);
-    if (H.filter === 'all' || H.filter === 'fa') out += _hsPickHtml();
-    var rows = list.filter(function (m) { return m !== hero; });
-    var show = H.more ? rows.slice(0, 120) : rows.slice(0, 12);
-    if (H.filter === 'mine' && !((H.fav || {}).favorite || ((H.fav || {}).following || []).length)) out += '<div class="hs-list"><div class="hs-empty">Pick your teams with the gear up top and their moves show here.</div></div>';
-    else out += '<div class="hs-list">' + (show.length ? show.map(_hsRowHtml).join('') : '<div class="hs-empty">Nothing here yet.</div>') +
-      (rows.length > show.length ? '<button type="button" class="hs-more" onclick="hsMore()">Show ' + (Math.min(rows.length, 120) - show.length) + ' more</button>' : '') + '</div>';
+    out += '<div class="hs-hd"><h3 class="hs-h2">Hot Stove</h3><span class="hs-mut">' + (D ? (function () { var c = D.moves.filter(function (m) { return m.date === today; }).length; return c ? c + (c === 1 ? ' move today' : ' moves today') : ''; })() : '') + '</span></div>';
+    var F = [['all', 'All'], ['mine', 'My teams'], ['sign', 'Signings'], ['trade', 'Trades'], ['fa', 'Free agents']];
+    out += '<div class="hs-chips" role="group" aria-label="Show">' + F.map(function (f) { return '<button type="button" class="hs-chip' + (H.filter === f[0] ? ' on' : '') + '" aria-pressed="' + (H.filter === f[0]) + '" onclick="hsFilter(' + _hsA(f[0]) + ')">' + f[1] + '</button>'; }).join('') + '</div>';
+    out += baseHtml;
+    if (!D) {
+      out += _hsWaitHtml();
+    } else {
+      var list = _hsFiltered(), hero = H.filter === 'fa' ? null : _hsHero(list);
+      if (hero) out += _hsHeroHtml(hero);
+      if (H.filter === 'all' || H.filter === 'fa') out += _hsPickHtml();
+      var rows = list.filter(function (m) { return m !== hero; });
+      var show = H.more ? rows.slice(0, 120) : rows.slice(0, 12);
+      if (H.filter === 'mine' && !((H.fav || {}).favorite || ((H.fav || {}).following || []).length)) out += '<div class="hs-list"><div class="hs-empty">Pick your teams with the gear up top and their moves show here.</div></div>';
+      else out += '<div class="hs-list">' + (show.length ? show.map(_hsRowHtml).join('') : '<div class="hs-empty">Nothing here yet.</div>') +
+        (rows.length > show.length ? '<button type="button" class="hs-more" onclick="hsMore()">Show ' + (Math.min(rows.length, 120) - show.length) + ' more</button>' : '') + '</div>';
+    }
   }
   out += '</div>';
   el.innerHTML = out;
   chipAt.forEach(function (c) { if (!c[1]) return; var n = el.querySelector('.hs-chips[aria-label="' + c[0] + '"]'); if (n) n.scrollLeft = c[1]; });
   if (typeof window._noDrift === 'function') window._noDrift();
+  _hsRailMark();
   if (keepFocus) { var q = document.getElementById('hs-q'); if (q) { try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) {} } }
+}
+
+
+// ══ v7.105.0: THE BOARD, THE TEAM LENS AND THE RAIL'S OPTIONS ══════════════
+// The Board: every free agent still unsigned, ranked, on a glass card lit
+// from the corner in his last team's color — where you and your friends say
+// he signs, Pick, and vs (compare). All / SP / RP / C / IF / OF narrows it;
+// the team lens narrows it to one club and adds what that club has done.
+function _hsWaitHtml() {
+  var H = window._hs;
+  return H.failed ? '<div class="hs-list"><div class="hs-empty">Couldn’t load the Hot Stove right now. <button type="button" class="hs-chip" onclick="window._hs.failed=false;_hsLoad(true);_hsRender()">Try again</button></div></div>' : '<div class="hs-skel" aria-label="Loading"></div>';
+}
+function _hsRgba(hex, a) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 'rgba(61,53,128,' + a + ')';
+  return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+}
+function _hsLum(hex) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 0.2;
+  return (0.2126 * parseInt(h.slice(0, 2), 16) + 0.7152 * parseInt(h.slice(2, 4), 16) + 0.0722 * parseInt(h.slice(4, 6), 16)) / 255;
+}
+function _hsAbbr(id) { return (typeof CMP_TEAM !== 'undefined' && CMP_TEAM[id]) || ''; }
+function _hsRole(p) {
+  if (_hsKindOf(p) === 'pit') return p.pit && p.pit.g && p.pit.gs >= p.pit.g / 2 ? 'SP' : 'RP';
+  return p.pos || '';
+}
+function _hsPosOk(p, f) {
+  if (!f || f === 'all') return true;
+  var r = _hsRole(p);
+  if (f === 'sp' || f === 'rp') return r === f.toUpperCase();
+  if (_hsKindOf(p) === 'pit') return false;
+  if (f === 'c') return r === 'C';
+  if (f === 'if') return ['1B', '2B', '3B', 'SS', 'IF'].indexOf(r) >= 0;
+  if (f === 'of') return ['LF', 'CF', 'RF', 'OF'].indexOf(r) >= 0;
+  return true;
+}
+// what one club has done: who came in, who left, and who of theirs is still out there
+function _hsTeamTally(tid) {
+  var D = window._hs.data, inn = {}, out = {}, mv = [];
+  if (!D) return { inn: 0, out: 0, moves: [] };
+  D.moves.forEach(function (m) {
+    var hit = false;
+    if (m.kind === 'trade') {
+      (m.teams || []).forEach(function (sd) {
+        var mine = sd.team && sd.team.id === tid;
+        if (mine) { hit = true; sd.gets.forEach(function (id) { inn[id] = 1; }); }
+      });
+      if (hit) (m.teams || []).forEach(function (sd) { if (sd.team && sd.team.id !== tid) sd.gets.forEach(function (id) { out[id] = 1; }); });
+    } else if (m.team && m.team.id === tid) {
+      hit = true;
+      var p = _hsP(m.player);
+      if (m.kind === 'sign' || m.kind === 'claim') { if (!(m.kind === 'sign' && p && p.lastTeam === tid)) inn[m.player] = 1; }
+      else out[m.player] = 1;
+    } else if (m.from && m.from.id === tid) { hit = true; out[m.player] = 1; }
+    if (hit) mv.push(m);
+  });
+  // re-signed with the same club: not out after all
+  D.moves.forEach(function (m) { if (m.kind === 'sign' && m.team && m.team.id === tid) delete out[m.player]; });
+  return { inn: Object.keys(inn).length, out: Object.keys(out).length, moves: mv };
+}
+function _hsBoardCard(p, rank) {
+  var H = window._hs, tid = p.lastTeam, L = _hsLook({ id: tid, name: '' }), kind = _hsKindOf(p);
+  // the team's color floods the corner; its lighter accent keeps dark navies from disappearing into the glass
+  var glow = _hsRgba(L.bg, 0.96), glow2 = _hsRgba(L.accent || L.bg, _hsLum(L.bg) < 0.12 ? 0.5 : 0.28);
+  var all = _hsPicksFor(p.id), mine = _hsMyPick(p.id), friends = all.filter(function (x) { return x.name !== 'You'; }).length;
+  var pk = mine ? 'You: ' + mine + (friends ? ' · ' + friends + (friends === 1 ? ' friend in' : ' friends in') : '') : friends ? friends + (friends === 1 ? ' friend picked' : ' friends picked') : 'No picks yet';
+  var held = H.base && String(H.base.id) === String(p.id);
+  var ab = _hsAbbr(tid) || L.abbr || '';
+  return '<div class="hb-card" role="button" tabindex="0" style="background:radial-gradient(150px 84px at 0 0,' + glow2 + ',rgba(20,16,48,0) 70%),radial-gradient(270px 150px at 0 0,' + glow + ',rgba(20,16,48,0) 74%),rgba(20,16,48,.9)" onclick="hsCard(' + p.id + ',' + _hsA(p.name) + ')">' +
+    '<div class="hb-r1"><span class="hb-l">' + (ab ? '<span class="hb-chip" style="background:' + L.bg + ';color:' + L.fg + '">' + _hsE(ab) + '</span>' : '') + '<span class="hb-eb">' + _hsE([_hsRole(p), p.age ? 'AGE ' + p.age : ''].filter(Boolean).join(' · ')) + '</span></span><span class="hb-tag">UNSIGNED</span></div>' +
+    '<div class="hb-r2"><span class="hb-rk">' + rank + '</span><div class="hb-who"><b>' + _hsE(p.name) + '</b><span>' + _hsE(_hsLine(p) || 'No line last season') + '</span></div></div>' +
+    '<div class="hb-r3"><span class="hb-pk">' + _hsE(pk) + '</span><span class="hb-bt"><button type="button" class="hb-pick" aria-label="' + _hsE('Where does ' + p.name + ' sign?') + '" onclick="event.stopPropagation();hsTeams(' + p.id + ')">' + (mine ? 'Change' : 'Pick') + '</button>' +
+    '<button type="button" class="hb-vs' + (held ? ' on' : '') + '" aria-pressed="' + !!held + '" aria-label="' + _hsE('Compare ' + p.name) + '" onclick="event.stopPropagation();hsCmp(' + p.id + ',' + _hsA(p.name) + ',' + _hsA(kind) + ')">vs</button></span></div></div>';
+}
+function _hsBoardHtml(baseHtml) {
+  var H = window._hs, D = H.data, tid = H.team || null;
+  var L = tid ? _hsLook({ id: tid, name: '' }) : null, ab = tid ? (_hsAbbr(tid) || (L && L.abbr) || '') : '';
+  var out = '<div class="hb-hd"><h3 class="hs-h2">The Board</h3><span class="hb-acts">' +
+    '<button type="button" class="hb-lens' + (tid ? ' on' : '') + '"' + (tid ? ' style="background:' + L.bg + ';color:' + L.fg + '"' : '') + ' aria-label="' + (tid ? _hsE('Showing ' + ab + ', change team') : 'Look at one team') + '" onclick="hsLens()">' + (tid ? _hsE(ab) : 'All teams') + '</button>' +
+    '<button type="button" class="hb-ic" aria-label="Search any player" onclick="hsView(\'players\',true)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button></span></div>';
+  var P = [['all', 'All'], ['sp', 'SP'], ['rp', 'RP'], ['c', 'C'], ['if', 'IF'], ['of', 'OF']];
+  out += '<div class="hb-seg" role="group" aria-label="Position">' + P.map(function (x) { var on = (H.pos || 'all') === x[0]; return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" onclick="hsPos(' + _hsA(x[0]) + ')">' + x[1] + '</button>'; }).join('') + '</div>';
+  out += baseHtml || '';
+  if (!D) return out + _hsWaitHtml();
+  var ranked = (D.fas || []).map(_hsP).filter(Boolean).map(function (p, i) { return { p: p, rank: i + 1 }; });
+  var mineFa = tid ? ranked.filter(function (x) { return x.p.lastTeam === tid; }) : ranked;
+  var tally = tid ? _hsTeamTally(tid) : null;
+  if (tid) {
+    out += '<div class="hb-team"><div><small>' + _hsE(ab) + ' · THIS OFFSEASON</small><b>' + tally.inn + ' in · ' + tally.out + ' out · ' + mineFa.length + ' unsigned</b></div><button type="button" class="hb-ghost" onclick="hsLensPick(0)">All teams</button></div>';
+  }
+  var list = mineFa.filter(function (x) { return _hsPosOk(x.p, H.pos); });
+  var show = H.boardMore ? list : list.slice(0, 12);
+  if (show.length) out += show.map(function (x) { return _hsBoardCard(x.p, x.rank); }).join('');
+  else out += '<div class="hs-list"><div class="hs-empty">' + (tid ? 'None of their free agents ' + ((H.pos || 'all') === 'all' ? 'is' : 'at that spot is') + ' still unsigned.' : 'Nobody at that spot is still unsigned.') + '</div></div>';
+  if (list.length > show.length) out += '<button type="button" class="hb-ghost wide" onclick="hsBoardMore()">Show ' + (list.length - show.length) + ' more</button>';
+  if (tid && tally.moves.length) out += '<div class="hs-hd"><h3 class="hs-h2">Their moves</h3><span class="hs-mut">' + tally.moves.length + '</span></div><div class="hs-list">' + tally.moves.slice(0, 20).map(_hsRowHtml).join('') + '</div>';
+  return out;
+}
+function hsPos(f) { var H = window._hs; H.pos = f; H.boardMore = false; _hsRender(); }
+function hsBoardMore() { window._hs.boardMore = true; _hsRender(); }
+function hsView(v, focus) {
+  var H = window._hs;
+  if (v === 'teams') { H.view = 'board'; _hsRender(); hsLens(); return; }
+  H.view = v;
+  _hsRender();
+  if ((v === 'players' || v === 'compare') && H.q.trim().length >= 2) hsSearch(H.q);
+  if (focus) { var q = document.getElementById('hs-q'); if (q) { try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } } }
+}
+// your teams' ids, favorite first
+function _hsFavIds() {
+  var f = window._hs.fav || {}, names = [f.favorite].concat(f.following || []).filter(Boolean), rev = {}, out = [];
+  Object.keys(typeof CMP_TEAM !== 'undefined' ? CMP_TEAM : {}).forEach(function (id) { rev[String(CMP_TEAM[id]).toUpperCase()] = +id; });
+  names.forEach(function (n) {
+    var L = null;
+    try { L = typeof _teamLook === 'function' ? _teamLook('mlb', n) : null; } catch (e) {}
+    var id = L && L.abbr ? rev[String(L.abbr).toUpperCase()] : null;
+    if (id && out.indexOf(id) < 0) out.push(id);
+  });
+  return out;
+}
+// the team lens: all 30 in a sheet, yours first and ringed in gold
+function hsLens() {
+  var el = document.getElementById('hs-teams');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hs-teams';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', 'hs-teams-t');
+    el.addEventListener('click', function (e) { if (e.target === el) hsTeamsClose(); });
+    document.body.appendChild(el);
+  }
+  var H = window._hs, fav = _hsFavIds();
+  var ids = Object.keys(typeof CMP_TEAM !== 'undefined' ? CMP_TEAM : {}).map(Number).sort(function (a, b) {
+    var fa = fav.indexOf(a), fb = fav.indexOf(b);
+    if (fa >= 0 || fb >= 0) return (fa < 0 ? 99 : fa) - (fb < 0 ? 99 : fb);
+    return CMP_TEAM[a] < CMP_TEAM[b] ? -1 : 1;
+  });
+  el.innerHTML = '<div class="sh"><div class="sh-hd"><h2 id="hs-teams-t">Look at one team</h2>' +
+    '<button type="button" class="x" aria-label="Close" onclick="hsTeamsClose()">✕</button></div>' +
+    (fav.length ? '<div class="hb-shl">YOUR TEAMS FIRST</div>' : '') + '<div class="gr">' +
+    ids.map(function (id) {
+      var ab = CMP_TEAM[id], L = _hsLook({ id: id, name: '' });
+      return '<button type="button" class="hs-tm' + (H.team === id ? ' mine' : fav.indexOf(id) >= 0 ? ' fav' : '') + '" style="background:' + L.bg + ';color:' + L.fg + '" aria-pressed="' + (H.team === id) + '" onclick="hsLensPick(' + id + ')">' + _hsE(ab) + '</button>';
+    }).join('') + '</div>' +
+    (H.team ? '<button type="button" class="hs-btn clr" onclick="hsLensPick(0)">All teams</button>' : '') + '</div>';
+  el.style.display = 'flex';
+}
+function hsLensPick(id) {
+  var H = window._hs;
+  hsTeamsClose();
+  H.team = id || null; H.boardMore = false; H.view = 'board';
+  _hsRender();
+}
+
+// ── The rail's options ────────────────────────────────────────────────────
+// On the offseason page the league rail shows for a couple of seconds, then
+// tucks: the baseball rolls to the left edge (tap it for every sport again),
+// the other leagues drop away and this page's options drop into their place —
+// Board, Players, Compare, Stove, Teams. js/games/games-deck.js calls
+// hsRail(true|false) on every draw and hsRailPick(key) when a league is tapped.
+window._hsRailS = window._hsRailS || { on: false, tucked: false, held: false, t: 0 };
+var HS_OPTS = [
+  ['board', 'Board', 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'],
+  ['players', 'Players', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c1.5-4 5-5 8-5s6.5 1 8 5'],
+  ['compare', 'Compare', 'M4 8h14l-3-3M20 16H6l3 3'],
+  ['stove', 'Stove', 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z'],
+  ['teams', 'Teams', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z']
+];
+function _hsRailEls() {
+  var band = document.getElementById('gdk-band'), rail = document.getElementById('gdk-rail');
+  return band && rail ? { band: band, rail: rail, menu: document.getElementById('hsm') } : null;
+}
+function _hsRailBuild(E) {
+  if (E.menu) return E.menu;
+  var m = document.createElement('div');
+  m.id = 'hsm';
+  var on = E.rail.querySelector('.gdk-lg.on .em');
+  m.innerHTML = '<button type="button" class="hsm-back" aria-label="Back to all sports" onclick="hsRailBack()"><span class="em" aria-hidden="true">' + (on ? on.innerHTML : '⚾') + '</span><span class="nm">Sports</span></button><i class="hsm-div" aria-hidden="true"></i>' +
+    HS_OPTS.map(function (o, i) {
+      return '<button type="button" class="hsm-o" data-v="' + o[0] + '" style="--i:' + i + '" onclick="hsView(this.dataset.v)"><span class="em"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + o[2] + '"/></svg></span><span class="nm">' + o[1] + '</span></button>';
+    }).join('');
+  E.band.appendChild(m);
+  E.band.classList.add('hsm');
+  E.menu = m;
+  return m;
+}
+function _hsRailMark() {
+  var m = document.getElementById('hsm'), v = window._hs.view || 'board';
+  if (!m) return;
+  [].forEach.call(m.querySelectorAll('.hsm-o'), function (b) { var on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+}
+function _hsRailDx(E) {
+  var sel = E.rail.querySelector('.gdk-lg.on'), back = E.menu.querySelector('.hsm-back');
+  if (!sel || !back) return 0;
+  var was = back.style.transform;
+  back.style.transform = 'none';
+  var dx = sel.getBoundingClientRect().left - back.getBoundingClientRect().left;
+  back.style.transform = was;
+  return Math.round(dx);
+}
+function _hsRailTuck() {
+  var R = window._hsRailS, E = _hsRailEls();
+  clearTimeout(R.t);
+  if (!E || !R.on || R.tucked) return;
+  var m = _hsRailBuild(E), back = m.querySelector('.hsm-back');
+  _hsRailMark();
+  clearTimeout(R.u);
+  E.band.classList.remove('untucking');
+  // the ball starts where baseball sits in the rail, then rolls to the left edge
+  back.style.transition = 'none';
+  back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
+  void back.offsetWidth;
+  E.band.classList.add('tuck');
+  back.style.transition = '';
+  back.style.transform = '';
+  R.tucked = true;
+}
+function hsRailBack() {
+  var R = window._hsRailS, E = _hsRailEls();
+  clearTimeout(R.t);
+  if (!E || !E.menu || !R.tucked) return;
+  var back = E.menu.querySelector('.hsm-back');
+  R.tucked = false; R.held = true;
+  E.band.classList.add('untucking');
+  E.band.classList.remove('tuck');
+  back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
+  clearTimeout(R.u);
+  R.u = setTimeout(function () { E.band.classList.remove('untucking'); back.style.transform = ''; }, 620);
+}
+function hsRail(on) {
+  var R = window._hsRailS, E = _hsRailEls();
+  if (!E) return;
+  if (!on) {
+    if (!R.on) return;
+    clearTimeout(R.t); clearTimeout(R.u);
+    R.on = false; R.tucked = false; R.held = false;
+    E.band.classList.remove('tuck', 'untucking', 'hsm');
+    if (E.menu && E.menu.parentNode) E.menu.parentNode.removeChild(E.menu);
+    return;
+  }
+  if (R.on) return;
+  R.on = true; R.tucked = false; R.held = false;
+  _hsRailBuild(E);
+  R.t = setTimeout(_hsRailTuck, 1800);
+}
+// tapping baseball again while its rail is out tucks it straight away
+function hsRailPick(key) {
+  var R = window._hsRailS;
+  if (key !== 'mlb' || !R.on || R.tucked) return;
+  clearTimeout(R.t);
+  R.t = setTimeout(_hsRailTuck, 160);
 }
 
 // Show or hide the page whenever the schedule loads (any league, any date)
