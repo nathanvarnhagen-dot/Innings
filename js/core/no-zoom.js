@@ -23,3 +23,37 @@
     });
   }
 })();
+
+// ══ NO SIDEWAYS DRIFT (v7.104.4) ═══════════════════════════════════════════
+// The MLB offseason page could slide sideways on an iPhone and stay there —
+// everything cut off on the left, a dark strip down the right. Safari will
+// pan a page (or an up-and-down scroller) sideways if anything in it runs a
+// few points wide, even with overflow hidden, and a row of chips scrolled to
+// its end hands the leftover swipe to the page. The Games page is locked in
+// css/offseason.css; this puts the page back if it ever moves anyway.
+(function () {
+  var busy = false;
+  function fix() {
+    busy = false;
+    var d = document.documentElement, b = document.body;
+    if (window.scrollX || (d && d.scrollLeft) || (b && b.scrollLeft)) {
+      try { window.scrollTo(0, window.scrollY || 0); } catch (e) {}
+      if (d) d.scrollLeft = 0;
+      if (b) b.scrollLeft = 0;
+    }
+    var s = document.querySelectorAll('.screen.active');
+    for (var i = 0; i < s.length; i++) {
+      if (s[i].scrollLeft) s[i].scrollLeft = 0;
+      var sb = s[i].id === 'screen-games-picker' ? s[i].querySelector('.scroll-bare') : null;
+      if (sb && sb.scrollLeft) sb.scrollLeft = 0;
+    }
+  }
+  function soon() { if (busy) return; busy = true; (window.requestAnimationFrame || setTimeout)(fix); }
+  // scroll doesn't bubble, so it's caught on the way down
+  document.addEventListener('scroll', soon, { capture: true, passive: true });
+  window.addEventListener('scroll', soon, { passive: true });
+  document.addEventListener('focusout', function () { setTimeout(fix, 60); }); // Safari shifts the page to show a text box
+  window.addEventListener('pageshow', fix);
+  window.addEventListener('orientationchange', function () { setTimeout(fix, 300); });
+  window._noDrift = fix;
+})();

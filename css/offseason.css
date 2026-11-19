@@ -84,3 +84,18 @@
 #hs-teams .gr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 #hs-teams .clr{width:100%;margin-top:12px}
 @media (prefers-reduced-motion: reduce){.hs-skel{animation:none}}
+
+/* ══ v7.104.4: the Games page can't slide sideways ══
+   On an iPhone the offseason page could be dragged a few points to the side
+   and stay there (cut off on the left, a dark strip on the right). The page
+   only ever scrolls up and down now; the league rail and the chip rows keep
+   their own sideways scroll and don't pass a leftover swipe to the page.
+   js/core/no-zoom.js puts the page back if Safari moves it anyway. */
+html.gdk-on #screen-games-picker{overflow:hidden}
+html.gdk-on #screen-games-picker .scroll-bare{overflow-x:hidden;overscroll-behavior-x:none}
+html.gdk-on #gdk{overflow-x:clip;max-width:calc(100% + 32px)}
+#gdk-rail,.hs-chips,#hs-teams .sh{overscroll-behavior-x:contain}
+#gdk-hs,.hs,.hs>*{min-width:0;max-width:100%;box-sizing:border-box}
+.hs>.hs-chips{max-width:none}
+.hs-top>div:first-child,.hs-band>div:first-child{min-width:0}
+.hs-nm,.hs-tl,.hs-pk-who b,.hs-pk-who span,.hs-rep,.hs-row .tx b{overflow-wrap:anywhere}

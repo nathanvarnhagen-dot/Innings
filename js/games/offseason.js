@@ -384,13 +384,8 @@ function _hsRowHtml(m) {
     '<div class="tx"><b>' + _hsE(tx.t) + '</b><span>' + _hsE((HS_KIND[m.kind] || '') + ' · ' + _hsWhen(m.date) + (tx.s ? ' · ' + tx.s : '')) + '</span></div>' + (btn || '<span></span>') + '</div>';
 }
 function _hsQuickHtml() {
-  var H = window._hs, D = H.data, chips = [];
-  if (D) {
-    var fa = (D.fas || []).map(_hsP).filter(Boolean);
-    var bats = fa.filter(function (p) { return _hsKindOf(p) === 'bat'; }), arms = fa.filter(function (p) { return _hsKindOf(p) === 'pit'; });
-    if (bats.length >= 2) chips.push('<button type="button" class="hs-chip gold" onclick="hsCmpPair(' + bats[0].id + ',' + _hsA(bats[0].name) + ',' + bats[1].id + ',' + _hsA(bats[1].name) + ',\'bat\')">Top 2 free agent bats</button>');
-    if (arms.length >= 2) chips.push('<button type="button" class="hs-chip gold" onclick="hsCmpPair(' + arms[0].id + ',' + _hsA(arms[0].name) + ',' + arms[1].id + ',' + _hsA(arms[1].name) + ',\'pit\')">Top 2 free agent arms</button>');
-  }
+  var chips = [];
+  // v7.104.4: the "Top 2 free agent bats / arms" chips are gone — they were guesses at who's best, and wrong ones
   (_hsLsGet(HS_RECENT) || []).slice(0, 3).forEach(function (r) {
     if (!r || !r.a || !r.b) return;
     chips.push('<button type="button" class="hs-chip" onclick="hsCmpPair(' + _hsA(r.a.id) + ',' + _hsA(r.a.name) + ',' + _hsA(r.b.id) + ',' + _hsA(r.b.name) + ',' + _hsA(r.kind) + ')">' + _hsE(_hsLast(r.a.name) + ' vs ' + _hsLast(r.b.name)) + '</button>');
@@ -457,6 +452,8 @@ function _hsRender() {
   // the search box keeps its text and focus across redraws
   var keepFocus = document.activeElement && document.activeElement.id === 'hs-q';
   var res = document.getElementById('hs-res'), resHtml = res ? res.innerHTML : '', resShow = res ? res.style.display : 'none';
+  // v7.104.4: so do the chip rows — a redraw (picks, a late stat line) used to snap them back to the start
+  var chipAt = [].map.call(el.querySelectorAll('.hs-chips'), function (c) { return [c.getAttribute('aria-label'), c.scrollLeft]; });
   var today = _hsToday();
   var cd = '';
   if (D && D.spring) {
@@ -491,7 +488,9 @@ function _hsRender() {
   }
   out += '</div>';
   el.innerHTML = out;
-  if (keepFocus) { var q = document.getElementById('hs-q'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) {} } }
+  chipAt.forEach(function (c) { if (!c[1]) return; var n = el.querySelector('.hs-chips[aria-label="' + c[0] + '"]'); if (n) n.scrollLeft = c[1]; });
+  if (typeof window._noDrift === 'function') window._noDrift();
+  if (keepFocus) { var q = document.getElementById('hs-q'); if (q) { try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) {} } }
 }
 
 // Show or hide the page whenever the schedule loads (any league, any date)
