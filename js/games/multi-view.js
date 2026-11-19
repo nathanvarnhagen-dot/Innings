@@ -119,6 +119,7 @@ function _mvAll() {
 function _mvLoad(force) {
   var M = window._mv;
   if (typeof _bsModalScheduleUrl !== 'function' || typeof GAMES_SPORTS === 'undefined' || !window.fetch) return Promise.resolve();
+  _mvFavLoad();
   if (M.loading) return M.loading;
   if (!force && M.at && Date.now() - M.at < MV_TICK_MS) return Promise.resolve();
   var today = _mvToday();
@@ -232,7 +233,30 @@ function _mvFlagWord(sport, f) {
 function _mvFlagText(sport, f, abbr) { return _mvFlagWord(sport, f) + ' · ' + abbr; }
 
 // ── the board ──
+// v7.104.3: your teams. 0 = your favorite team is in this game, 1 = a team
+// you follow is, 9 = neither. Read from the per-league cache the rest of the
+// app fills (_loadFavTeams); _mvFavLoad asks for any league not in it yet.
+function _mvMine(sport, g) {
+  var f = (window._favTeamsCache || {})[sport];
+  if (!f || !g) return 9;
+  if (f.favorite && (g.away === f.favorite || g.home === f.favorite)) return 0;
+  var fo = f.following || [];
+  return fo.indexOf(g.away) >= 0 || fo.indexOf(g.home) >= 0 ? 1 : 9;
+}
+function _mvFavLoad() {
+  var M = window._mv;
+  if (M.favLoading || typeof _loadFavTeams !== 'function' || typeof GAMES_SPORTS === 'undefined') return;
+  var need = GAMES_SPORTS.map(function (s) { return s.key; }).filter(function (k) { return !(window._favTeamsCache || {})[k]; });
+  if (!need.length) return;
+  M.favLoading = true;
+  Promise.all(need.map(function (k) { return _loadFavTeams(k).catch(function () { return null; }); })).then(function (res) {
+    M.favLoading = false;
+    if (res.some(function (f) { return f && (f.favorite || (f.following || []).length); })) _mvRenderAll();
+  }, function () { M.favLoading = false; });
+}
 function _mvRank(a, b) {
+  var ma = _mvMine(a.sport, a.g), mb = _mvMine(b.sport, b.g);
+  if (ma !== mb) return ma - mb;
   var fa = _mvFriends(a.g.gamePk), fb = _mvFriends(b.g.gamePk);
   var ra = fa.names.length || fa.mine ? 0 : 1, rb = fb.names.length || fb.mine ? 0 : 1;
   if (ra !== rb) return ra - rb;
@@ -255,6 +279,19 @@ function _mvBoard() {
     var kept = ids.filter(function (p) { return !have[p.sport] || !!by[_mvKey(p.sport, p.gamePk)]; });
     if (kept.length !== ids.length) { ids = kept; changed = true; }
     if (st.auto) {
+      // v7.104.3: the day's board starts with your teams on top — your
+      // favorite first, then the teams you follow — whenever they play today
+      // and aren't finished. Stays that way until you change the board yourself.
+      var mine = all.filter(function (x) { return _mvMine(x.sport, x.g) < 9 && _mvPhase(x.sport, x.g) !== 'post'; })
+        .sort(function (a, b) { return (_mvMine(a.sport, a.g) - _mvMine(b.sport, b.g)) || ((_mvIsLive(a.sport, a.g) ? 0 : 1) - (_mvIsLive(b.sport, b.g) ? 0 : 1)) || _mvRank(a, b); })
+        .slice(0, MV_AUTO);
+      if (mine.length) {
+        var mk = {};
+        mine.forEach(function (x) { mk[_mvKey(x.sport, x.g.gamePk)] = true; });
+        var next = mine.map(_mvEntry).concat(ids.filter(function (p) { return !mk[_mvKey(p.sport, p.gamePk)]; })).slice(0, Math.max(MV_AUTO, 0));
+        var sig = function (l) { return l.map(function (p) { return _mvKey(p.sport, p.gamePk); }).join('|'); };
+        if (sig(next) !== sig(ids)) { ids = next; changed = true; }
+      }
       var on = {};
       ids.forEach(function (p) { on[_mvKey(p.sport, p.gamePk)] = true; });
       // v7.91.0: a college basketball game joins on its own only if it's ranked, your team's or a friend's
