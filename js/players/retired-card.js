@@ -70,6 +70,39 @@ function _rcFill(id) {
     '<div class="rc-box rc-years"><div class="rc-eb"><span>YEAR BY YEAR</span><button type="button" class="rc-order" onclick="rcFlip(' + JSON.stringify(String(id)).replace(/"/g, '&quot;') + ')">' + (oldest ? 'Oldest first' : 'Newest first') + '</button></div>' + table +
     (rows.some(function (r) { return r.champ; }) ? '<div class="rc-key"><i class="rc-dot"></i>Won the World Series</div>' : '') + '</div></div>';
 }
+// v7.107.0: an active player's card in the offseason — who he is, his last five
+// seasons (newest first) and his career line, in place of the season table
+// and its last-7/14/30-day rows (there are no days to count until spring).
+// The links to Baseball Reference and Savant sit right under it, as before.
+function _rcRecentFill(id) {
+  var el = document.getElementById('player-lines');
+  if (!el || window._savSheetId !== String(id)) return;
+  var d = _savGet('career', String(id), '/api/mlb?mode=career&id=' + encodeURIComponent(id), 24 * 3600e3, function () { if (window._savSheetId === String(id)) _rcRecentFill(id); });
+  if (!d || !d.seasons || !d.seasons.length) return; // still loading, or never in the majors: the season table stays
+  var abbr = _rcAbbr(d.mainTeamId), c = abbr && typeof _ghTeamColors === 'function' ? _ghTeamColors(abbr) : null;
+  var tint = c ? c.bg : '#3D3580', hi = '#C9C2F5';
+  if (c && typeof _gxLum === 'function') [c.accent, c.bg, c.fg].some(function (x) { if (x && _gxLum(x) >= .2 && _gxLum(x) <= .9) { hi = x; return true; } return false; });
+  var pit = d.group === 'pitching', k = d.career || {};
+  var se = window._sav.season && window._sav.season[String(id)], sd = se && se.data;
+  var who = [d.pos, sd && sd.team ? sd.team : abbr, d.first ? 'Since ' + d.first : ''].filter(Boolean).join(' · ');
+  var sub = [d.seasonsPlayed ? d.seasonsPlayed + (d.seasonsPlayed === 1 ? ' season' : ' seasons') : '', d.bats ? 'Bats ' + d.bats : '', d.throws ? 'Throws ' + d.throws : ''].filter(Boolean).join(' · ');
+  var rows = d.seasons.filter(function (r) { return !r.dnp; }).slice(0, 5);
+  var head = pit ? ['W–L', 'ERA', 'IP', 'K'] : ['G', 'H', 'HR', 'RBI', 'BA'];
+  var cols = 'grid-template-columns:58px repeat(' + head.length + ',minmax(0,1fr))';
+  var line = function (label, small, v, cls) {
+    return '<div class="rc-row' + (cls || '') + '" style="' + cols + '"><span class="rc-yr"><b>' + _escapeHtml(String(label)) + '</b>' + (small ? '<small>' + _escapeHtml(small) + '</small>' : '') + '</span>' + v.map(function (x) { return '<span>' + _escapeHtml(x == null || x === '' ? '—' : String(x)) + '</span>'; }).join('') + '</div>';
+  };
+  var ip = function (x) { return x == null ? null : String(x).replace(/^(\d+)(\d{3})/, '$1,$2'); };
+  var table = '<div class="rc-yh" style="' + cols + '"><span>YEAR</span>' + head.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div>' +
+    rows.map(function (r) {
+      var tm = r.teams && r.teams.length ? r.teams.map(_rcAbbr).filter(Boolean).join('/') : '';
+      return line(r.y, tm, pit ? [r.wl ? String(r.wl).replace('-', '–') : null, r.era, ip(r.ip), r.k] : [r.g, r.h, r.hr, r.rbi, r.ba]);
+    }).join('') +
+    line('Career', '', pit ? [k.w != null ? k.w + '–' + k.l : null, k.era, ip(k.ip), k.k != null ? _rcN(k.k) : null] : [k.g != null ? _rcN(k.g) : null, k.h != null ? _rcN(k.h) : null, k.hr, k.rbi != null ? _rcN(k.rbi) : null, k.avg], ' car');
+  el.innerHTML = '<div class="rc" style="--rc-tint:' + tint + ';--rc-hi:' + hi + '">' +
+    '<div class="rc-top"><div class="rc-who">' + _escapeHtml(who) + '</div>' + (sub ? '<div class="rc-sub">' + _escapeHtml(sub) + '</div>' : '') + '</div>' +
+    '<div class="rc-box rc-years"><div class="rc-eb"><span>LAST ' + (rows.length === 1 ? 'SEASON' : rows.length + ' SEASONS') + '</span><span>AND CAREER</span></div>' + table + '</div></div>';
+}
 (function () {
   if (typeof _plsLinesFill !== 'function') return;
   var prev = _plsLinesFill;
@@ -80,6 +113,7 @@ function _rcFill(id) {
     var el = document.getElementById('player-lines');
     if (el) window._rcOrig[String(id)] = el.innerHTML;
     if (_rcIsRetired(id)) _rcFill(id);
+    else if (typeof _plsOff === 'function' && _plsOff('mlb')) _rcRecentFill(id);
     return r;
   };
 })();

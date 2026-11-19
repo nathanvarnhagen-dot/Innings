@@ -109,6 +109,15 @@ window._sav.fb = window._sav.fb || {};
 var PLS_FB_TTL = 5 * 60e3;
 function _plsFbOn(league) { return league === 'nfl' || league === 'cfb' || league === 'nba' || league === 'wnba' || league === 'cbb'; } // v7.87.0: basketball too (v7.91.0: college)
 function _plsFbKey(name, id, league) { return league + ':' + (id || '') + ':' + String(name || '').toLowerCase(); }
+// is this league between seasons? (the season line the Games page already keeps; baseball falls back to the calendar)
+function _plsOff(league) {
+  try {
+    var P = typeof _gsPhaseState === 'function' ? _gsPhaseState() : null, p = P && P.by && P.by[league];
+    if (p && p.phase) return p.phase === 'off';
+  } catch (e) {}
+  if (league === 'mlb') { var m = new Date().getMonth(); return m >= 10 || m <= 1; }
+  return false;
+}
 function _plsFbRow(cls, label, small, v, n, i) {
   var cells = '';
   for (var k = 0; k < n; k++) cells += '<b>' + (v ? _escapeHtml(String(v[k] == null ? '—' : v[k])) : '—') + '</b>';
@@ -134,6 +143,12 @@ function _plsFbHtml(name, id, league) {
   var tight = [d.season, d.prev, d.career].some(function (r) { return r && (r.v || []).some(function (x) { return String(x).length > 6; }); });
   var h = '<div class="pll plf' + (tight ? ' tight' : '') + '"' + grid + '><div class="pll-meta">' + _escapeHtml(meta) + '</div>' + head(d.perGame ? 'Per game' : 'Season');
   var i = 0, yl = function (r) { return String(r.label || r.year); };
+  // v7.107.0: in the league's offseason the card is his last five seasons and his career, nothing game by game
+  if (_plsOff(league) && d.recent && d.recent.length) {
+    d.recent.forEach(function (r, k) { h += _plsFbRow(k ? '' : 'ssn', yl(r), gp(r), r.v, n, i++); });
+    if (d.career) h += _plsFbRow('car', 'Career', d.career.g ? _escapeHtml(d.career.g + ' G') : '', d.career.v, n, i++);
+    return h + '</div>';
+  }
   h += d.season ? _plsFbRow('ssn', yl(d.season), gp(d.season), d.season.v, n, i++) : _plsFbRow('ssn', String(d.curLabel || d.cur || ''), 'No games yet', null, n, i++);
   if (d.prev) h += _plsFbRow('', yl(d.prev), gp(d.prev), d.prev.v, n, i++);
   if (d.career) h += _plsFbRow('car', 'Career', d.career.g ? _escapeHtml(d.career.g + ' G') : '', d.career.v, n, i++);

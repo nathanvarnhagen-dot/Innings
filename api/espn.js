@@ -2504,7 +2504,9 @@ async function _playerStats(req, res) {
     });
     log.sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
   }
-  const result = { league: league, id: id, pos: F.pos, group: group, team: team, cols: cols.map(function (c) { return c[0]; }), cur: cur, season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log };
+  const result = { league: league, id: id, pos: F.pos, group: group, team: team, cols: cols.map(function (c) { return c[0]; }), cur: cur, season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log,
+    // v7.107.0: his last five seasons, newest first, for the card in the offseason
+    recent: years.slice(0, 5).map(seasonRow).filter(Boolean) };
   if (req.query.debug) result.debug = { cats: Object.keys(F.names), years: years, logFeed: gl ? { names: gl.names, types: (gl.seasonTypes || []).map(function (st) { return st.displayName; }), events: Object.keys(gl.events || {}).length } : null };
   // in season the lines move every week (and during games); otherwise they sit
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
@@ -2656,7 +2658,9 @@ async function _playerStatsBk(req, res, league) {
     });
     log.sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
   }
-  const result = { league: league, id: id, pos: F.pos, group: 'bk', team: team, cols: _BK_SEASON_COLS.map(function (c) { return c[0]; }), logCols: logCols, perGame: true, cur: cur, curLabel: _bkLabel(league, cur), season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log };
+  const result = { league: league, id: id, pos: F.pos, group: 'bk', team: team, cols: _BK_SEASON_COLS.map(function (c) { return c[0]; }), logCols: logCols, perGame: true, cur: cur, curLabel: _bkLabel(league, cur), season: seasonRow(cur), prev: prevYear ? seasonRow(prevYear) : null, career: career, log: log,
+    // v7.107.0: his last five seasons, newest first, for the card in the offseason
+    recent: years.slice(0, 5).map(seasonRow).filter(Boolean) };
   if (debug) result.debug = debug;
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
   res.status(200).json(result);
