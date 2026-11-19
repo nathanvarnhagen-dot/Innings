@@ -166,6 +166,18 @@
   // Next bigger build: add an entry at the TOP of WHATS_NEW.
   var WHATS_NEW = [
     {
+      id: 'v7.106.0', at: '2026-11-19T00:30:00-08:00',
+      title: 'The rail tucks in every sport',
+      sub: 'Each league gets its own options, and its own way of getting there.',
+      items: function () {
+        return [
+          { icon: 'bars', title: 'Options for every league', body: 'On Games, the league rail steps aside after a moment and the league’s own options take its place: Games, Standings or Playoffs where there are any, Teams, Players, TV and Multi.' },
+          { icon: 'trophy', title: 'Each sport its own way', body: 'The football is thrown, the basketball drops through a hoop, the puck and the soccer ball find the net, and the baseball still rolls.' },
+          { icon: 'history', title: 'Tap the ball for every sport', body: 'The ball on the left brings the whole rail back, and it rolls home to its spot. Tap a league and its options return.' }
+        ];
+      }
+    },
+    {
       id: 'v7.105.0', at: '2026-11-18T23:50:00-08:00',
       title: 'The Board',
       sub: 'Baseball’s offseason page, rebuilt around who’s still unsigned.',

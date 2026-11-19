@@ -161,13 +161,54 @@ html.gdk-on #gdk{overflow-x:clip;max-width:calc(100% + 32px)}
 .hsm-back .em{background:rgba(168,159,232,.3);border:2px solid #F3F1FF;box-shadow:0 0 0 3px rgba(168,159,232,.3);transition:transform .6s cubic-bezier(.22,1,.36,1)}
 #gdk-band.tuck .hsm-back,#gdk-band.untucking .hsm-back{opacity:1}
 #gdk-band.tuck .hsm-back{pointer-events:auto}
-#gdk-band.tuck .hsm-back .em{transform:rotate(-360deg)}
+#gdk-band.tuck #hsm[data-fx="roll"] .hsm-back .em{transform:rotate(-360deg)}
 .hsm-div{flex:0 0 1px;align-self:flex-start;height:44px;margin:2px 4px 0 6px;background:linear-gradient(180deg,rgba(243,241,255,0),rgba(243,241,255,.34),rgba(243,241,255,0));opacity:0;transition:opacity .25s ease}
-#gdk-band.tuck .hsm-div{opacity:1;transition:opacity .4s ease .32s}
+#gdk-band.tuck .hsm-div{opacity:1;transition:opacity .4s ease calc(var(--d,260ms) + 60ms)}
 .hsm-o{flex:1 1 0;min-width:0;opacity:0;transform:translateY(-16px);pointer-events:none;transition:opacity .2s ease,transform .3s ease}
 .hsm-o .em{background:rgba(13,10,34,.45);border:1px solid rgba(168,159,232,.4)}
 .hsm-o .nm{letter-spacing:.03em!important}
 .hsm-o.on{color:#fff!important}
 .hsm-o.on .em{background:#F3F1FF;color:#1A1640;border:0}
-#gdk-band.tuck .hsm-o{opacity:1;transform:none;pointer-events:auto;transition:opacity .32s ease calc(260ms + var(--i)*45ms),transform .5s cubic-bezier(.22,1,.36,1) calc(260ms + var(--i)*45ms)}
+#gdk-band.tuck .hsm-o{opacity:1;transform:none;pointer-events:auto;transition:opacity .32s ease calc(var(--d,260ms) + var(--i)*45ms),transform .5s cubic-bezier(.22,1,.36,1) calc(var(--d,260ms) + var(--i)*45ms)}
 @media (prefers-reduced-motion:reduce){#gdk-band.hsm #gdk-rail .gdk-lg,.hsm-back,.hsm-back .em,.hsm-div,.hsm-o,#gdk-band.tuck .hsm-o,#gdk-band.tuck .hsm-div{transition:none!important}#gdk-band.tuck .hsm-back .em{transform:none}}
+
+/* ══ v7.106.0: the rail tucks in every league, each sport its own way ══
+   data-fx on #hsm: roll (baseball), pass (football), hoop (basketball),
+   puck (hockey), kick (soccer). The prop (.hsm-fx: a hoop or a net) only
+   shows while the ball is on its way; tapping Sports sends the ball back. */
+#hsm .hsm-back .em b{display:flex;align-items:center;justify-content:center;font-weight:400}
+#hsm[data-fx="hoop"],#hsm[data-fx="puck"],#hsm[data-fx="kick"]{--d:900ms}
+#gdk-band.fx-hoop.tuck{overflow:visible}
+.hsm-fx{position:absolute;display:block;opacity:0;pointer-events:none;transform-origin:100% 50%}
+.hsm-fx svg{display:block}
+#hsm[data-fx="hoop"] .hsm-fx{left:20px;top:7px;z-index:3}
+#hsm[data-fx="puck"] .hsm-fx{left:27px;top:31px;z-index:0}
+#hsm[data-fx="kick"] .hsm-fx{left:25px;top:29px;z-index:0}
+#hsm .hsm-back{position:relative;z-index:2}
+#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back{transition-duration:.7s;transition-timing-function:cubic-bezier(.4,0,.2,1)}
+#gdk-band.tuck #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPass .7s cubic-bezier(.4,0,.2,1) both}
+#gdk-band.untucking #hsm[data-fx="pass"] .hsm-back .em{animation:hsmPassBack .6s cubic-bezier(.4,0,.2,1) both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back{transition-timing-function:cubic-bezier(.3,.1,.3,1)}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em{animation:hsmHoop 1s linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-back .em b,#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em b{animation:hsmBig 1s linear both}
+#gdk-band.tuck #hsm[data-fx="hoop"] .hsm-fx{animation:hsmProp 1s linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back{transition-duration:.42s;transition-timing-function:cubic-bezier(.2,.7,.3,1)}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em{animation:hsmPuck 1s linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-back .em b{animation:hsmGone 1s linear both}
+#gdk-band.tuck #hsm[data-fx="puck"] .hsm-fx{animation:hsmGoal 1s linear both}
+#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back{transition-timing-function:cubic-bezier(.3,.1,.3,1)}
+#gdk-band.tuck #hsm[data-fx="kick"] .hsm-back .em{animation:hsmKick 1s linear both}
+#gdk-band.tuck #hsm[data-fx="kick"] .hsm-fx{animation:hsmGoalLate 1s linear both}
+#gdk-band.untucking #hsm[data-fx="hoop"] .hsm-back .em,#gdk-band.untucking #hsm[data-fx="puck"] .hsm-back .em,#gdk-band.untucking #hsm[data-fx="kick"] .hsm-back .em{animation:hsmRollBack .6s cubic-bezier(.3,.1,.3,1) both}
+@keyframes hsmPass{0%{transform:translateY(0) rotate(0)}18%{transform:translateY(-5px) rotate(-24deg)}50%{transform:translateY(-8px) rotate(-10deg)}82%{transform:translateY(-3px) rotate(10deg)}100%{transform:translateY(0) rotate(0)}}
+@keyframes hsmPassBack{0%{transform:translateY(0) rotate(0)}18%{transform:translateY(-5px) rotate(24deg)}50%{transform:translateY(-8px) rotate(10deg)}82%{transform:translateY(-3px) rotate(-10deg)}100%{transform:translateY(0) rotate(0)}}
+@keyframes hsmHoop{0%{transform:translateY(0) scale(1)}14%{transform:translateY(-10px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}46%{transform:translateY(-30px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}66%{transform:translateY(-25px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}80%{transform:translateY(-12px) scale(.46);background:transparent;border-color:transparent;box-shadow:none}90%{transform:translateY(0) scale(.5);background:transparent;border-color:transparent;box-shadow:none}100%{transform:translateY(0) scale(1)}}
+@keyframes hsmBig{0%{transform:scale(1)}14%{transform:scale(1.7)}90%{transform:scale(1.7)}100%{transform:scale(1)}}
+@keyframes hsmProp{0%{opacity:0}16%{opacity:1}86%{opacity:1}100%{opacity:0}}
+@keyframes hsmPuck{0%{transform:translateY(0) scale(1)}8%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:none}86%{transform:translateY(10px) scale(.36,.2);background:#0B0718;border-color:#0B0718;box-shadow:none}100%{transform:translateY(0) scale(1)}}
+@keyframes hsmGone{0%{opacity:1}8%{opacity:0}86%{opacity:0}100%{opacity:1}}
+@keyframes hsmGoal{0%{opacity:0;transform:none}12%{opacity:1;transform:none}42%{opacity:1;transform:none}48%{opacity:1;transform:translateX(-2px) scaleX(1.06)}58%{opacity:1;transform:none}86%{opacity:1}100%{opacity:0}}
+@keyframes hsmGoalLate{0%{opacity:0;transform:none}12%{opacity:1;transform:none}60%{opacity:1;transform:none}66%{opacity:1;transform:translateX(-2px) scaleX(1.06)}76%{opacity:1;transform:none}86%{opacity:1}100%{opacity:0}}
+@keyframes hsmKick{0%{transform:translateY(0) scale(1) rotate(0)}10%{transform:translateY(4px) scale(.4) rotate(-60deg);background:transparent;border-color:transparent;box-shadow:none}35%{transform:translateY(-8px) scale(.4) rotate(-220deg);background:transparent;border-color:transparent;box-shadow:none}62%{transform:translateY(8px) scale(.4) rotate(-400deg);background:transparent;border-color:transparent;box-shadow:none}86%{transform:translateY(9px) scale(.4) rotate(-430deg);background:transparent;border-color:transparent;box-shadow:none}100%{transform:translateY(0) scale(1) rotate(-720deg)}}
+@keyframes hsmRollBack{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#hsm .hsm-back .em,#hsm .hsm-back .em b,.hsm-fx{animation:none!important}}

@@ -622,8 +622,8 @@
     S.items = items;
     try { if (window.gdkArt) { gdkArt.show(artEl, S.sport); root.classList.toggle('art', gdkArt.has(S.sport)); } } catch (e) { console.error('[gdk] art', e); }
     renderRail(c); renderHead(c); renderDeck(); renderList();
-    // v7.105.0: on baseball's offseason page the rail tucks into that page's options (js/games/offseason.js)
-    try { if (typeof hsRail === 'function') hsRail(S.sport === 'mlb' && !!document.getElementById('gdk-hs')); } catch (e) { console.error('[gdk] rail options', e); }
+    // v7.106.0: the rail tucks into the league's own options, in every league (js/games/offseason.js)
+    try { if (typeof hsRail === 'function') { var rs = league(S.sport); hsRail(inPage(rs) ? S.sport : null, S.sport === 'mlb' && !!document.getElementById('gdk-hs')); } } catch (e) { console.error('[gdk] rail options', e); }
   }
   window.gdkPick = function (key) {
     var s = league(key); if (!s) return;

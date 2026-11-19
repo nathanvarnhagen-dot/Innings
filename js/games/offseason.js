@@ -665,41 +665,79 @@ function hsLensPick(id) {
   _hsRender();
 }
 
-// ── The rail's options ────────────────────────────────────────────────────
-// On the offseason page the league rail shows for a couple of seconds, then
-// tucks: the baseball rolls to the left edge (tap it for every sport again),
-// the other leagues drop away and this page's options drop into their place —
-// Board, Players, Compare, Stove, Teams. js/games/games-deck.js calls
-// hsRail(true|false) on every draw and hsRailPick(key) when a league is tapped.
-window._hsRailS = window._hsRailS || { on: false, tucked: false, held: false, t: 0 };
-var HS_OPTS = [
-  ['board', 'Board', 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'],
-  ['players', 'Players', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c1.5-4 5-5 8-5s6.5 1 8 5'],
-  ['compare', 'Compare', 'M4 8h14l-3-3M20 16H6l3 3'],
-  ['stove', 'Stove', 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z'],
-  ['teams', 'Teams', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z']
-];
+// ── The rail's options (v7.105.0; every league since v7.106.0) ────────────
+// On the Games page the league rail shows for a moment, then tucks: the
+// league you're on travels to the left edge (tap it for every sport again),
+// the other leagues drop away and that league's options take their place.
+// Each sport gets there its own way — the baseball rolls, the football is
+// thrown, the basketball drops through a hoop, the puck and the soccer ball
+// go into a net — and rolls (or is thrown) back when you tap Sports.
+// Options only ever name things that exist: the offseason page's views for
+// baseball in the winter, and elsewhere Games, the league's standings /
+// playoff picture / Top 25 where there is one, Teams, Players, TV and Multi.
+// js/games/games-deck.js calls hsRail(sport, offseasonPage) on every draw
+// and hsRailPick(key) when a league is tapped.
+window._hsRailS = window._hsRailS || { key: null, sport: null, off: false, tucked: false, t: 0, u: 0, fast: false };
+var HS_IC = {
+  board: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  players: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c1.5-4 5-5 8-5s6.5 1 8 5',
+  compare: 'M4 8h14l-3-3M20 16H6l3 3',
+  stove: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z',
+  teams: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z',
+  games: 'M4 6h16v14H4zM4 10h16M9 3v4M15 3v4',
+  stand: 'M5 20V10M12 20V4M19 20v-7',
+  cup: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7',
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  tv: 'M4 6h16v11H4zM9 20h6M12 17v3',
+  multi: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
+};
+var HS_FX = { mlb: 'roll', nfl: 'pass', cfb: 'pass', nba: 'hoop', wnba: 'hoop', cbb: 'hoop', nhl: 'puck', mls: 'kick', nwsl: 'kick' };
+var HS_HOOP = '<svg width="48" height="34" viewBox="0 0 48 34" fill="none" aria-hidden="true"><rect x="2" y="0" width="3" height="22" rx="1" fill="#F3F1FF"/><path d="M5 12h5" stroke="#FF7A2F" stroke-width="2.5"/><path d="M10 13L14 29M16 15L18 29M22 15.5V29M28 15L26 29M34 13L30 29M14 29H30M12 20H32" stroke="#F3F1FF" stroke-opacity=".75" stroke-width="1"/><ellipse cx="22" cy="12" rx="13" ry="3.5" stroke="#FF7A2F" stroke-width="2.5"/></svg>';
+function _hsGoalSvg(c, w) { return '<svg width="32" height="30" viewBox="0 0 32 30" fill="none" aria-hidden="true"><path d="M27 4V27H5c0-9 6-21 22-23z" fill="rgba(255,255,255,.10)"/><path d="M10 27C11 19 16 10 22 6M16 27c1-7 4-14 8-19M21 27V9M8 21h19M12 14h15" stroke="#F3F1FF" stroke-opacity=".7" stroke-width="1"/><path d="M27 4V27H5c0-9 6-21 22-23z" stroke="' + c + '" stroke-width="' + w + '" stroke-linejoin="round"/></svg>'; }
+// the options a league really has right now: [key, label, icon, what it does]
+function _hsRailOpts(sport, off) {
+  if (sport === 'mlb' && off) {
+    return ['board', 'players', 'compare', 'stove', 'teams'].map(function (v) {
+      return [v, v.charAt(0).toUpperCase() + v.slice(1), HS_IC[v], function () { hsView(v); }];
+    });
+  }
+  var o = [['games', 'Games', HS_IC.games, function () { var sc = document.querySelector('#screen-games-picker .scroll-bare'); if (sc) { try { sc.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { sc.scrollTop = 0; } } }]];
+  var third = { mlb: ['Standings', HS_IC.stand], nfl: ['Playoffs', HS_IC.cup], nba: ['Standings', HS_IC.stand], cbb: ['Top 25', HS_IC.list] }[sport];
+  if (third && typeof openPlayoffPicture === 'function') o.push(['table', third[0], third[1], function () { openPlayoffPicture(sport); }]);
+  if (typeof openTeamPrefs === 'function') o.push(['teams', 'Teams', HS_IC.teams, function () { openTeamPrefs(sport); }]);
+  if (typeof openInningsSearch === 'function') o.push(['players', 'Players', HS_IC.players, function () { openInningsSearch(); }]);
+  if (typeof window.gdkGuide === 'function') o.push(['tv', 'TV', HS_IC.tv, function () { window.gdkGuide(sport); }]);
+  if (o.length < 5 && typeof multiOpen === 'function') o.push(['multi', 'Multi', HS_IC.multi, function () { multiOpen(); }]);
+  return o.slice(0, 5);
+}
 function _hsRailEls() {
   var band = document.getElementById('gdk-band'), rail = document.getElementById('gdk-rail');
   return band && rail ? { band: band, rail: rail, menu: document.getElementById('hsm') } : null;
 }
 function _hsRailBuild(E) {
-  if (E.menu) return E.menu;
-  var m = document.createElement('div');
-  m.id = 'hsm';
-  var on = E.rail.querySelector('.gdk-lg.on .em');
-  m.innerHTML = '<button type="button" class="hsm-back" aria-label="Back to all sports" onclick="hsRailBack()"><span class="em" aria-hidden="true">' + (on ? on.innerHTML : '⚾') + '</span><span class="nm">Sports</span></button><i class="hsm-div" aria-hidden="true"></i>' +
-    HS_OPTS.map(function (o, i) {
-      return '<button type="button" class="hsm-o" data-v="' + o[0] + '" style="--i:' + i + '" onclick="hsView(this.dataset.v)"><span class="em"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + o[2] + '"/></svg></span><span class="nm">' + o[1] + '</span></button>';
+  var R = window._hsRailS, m = E.menu;
+  if (!m) { m = document.createElement('div'); m.id = 'hsm'; E.band.appendChild(m); E.band.classList.add('hsm'); E.menu = m; }
+  var fx = HS_FX[R.sport] || 'roll', on = E.rail.querySelector('.gdk-lg.on .em');
+  R.opts = _hsRailOpts(R.sport, R.off);
+  m.setAttribute('data-fx', fx);
+  E.band.classList.toggle('fx-hoop', fx === 'hoop');
+  m.innerHTML = (fx === 'hoop' ? '<i class="hsm-fx" aria-hidden="true">' + HS_HOOP + '</i>' : fx === 'puck' ? '<i class="hsm-fx" aria-hidden="true">' + _hsGoalSvg('#E5484D', '2.5') + '</i>' : fx === 'kick' ? '<i class="hsm-fx" aria-hidden="true">' + _hsGoalSvg('#F3F1FF', '2.2') + '</i>' : '') +
+    '<button type="button" class="hsm-back" aria-label="Back to all sports" onclick="hsRailBack()"><span class="em" aria-hidden="true"><b>' + (on ? on.innerHTML : '') + '</b></span><span class="nm">Sports</span></button><i class="hsm-div" aria-hidden="true"></i>' +
+    R.opts.map(function (o, i) {
+      return '<button type="button" class="hsm-o" data-v="' + o[0] + '" style="--i:' + i + '" onclick="hsRailGo(' + i + ')"><span class="em"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + o[2] + '"/></svg></span><span class="nm">' + o[1] + '</span></button>';
     }).join('');
-  E.band.appendChild(m);
-  E.band.classList.add('hsm');
-  E.menu = m;
+  _hsRailMark();
   return m;
 }
+function hsRailGo(i) {
+  var o = (window._hsRailS.opts || [])[i];
+  if (!o) return;
+  try { o[3](); } catch (e) { console.error('[rail options]', o[0], e); }
+}
 function _hsRailMark() {
-  var m = document.getElementById('hsm'), v = window._hs.view || 'board';
+  var m = document.getElementById('hsm'), R = window._hsRailS;
   if (!m) return;
+  var v = R.sport === 'mlb' && R.off ? (window._hs.view || 'board') : 'games';
   [].forEach.call(m.querySelectorAll('.hsm-o'), function (b) { var on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
 }
 function _hsRailDx(E) {
@@ -714,12 +752,12 @@ function _hsRailDx(E) {
 function _hsRailTuck() {
   var R = window._hsRailS, E = _hsRailEls();
   clearTimeout(R.t);
-  if (!E || !R.on || R.tucked) return;
+  if (!E || !R.key || R.tucked) return;
+  if (!E.rail.querySelector('.gdk-lg.on')) { R.t = setTimeout(_hsRailTuck, 400); return; } // the rail isn't drawn yet
   var m = _hsRailBuild(E), back = m.querySelector('.hsm-back');
-  _hsRailMark();
   clearTimeout(R.u);
   E.band.classList.remove('untucking');
-  // the ball starts where baseball sits in the rail, then rolls to the left edge
+  // it starts where the league sits in the rail, then travels to the left edge
   back.style.transition = 'none';
   back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
   void back.offsetWidth;
@@ -733,35 +771,44 @@ function hsRailBack() {
   clearTimeout(R.t);
   if (!E || !E.menu || !R.tucked) return;
   var back = E.menu.querySelector('.hsm-back');
-  R.tucked = false; R.held = true;
+  R.tucked = false;
   E.band.classList.add('untucking');
   E.band.classList.remove('tuck');
   back.style.transform = 'translateX(' + _hsRailDx(E) + 'px)';
   clearTimeout(R.u);
   R.u = setTimeout(function () { E.band.classList.remove('untucking'); back.style.transform = ''; }, 620);
 }
-function hsRail(on) {
+// sport: the league showing on the Games page (null when the page isn't a league's); off: baseball's offseason page is up
+function hsRail(sport, off) {
+  if (sport === true) { sport = 'mlb'; off = true; } else if (sport === false) sport = null; // v7.105.0 callers
   var R = window._hsRailS, E = _hsRailEls();
   if (!E) return;
-  if (!on) {
-    if (!R.on) return;
-    clearTimeout(R.t); clearTimeout(R.u);
-    R.on = false; R.tucked = false; R.held = false;
-    E.band.classList.remove('tuck', 'untucking', 'hsm');
+  var key = sport ? sport + (off ? '|off' : '') : null;
+  if (key === R.key) return;
+  var sameSport = sport && sport === R.sport, wasTucked = R.tucked;
+  clearTimeout(R.t);
+  R.key = key; R.sport = sport || null; R.off = !!off;
+  if (!key) {
+    clearTimeout(R.u);
+    R.tucked = false;
+    E.band.classList.remove('tuck', 'untucking', 'hsm', 'fx-hoop');
     if (E.menu && E.menu.parentNode) E.menu.parentNode.removeChild(E.menu);
     return;
   }
-  if (R.on) return;
-  R.on = true; R.tucked = false; R.held = false;
+  // same league, different page (baseball's season line just landed): swap the options where they stand
+  if (sameSport && wasTucked) { _hsRailBuild(E); return; }
+  clearTimeout(R.u);
+  R.tucked = false;
+  E.band.classList.remove('tuck', 'untucking');
   _hsRailBuild(E);
-  R.t = setTimeout(_hsRailTuck, 1800);
+  R.t = setTimeout(_hsRailTuck, R.fast ? 700 : 1800);
+  R.fast = false;
 }
-// tapping baseball again while its rail is out tucks it straight away
+// a league tapped in the rail: the one you're on tucks straight away, a new one after a beat
 function hsRailPick(key) {
   var R = window._hsRailS;
-  if (key !== 'mlb' || !R.on || R.tucked) return;
-  clearTimeout(R.t);
-  R.t = setTimeout(_hsRailTuck, 160);
+  if (key === R.sport && R.key && !R.tucked) { clearTimeout(R.t); R.t = setTimeout(_hsRailTuck, 160); return; }
+  R.fast = true;
 }
 
 // Show or hide the page whenever the schedule loads (any league, any date)
